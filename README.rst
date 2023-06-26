@@ -1,9 +1,6 @@
 LOERIC: a Live perfOrmance rulE-system for iRish tradItional musiC.
 =======================================
 
-This GitHub template includes fictional Python library
-with some basic Sphinx docs.
+LOERIC is a software package capable of performing Irish traditional music by adding expression, ornaments and live human interaction.
 
-Read the tutorial here:
-
-https://docs.readthedocs.io/en/stable/tutorial/
+This repository hosts both the code and the documentation for the software.
