@@ -2,7 +2,7 @@
 
 # -- Project information
 
-project = 'LOERIC'
+project = 'loeric'
 copyright = '2023, Marco Amerotti'
 author = 'Marco Amerotti'
 
