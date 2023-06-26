@@ -1,4 +1,4 @@
-Template for the Read the Docs tutorial
+LOERIC: a Live perfOrmance rulE-system for iRish tradItional musiC.
 =======================================
 
 This GitHub template includes fictional Python library
