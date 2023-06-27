@@ -5,5 +5,3 @@ API
    :toctree: generated
 
    loeric
-   contour
-   tune
