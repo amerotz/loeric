@@ -1,4 +1,4 @@
-LOERIC: a Live perfOrmance rulE-system for iRish tradItional musiC.
+LOERIC: a live performance rule system for Irish traditional music.
 =======================================
 
 LOERIC is a software package capable of performing Irish traditional music by adding expression, ornaments and live human interaction.

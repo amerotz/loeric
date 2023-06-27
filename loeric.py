@@ -2,6 +2,13 @@ import mido
 import tune as tu
 import contour as cnt
 
+"""
+LOERIC - a live performance rule system for Irish traditional music.
+"""
+
+__version__ = "0.1.0"
+
+
 # create a new tune
 tune = tu.Tune("test.mid")
 
