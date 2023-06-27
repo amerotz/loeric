@@ -1,0 +1,5 @@
+mido==1.2.10
+music21==8.1.0
+muspy==0.5.0
+numpy==1.23.5
+matplotlib==3.7.1

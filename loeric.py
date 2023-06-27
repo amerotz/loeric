@@ -1,4 +1,6 @@
 import mido
+import matplotlib.pyplot as plt
+
 import tune as tu
 import contour as cnt
 
@@ -20,6 +22,8 @@ def main():
     # contour.next()
 
     contour.calculate(tune)
+    plt.plot(contour._contour)
+    plt.show()
 
     # print messages
     for msg in tune:
