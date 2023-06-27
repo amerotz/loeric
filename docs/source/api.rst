@@ -5,5 +5,6 @@ API
    :members:
    :private-members:
    :special-members:
+   :recursive:
 
 
