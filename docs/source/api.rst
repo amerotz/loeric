@@ -4,7 +4,6 @@ API
 .. autosummary::
    :toctree: generated
    :recursive:
-   :noindex:
 
    loeric
 
