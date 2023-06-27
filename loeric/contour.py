@@ -62,11 +62,11 @@ class Contour:
     ) -> tuple[np.array, np.array, np.array, np.array, np.array]:
         """
         Computes the individual components for the ocanainn score:
-        - frequency score;
-        - beat score;
-        - ambitus score;
-        - leap score;
-        - length score.
+        * frequency score;
+        * beat score;
+        * ambitus score;
+        * leap score;
+        * length score.
         :param midi: the input tune used to compute the individual scores.
         :return: the frequency score, the beat score, the ambitus score, the leap score and the length score.
         """

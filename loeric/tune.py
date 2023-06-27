@@ -8,8 +8,8 @@ from collections.abc import Callable
 def is_note_on(msg: mido.Message) -> bool:
     """
     Check if a note event is to be considered a note-on event, that is:
-    - its type is "note-on";
-    - it has non-zero velocity.
+    * its type is "note-on";
+    * it has non-zero velocity.
 
     :param msg: the message to check.
     :return True if the message is a note on event.
@@ -23,9 +23,10 @@ class Tune:
     def __init__(self, filename: str):
         """
         Initialize the class. A number of properties is computed:
-        - the duration of the pickup bar, if there is any;
-        - the key signature (only the first encountered is considered, key signature changes are not supported);
-        - the time signature (only the first encountered is considered, time signature changes are not supported);
+        * the duration of the pickup bar, if there is any;
+        * the key signature (only the first encountered is considered, key signature changes are not supported);
+        * the time signature (only the first encountered is considered, time signature changes are not supported);
+
         :param filename: the path to the midi file.
         """
         mido_source = mido.MidiFile(filename)
@@ -54,6 +55,7 @@ class Tune:
     ) -> list[mido.Message]:
         """
         Retrieve the midi events that fullfill the given filtering function.
+
         :param filtering_function: the function filtering the midi events.
         :return: a list of midi events fullfilling the filtering function.
         """
