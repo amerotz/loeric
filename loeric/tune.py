@@ -12,6 +12,7 @@ def is_note_on(msg: mido.Message) -> bool:
     * it has non-zero velocity.
 
     :param msg: the message to check.
+    
     :return True if the message is a note on event.
     """
     return msg.type == "note_on" and msg.velocity != 0
@@ -28,6 +29,7 @@ class Tune:
         * the time signature (only the first encountered is considered, time signature changes are not supported);
 
         :param filename: the path to the midi file.
+        
         """
         mido_source = mido.MidiFile(filename)
         self._midi = list(mido_source)
@@ -57,6 +59,7 @@ class Tune:
         Retrieve the midi events that fullfill the given filtering function.
 
         :param filtering_function: the function filtering the midi events.
+        
         :return: a list of midi events fullfilling the filtering function.
         """
         return [msg for msg in self._midi if filtering_function(msg)]
@@ -65,6 +68,7 @@ class Tune:
     def __len__(self) -> int:
         """
         Return the length of the list of midi messages.
+        
         :return: the number of midi messages in this tune.
         """
         return len(self._midi)
@@ -72,7 +76,9 @@ class Tune:
     def __getitem__(self, idx: int) -> mido.Message:
         """
         Return the item in the midi event list corresponding to the given index.
+        
         :param idx: the element index.
+        
         :return: the midi message corresponding to that index.
         """
         return self._midi[idx]
