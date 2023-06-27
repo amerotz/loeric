@@ -5,9 +5,6 @@ import tune as tu
 import contour as cnt
 
 
-__version__ = "0.1.0"
-
-
 def main():
     # create a new tune
     tune = tu.Tune("test.mid")
