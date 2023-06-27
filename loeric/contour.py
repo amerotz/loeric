@@ -36,8 +36,10 @@ class Contour:
     def next(self) -> float:
         """
         Return the next element (i.e. intensity value) of the intensity contour.
+
         :raise contour.UncomputedContourError: if the contour has not been computed yet.
         :raise contour.InvalidIndexError: if the index of the current value is below 0 or exceeds the length of the contour.
+
         :return: the next intensity value.
         """
         if self._contour is None:
@@ -62,12 +64,15 @@ class Contour:
     ) -> tuple[np.array, np.array, np.array, np.array, np.array]:
         """
         Computes the individual components for the ocanainn score:
+
         * frequency score;
         * beat score;
         * ambitus score;
         * leap score;
         * length score.
+
         :param midi: the input tune used to compute the individual scores.
+
         :return: the frequency score, the beat score, the ambitus score, the leap score and the length score.
         """
         # retrieve pitch and time info
@@ -144,6 +149,7 @@ class RandomContour(Contour):
     def calculate(self, midi: tune.Tune) -> None:
         """
         Compute a random contour following a uniform distribution between 0 and 1.
+
         :param midi: the input tune.
         """
         note_events = midi.filter(lambda x: tune.is_note_on(x))
