@@ -2,6 +2,7 @@ API
 ===
 
 .. autosummary::
+   :noindex:
    :toctree: generated
    :recursive:
 
