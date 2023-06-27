@@ -9,23 +9,28 @@ LOERIC - a live performance rule system for Irish traditional music.
 __version__ = "0.1.0"
 
 
-# create a new tune
-tune = tu.Tune("test.mid")
+def main():
+    # create a new tune
+    tune = tu.Tune("test.mid")
 
-# create a contour
-contour = cnt.RandomContour()
+    # create a contour
+    contour = cnt.RandomContour()
 
-# this should trigger an UncomputedContourError
-# contour.next()
+    # this should trigger an UncomputedContourError
+    # contour.next()
 
-contour.calculate(tune)
+    contour.calculate(tune)
 
-# print messages
-for msg in tune:
-    print(msg)
-    # follow contour
-    if tu.is_note_on(msg):
-        print(contour.next())
+    # print messages
+    for msg in tune:
+        print(msg)
+        # follow contour
+        if tu.is_note_on(msg):
+            print(contour.next())
 
-# this should trigger an InvalidIndexError
-contour.next()
+    # this should trigger an InvalidIndexError
+    contour.next()
+
+
+if __name__ == "__main__":
+    main()
