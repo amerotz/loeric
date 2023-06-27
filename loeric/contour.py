@@ -1,7 +1,7 @@
 import mido
 import numpy as np
 
-import tune
+import loeric.tune as tune
 
 
 class UncomputedContourError(Exception):

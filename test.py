@@ -1,8 +1,8 @@
 import mido
 import matplotlib.pyplot as plt
 
-import tune as tu
-import contour as cnt
+import loeric.tune as tu
+import loeric.contour as cnt
 
 
 def main():
