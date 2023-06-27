@@ -1,15 +1,9 @@
 API
 ===
 
-.. autosummary::
-   :toctree: generated
-   :recursive:
-
-   loeric
-
-.. automodule::
+.. automodule:: loeric
    :members:
    :private-members:
    :special-members:
 
-   loeric
+
