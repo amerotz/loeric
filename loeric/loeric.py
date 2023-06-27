@@ -1,3 +1,5 @@
+__version__ = "0.1.0"
+
 import mido
 import matplotlib.pyplot as plt
 
