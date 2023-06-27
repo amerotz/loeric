@@ -7,7 +7,9 @@ API
 
    loeric
 
-.. automodule:: loeric
+.. automodule::
    :members:
    :private-members:
    :special-members:
+
+   loeric
