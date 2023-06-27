@@ -6,3 +6,5 @@ build-backend = "flit_core.buildapi"
 name = "loeric"
 authors = [{name = "Marco Amerotti", email = "amerotti@kth.se"}]
 dynamic = ["version", "description"]
+[tool.setuptools.dynamic]
+version = {attr = "loeric.__version__"}
