@@ -4,9 +4,6 @@ import matplotlib.pyplot as plt
 import tune as tu
 import contour as cnt
 
-"""
-LOERIC - a live performance rule system for Irish traditional music.
-"""
 
 __version__ = "0.1.0"
 
