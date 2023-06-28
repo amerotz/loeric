@@ -1,5 +1,6 @@
 import mido
 import numpy as np
+from scipy.signal import savgol_filter
 
 import loeric.tune as tune
 
@@ -59,6 +60,29 @@ class Contour:
         """
         self._index = -1
 
+    def scale_and_savgol(self, array: np.ndarray, shift: bool = False) -> np.ndarray:
+        """
+        Scale the contour, then apply a Savitzky-Golay filter with a window of 15 and order 3.
+        Optionally, shift the array to bring its mean closer to 0.5.
+
+        :param array: the input contour.
+        :param shift: wether or not to shift the filtered array so that its mean is close to 0.5.
+
+        :return: the filtered array.
+        """
+        array -= min(array)
+        array /= max(array)
+
+        window = 15
+        array = np.pad(array, (window, window), "mean")
+        array = savgol_filter(array, window, 3)
+        array = array[window:-window]
+
+        if shift:
+            array += min(0.5 - array.mean(), 1 - max(array))
+
+        return array
+
     def ocanainn_scores(
         self, midi: tune.Tune
     ) -> tuple[np.array, np.array, np.array, np.array, np.array]:
@@ -97,6 +121,9 @@ class Contour:
             [counts[np.where(values == n)] for n in notes]
         ).astype(float)
         frequency_score = frequency_score.reshape(-1)
+        frequency_score = np.interp(
+            frequency_score, (frequency_score.min(), frequency_score.max()), (0, 1)
+        )
 
         # strong beat
         beat_position = (summed_timings % midi.bar_duration) / midi.beat_duration
@@ -112,6 +139,7 @@ class Contour:
         beat_score = beat_score.reshape(-1)
         beat_score[np.where(beats == -1)] = 0
         beat_score = beat_score.reshape(-1)
+        beat_score = np.interp(beat_score, (beat_score.min(), beat_score.max()), (0, 1))
 
         # highest/lowest score
         highest = notes == max(notes)
@@ -129,6 +157,7 @@ class Contour:
         )
         leap_score = leap_score.reshape(-1)
         leap_score[np.where(leaps == -1)] = 0
+        leap_score = np.interp(leap_score, (leap_score.min(), leap_score.max()), (0, 1))
 
         # long score
         timings = timings[note_offs] - timings[note_ons]
@@ -155,3 +184,58 @@ class RandomContour(Contour):
         note_events = midi.filter(lambda x: tune.is_note_on(x))
         size = len(note_events)
         self._contour = np.random.uniform(0, 1, size=size)
+
+
+class IntensityContour(Contour):
+    """A contour given by the weighted sum of O'Canainn components."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(
+        self,
+        midi,
+        weights: np.array = None,
+        random_weight: float = 0,
+        savgol: bool = True,
+    ) -> None:
+        """
+        Compute the contour as the weighted sum of O'Canainn component.
+        An optional random component can be added.
+
+        :param midi: the input tune.
+        :param weights: the weights for the components, respectively:
+        * frequency score;
+        * beat score;
+        * ambitus score;
+        * leap score;
+        * length score.
+        :param random_weight: the weight of the random component over the sum of the weighted O'Canainn scores. If None, the components will be averaged together.
+        :param savgol: wether or not to apply a final savgol filtering step (recommended).
+        """
+
+        # calculate the components
+        components = self.ocanainn_scores(midi)
+        # stack them
+        stacked_components = np.stack(components, axis=0)
+        size = stacked_components.shape[0]
+
+        if weights is None:
+            weights = np.ones((size, 1)) / size
+        else:
+            assert weights.shape == (size, 1)
+
+        # weight them
+        stacked_components = np.multiply(stacked_components, weights)
+        # sum them
+        stacked_components = stacked_components.sum(axis=0)
+
+        # add the random contour
+        self._contour = stacked_components
+        if random_weight != 0:
+            self._contour *= 1 - random_weight
+            self._contour += np.random.uniform(0, random_weight, self._contour.shape[0])
+
+        # savgol filtering
+        if savgol:
+            self._contour = self.scale_and_savgol(self._contour)
