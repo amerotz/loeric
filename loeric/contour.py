@@ -2,7 +2,7 @@ import mido
 import numpy as np
 from scipy.signal import savgol_filter
 
-import loeric.tune as tune
+import tune
 
 
 class UncomputedContourError(Exception):
@@ -232,7 +232,9 @@ class IntensityContour(Contour):
         self._contour = stacked_components
         if random_weight != 0:
             self._contour *= 1 - random_weight
-            self._contour += np.random.uniform(0, random_weight, self._contour.shape[0])
+            random_contour = RandomContour()
+            random_contour.calculate(midi, extremes=(0, 1))
+            self._contour += random_contour._contour * random_weight
 
         # savgol filtering
         if savgol:

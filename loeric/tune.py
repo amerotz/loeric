@@ -45,13 +45,7 @@ class Tune:
         self._time_signature = self.get_time_signature()
 
         # tempo in microseconds per quarter
-        self._original_tempo = self.get_original_tempo()
-
-        # user-given tempo in microseconds per quarter
-        if bpm is None:
-            self._current_tempo = self._original_tempo
-        else:
-            self._current_tempo = mido.bpm2tempo(bpm)
+        self._tempo = self.get_original_tempo()
 
         # pickup bar
         self.offset = self.get_performance_offset()
@@ -71,7 +65,7 @@ class Tune:
 
         :return: the amount of seconds corresponding to a quarter note given the current tempo.
         """
-        return self._current_tempo / 1e6
+        return self._tempo / 1e6
 
     def get_performance_offset(self) -> float:
         """
