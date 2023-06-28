@@ -207,13 +207,7 @@ class IntensityContour(Contour):
         An optional random component can be added.
 
         :param midi: the input tune.
-        :param weights: the weights for the components, respectively
-        * frequency score;
-        * beat score;
-        * ambitus score;
-        * leap score;
-        * length score.
-
+        :param weights: the weights for the components, respectively frequency score, beat score, ambitus score, leap score and length score.
         :param random_weight: the weight of the random component over the sum of the weighted O'Canainn scores. If None, the components will be averaged together.
         :param savgol: wether or not to apply a final savgol filtering step (recommended).
         """
