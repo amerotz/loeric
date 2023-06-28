@@ -175,15 +175,18 @@ class RandomContour(Contour):
     def __init__(self):
         super().__init__()
 
-    def calculate(self, midi: tune.Tune) -> None:
+    def calculate(self, midi: tune.Tune, extremes: tuple[float, float] = None) -> None:
         """
-        Compute a random contour following a uniform distribution between 0 and 1.
+        Compute a random contour following a uniform distribution in the specified range, by default between 0 and 1.
 
         :param midi: the input tune.
+        :param extremes: the upper and lower bound for the random contour. If None, the range will be (0, 1).
         """
         note_events = midi.filter(lambda x: tune.is_note_on(x))
         size = len(note_events)
-        self._contour = np.random.uniform(0, 1, size=size)
+        if extremes is None:
+            extremes = (0, 1)
+        self._contour = np.random.uniform(*extremes, size=size)
 
 
 class IntensityContour(Contour):
@@ -204,12 +207,13 @@ class IntensityContour(Contour):
         An optional random component can be added.
 
         :param midi: the input tune.
-        :param weights: the weights for the components, respectively:
+        :param weights: the weights for the components, respectively
         * frequency score;
         * beat score;
         * ambitus score;
         * leap score;
         * length score.
+
         :param random_weight: the weight of the random component over the sum of the weighted O'Canainn scores. If None, the components will be averaged together.
         :param savgol: wether or not to apply a final savgol filtering step (recommended).
         """

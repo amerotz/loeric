@@ -11,12 +11,13 @@ def main():
     tune = tu.Tune("test.mid")
 
     # create a contour
-    contour = cnt.IntensityContour()
+    contour = cnt.RandomContour()
 
     # this should trigger an UncomputedContourError
     # contour.next()
 
-    contour.calculate(tune)
+    contour.calculate(tune, extremes=(0.2, 0.5))
+    """
     min_contour = np.ones(contour._contour.shape)
     max_contour = np.zeros(contour._contour.shape)
     avg_contour = np.zeros(contour._contour.shape)
@@ -28,6 +29,8 @@ def main():
     plt.plot(range(len(contour._contour)), min_contour)
     plt.plot(range(len(contour._contour)), max_contour)
     plt.plot(range(len(contour._contour)), avg_contour / 10)
+    """
+    plt.plot(contour._contour)
     plt.show()
 
     # print messages
