@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 def is_note_on(msg: mido.Message) -> bool:
     """
-    Check if a note event is to be considered a note-on event, that is:
+    Check if a midi event is to be considered a note-on event, that is:
     * its type is "note-on";
     * it has non-zero velocity.
 
@@ -18,10 +18,21 @@ def is_note_on(msg: mido.Message) -> bool:
     return msg.type == "note_on" and msg.velocity != 0
 
 
+def is_note(msg: mido.Message) -> bool:
+    """
+    Check if a midi event is a note event (either note-on or note-off).
+
+    :param msg: the message to check.
+
+    :return: True if the message is a note event.
+    """
+    return "note" in msg.type
+
+
 class Tune:
     """A wrapper for a midi file."""
 
-    def __init__(self, filename: str, bpm: float = None) -> None:
+    def __init__(self, filename: str) -> None:
         """
         Initialize the class. A number of properties is computed:
 
@@ -30,7 +41,6 @@ class Tune:
         * the time signature (only the first encountered is considered, time signature changes are not supported);
 
         :param filename: the path to the midi file.
-        :param bpm: the user-chosen bpm for the tune.
 
         """
         mido_source = mido.MidiFile(filename)

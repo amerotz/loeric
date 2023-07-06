@@ -197,7 +197,7 @@ class IntensityContour(Contour):
 
     def calculate(
         self,
-        midi,
+        midi: tune.Tune,
         weights: np.array = None,
         random_weight: float = 0,
         savgol: bool = True,
@@ -221,7 +221,8 @@ class IntensityContour(Contour):
         if weights is None:
             weights = np.ones((size, 1)) / size
         else:
-            assert weights.shape == (size, 1)
+            if weights.shape != (size, 1):
+                weights = weights.reshape(size, 1)
 
         # weight them
         stacked_components = np.multiply(stacked_components, weights)

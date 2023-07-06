@@ -1,16 +1,35 @@
+import contour as cnt
+import tune as tu
+import groover as gr
+
+
 # play midi file
-def play(tune, out, save=False):
+def play(tune: tu.Tune, out, args) -> None:
+    """
+    Play the given tune.
+
+    :param tune: the tune to play
+    :param out: the output midi port
+    :param args: the performance arguments
+    """
     # create groover
+
+    groover = gr.Groover(tune)
+
     # repeat as specified
     for t in range(args.repeat):
+        print(f"Repetition {t+1}/{args.repeat}")
         # iterate over messages
-        for msg in tune:
-            print(msg)
+        for message in tune:
+            if not message.is_meta:
+                # make the groover play the messages
+                new_messages = groover.perform(message)
 
-            if not msg.is_meta:
-                # groover.play(msg)
-                time.sleep(msg.time)
-                out.send(msg)
+                for msg in new_messages:
+                    time.sleep(msg.time)
+                    out.send(msg)
+
+    print("Playback terminated.")
 
 
 def main(args):
@@ -60,8 +79,8 @@ def main(args):
             # start the player thread
             try:
                 # load a tune
-                tune = tu.Tune(args.source, bpm=args.bpm)
-                t = threading.Thread(target=play, args=(tune, out, args.save))
+                tune = tu.Tune(args.source)
+                t = threading.Thread(target=play, args=(tune, out, args))
                 t.start()
                 t.join()
 
@@ -85,9 +104,6 @@ if __name__ == "__main__":
     import threading
     import traceback
     import time
-
-    import contour as cnt
-    import tune as tu
 
     # args
     parser = argparse.ArgumentParser()
