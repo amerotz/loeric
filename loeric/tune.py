@@ -3,6 +3,50 @@ import muspy as mp
 import music21 as m21
 
 from collections.abc import Callable
+from typing import Generator
+
+# calculated as the shortest "possible" length of a note
+# given the latest guinnes world record for
+# most notes played in a minute on a piano
+TRIGGER_DELTA = 0.05
+
+# how to approach a note from above or below in a major scale
+above_approach_scale = [2, 1, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1]
+below_approach_scale = [-1, -1, -2, -1, -2, -1, -1, -2, -1, -2, -1, -2]
+
+# key signatures
+_number_of_fifths = {
+    "Cb": -7,
+    "Abm": -7,
+    "Gb": -6,
+    "Ebm": -6,
+    "Db": -5,
+    "Bbm": -5,
+    "Ab": -4,
+    "Fm": -4,
+    "Eb": -3,
+    "Cm": -3,
+    "Bb": -2,
+    "Gm": -2,
+    "F": -1,
+    "Dm": -1,
+    "C": 0,
+    "Am": 0,
+    "G": 1,
+    "Em": 1,
+    "D": 2,
+    "Bm": 2,
+    "A": 3,
+    "F#m": 3,
+    "E": 4,
+    "C#m": 4,
+    "B": 5,
+    "G#m": 5,
+    "F#": 6,
+    "D#m": 6,
+    "C#": 7,
+    "A#m": 7,
+}
 
 
 def is_note_on(msg: mido.Message) -> bool:
@@ -49,24 +93,56 @@ class Tune:
         self._midi = list(mido_source)
 
         # key signature
-        self._key_signature = self.get_key_signature()
+        self._key_signature = self._get_key_signature()
+        self._fifths = _number_of_fifths[self._key_signature]
 
         # time signature
-        self._time_signature = self.get_time_signature()
+        self._time_signature = self._get_time_signature()
 
         # tempo in microseconds per quarter
-        self._tempo = self.get_original_tempo()
+        self._tempo = self._get_original_tempo()
 
         # pickup bar
-        self.offset = self.get_performance_offset()
+        self._offset = self._get_performance_offset()
 
         # number of quarter notes per bar
         quarters_per_bar = (
             4 * self._time_signature.numerator / self._time_signature.denominator
         )
         # bar and beat duration in seconds
-        self.bar_duration = quarters_per_bar * self._quarter_duration
-        self.beat_duration = self.bar_duration / self._time_signature.beatCount
+        self._bar_duration = quarters_per_bar * self._quarter_duration
+        self._beat_duration = self._bar_duration / self._time_signature.beatCount
+
+        # to keep track of the performance
+        self._performance_time = -self._offset
+
+    @property
+    def tempo(self) -> int:
+        """
+        :return: the tune's tempo in microseconds per quarter.
+        """
+        return self._tempo
+
+    @property
+    def bar_duration(self) -> float:
+        """
+        :return: the tune's bar duration in seconds.
+        """
+        return self._bar_duration
+
+    @property
+    def beat_duration(self) -> float:
+        """
+        :return: the tune's beat duration in seconds.
+        """
+        return self._beat_duration
+
+    @property
+    def offset(self) -> float:
+        """
+        :return: the tune's performance offset (i.e. the length of the pickup bar) in seconds.
+        """
+        return self._offset
 
     @property
     def _quarter_duration(self) -> float:
@@ -77,7 +153,17 @@ class Tune:
         """
         return self._tempo / 1e6
 
-    def get_performance_offset(self) -> float:
+    def semitones_from_tonic(self, midi_note: int) -> int:
+        """
+        Compute the distance between the given note and the tonic of the tune in semitones.
+
+        :param midi_note: the input note.
+
+        :return: the distance between note and the tonic in semitones.
+        """
+        return (midi_note - 7 * self._fifths) % 12
+
+    def _get_performance_offset(self) -> float:
         """
         Return the length of the pickup bar, if there is any.
 
@@ -86,15 +172,16 @@ class Tune:
         # retrieve duration of first bar
         m21_source = m21.converter.parse(self._filename)
 
-        # performance offset in seconds
+        # performance offset in quarter length
         offset = list(m21_source.recurse().getElementsByClass("Measure"))[
             0
         ].duration.quarterLength
 
+        # convert quarter length to seconds
         offset *= self._quarter_duration
         return offset
 
-    def get_original_tempo(self) -> int:
+    def _get_original_tempo(self) -> int:
         """
         Retrieve the tempo of the tune, if there is any.
         Only the first tempo change will be retrieved.
@@ -106,7 +193,7 @@ class Tune:
             return None
         return msg[0].tempo
 
-    def get_time_signature(self) -> m21.meter.TimeSignature:
+    def _get_time_signature(self) -> m21.meter.TimeSignature:
         """
         Retrieve the time signature of the tune, if there is any.
         Only the first time signature will be retrieved.
@@ -123,7 +210,7 @@ class Tune:
         time_signature.denominator = msg[0].denominator
         return time_signature
 
-    def get_key_signature(self) -> str:
+    def _get_key_signature(self) -> str:
         """
         Retrieve the key signature of the tune, if there is any.
         Only the first key signature will be retrieved.
@@ -148,6 +235,33 @@ class Tune:
         :return: a list of midi events fullfilling the filtering function.
         """
         return [msg for msg in self._midi if filtering_function(msg)]
+
+    def events(self) -> Generator[mido.Message, None, None]:
+        """
+        A generator returning each midi event in the tune. Each time an event is retrieved, the performance time is updated.
+
+        :return: the sequence of midi events one by one
+        """
+        # for each note
+        for event in self._midi:
+            # update the performance time
+            self._performance_time += event.time
+
+            # return the event
+            yield event
+
+    def is_on_a_beat(self) -> bool:
+        """
+        Decide if we are on a beat or not, given the current cumulative performance time.
+
+        :return: True if we are on a beat.
+        """
+        beat_position = (
+            self._performance_time % self._bar_duration
+        ) / self._beat_duration
+        diff = abs(beat_position - round(beat_position))
+
+        return diff <= TRIGGER_DELTA
 
     def __len__(self) -> int:
         """

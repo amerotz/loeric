@@ -4,23 +4,25 @@ import groover as gr
 
 
 # play midi file
-def play(tune: tu.Tune, out, args) -> None:
+def play(out, args) -> None:
     """
     Play the given tune.
 
-    :param tune: the tune to play
     :param out: the output midi port
     :param args: the performance arguments
     """
-    # create groover
 
-    groover = gr.Groover(tune)
+    # load a tune
+    tune = tu.Tune(args.source)
+
+    # create groover
+    groover = gr.Groover(tune, bpm=args.bpm)
 
     # repeat as specified
     for t in range(args.repeat):
         print(f"Repetition {t+1}/{args.repeat}")
         # iterate over messages
-        for message in tune:
+        for message in tune.events():
             if not message.is_meta:
                 # make the groover play the messages
                 new_messages = groover.perform(message)
@@ -78,15 +80,14 @@ def main(args):
 
             # start the player thread
             try:
-                # load a tune
-                tune = tu.Tune(args.source)
-                t = threading.Thread(target=play, args=(tune, out, args))
-                t.start()
-                t.join()
+                p = multiprocessing.Process(target=play, args=(out, args))
+                p.start()
+                p.join()
 
             except KeyboardInterrupt:
                 print("Playback stopped by user.")
                 print("Attempting graceful shutdown...")
+                p.terminate()
                 # make sure to turn off all notes
                 for i in range(128):
                     out.send(
@@ -95,14 +96,15 @@ def main(args):
                         )
                     )
                 print("Done.")
-                return
+                sys.exit()
 
 
 if __name__ == "__main__":
     import argparse
     import mido
-    import threading
+    import multiprocessing
     import traceback
+    import sys
     import time
 
     # args

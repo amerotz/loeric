@@ -30,7 +30,8 @@ class Contour:
     def calculate(self, midi: tune.Tune) -> None:
         """
         Calculate the intensity contour for the given tune.
-        :params midi: the input tune.
+
+        :param midi: the input tune.
         """
         pass
 
@@ -66,7 +67,7 @@ class Contour:
         Optionally, shift the array to bring its mean closer to 0.5.
 
         :param array: the input contour.
-        :param shift: wether or not to shift the filtered array so that its mean is close to 0.5.
+        :param shift: whether or not to shift the filtered array so that its mean is close to 0.5.
 
         :return: the filtered array.
         """
@@ -128,7 +129,7 @@ class Contour:
         # strong beat
         beat_position = (summed_timings % midi.bar_duration) / midi.beat_duration
         beat_position = abs(beat_position - np.round(beat_position))
-        trigger_delta = 0.05
+        trigger_delta = tune.TRIGGER_DELTA
         beats = -np.ones(notes.shape)
         indexes = np.where(beat_position <= trigger_delta)
         beats[indexes] = notes[indexes]
@@ -209,7 +210,7 @@ class IntensityContour(Contour):
         :param midi: the input tune.
         :param weights: the weights for the components, respectively frequency score, beat score, ambitus score, leap score and length score.
         :param random_weight: the weight of the random component over the sum of the weighted O'Canainn scores. If None, the components will be averaged together.
-        :param savgol: wether or not to apply a final savgol filtering step (recommended).
+        :param savgol: whether or not to apply a final savgol filtering step (recommended).
         """
 
         # calculate the components

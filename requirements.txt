@@ -1,4 +1,5 @@
 mido
+python-rtmidi
 scipy
 argparse
 music21==8.1.0
