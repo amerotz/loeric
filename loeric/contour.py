@@ -241,3 +241,40 @@ class IntensityContour(Contour):
         # savgol filtering
         if savgol:
             self._contour = self.scale_and_savgol(self._contour)
+
+
+class MessageLengthContour(Contour):
+    """A contour holding the length of each note in the tune."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(
+        self,
+        midi: tune.Tune,
+    ) -> None:
+        """
+        Calculate the contour as the length of each note message (from each note on message to the next note off message).
+
+        :param midi: the input tune object.
+        """
+
+        note_events = midi.filter(lambda x: "note" in x.type)
+        timings = np.array([msg.time for msg in note_events])
+        note_ons = np.array([tune.is_note_on(msg) for msg in note_events])
+        note_offs = np.array([not tune.is_note_on(msg) for msg in note_events])
+        self._contour = timings[note_offs] - timings[note_ons]
+
+
+class MessageLengthContour(Contour):
+    """A contour holding the pitch difference between notes in the tune."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(
+        self,
+        midi: tune.Tune,
+    ) -> None:
+        # TODO
+        pass

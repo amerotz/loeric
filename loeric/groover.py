@@ -7,8 +7,16 @@ import tune as tu
 import contour as cnt
 
 TEMPO_WARP = 0.1
+
+# TODO make this a command line arg
 CUT = "cut"
 CUT_CHANCE = 0.5
+
+ROLL = "roll"
+ROLL_CHANCE = 0.5
+
+SLIDE = "slide"
+SLIDE_CHANCE = 0.5
 
 
 class Groover:
@@ -72,6 +80,12 @@ class Groover:
             random_weight=random_weight,
             savgol=apply_savgol,
         )
+        # message length contour
+        self._contours["message length"] = cnt.MessageLengthContour()
+        self._contours["message length"].calculate(self._tune)
+        # pich difference
+        self._contours["pitch difference"] = cnt.PitchDifferenceContour()
+        self._contours["pitch difference"].calculate(self._tune)
 
         # object holding each contour's value in a given moment
         self._contour_values = {}
@@ -143,6 +157,20 @@ class Groover:
 
         return notes
 
+    @property
+    def _cut_duration(self):
+        """
+        :return: the duration of a cut note.
+        """
+        return self._duration_of(self._tune.beat_duration / 24)
+
+    @property
+    def _roll_duration(self):
+        """
+        :return: the duration of a single note in a roll.
+        """
+        return self._duration_of(self._tune.beat_duration / 12)
+
     def generate_ornament(
         self, message: mido.Message, ornament_type: str
     ) -> list[mido.Message]:
@@ -161,7 +189,11 @@ class Groover:
             cut = copy.deepcopy(message)
             cut_index = self._tune.semitones_from_tonic(message.note)
             cut.note = tu.above_approach_scale[cut_index] + message.note
-            duration = self._tune.beat_duration / 24
+            cut.velocity = self._current_velocity
+            duration = min(
+                self._cut_duration,
+                self._contour_values["message length"] / 3,
+            )
             cut.time = 0
 
             # note on
@@ -178,9 +210,109 @@ class Groover:
             )
 
             ornaments.append(message)
+            # update offset for next message to make it shorter
+            self._offset = duration
 
-        # update offset for next message to make it shorter
-        self._offset = duration
+        elif ornament_type == ROLL:
+            ornament_index = self._tune.semitones_from_tonic(message.note)
+            message_length = min(
+                self._roll_duration,
+                self._contour_values["message length"] / 4,
+            )
+
+            # calculate cut
+            upper_pitch = tu.above_approach_scale[ornament_index] + message.note
+            upper = mido.Message(
+                "note_on",
+                note=upper_pitch,
+                channel=message.channel,
+                time=0,
+                velocity=self._current_velocity,
+            )
+            upper_off = mido.Message(
+                "note_off",
+                note=upper_pitch,
+                channel=message.channel,
+                time=message_length,
+                velocity=0,
+            )
+
+            # change original note
+            original_1 = copy.deepcopy(message)
+            original_1.time = 0
+            original_1.velocity = self._current_velocity
+            or_1_off = mido.Message(
+                "note_off",
+                note=message.note,
+                channel=message.channel,
+                time=message_length,
+                velocity=0,
+            )
+
+            # calculate cut
+            lower_pitch = tu.below_approach_scale[ornament_index] + message.note
+            lower = mido.Message(
+                "note_on",
+                note=lower_pitch,
+                channel=message.channel,
+                time=0,
+                velocity=self._current_velocity,
+            )
+            lower_off = mido.Message(
+                "note_off",
+                note=lower_pitch,
+                channel=message.channel,
+                time=message_length,
+                velocity=0,
+            )
+
+            # append note on and off events
+            ornaments.append(upper)
+            ornaments.append(upper_off)
+
+            ornaments.append(original_1)
+            ornaments.append(or_1_off)
+
+            ornaments.append(lower)
+            ornaments.append(lower_off)
+
+            ornaments.append(message)
+
+            self._offset = 3 * message_length
+
+        elif ornament_type == SLIDE:
+            # append original note
+            original = copy.deepcopy(message)
+            original.time = 0
+            original.velocity = self._current_velocity
+            ornaments.append(original)
+
+            # calculate pitch bend
+            note_index = self._tune.semitones_from_tonic(message.note)
+            diff = tu.below_approach_scale[note_index]
+            bend = max(min(4096.0 * diff, 8191), -8192)
+
+            # calculate duration
+            resolution = 32
+            slide_time = self._contour_values["message length"] / 4
+            self._offset = slide_time
+            duration = slide_time / resolution
+
+            # append messages
+            for i in range(resolution, -1, -1):
+                p = i / resolution
+                p **= 5
+                p *= bend
+                p = int(p)
+                ornaments.append(
+                    mido.Message(
+                        "pitchwheel", channel=message.channel, pitch=p, time=duration
+                    )
+                )
+            ornaments.append(
+                mido.Message("pitchwheel", channel=message.channel, pitch=0, time=0)
+            )
+
         return ornaments
 
     def choose_ornament(self, message: mido.Message) -> str:
@@ -196,6 +328,22 @@ class Groover:
         is_beat = self._tune.is_on_a_beat()
         if is_beat and random.uniform(0, 1) < CUT_CHANCE:
             options.append(CUT)
+
+        if (
+            random.uniform(0, 1) < ROLL_CHANCE
+            and self._contour_values["message length"] >= self._roll_duration * 4
+        ):
+            options.append(ROLL)
+
+        if (
+            (
+                is_beat
+                and self._contour_values["message length"]
+                > self._tune.beat_duration / 3
+            )
+            or self._contour_values["pitch difference"] >= 5
+        ) and random.uniform(0, 1) < SLIDE_CHANCE:
+            options.append(SLIDE)
 
         if len(options) == 0:
             return None
