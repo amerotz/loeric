@@ -18,6 +18,9 @@ ROLL_CHANCE = 0.5
 SLIDE = "slide"
 SLIDE_CHANCE = 0.5
 
+DROP = "drop"
+DROP_CHANCE = 0.2
+
 
 class Groover:
     """The class responsible for playback, ornamentation and human interaction."""
@@ -63,6 +66,7 @@ class Groover:
             weights=np.array([0.2, 0.3, 0.1, 0.2, 0.2]),
             random_weight=random_weight,
             savgol=apply_savgol,
+            shift=False,
         )
         # tempo contour
         self._contours["tempo"] = cnt.IntensityContour()
@@ -71,6 +75,7 @@ class Groover:
             weights=np.array([0.25, 0.1, 0.3, 0.25, 0.1]),
             random_weight=random_weight,
             savgol=apply_savgol,
+            shift=True,
         )
         # ornament contour
         self._contours["ornament"] = cnt.IntensityContour()
@@ -79,6 +84,7 @@ class Groover:
             weights=np.array([0.2, 0.35, 0.15, 0.15, 0.2]),
             random_weight=random_weight,
             savgol=apply_savgol,
+            shift=False,
         )
         # message length contour
         self._contours["message length"] = cnt.MessageLengthContour()
@@ -170,6 +176,13 @@ class Groover:
         :return: the duration of a single note in a roll.
         """
         return self._duration_of(self._tune.beat_duration / 12)
+
+    @property
+    def tempo(self):
+        """
+        :return: the user-set tempo.
+        """
+        return self._user_tempo
 
     def generate_ornament(
         self, message: mido.Message, ornament_type: str
@@ -312,6 +325,8 @@ class Groover:
             ornaments.append(
                 mido.Message("pitchwheel", channel=message.channel, pitch=0, time=0)
             )
+        elif ornament_type == DROP:
+            pass
 
         return ornaments
 
@@ -326,24 +341,25 @@ class Groover:
         options = []
 
         is_beat = self._tune.is_on_a_beat()
+        message_length = self._duration_of(self._contour_values["message length"])
+
         if is_beat and random.uniform(0, 1) < CUT_CHANCE:
             options.append(CUT)
 
         if (
             random.uniform(0, 1) < ROLL_CHANCE
-            and self._contour_values["message length"] >= self._roll_duration * 4
+            and message_length >= self._roll_duration * 4
         ):
             options.append(ROLL)
 
         if (
-            (
-                is_beat
-                and self._contour_values["message length"]
-                > self._tune.beat_duration / 3
-            )
+            (is_beat and message_length > self._tune.beat_duration / 3)
             or self._contour_values["pitch difference"] >= 5
         ) and random.uniform(0, 1) < SLIDE_CHANCE:
             options.append(SLIDE)
+
+        if not is_beat and random.uniform(0, 1) < DROP_CHANCE:
+            options.append(DROP)
 
         if len(options) == 0:
             return None
@@ -372,10 +388,22 @@ class Groover:
         """
         :return: the current tempo given the value of the tempo contour.
         """
+        # TODO
+        # version 1
+        # warp as a percentage of current tempo
+        """
+        TEMPO_WARP = 0.1
         value = int(
             2 * TEMPO_WARP * self._user_tempo * (self._contour_values["tempo"] - 0.5)
         )
-        return self._user_tempo + value
+        """
+        # version 2
+        # warp as a fixed maximum amount of bpm
+        TEMPO_WARP = 10
+        bpm = mido.tempo2bpm(self._user_tempo)
+        value = 2 * TEMPO_WARP * (self._contour_values["tempo"] - 0.5)
+
+        return mido.bpm2tempo(int(bpm + value))
 
     @property
     def _current_velocity(self) -> int:

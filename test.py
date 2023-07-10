@@ -17,7 +17,7 @@ def main():
     # this should trigger an UncomputedContourError
     # contour.next()
 
-    contour.calculate(tune, random_weight=0.5)
+    contour.calculate(tune, weights=np.array([0, 0, 0, 1, 0]), random_weight=0.5)
     """
     min_contour = np.ones(contour._contour.shape)
     max_contour = np.zeros(contour._contour.shape)

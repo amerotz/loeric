@@ -76,7 +76,7 @@ def is_note(msg: mido.Message) -> bool:
 class Tune:
     """A wrapper for a midi file."""
 
-    def __init__(self, filename: str) -> None:
+    def __init__(self, filename: str):
         """
         Initialize the class. A number of properties is computed:
 
@@ -115,6 +115,20 @@ class Tune:
 
         # to keep track of the performance
         self._performance_time = -self._offset
+
+    @property
+    def key_signature(self) -> str:
+        """
+        :return: the tune's key signature.
+        """
+        return self._key_signature
+
+    @property
+    def time_signature(self) -> m21.meter.TimeSignature:
+        """
+        :return: the tune's time signature.
+        """
+        return self._time_signature
 
     @property
     def tempo(self) -> int:

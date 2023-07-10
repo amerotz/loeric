@@ -143,13 +143,14 @@ class Contour:
         beat_score = np.interp(beat_score, (beat_score.min(), beat_score.max()), (0, 1))
 
         # highest/lowest score
-        highest = notes == max(notes)
-        lowest = notes == min(notes)
+        highest = pitches == max(pitches)
+        lowest = pitches == min(pitches)
         ambitus_score = (highest | lowest).astype(float)
 
         # leap score
-        diff = np.insert(np.diff(notes), 0, 0)
-        leaps = -np.ones(notes.shape)
+        diff = np.diff(pitches)
+        diff = np.insert(diff, 0, 0)
+        leaps = -np.ones(pitches.shape)
         index = np.where(diff >= 7)
         leaps[index] = notes[index]
         values, counts = np.unique(leaps, return_counts=True)
@@ -158,7 +159,10 @@ class Contour:
         )
         leap_score = leap_score.reshape(-1)
         leap_score[np.where(leaps == -1)] = 0
-        leap_score = np.interp(leap_score, (leap_score.min(), leap_score.max()), (0, 1))
+        if leap_score.min() != leap_score.max():
+            leap_score = np.interp(
+                leap_score, (leap_score.min(), leap_score.max()), (0, 1)
+            )
 
         # long score
         timings = timings[note_offs] - timings[note_ons]
@@ -202,6 +206,7 @@ class IntensityContour(Contour):
         weights: np.array = None,
         random_weight: float = 0,
         savgol: bool = True,
+        shift: bool = False,
     ) -> None:
         """
         Compute the contour as the weighted sum of O'Canainn component.
@@ -211,6 +216,7 @@ class IntensityContour(Contour):
         :param weights: the weights for the components, respectively frequency score, beat score, ambitus score, leap score and length score.
         :param random_weight: the weight of the random component over the sum of the weighted O'Canainn scores. If None, the components will be averaged together.
         :param savgol: whether or not to apply a final savgol filtering step (recommended).
+        :param shift: whether or not to apply a final shifting step to bring the mean of the array close to 0.5.
         """
 
         # calculate the components
@@ -240,7 +246,7 @@ class IntensityContour(Contour):
 
         # savgol filtering
         if savgol:
-            self._contour = self.scale_and_savgol(self._contour)
+            self._contour = self.scale_and_savgol(self._contour, shift=shift)
 
 
 class MessageLengthContour(Contour):
@@ -266,7 +272,7 @@ class MessageLengthContour(Contour):
         self._contour = timings[note_offs] - timings[note_ons]
 
 
-class MessageLengthContour(Contour):
+class PitchDifferenceContour(Contour):
     """A contour holding the pitch difference between notes in the tune."""
 
     def __init__(self):
@@ -276,5 +282,8 @@ class MessageLengthContour(Contour):
         self,
         midi: tune.Tune,
     ) -> None:
-        # TODO
-        pass
+        note_events = midi.filter(lambda x: "note" in x.type)
+        pitches = np.array([msg.note for msg in note_events if tune.is_note_on(msg)])
+        diff = np.diff(pitches)
+        diff = np.insert(diff, 0, 0)
+        self._contour = diff
