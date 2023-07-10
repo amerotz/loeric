@@ -19,7 +19,7 @@ SLIDE = "slide"
 SLIDE_CHANCE = 0.5
 
 DROP = "drop"
-DROP_CHANCE = 0.2
+DROP_CHANCE = 0.1
 
 
 class Groover:
@@ -383,12 +383,18 @@ class Groover:
         tempo_ratio = self._current_tempo / self._tune.tempo
         return tempo_ratio * time
 
+    def reset(self) -> None:
+        """
+        Reset all contours so that the next call to `next()` will yield the first value of each contour.
+        """
+        for contour_name in self._contours:
+            self._contours[contour_name].reset()
+
     @property
     def _current_tempo(self) -> int:
         """
         :return: the current tempo given the value of the tempo contour.
         """
-        # TODO
         # version 1
         # warp as a percentage of current tempo
         """

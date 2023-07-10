@@ -38,6 +38,9 @@ def play(out, args) -> None:
                 new_messages = groover.perform(message)
                 player.play(new_messages)
 
+        # reset the groover at the end of the repetition
+        groover.reset()
+
     if args.save:
         player.save(f"generated_{args.source}.mid")
 
