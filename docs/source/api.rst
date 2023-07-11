@@ -5,6 +5,11 @@ API
    :maxdepth: 2
    :caption: Contents:
 
+.. automodule:: loeric.__main__
+   :members:
+   :private-members:
+   :special-members:
+
 .. automodule:: loeric.groover
    :members:
    :private-members:
