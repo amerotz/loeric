@@ -38,7 +38,7 @@ class Groover:
         Initialize the groover class by setting user-defined parameters and creating the contours.
 
         :param tune: the tune that will be performed.
-        :param bpm : the user-defined tempo in bpm for the tune.
+        :param bpm: the user-defined tempo in bpm for the tune.
         :param midi_channel: the midi output channel for all messages.
         :param transpose: the number of semitones by which to transpose the tune.
         :param random_weight: the weight of the random component in contour generation.
