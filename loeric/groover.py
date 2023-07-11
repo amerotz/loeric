@@ -376,7 +376,7 @@ class Groover:
         """
         Calculate the duration in seconds in the current tempo of the input duration, given in tune tempo.
 
-        :param message: the input time value in seconds, given the original tempo.
+        :param time: the input time value in seconds, given the original tempo.
 
         :return: the new duration of the input time value in seconds.
         """

@@ -20,5 +20,9 @@ API
    :private-members:
    :special-members:
 
+.. automodule:: loeric.player
+   :members:
+   :private-members:
+   :special-members:
 
 
