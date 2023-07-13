@@ -17,7 +17,7 @@ def play(out, args) -> None:
     tune = tu.Tune(args.source)
 
     # create groover
-    groover = gr.Groover(tune, bpm=args.bpm, random_weight=0.2)
+    groover = gr.Groover(tune, bpm=args.bpm, random_weight=0.2, config_file=args.config)
 
     # create player
     player = pl.Player(
@@ -129,22 +129,16 @@ if __name__ == "__main__":
     parser.add_argument("--list_ports", action="store_true")
     parser.add_argument("source", nargs="?", default="")
     # parser.add_argument("-c", "--control", type=int)
+    # parser.add_argument("-hi", "--human_impact", type=float, default=0)
     parser.add_argument("-i", "--input", type=int)
     parser.add_argument("-o", "--output", type=int)
-    # parser.add_argument("-sw", "--speed_warp", type=float, default=0.1)
-    # parser.add_argument("-cc", "--cut_chance", type=float, default=1)
-    # parser.add_argument("-dc", "--drop_chance", type=float, default=0.1)
-    # parser.add_argument("-rc", "--roll_chance", type=float, default=1)
-    # parser.add_argument("-sc", "--slide_chance", type=float, default=1)
-    # parser.add_argument("-hi", "--human_impact", type=float, default=0)
     parser.add_argument("-mc", "--midi-channel", type=int, default=1)
     parser.add_argument("-t", "--transpose", type=int, default=0)
     parser.add_argument("-r", "--repeat", type=int, default=1)
     parser.add_argument("-bpm", type=int, default=None)
     parser.add_argument("--save", action="store_true")
-    parser.add_argument("--silent", action="store_true")
-    # parser.add_argument("--random", action="store_true")
     parser.add_argument("--no-prompt", action="store_true")
+    parser.add_argument("--config", type=str, default=None)
     # parser.add_argument("--plot", action="store_true")
     args = parser.parse_args()
 

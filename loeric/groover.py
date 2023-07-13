@@ -9,24 +9,9 @@ import tune as tu
 import contour as cnt
 
 CUT = "cut"
-CUT_CHANCE = 0.5
-
-ROLL = "roll"
-ROLL_CHANCE = 0.5
-
-SLIDE = "slide"
-SLIDE_CHANCE = 0.5
-
 DROP = "drop"
-DROP_CHANCE = 0.1
-
-BEND_RESOLUTION = 32
-CUT_BEAT_DIVISIONS = 24
-ROLL_BEAT_DIVISIONS = 12
-SLIDE_BEAT_DIVISIONS = 3
-SLIDE_PITCH_THRESHOLD = 5
-TEMPO_WARP_BPMS = 10
-BEAT_VELOCITY_INCREASE = 16
+ROLL = "roll"
+SLIDE = "slide"
 
 
 class Groover:
@@ -40,7 +25,7 @@ class Groover:
         transpose: int = 0,
         random_weight: float = 0,
         apply_savgol: bool = True,
-        config_file: str,
+        config_file: str = None,
     ):
         """
         Initialize the groover class by setting user-defined parameters and creating the contours.
@@ -74,7 +59,7 @@ class Groover:
                 "savgol": apply_savgol,
                 "shift": True,
             },
-            "ornaments": {
+            "ornament": {
                 "weights": [0.2, 0.35, 0.15, 0.15, 0.2],
                 "random": random_weight,
                 "savgol": apply_savgol,
@@ -92,8 +77,15 @@ class Groover:
                 "midi_channel": midi_channel,
                 "bpm": bpm,
                 "transpose": transpose,
+                "min_velocity": 0,
+                "max_velocity": 127,
             },
         }
+
+        if config_file is not None:
+            with open(config_file, "r") as f:
+                config_file = json.load(f)
+            self._config = jsonmerge.merge(self._config, config_file)
 
         # generate all parameter settings and contours
         self.__instantiate()
@@ -104,13 +96,13 @@ class Groover:
         """
 
         # set parameters
-        if self._config["bpm"] is None:
+        if self._config["values"]["bpm"] is None:
             self._user_tempo = self._tune.tempo
         else:
-            self._user_tempo = mido.bpm2tempo(self._config["bpm"])
+            self._user_tempo = mido.bpm2tempo(self._config["values"]["bpm"])
 
-        self._midi_channel = self._config["midi_channel"]
-        self._transpose_semitones = self._config["transpose"]
+        self._midi_channel = self._config["values"]["midi_channel"]
+        self._transpose_semitones = self._config["values"]["transpose"]
 
         # create contours
         self._contours = {}
@@ -121,8 +113,8 @@ class Groover:
             self._tune,
             weights=np.array(self._config["velocity"]["weights"]),
             random_weight=self._config["velocity"]["random"],
-            savgol=self._config["savgol"],
-            shift=self._config["shift"],
+            savgol=self._config["velocity"]["savgol"],
+            shift=self._config["velocity"]["shift"],
         )
         # tempo contour
         self._contours["tempo"] = cnt.IntensityContour()
@@ -130,8 +122,8 @@ class Groover:
             self._tune,
             weights=np.array(self._config["tempo"]["weights"]),
             random_weight=self._config["tempo"]["random"],
-            savgol=self._config["savgol"],
-            shift=self._config["shift"],
+            savgol=self._config["tempo"]["savgol"],
+            shift=self._config["tempo"]["shift"],
         )
         # ornament contour
         self._contours["ornament"] = cnt.IntensityContour()
@@ -139,8 +131,8 @@ class Groover:
             self._tune,
             weights=np.array(self._config["ornament"]["weights"]),
             random_weight=self._config["ornament"]["random"],
-            savgol=self._config["savgol"],
-            shift=self._config["shift"],
+            savgol=self._config["ornament"]["savgol"],
+            shift=self._config["ornament"]["shift"],
         )
         # message length contour
         self._contours["message length"] = cnt.MessageLengthContour()
@@ -214,21 +206,28 @@ class Groover:
         """
         :return: the duration of a slide.
         """
-        return self._duration_of(self._tune.beat_duration / SLIDE_BEAT_DIVISIONS)
+        return self._duration_of(
+            self._tune.beat_duration / self._config["values"]["slide_beat_divisions"]
+        )
 
     @property
     def _cut_duration(self):
         """
         :return: the duration of a cut note.
         """
-        return self._duration_of(self._tune.beat_duration / CUT_BEAT_DIVISIONS)
+        return self._duration_of(
+            self._tune.beat_duration / self._config["values"]["cut_beat_divisions"]
+        )
 
     @property
     def _roll_duration(self):
         """
         :return: the duration of a single note in a roll.
         """
-        return self._duration_of(self._tune.beat_duration / ROLL_BEAT_DIVISIONS)
+
+        return self._duration_of(
+            self._tune.beat_duration / self._config["values"]["roll_beat_divisions"]
+        )
 
     @property
     def tempo(self):
@@ -258,6 +257,7 @@ class Groover:
             cut.velocity = self._current_velocity
             duration = min(
                 self._cut_duration,
+                # TODO check this
                 self._contour_values["message length"] / 3,
             )
             cut.time = 0
@@ -283,6 +283,7 @@ class Groover:
             ornament_index = self._tune.semitones_from_tonic(message.note)
             message_length = min(
                 self._roll_duration,
+                # TODO check this
                 self._contour_values["message length"] / 4,
             )
 
@@ -359,12 +360,13 @@ class Groover:
             bend = max(min(4096.0 * diff, 8191), -8192)
 
             # calculate duration
+            resolution = self._config["values"]["bend_resolution"]
             slide_time = self._contour_values["message length"] / 4
             self._offset = slide_time
-            duration = slide_time / BEND_RESOLUTION
+            duration = slide_time / resolution
 
             # append messages
-            for i in range(BEND_RESOLUTION, -1, -1):
+            for i in range(resolution, -1, -1):
                 p = i / resolution
                 p **= 5
                 p *= bend
@@ -395,22 +397,23 @@ class Groover:
         is_beat = self._tune.is_on_a_beat()
         message_length = self._duration_of(self._contour_values["message length"])
 
-        if is_beat and random.uniform(0, 1) < CUT_CHANCE:
+        if is_beat and random.uniform(0, 1) < self._config["probabilities"]["cut"]:
             options.append(CUT)
 
         if (
-            random.uniform(0, 1) < ROLL_CHANCE
+            random.uniform(0, 1) < self._config["probabilities"]["roll"]
             and message_length >= self._roll_duration * 4
         ):
             options.append(ROLL)
 
         if (
             (is_beat and message_length > self._slide_duration)
-            or self._contour_values["pitch difference"] >= SLIDE_PITCH_THRESHOLD
-        ) and random.uniform(0, 1) < SLIDE_CHANCE:
+            or self._contour_values["pitch difference"]
+            >= self._config["values"]["slide_pitch_threshold"]
+        ) and random.uniform(0, 1) < self._config["probabilities"]["slide"]:
             options.append(SLIDE)
 
-        if not is_beat and random.uniform(0, 1) < DROP_CHANCE:
+        if not is_beat and random.uniform(0, 1) < self._config["probabilities"]["drop"]:
             options.append(DROP)
 
         if len(options) == 0:
@@ -458,7 +461,11 @@ class Groover:
         # version 2
         # warp as a fixed maximum amount of bpm
         bpm = mido.tempo2bpm(self._user_tempo)
-        value = 2 * TEMPO_WARP_BPMS * (self._contour_values["tempo"] - 0.5)
+        value = (
+            2
+            * self._config["values"]["tempo_warp_bpms"]
+            * (self._contour_values["tempo"] - 0.5)
+        )
 
         return mido.bpm2tempo(int(bpm + value))
 
@@ -467,10 +474,13 @@ class Groover:
         """
         :return: the current velocity given the value of the velocity contour.
         """
-        value = int(self._contour_values["velocity"] * 127)
+        max_velocity = self._config["values"]["max_velocity"]
+        min_velocity = self._config["values"]["min_velocity"]
+        velocity_range = max_velocity - min_velocity
+        value = int(self._contour_values["velocity"] * velocity_range)
         if self._tune.is_on_a_beat():
-            value += BEAT_VELOCITY_INCREASE
+            value += self._config["values"]["beat_velocity_increase"]
 
         # clamp velocity
-        value = max(min(value, 127), 0)
+        value = max(min(value, max_velocity), min_velocity)
         return value
