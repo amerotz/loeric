@@ -17,7 +17,13 @@ def play(out, args) -> None:
     tune = tu.Tune(args.source)
 
     # create groover
-    groover = gr.Groover(tune, bpm=args.bpm, random_weight=0.2, config_file=args.config)
+    groover = gr.Groover(
+        tune,
+        bpm=args.bpm,
+        random_weight=0.2,
+        human_impact=args.human_impact,
+        config_file=args.config,
+    )
 
     # create player
     player = pl.Player(
@@ -129,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument("--list_ports", action="store_true")
     parser.add_argument("source", nargs="?", default="")
     # parser.add_argument("-c", "--control", type=int)
-    # parser.add_argument("-hi", "--human_impact", type=float, default=0)
+    parser.add_argument("-hi", "--human_impact", type=float, default=0)
     parser.add_argument("-i", "--input", type=int)
     parser.add_argument("-o", "--output", type=int)
     parser.add_argument("-mc", "--midi-channel", type=int, default=1)

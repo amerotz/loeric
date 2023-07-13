@@ -35,6 +35,7 @@
 		"bpm": 120,
 		"transpose": 0,
 		"min_velocity": 0,
-		"max_velocity": 127
+		"max_velocity": 127,
+		"human_impact": 0.5
 	}
 }

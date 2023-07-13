@@ -13,6 +13,14 @@ DROP = "drop"
 ROLL = "roll"
 SLIDE = "slide"
 
+# TODO add human interaction
+
+
+class UnknownContourError(Exception):
+    """Raised if trying to set a contour whose name does not correspond to any of the Groover's contours."""
+
+    pass
+
 
 class Groover:
     """The class responsible for playback, ornamentation and human interaction."""
@@ -24,6 +32,7 @@ class Groover:
         midi_channel: int = 0,
         transpose: int = 0,
         random_weight: float = 0,
+        human_impact: float = 0,
         apply_savgol: bool = True,
         config_file: str = None,
     ):
@@ -52,18 +61,21 @@ class Groover:
                 "random": random_weight,
                 "savgol": apply_savgol,
                 "shift": False,
+                "human_impact": human_impact,
             },
             "tempo": {
                 "weights": [0.25, 0.1, 0.3, 0.25, 0.1],
                 "random": random_weight,
                 "savgol": apply_savgol,
                 "shift": True,
+                "human_impact": human_impact,
             },
             "ornament": {
                 "weights": [0.2, 0.35, 0.15, 0.15, 0.2],
                 "random": random_weight,
                 "savgol": apply_savgol,
                 "shift": False,
+                "human_impact": human_impact,
             },
             "probabilities": {"drop": 0.1, "roll": 0.5, "slide": 0.5, "cut": 0.5},
             "values": {
@@ -143,14 +155,37 @@ class Groover:
 
         # object holding each contour's value in a given moment
         self._contour_values = {}
+        # init the human contour
+        self._contour_values["human"] = None
 
     def advance_contours(self) -> None:
         """
         Retrieve the next value of each contour and store it for future use.
         """
 
+        # update all contours
         for contour_name in self._contours:
             self._contour_values[contour_name] = self._contours[contour_name].next()
+
+        # add the human part
+        if self._contour_values["human"] is not None:
+            for contour_name in ["velocity", "tempo", "ornament"]:
+                hi = self._config[contour_name]["human_impact"]
+                self._contour_values[contour_name] *= 1 - hi
+                self._contour_values[contour_name] += hi * self._contour_values["human"]
+
+    def set_contour_value(contour_name: str, value: float) -> None:
+        """
+        Set the value of a given contour to a given value until the update.
+
+        :param contour_name: the name of the contour.
+        :param value: the value to set the contour to.
+
+        :raise groover.UnknownContourError: if the contour name does not correspond to any of the Groover's contours.
+        """
+        if contour_name not in self._contour_values:
+            raise UnknownContourError
+        self._contour_values[contour_name] = value
 
     def perform(self, message: mido.Message) -> list[mido.Message]:
         """
