@@ -1,14 +1,13 @@
 import mido
+import jsonmerge
 import copy
 import random
+import json
 import numpy as np
 
 import tune as tu
 import contour as cnt
 
-TEMPO_WARP = 0.1
-
-# TODO make this a command line arg
 CUT = "cut"
 CUT_CHANCE = 0.5
 
@@ -20,6 +19,14 @@ SLIDE_CHANCE = 0.5
 
 DROP = "drop"
 DROP_CHANCE = 0.1
+
+BEND_RESOLUTION = 32
+CUT_BEAT_DIVISIONS = 24
+ROLL_BEAT_DIVISIONS = 12
+SLIDE_BEAT_DIVISIONS = 3
+SLIDE_PITCH_THRESHOLD = 5
+TEMPO_WARP_BPMS = 10
+BEAT_VELOCITY_INCREASE = 16
 
 
 class Groover:
@@ -33,9 +40,11 @@ class Groover:
         transpose: int = 0,
         random_weight: float = 0,
         apply_savgol: bool = True,
+        config_file: str,
     ):
         """
         Initialize the groover class by setting user-defined parameters and creating the contours.
+        Any parameters set on class instatiation that are also present in the configuration file will be overwritten. To preserve command line arguments, omit the corresponding fields from the  configuration file.
 
         :param tune: the tune that will be performed.
         :param bpm: the user-defined tempo in bpm for the tune.
@@ -43,19 +52,66 @@ class Groover:
         :param transpose: the number of semitones by which to transpose the tune.
         :param random_weight: the weight of the random component in contour generation.
         :param apply_savgol: whether or not to apply savgol filtering in contour generation. True by default (recommended).
+        :param config_file: the path to the configuration file (must be a JSON file).
         """
 
-        # set parameters
+        # tune
         self._tune = tune
-        if bpm is None:
-            self._user_tempo = self._tune.tempo
-        else:
-            self._user_tempo = mido.bpm2tempo(bpm)
-        self._midi_channel = midi_channel
-        self._transpose_semitones = transpose
 
         # offset for messages after ornaments
         self._offset = 0
+
+        self._config = {
+            "velocity": {
+                "weights": [0.2, 0.3, 0.1, 0.2, 0.2],
+                "random": random_weight,
+                "savgol": apply_savgol,
+                "shift": False,
+            },
+            "tempo": {
+                "weights": [0.25, 0.1, 0.3, 0.25, 0.1],
+                "random": random_weight,
+                "savgol": apply_savgol,
+                "shift": True,
+            },
+            "ornaments": {
+                "weights": [0.2, 0.35, 0.15, 0.15, 0.2],
+                "random": random_weight,
+                "savgol": apply_savgol,
+                "shift": False,
+            },
+            "probabilities": {"drop": 0.1, "roll": 0.5, "slide": 0.5, "cut": 0.5},
+            "values": {
+                "bend_resolution": 32,
+                "cut_beat_divisions": 24,
+                "roll_beat_divisions": 12,
+                "slide_beat_divisions": 3,
+                "slide_pitch_threshold": 5,
+                "tempo_warp_bpms": 10,
+                "beat_velocity_increase": 16,
+                "midi_channel": midi_channel,
+                "bpm": bpm,
+                "transpose": transpose,
+            },
+        }
+
+        # generate all parameter settings and contours
+        self.__instantiate()
+
+    def __instantiate(self):
+        """
+        Generate all parameter settings following the current configuration.
+        """
+
+        # set parameters
+        if self._config["bpm"] is None:
+            self._user_tempo = self._tune.tempo
+        else:
+            self._user_tempo = mido.bpm2tempo(self._config["bpm"])
+
+        self._midi_channel = self._config["midi_channel"]
+        self._transpose_semitones = self._config["transpose"]
+
         # create contours
         self._contours = {}
 
@@ -63,28 +119,28 @@ class Groover:
         self._contours["velocity"] = cnt.IntensityContour()
         self._contours["velocity"].calculate(
             self._tune,
-            weights=np.array([0.2, 0.3, 0.1, 0.2, 0.2]),
-            random_weight=random_weight,
-            savgol=apply_savgol,
-            shift=False,
+            weights=np.array(self._config["velocity"]["weights"]),
+            random_weight=self._config["velocity"]["random"],
+            savgol=self._config["savgol"],
+            shift=self._config["shift"],
         )
         # tempo contour
         self._contours["tempo"] = cnt.IntensityContour()
         self._contours["tempo"].calculate(
             self._tune,
-            weights=np.array([0.25, 0.1, 0.3, 0.25, 0.1]),
-            random_weight=random_weight,
-            savgol=apply_savgol,
-            shift=True,
+            weights=np.array(self._config["tempo"]["weights"]),
+            random_weight=self._config["tempo"]["random"],
+            savgol=self._config["savgol"],
+            shift=self._config["shift"],
         )
         # ornament contour
         self._contours["ornament"] = cnt.IntensityContour()
         self._contours["ornament"].calculate(
             self._tune,
-            weights=np.array([0.2, 0.35, 0.15, 0.15, 0.2]),
-            random_weight=random_weight,
-            savgol=apply_savgol,
-            shift=False,
+            weights=np.array(self._config["ornament"]["weights"]),
+            random_weight=self._config["ornament"]["random"],
+            savgol=self._config["savgol"],
+            shift=self._config["shift"],
         )
         # message length contour
         self._contours["message length"] = cnt.MessageLengthContour()
@@ -95,16 +151,6 @@ class Groover:
 
         # object holding each contour's value in a given moment
         self._contour_values = {}
-
-    @classmethod
-    def from_config(cls, config_file: str):
-        """
-        Initialize the groover class by using a configuration file.
-
-        :param config_file: the configuration file (must be a JSON file).
-        """
-        # TODO
-        pass
 
     def advance_contours(self) -> None:
         """
@@ -164,18 +210,25 @@ class Groover:
         return notes
 
     @property
+    def _slide_duration(self):
+        """
+        :return: the duration of a slide.
+        """
+        return self._duration_of(self._tune.beat_duration / SLIDE_BEAT_DIVISIONS)
+
+    @property
     def _cut_duration(self):
         """
         :return: the duration of a cut note.
         """
-        return self._duration_of(self._tune.beat_duration / 24)
+        return self._duration_of(self._tune.beat_duration / CUT_BEAT_DIVISIONS)
 
     @property
     def _roll_duration(self):
         """
         :return: the duration of a single note in a roll.
         """
-        return self._duration_of(self._tune.beat_duration / 12)
+        return self._duration_of(self._tune.beat_duration / ROLL_BEAT_DIVISIONS)
 
     @property
     def tempo(self):
@@ -306,13 +359,12 @@ class Groover:
             bend = max(min(4096.0 * diff, 8191), -8192)
 
             # calculate duration
-            resolution = 32
             slide_time = self._contour_values["message length"] / 4
             self._offset = slide_time
-            duration = slide_time / resolution
+            duration = slide_time / BEND_RESOLUTION
 
             # append messages
-            for i in range(resolution, -1, -1):
+            for i in range(BEND_RESOLUTION, -1, -1):
                 p = i / resolution
                 p **= 5
                 p *= bend
@@ -353,8 +405,8 @@ class Groover:
             options.append(ROLL)
 
         if (
-            (is_beat and message_length > self._tune.beat_duration / 3)
-            or self._contour_values["pitch difference"] >= 5
+            (is_beat and message_length > self._slide_duration)
+            or self._contour_values["pitch difference"] >= SLIDE_PITCH_THRESHOLD
         ) and random.uniform(0, 1) < SLIDE_CHANCE:
             options.append(SLIDE)
 
@@ -405,9 +457,8 @@ class Groover:
         """
         # version 2
         # warp as a fixed maximum amount of bpm
-        TEMPO_WARP = 10
         bpm = mido.tempo2bpm(self._user_tempo)
-        value = 2 * TEMPO_WARP * (self._contour_values["tempo"] - 0.5)
+        value = 2 * TEMPO_WARP_BPMS * (self._contour_values["tempo"] - 0.5)
 
         return mido.bpm2tempo(int(bpm + value))
 
@@ -418,7 +469,7 @@ class Groover:
         """
         value = int(self._contour_values["velocity"] * 127)
         if self._tune.is_on_a_beat():
-            value += 16
+            value += BEAT_VELOCITY_INCREASE
 
         # clamp velocity
         value = max(min(value, 127), 0)

@@ -1,4 +1,5 @@
 mido
+jsonmerge
 python-rtmidi
 scipy
 argparse

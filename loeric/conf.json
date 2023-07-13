@@ -1,0 +1,38 @@
+{
+	"velocity": {
+		"weights": [0.2, 0.3, 0.1, 0.2, 0.2],
+		"random": 0.2,
+		"savgol": true,
+		"shift": false
+	},
+	"tempo": {
+		"weights": [0.25, 0.1, 0.3, 0.25, 0.1],
+		"random": 0.2,
+		"savgol": true,
+		"shift": true 
+	},
+	"ornaments": {
+		"weights":[0.2, 0.35, 0.15, 0.15, 0.2],
+		"random": 0.2,
+		"savgol": true,
+		"shift": false 
+	},
+	"probabilities": {
+		"drop":0.1,
+		"roll":0.5,
+		"slide":0.5,
+		"cut":0.5
+	},
+	"values": {
+		"bend_resolution" : 32,
+		"cut_beat_divisions" : 24,
+		"roll_beat_divisions" : 12,
+		"slide_beat_divisions" : 3,
+		"slide_pitch_threshold" : 5,
+		"tempo_warp_bpms" : 10,
+		"beat_velocity_increase" : 16,
+		"midi_channel": 0,
+		"bpm": 120,
+		"transpose": 0
+	}
+}
