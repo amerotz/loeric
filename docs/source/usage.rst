@@ -116,6 +116,7 @@ Invoke using:
 
 
 where possible arguments are:
+
 * ``-h, --help``: show this help message and exit
 * ``--list_ports``: list available input and output MIDI ports and exit.
 * ``-i INPUT, --input INPUT``: the input MIDI port.
