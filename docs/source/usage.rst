@@ -109,6 +109,7 @@ The intensity of each note is simply its velocity mapped from ``[0, 127]`` to th
 where ``responsiveness`` is the weight of the newly computed note intensity. A value of ``0`` newver updates the intensity, a value of ``1`` always returns the newest value. Note off events (and thus also note on events with velocity ``0``) are excluded from this computation.
 
 Invoke using:
+
 .. code-block:: bash
 
    python midi_velocity_listener.py [command line arguments]
