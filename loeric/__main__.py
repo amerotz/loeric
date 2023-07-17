@@ -2,6 +2,7 @@ import contour as cnt
 import tune as tu
 import groover as gr
 import player as pl
+import loeric_utils as lu
 
 from collections.abc import Callable
 
@@ -69,41 +70,11 @@ def check_midi_control(
 
 
 def main(args):
-    # list ports
-    if args.list_ports:
-        print("Available inputs:")
-        for i, p in enumerate(mido.get_input_names()):
-            print(f"{i}:\t{p}")
-        print()
-        print("Available outputs:")
-        for i, p in enumerate(mido.get_output_names()):
-            print(f"{i}:\t{p}")
+    inport, outport = lu.get_ports(
+        input_number=args.input, output_number=args.output, list_ports=args.list_ports
+    )
+    if inport is None and outport is None:
         return
-
-    # if no input is defined
-    if args.input is None:
-        print()
-        for i, m in enumerate(mido.get_input_names()):
-            print(f"{i} : {m}")
-        in_index = int(input("Choose input midi port:"))
-        print()
-    else:
-        in_index = args.input
-
-    # if no output is defined
-    if args.output is None:
-        for i, m in enumerate(mido.get_output_names()):
-            print(f"{i} : {m}")
-        out_index = int(input("Choose output midi port:"))
-    else:
-        out_index = args.output
-
-    # get the ports
-    inport = mido.get_input_names()[in_index]
-    outport = mido.get_output_names()[out_index]
-
-    # consistency with MIDI spec and mido
-    args.midi_channel -= 1
 
     # open in
     port = mido.open_input(inport)
@@ -112,6 +83,9 @@ def main(args):
         out = None
     else:
         out = mido.open_output(outport)
+
+    # consistency with MIDI spec and mido
+    args.midi_channel -= 1
 
     if args.no_prompt or (not args.save):
         input("Press any key to start playback:")
@@ -150,7 +124,8 @@ def main(args):
         print("Done.")
 
     port.close()
-    out.close()
+    if out is not None:
+        out.close()
 
 
 if __name__ == "__main__":
@@ -161,20 +136,82 @@ if __name__ == "__main__":
 
     # args
     parser = argparse.ArgumentParser()
-    parser.add_argument("--list_ports", action="store_true")
-    parser.add_argument("source", nargs="?", default="")
-    parser.add_argument("-c", "--control", type=int)
-    parser.add_argument("-hi", "--human_impact", type=float, default=0)
-    parser.add_argument("-i", "--input", type=int)
-    parser.add_argument("-o", "--output", type=int)
-    parser.add_argument("-mc", "--midi-channel", type=int, default=1)
-    parser.add_argument("-t", "--transpose", type=int, default=0)
-    parser.add_argument("-r", "--repeat", type=int, default=1)
-    parser.add_argument("-bpm", type=int, default=None)
-    parser.add_argument("--save", action="store_true")
-    parser.add_argument("--no-prompt", action="store_true")
-    parser.add_argument("--config", type=str, default=None)
-    # parser.add_argument("--plot", action="store_true")
+    parser.add_argument(
+        "--list_ports",
+        help="list available input and output MIDI ports and exit.",
+        action="store_true",
+    )
+    parser.add_argument("source", help="the midi file to play.", nargs="?", default="")
+    parser.add_argument(
+        "-c",
+        "--control",
+        help="the MIDI control signal number to use as human control.",
+        type=int,
+    )
+    parser.add_argument(
+        "-hi",
+        "--human_impact",
+        help="the percentage of human impact over the performance (0: only generated, 1:only human).",
+        type=float,
+        default=0,
+    )
+    parser.add_argument(
+        "-i",
+        "--input",
+        help="the input MIDI port for the control signal.",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="the output MIDI port for the performance.",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "-mc",
+        "--midi-channel",
+        help="the output MIDI channel for the performance.",
+        type=int,
+        default=1,
+    )
+    parser.add_argument(
+        "-t",
+        "--transpose",
+        help="the number of semitones to transpose the tune of",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "-r",
+        "--repeat",
+        help="how many times the tune should be repeated",
+        type=int,
+        default=1,
+    )
+    parser.add_argument(
+        "-bpm",
+        help="the tempo of the performance. If None, defaults to the original file's tempo.",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "--save",
+        help="whether or not to export the performance. Playback will be disabled.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--no-prompt",
+        help="whether or not to wait for user input before starting.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--config",
+        help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
+        type=str,
+        default=None,
+    )
     args = parser.parse_args()
 
     main(args)

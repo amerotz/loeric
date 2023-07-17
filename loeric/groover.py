@@ -13,8 +13,6 @@ DROP = "drop"
 ROLL = "roll"
 SLIDE = "slide"
 
-# TODO add human interaction
-
 
 class UnknownContourError(Exception):
     """Raised if trying to set a contour whose name does not correspond to any of the Groover's contours."""
@@ -84,7 +82,7 @@ class Groover:
                 "roll_beat_divisions": 12,
                 "slide_beat_divisions": 3,
                 "slide_pitch_threshold": 5,
-                "tempo_warp_bpms": 10,
+                "tempo_warp_bpms": 0,
                 "beat_velocity_increase": 16,
                 "midi_channel": midi_channel,
                 "bpm": bpm,
@@ -156,7 +154,10 @@ class Groover:
         # object holding each contour's value in a given moment
         self._contour_values = {}
         # init the human contour
-        self._contour_values["human"] = None
+        self._contour_values["human"] = 0.5
+        # init all contours
+        for contour_name in self._contours:
+            self._contour_values[contour_name] = 0.5
 
     def advance_contours(self) -> None:
         """
@@ -219,7 +220,8 @@ class Groover:
         new_message.time = self._duration_of(new_message.time)
 
         # change loudness
-        new_message.velocity = self._current_velocity
+        if is_note_on:
+            new_message.velocity = self._current_velocity
 
         notes = [new_message]
 
@@ -284,6 +286,7 @@ class Groover:
         """
 
         ornaments = []
+        message_length = self._duration_of(self._contour_values["message length"])
         if ornament_type == CUT:
             # generate a cut
             cut = copy.deepcopy(message)
@@ -292,8 +295,7 @@ class Groover:
             cut.velocity = self._current_velocity
             duration = min(
                 self._cut_duration,
-                # TODO check this
-                self._contour_values["message length"] / 3,
+                message_length / 3,
             )
             cut.time = 0
 
@@ -318,8 +320,7 @@ class Groover:
             ornament_index = self._tune.semitones_from_tonic(message.note)
             message_length = min(
                 self._roll_duration,
-                # TODO check this
-                self._contour_values["message length"] / 4,
+                message_length / 4,
             )
 
             # calculate cut
@@ -396,7 +397,7 @@ class Groover:
 
             # calculate duration
             resolution = self._config["values"]["bend_resolution"]
-            slide_time = self._contour_values["message length"] / 4
+            slide_time = message_length / 4
             self._offset = slide_time
             duration = slide_time / resolution
 
