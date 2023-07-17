@@ -3,28 +3,19 @@ import tune as tu
 import groover as gr
 import player as pl
 
+from collections.abc import Callable
+
 
 # play midi file
-def play(out, args) -> None:
+def play(groover, tune, out, args) -> None:
     """
-    Play the given tune.
+    Play the given tune with the given groover.
 
+    :param groover: the groover object
+    :param tune: the tune object
     :param out: the output midi port
     :param args: the performance arguments
     """
-
-    # load a tune
-    tune = tu.Tune(args.source)
-
-    # create groover
-    groover = gr.Groover(
-        tune,
-        bpm=args.bpm,
-        random_weight=0.2,
-        human_impact=args.human_impact,
-        config_file=args.config,
-    )
-
     # create player
     player = pl.Player(
         tempo=groover.tempo,
@@ -51,6 +42,30 @@ def play(out, args) -> None:
         player.save(f"generated_{args.source}.mid")
 
     print("Playback terminated.")
+
+
+def check_midi_control(
+    groover: gr.Groover, control2contour: dict[int, str]
+) -> Callable[[], None]:
+    """
+    Returns a function that associates a contour name (values) for every MIDI control number in the dictionary (keys) and updates the groover accordingly.
+    The value of the contour will be the control value mapped in the interval [0, 1].
+
+    :param groover: the groover object.
+    :param control2contour: a dictionary of control numbers associated to contour names.
+
+    :return: a callback function that will check for the given values.
+    """
+
+    def callback(msg):
+        for event_number in control2contour:
+            if msg.is_cc(event_number):
+                contour_name = control2contour[event_number]
+                value = msg.value / 127
+                groover.set_contour_value(contour_name, value)
+                print(f"{contour_name}: {round(value, 2)}")
+
+    return callback
 
 
 def main(args):
@@ -103,7 +118,24 @@ def main(args):
 
     # start the player thread
     try:
-        t = threading.Thread(target=play, args=(out, args))
+        # load a tune
+        tune = tu.Tune(args.source)
+
+        # create groover
+        groover = gr.Groover(
+            tune,
+            bpm=args.bpm,
+            midi_channel=args.midi_channel,
+            transpose=args.transpose,
+            random_weight=0.2,
+            human_impact=args.human_impact,
+            config_file=args.config,
+        )
+
+        # set input callback
+        port.callback = check_midi_control(groover, {42: "human"})
+
+        t = threading.Thread(target=play, args=(groover, tune, out, args))
         t.start()
         t.join()
 
@@ -115,9 +147,10 @@ def main(args):
             out.send(
                 mido.Message("note_off", note=i, velocity=0, channel=args.midi_channel)
             )
-        port.close()
-        out.close()
         print("Done.")
+
+    port.close()
+    out.close()
 
 
 if __name__ == "__main__":

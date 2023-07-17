@@ -100,9 +100,9 @@ class Groover:
             self._config = jsonmerge.merge(self._config, config_file)
 
         # generate all parameter settings and contours
-        self.__instantiate()
+        self._instantiate()
 
-    def __instantiate(self):
+    def _instantiate(self):
         """
         Generate all parameter settings following the current configuration.
         """
@@ -174,7 +174,7 @@ class Groover:
                 self._contour_values[contour_name] *= 1 - hi
                 self._contour_values[contour_name] += hi * self._contour_values["human"]
 
-    def set_contour_value(contour_name: str, value: float) -> None:
+    def set_contour_value(self, contour_name: str, value: float) -> None:
         """
         Set the value of a given contour to a given value until the update.
 
