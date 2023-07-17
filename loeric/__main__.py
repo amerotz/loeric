@@ -133,7 +133,7 @@ def main(args):
         )
 
         # set input callback
-        port.callback = check_midi_control(groover, {42: "human"})
+        port.callback = check_midi_control(groover, {args.control: "human"})
 
         t = threading.Thread(target=play, args=(groover, tune, out, args))
         t.start()
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--list_ports", action="store_true")
     parser.add_argument("source", nargs="?", default="")
-    # parser.add_argument("-c", "--control", type=int)
+    parser.add_argument("-c", "--control", type=int)
     parser.add_argument("-hi", "--human_impact", type=float, default=0)
     parser.add_argument("-i", "--input", type=int)
     parser.add_argument("-o", "--output", type=int)
