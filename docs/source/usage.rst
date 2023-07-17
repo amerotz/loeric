@@ -100,18 +100,31 @@ MIDI Velocity Listener
 
 This script continuously reads MIDI input on the given port and sends a control signal with a given event number on a given port corresponding to "intensity" computed from the MIDI velocity of played notes.
 
-  * ``-h, --help``: show this help message and exit
-  * ``--list_ports``: list available input and output MIDI ports and exit.
-  -i INPUT, --input INPUT
-                        the input MIDI port.
-  -o OUTPUT, --output OUTPUT
-                        the output MIDI port.
-  -c CONTROL, --control CONTROL
-                        the control channel on which
-                        intensity is sent.
-  -r RESPONSIVE, --responsive RESPONSIVE
-                        the weight of incoming values
-                        when computing intensity, in
-                        range 0 to 1.
+The intensity of each note is simply its velocity mapped from ``[0, 127]`` to the interval ``[0, 1]``. The new intensity value is then computed as:
+
+.. code-block:: python
+
+   value = old_value * (1 - responsiveness) + note_value - responsiveness
+
+where ``responsiveness`` is the weight of the newly computed note intensity. A value of ``0`` newver updates the intensity, a value of ``1`` always returns the newest value. Note off events (and thus also note on events with velocity ``0``) are excluded from this computation.
+
+Invoke using:
+.. code-block:: bash
+
+   python midi_velocity_listener.py [command line arguments]
 
 
+where possible arguments are:
+* ``-h, --help``: show this help message and exit
+* ``--list_ports``: list available input and output MIDI ports and exit.
+* ``-i INPUT, --input INPUT``: the input MIDI port.
+* ``-o OUTPUT, --output OUTPUT``: the output MIDI port.
+* ``-c CONTROL, --control CONTROL``: the control channel on which intensity is sent.
+* ``-r RESPONSIVE, --responsive RESPONSIVE``: the weight of incoming values when computing intensity, in range 0 to 1.
+
+When using ``loeric``, use the ``--list_ports`` option to identify the port you just opened and use it as input port. Make sure to monitor the same event number with the ``--c`` option.
+
+Other Listeners
+======================
+
+Coming soon.
