@@ -33,7 +33,8 @@ Performing a tune
 -----------------
 To perform a tune, invoke:
 
-.. code-block: bash
+.. code-block:: bash
+
    python loeric <tune MIDI file> [command line arguments]
 
 where the possible arguments are
