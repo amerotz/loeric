@@ -103,31 +103,27 @@ def main(args):
 
     # start the player thread
     try:
-        p = multiprocessing.Process(target=play, args=(out, args))
-        p.start()
-        p.join()
+        t = threading.Thread(target=play, args=(out, args))
+        t.start()
+        t.join()
 
     except KeyboardInterrupt:
         print("Playback stopped by user.")
         print("Attempting graceful shutdown...")
-        p.terminate()
         # make sure to turn off all notes
         for i in range(128):
             out.send(
                 mido.Message("note_off", note=i, velocity=0, channel=args.midi_channel)
             )
-        print("Done.")
         port.close()
         out.close()
-        sys.exit()
+        print("Done.")
 
 
 if __name__ == "__main__":
     import argparse
     import mido
-    import multiprocessing
-    import traceback
-    import sys
+    import threading
     import time
 
     # args
