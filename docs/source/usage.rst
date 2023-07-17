@@ -96,7 +96,7 @@ Available Control Scripts
 There are a few scripts that compute an intensity value based on some user activity and output it as a control signal on a given port.
 
 MIDI Velocity Listener
-======================
+^^^^^^^^^^^^^^^^^^^^^^
 
 This script continuously reads MIDI input on the given port and sends a control signal with a given event number on a given port corresponding to "intensity" computed from the MIDI velocity of played notes.
 
@@ -125,6 +125,6 @@ where possible arguments are:
 When using ``loeric``, use the ``--list_ports`` option to identify the port you just opened and use it as input port. Make sure to monitor the same event number with the ``--c`` option.
 
 Other Listeners
-======================
+^^^^^^^^^^^^^^^
 
 Coming soon.
