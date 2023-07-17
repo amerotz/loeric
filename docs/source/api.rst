@@ -10,12 +10,6 @@ API
    :private-members:
    :special-members:
 
-.. automodule:: loeric.midi_velocity_listener
-   :members:
-   :private-members:
-   :special-members:
-
-
 .. automodule:: loeric.loeric_utils
    :members:
    :private-members:
