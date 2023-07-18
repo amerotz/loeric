@@ -104,6 +104,7 @@ class Groover:
                 "max_pitch_error": 3,
                 "min_pitch_error": -3,
                 "diatonic_errors": diatonic_errors,
+                "max_microtiming_ms": 10,
             },
         }
 
@@ -218,6 +219,12 @@ class Groover:
         # work on a deepcopy to avoid side effects
         new_message = copy.deepcopy(message)
         new_message.time -= self._offset
+
+        # add microtiming
+        ms = self._config["values"]["max_microtiming_ms"]
+        new_message.time += random.randint(-ms, ms) / 1000
+        new_message.time = max(0, new_message.time)
+
         self._offset = 0
 
         # change midi channel
