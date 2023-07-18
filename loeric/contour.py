@@ -3,6 +3,7 @@ import numpy as np
 from scipy.signal import savgol_filter
 
 import tune
+import loeric_utils as lu
 
 
 class UncomputedContourError(Exception):
@@ -104,11 +105,11 @@ class Contour:
         # note_events = [msg for msg in midi if "note" in msg.type]
         note_events = midi.filter(lambda x: "note" in x.type)
         timings = np.array([msg.time for msg in note_events])
-        pitches = np.array([msg.note for msg in note_events if tune.is_note_on(msg)])
+        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
 
         # cumulative time
-        note_ons = np.array([tune.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not tune.is_note_on(msg) for msg in note_events])
+        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
+        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
         summed_timings = np.cumsum(timings)
         summed_timings -= midi.offset
         summed_timings = summed_timings[note_ons]
@@ -187,7 +188,7 @@ class RandomContour(Contour):
         :param midi: the input tune.
         :param extremes: the upper and lower bound for the random contour. If None, the range will be (0, 1).
         """
-        note_events = midi.filter(lambda x: tune.is_note_on(x))
+        note_events = midi.filter(lambda x: lu.is_note_on(x))
         size = len(note_events)
         if extremes is None:
             extremes = (0, 1)
@@ -267,8 +268,8 @@ class MessageLengthContour(Contour):
 
         note_events = midi.filter(lambda x: "note" in x.type)
         timings = np.array([msg.time for msg in note_events])
-        note_ons = np.array([tune.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not tune.is_note_on(msg) for msg in note_events])
+        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
+        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
         self._contour = timings[note_offs] - timings[note_ons]
 
 
@@ -283,7 +284,7 @@ class PitchDifferenceContour(Contour):
         midi: tune.Tune,
     ) -> None:
         note_events = midi.filter(lambda x: "note" in x.type)
-        pitches = np.array([msg.note for msg in note_events if tune.is_note_on(msg)])
+        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
         diff = np.diff(pitches)
         diff = np.insert(diff, 0, 0)
         self._contour = diff

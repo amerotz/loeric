@@ -7,11 +7,15 @@ import numpy as np
 
 import tune as tu
 import contour as cnt
+import loeric_utils as lu
+
+from collections import defaultdict
 
 CUT = "cut"
 DROP = "drop"
 ROLL = "roll"
 SLIDE = "slide"
+ERROR = "error"
 
 
 class UnknownContourError(Exception):
@@ -29,6 +33,7 @@ class Groover:
         bpm: int = None,
         midi_channel: int = 0,
         transpose: int = 0,
+        diatonic_errors: bool = True,
         random_weight: float = 0,
         human_impact: float = 0,
         apply_savgol: bool = True,
@@ -42,6 +47,7 @@ class Groover:
         :param bpm: the user-defined tempo in bpm for the tune.
         :param midi_channel: the midi output channel for all messages.
         :param transpose: the number of semitones by which to transpose the tune.
+        :param diatonic_errors: whether or not error generation should be quantized to the tune's mode.
         :param random_weight: the weight of the random component in contour generation.
         :param apply_savgol: whether or not to apply savgol filtering in contour generation. True by default (recommended).
         :param config_file: the path to the configuration file (must be a JSON file).
@@ -80,7 +86,7 @@ class Groover:
                 "roll": 0.5,
                 "slide": 0.5,
                 "cut": 0.5,
-                "error": 0.5,
+                "error": 0.1,
             },
             "values": {
                 "bend_resolution": 32,
@@ -95,6 +101,9 @@ class Groover:
                 "transpose": transpose,
                 "min_velocity": 0,
                 "max_velocity": 127,
+                "max_pitch_error": 3,
+                "min_pitch_error": -3,
+                "diatonic_errors": diatonic_errors,
             },
         }
 
@@ -119,6 +128,8 @@ class Groover:
 
         self._midi_channel = self._config["values"]["midi_channel"]
         self._transpose_semitones = self._config["values"]["transpose"]
+        # table for pitch errors
+        self._pitch_errors = defaultdict(int)
 
         # create contours
         self._contours = {}
@@ -217,12 +228,21 @@ class Groover:
         new_message.channel = self._midi_channel
 
         # if it's a note message
-        if tu.is_note(new_message):
+        if lu.is_note(new_message):
             # transpose note
             new_message.note += self._transpose_semitones
 
+        # change note offs of errors
+        if lu.is_note_off(new_message):
+            key = new_message.note
+            if key in self._pitch_errors:
+                value = self._pitch_errors[key]
+                new_message.note += value
+                # reset error
+                del self._pitch_errors[key]
+
         # check if note on event
-        is_note_on = tu.is_note_on(new_message)
+        is_note_on = lu.is_note_on(new_message)
         if is_note_on:
             # advance the contours
             self.advance_contours()
@@ -302,7 +322,7 @@ class Groover:
             # generate a cut
             cut = copy.deepcopy(message)
             cut_index = self._tune.semitones_from_tonic(message.note)
-            cut.note = tu.above_approach_scale[cut_index] + message.note
+            cut.note = lu.above_approach_scale[cut_index] + message.note
             cut.velocity = self._current_velocity
             duration = min(
                 self._cut_duration,
@@ -335,7 +355,7 @@ class Groover:
             )
 
             # calculate cut
-            upper_pitch = tu.above_approach_scale[ornament_index] + message.note
+            upper_pitch = lu.above_approach_scale[ornament_index] + message.note
             upper = mido.Message(
                 "note_on",
                 note=upper_pitch,
@@ -364,7 +384,7 @@ class Groover:
             )
 
             # calculate cut
-            lower_pitch = tu.below_approach_scale[ornament_index] + message.note
+            lower_pitch = lu.below_approach_scale[ornament_index] + message.note
             lower = mido.Message(
                 "note_on",
                 note=lower_pitch,
@@ -403,7 +423,7 @@ class Groover:
 
             # calculate pitch bend
             note_index = self._tune.semitones_from_tonic(message.note)
-            diff = tu.below_approach_scale[note_index]
+            diff = lu.below_approach_scale[note_index]
             bend = max(min(4096.0 * diff, 8191), -8192)
 
             # calculate duration
@@ -428,6 +448,38 @@ class Groover:
             )
         elif ornament_type == DROP:
             pass
+        elif ornament_type == ERROR:
+            max_limit = self._config["values"]["max_pitch_error"]
+            min_limit = self._config["values"]["min_pitch_error"]
+            # generate error
+            value = random.randint(min_limit, max_limit)
+
+            # correct if diatonic errors are required
+            if self._config["values"]["diatonic_errors"]:
+                new_note = message.note + value
+
+                # get note position in scale
+                note_index = self._tune.semitones_from_tonic(new_note)
+
+                # if quantization needed
+                if lu.needs_pitch_quantization[note_index]:
+                    # check both quantizing up and down
+                    opt = {
+                        abs(value - 1): -1,
+                        abs(value + 1): 1,
+                    }
+                    # if one option leaves the note unchanged, use the other
+                    if min(opt) == 0:
+                        value += opt[max(opt)]
+                    else:
+                        value -= opt[min(opt)]
+
+            # record error for that note for later note off event
+            self._pitch_errors[message.note] = value
+            # create the new message
+            new_message = copy.deepcopy(message)
+            new_message.note += value
+            ornaments.append(new_message)
 
         return ornaments
 
@@ -462,6 +514,9 @@ class Groover:
 
         if not is_beat and random.uniform(0, 1) < self._config["probabilities"]["drop"]:
             options.append(DROP)
+
+        if random.uniform(0, 1) < self._config["probabilities"]["error"]:
+            options.append(ERROR)
 
         if len(options) == 0:
             return None

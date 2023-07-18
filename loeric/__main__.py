@@ -101,6 +101,7 @@ def main(args):
             bpm=args.bpm,
             midi_channel=args.midi_channel,
             transpose=args.transpose,
+            diatonic_errors=args.diatonic,
             random_weight=0.2,
             human_impact=args.human_impact,
             config_file=args.config,
@@ -125,6 +126,7 @@ def main(args):
 
     port.close()
     if out is not None:
+        out.reset()
         out.close()
 
 
@@ -182,6 +184,12 @@ if __name__ == "__main__":
         help="the number of semitones to transpose the tune of",
         type=int,
         default=0,
+    )
+    parser.add_argument(
+        "-d",
+        "--diatonic",
+        help="whether or not error generation should be quantized to the tune's mode",
+        action="store_true",
     )
     parser.add_argument(
         "-r",
