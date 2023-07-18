@@ -162,10 +162,6 @@ class Groover:
             shift=self._config["ornament"]["shift"],
         )
 
-        # error contour
-        self._contours["error"] = cnt.RandomContour()
-        self._contours["error"].calculate(self._tune, extremes=(0, 1))
-
         # message length contour
         self._contours["message length"] = cnt.MessageLengthContour()
         self._contours["message length"].calculate(self._tune)
