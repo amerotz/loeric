@@ -87,7 +87,7 @@ class Groover:
                 "slide": 0.5,
                 "cut": 0.5,
                 "error": 0.1,
-            },;
+            },
             "values": {
                 "bend_resolution": 32,
                 "cut_beat_divisions": 24,
