@@ -75,7 +75,13 @@ class Groover:
                 "shift": False,
                 "human_impact": human_impact,
             },
-            "probabilities": {"drop": 0.1, "roll": 0.5, "slide": 0.5, "cut": 0.5},
+            "probabilities": {
+                "drop": 0.1,
+                "roll": 0.5,
+                "slide": 0.5,
+                "cut": 0.5,
+                "error": 0.5,
+            },
             "values": {
                 "bend_resolution": 32,
                 "cut_beat_divisions": 24,
@@ -144,6 +150,11 @@ class Groover:
             savgol=self._config["ornament"]["savgol"],
             shift=self._config["ornament"]["shift"],
         )
+
+        # error contour
+        self._contours["error"] = cnt.RandomContour()
+        self._contours["error"].calculate(self._tune, extremes=(0, 1))
+
         # message length contour
         self._contours["message length"] = cnt.MessageLengthContour()
         self._contours["message length"].calculate(self._tune)
