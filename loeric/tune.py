@@ -10,10 +10,6 @@ from typing import Generator
 # most notes played in a minute on a piano
 TRIGGER_DELTA = 0.05
 
-# how to approach a note from above or below in a major scale
-above_approach_scale = [2, 1, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1]
-below_approach_scale = [-1, -1, -2, -1, -2, -1, -1, -2, -1, -2, -1, -2]
-
 # key signatures
 _number_of_fifths = {
     "Cb": -7,
@@ -47,30 +43,6 @@ _number_of_fifths = {
     "C#": 7,
     "A#m": 7,
 }
-
-
-def is_note_on(msg: mido.Message) -> bool:
-    """
-    Check if a midi event is to be considered a note-on event, that is:
-    * its type is "note-on";
-    * it has non-zero velocity.
-
-    :param msg: the message to check.
-
-    :return: True if the message is a note on event.
-    """
-    return msg.type == "note_on" and msg.velocity != 0
-
-
-def is_note(msg: mido.Message) -> bool:
-    """
-    Check if a midi event is a note event (either note-on or note-off).
-
-    :param msg: the message to check.
-
-    :return: True if the message is a note event.
-    """
-    return "note" in msg.type
 
 
 class Tune:

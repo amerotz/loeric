@@ -48,6 +48,7 @@ where the possible arguments are
 * ``-o OUTPUT, --output OUTPUT``: the output MIDI port for the performance;
 * ``-mc MIDI_CHANNEL, --midi-channel MIDI_CHANNEL``: the output MIDI channel for the performance;
 * ``-t TRANSPOSE, --transpose TRANSPOSE``: the number of semitones to transpose the tune of;
+* ``-d, --diatonic``: whether or not error generation should be quantized to the tune's mode;
 * ``-r REPEAT, --repeat REPEAT``: how many times the tune should be repeated;
 * ``-bpm BPM``: the tempo of the performance. If None, defaults to the original file's tempo;
 * ``--save``: whether or not to export the performance. Playback will be disabled;

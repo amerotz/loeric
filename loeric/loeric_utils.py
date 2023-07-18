@@ -1,5 +1,64 @@
 import mido
 
+# how to approach a note from above or below in a major scale
+above_approach_scale = [2, 1, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1]
+below_approach_scale = [-1, -1, -2, -1, -2, -1, -1, -2, -1, -2, -1, -2]
+
+# pitches that need quantization to major scale (then shifted according to modes)
+needs_pitch_quantization = [
+    False,  # C
+    True,  # C#
+    False,  # D
+    True,  # D#
+    False,  # E
+    False,  # F
+    True,  # F#
+    False,  # G
+    True,  # G#
+    False,  # A
+    True,  # A#
+    False,  # B
+]
+
+
+def is_note_on(msg: mido.Message) -> bool:
+    """
+    Check if a midi event is to be considered a note-on event, that is:
+
+    * its type is "note-on";
+    * it has non-zero velocity.
+
+    :param msg: the message to check.
+
+    :return: True if the message is a note on event.
+    """
+    return msg.type == "note_on" and msg.velocity != 0
+
+
+def is_note_off(msg: mido.Message) -> bool:
+    """
+    Check if a midi event is to be considered a note-off event, that is:
+
+    * its type is "note-off" or
+    * its type is "note-on" and it has 0 velocity.
+
+    :param msg: the message to check.
+
+    :return: True if the message is a note on event.
+    """
+    return msg.type == "note_off" or (msg.type == "note_on" and msg.velocity == 0)
+
+
+def is_note(msg: mido.Message) -> bool:
+    """
+    Check if a midi event is a note event (either note-on or note-off).
+
+    :param msg: the message to check.
+
+    :return: True if the message is a note event.
+    """
+    return "note" in msg.type
+
 
 def get_ports(
     input_number: int = None, output_number: int = None, list_ports: bool = False
