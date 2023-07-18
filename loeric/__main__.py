@@ -77,9 +77,13 @@ def main(args):
         return
 
     # open in
-    port = mido.open_input(inport)
+    if inport is not None:
+        port = mido.open_input(inport)
+    else:
+        port = None
+
     # open out
-    if args.save:
+    if args.save or outport is None:
         out = None
     else:
         out = mido.open_output(outport)
@@ -108,7 +112,8 @@ def main(args):
         )
 
         # set input callback
-        port.callback = check_midi_control(groover, {args.control: "human"})
+        if port is not None:
+            port.callback = check_midi_control(groover, {args.control: "human"})
 
         t = threading.Thread(target=play, args=(groover, tune, out, args))
         t.start()
@@ -118,13 +123,17 @@ def main(args):
         print("Playback stopped by user.")
         print("Attempting graceful shutdown...")
         # make sure to turn off all notes
-        for i in range(128):
-            out.send(
-                mido.Message("note_off", note=i, velocity=0, channel=args.midi_channel)
-            )
+        if out is not None:
+            for i in range(128):
+                out.send(
+                    mido.Message(
+                        "note_off", note=i, velocity=0, channel=args.midi_channel
+                    )
+                )
         print("Done.")
 
-    port.close()
+    if port is not None:
+        port.close()
     if out is not None:
         out.reset()
         out.close()
