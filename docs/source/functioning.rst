@@ -51,3 +51,8 @@ Tempo
 
 Tempo is modeled as a shift in performance BPM, with lower intensity corresponding to a slower tempo and higher intensity to a faster tempo.
 In the first iteration of the system, the maximum amount of tempo drift was modeled as a percentage of the original tempo (e.g. 10% slower). We have now switched to a fixed amount of BPM around the original tempo (e.g. ±10 BPM).
+
+Microtiming
+^^^^^^^^^^^
+
+By "microtiming" we mean a random shift of MIDI event times in the order of milliseconds (in practice, could be set to any value). Microtiming is most useful when having more than one instrument playing, as it outphases the instruments and makes the sound of the ensemble more natural, instead of completely synchronized. At the moment microtiming is not contour-dependent since it is not explicitly connected to performance intensity, but rather the normal imperfections of human playing.
