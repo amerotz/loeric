@@ -34,5 +34,9 @@
 		"transpose": 0,
 		"min_velocity": 0,
 		"max_velocity": 127
+	},
+	"approach_from_above": {
+	},
+	"approach_from_below": {
 	}
 }

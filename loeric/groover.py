@@ -4,6 +4,7 @@ import copy
 import random
 import json
 import numpy as np
+import music21 as m21
 
 import tune as tu
 import contour as cnt
@@ -94,18 +95,20 @@ class Groover:
                 "roll_beat_divisions": 12,
                 "slide_beat_divisions": 3,
                 "slide_pitch_threshold": 5,
-                "tempo_warp_bpms": 0,
+                "tempo_warp_bpms": 10,
                 "beat_velocity_increase": 16,
                 "midi_channel": midi_channel,
                 "bpm": bpm,
                 "transpose": transpose,
                 "min_velocity": 0,
                 "max_velocity": 127,
-                "max_pitch_error": 3,
-                "min_pitch_error": -3,
+                "max_pitch_error": 2,
+                "min_pitch_error": -2,
                 "diatonic_errors": diatonic_errors,
                 "max_microtiming_ms": 10,
             },
+            "approach_from_above": {},
+            "approach_from_below": {},
         }
 
         if config_file is not None:
@@ -307,6 +310,46 @@ class Groover:
         """
         return self._user_tempo
 
+    def approach_from_above(self, note_number: int, tune: tu.Tune) -> int:
+        """
+        Return the midi note number to approach the given note from above.
+        If no special approach rule is specified in the configuration file, it will return the next note in the scale of the tune's key from the given note.
+
+        :param note_number: the note to approach.
+        :param tune: the reference tune.
+
+        :return: the note used the approach the given note from above.
+        """
+        note_name = m21.pitch.Pitch(midi=note_number).nameWithOctave
+        # use configuration
+        if note_name in self._config["approach_from_above"]:
+            pitch = m21.pitch.Pitch(self._config["approach_from_above"][note_name])
+            return pitch.midi
+        # use normal scale
+        else:
+            index = self._tune.semitones_from_tonic(note_number)
+            return lu.above_approach_scale[index] + note_number
+
+    def approach_from_below(self, note_number: int, tune: tu.Tune) -> int:
+        """
+        Return the midi note number to approach the given note from below.
+        If no special approach rule is specified in the configuration file, it will return the previous note in the scale of the tune's key from the given note.
+
+        :param note_number: the note to approach.
+        :param tune: the reference tune.
+
+        :return: the note used the approach the given note from below.
+        """
+        note_name = m21.pitch.Pitch(midi=note_number).nameWithOctave
+        # use configuration
+        if note_name in self._config["approach_from_below"]:
+            pitch = m21.pitch.Pitch(self._config["approach_from_below"][note_name])
+            return pitch.midi
+        # use normal scale
+        else:
+            index = self._tune.semitones_from_tonic(note_number)
+            return lu.below_approach_scale[index] + note_number
+
     def generate_ornament(
         self, message: mido.Message, ornament_type: str
     ) -> list[mido.Message]:
@@ -324,8 +367,7 @@ class Groover:
         if ornament_type == CUT:
             # generate a cut
             cut = copy.deepcopy(message)
-            cut_index = self._tune.semitones_from_tonic(message.note)
-            cut.note = lu.above_approach_scale[cut_index] + message.note
+            cut.note = self.approach_from_above(message.note, self._tune)
             cut.velocity = self._current_velocity
             duration = min(
                 self._cut_duration,
@@ -351,14 +393,13 @@ class Groover:
             self._offset = duration
 
         elif ornament_type == ROLL:
-            ornament_index = self._tune.semitones_from_tonic(message.note)
             message_length = min(
                 self._roll_duration,
                 message_length / 4,
             )
 
             # calculate cut
-            upper_pitch = lu.above_approach_scale[ornament_index] + message.note
+            upper_pitch = self.approach_from_above(message.note, self._tune)
             upper = mido.Message(
                 "note_on",
                 note=upper_pitch,
@@ -387,7 +428,7 @@ class Groover:
             )
 
             # calculate cut
-            lower_pitch = lu.below_approach_scale[ornament_index] + message.note
+            lower_pitch = self.approach_from_below(message.note, self._tune)
             lower = mido.Message(
                 "note_on",
                 note=lower_pitch,
@@ -425,8 +466,7 @@ class Groover:
             ornaments.append(original)
 
             # calculate pitch bend
-            note_index = self._tune.semitones_from_tonic(message.note)
-            diff = lu.below_approach_scale[note_index]
+            diff = self.approach_from_below(message.note, self._tune) - message.note
             bend = max(min(4096.0 * diff, 8191), -8192)
 
             # calculate duration
