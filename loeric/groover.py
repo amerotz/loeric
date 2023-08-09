@@ -91,9 +91,9 @@ class Groover:
             },
             "values": {
                 "bend_resolution": 32,
-                "cut_beat_divisions": 24,
-                "roll_beat_divisions": 12,
-                "slide_beat_divisions": 3,
+                "cut_eight_fraction": 0.1,
+                "roll_eight_fraction": 0.8,
+                "slide_eight_fraction": 0.66,
                 "slide_pitch_threshold": 5,
                 "tempo_warp_bpms": 10,
                 "beat_velocity_increase": 16,
@@ -106,6 +106,8 @@ class Groover:
                 "min_pitch_error": -2,
                 "diatonic_errors": diatonic_errors,
                 "max_microtiming_ms": 10,
+                "use_old_tempo_warp": False,
+                "old_tempo_warp": 0.1,
             },
             "approach_from_above": {},
             "approach_from_below": {},
@@ -280,18 +282,14 @@ class Groover:
         """
         :return: the duration of a slide.
         """
-        return self._duration_of(
-            self._tune.beat_duration / self._config["values"]["slide_beat_divisions"]
-        )
+        return self._eight_duration * self._config["values"]["slide_eight_fraction"]
 
     @property
     def _cut_duration(self):
         """
         :return: the duration of a cut note.
         """
-        return self._duration_of(
-            self._tune.beat_duration / self._config["values"]["cut_beat_divisions"]
-        )
+        return self._eight_duration * self._config["values"]["cut_eight_fraction"]
 
     @property
     def _roll_duration(self):
@@ -299,9 +297,14 @@ class Groover:
         :return: the duration of a single note in a roll.
         """
 
-        return self._duration_of(
-            self._tune.beat_duration / self._config["values"]["roll_beat_divisions"]
-        )
+        return self._eight_duration * self._config["values"]["roll_eight_fraction"]
+
+    @property
+    def _eight_duration(self):
+        """
+        :return: the duration of a eight note in seconds at current tempo.
+        """
+        return self._duration_of(0.5 * self._current_tempo / 1e6)
 
     @property
     def tempo(self):
@@ -393,9 +396,19 @@ class Groover:
             self._offset = duration
 
         elif ornament_type == ROLL:
-            message_length = min(
-                self._roll_duration,
-                message_length / 4,
+            original_length = self._roll_duration
+            ornament_length = self._eight_duration - self._roll_duration
+
+            # first note
+            original_0 = copy.deepcopy(message)
+            original_0.time = 0
+            original_0.velocity = self._current_velocity
+            or_0_off = mido.Message(
+                "note_off",
+                note=message.note,
+                channel=message.channel,
+                time=original_length,
+                velocity=0,
             )
 
             # calculate cut
@@ -411,7 +424,7 @@ class Groover:
                 "note_off",
                 note=upper_pitch,
                 channel=message.channel,
-                time=message_length,
+                time=ornament_length,
                 velocity=0,
             )
 
@@ -423,7 +436,7 @@ class Groover:
                 "note_off",
                 note=message.note,
                 channel=message.channel,
-                time=message_length,
+                time=original_length,
                 velocity=0,
             )
 
@@ -440,11 +453,14 @@ class Groover:
                 "note_off",
                 note=lower_pitch,
                 channel=message.channel,
-                time=message_length,
+                time=ornament_length,
                 velocity=0,
             )
 
             # append note on and off events
+            ornaments.append(original_0)
+            ornaments.append(or_0_off)
+
             ornaments.append(upper)
             ornaments.append(upper_off)
 
@@ -456,7 +472,7 @@ class Groover:
 
             ornaments.append(message)
 
-            self._offset = 3 * message_length
+            self._offset = 2 * original_length + 2 * ornament_length
 
         elif ornament_type == SLIDE:
             # append original note
@@ -544,7 +560,8 @@ class Groover:
 
         if (
             random.uniform(0, 1) < self._config["probabilities"]["roll"]
-            and message_length >= self._roll_duration * 4
+            # value of a dotted quarter
+            and message_length - 3 * self._eight_duration > -0.01
         ):
             options.append(ROLL)
 
@@ -593,26 +610,31 @@ class Groover:
     @property
     def _current_tempo(self) -> int:
         """
-        :return: the current tempo given the value of the tempo contour.
+        :return: the current tempo given the value of the tempo contour. If the option `use_old_tempo_warp` is set to `True` the contour affects tempo in terms of percentage of the original one (e.g. 20% faster); otherwise in terms of a fixed amount of bpms (e.g. 10 bpms faster).
         """
-        # version 1
+        # (old) version 1
         # warp as a percentage of current tempo
-        """
-        TEMPO_WARP = 0.1
-        value = int(
-            2 * TEMPO_WARP * self._user_tempo * (self._contour_values["tempo"] - 0.5)
-        )
-        """
+        if self._config["values"]["use_old_tempo_warp"]:
+            tempo_warp = self._config["values"]["old_tempo_warp"]
+            value = int(
+                2
+                * tempo_warp
+                * self._user_tempo
+                * (self._contour_values["tempo"] - 0.5)
+            )
+            return int(self._user_tempo + value)
+
         # version 2
         # warp as a fixed maximum amount of bpm
-        bpm = mido.tempo2bpm(self._user_tempo)
-        value = (
-            2
-            * self._config["values"]["tempo_warp_bpms"]
-            * (self._contour_values["tempo"] - 0.5)
-        )
+        else:
+            bpm = mido.tempo2bpm(self._user_tempo)
+            value = (
+                2
+                * self._config["values"]["tempo_warp_bpms"]
+                * (self._contour_values["tempo"] - 0.5)
+            )
 
-        return mido.bpm2tempo(int(bpm + value))
+            return mido.bpm2tempo(int(bpm + value))
 
     @property
     def _current_velocity(self) -> int:
