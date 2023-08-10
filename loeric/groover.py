@@ -84,15 +84,15 @@ class Groover:
             },
             "probabilities": {
                 "drop": 0.1,
-                "roll": 0.5,
-                "slide": 0.5,
-                "cut": 0.5,
+                "roll": 1,
+                "slide": 1,
+                "cut": 1,
                 "error": 0.1,
             },
             "values": {
                 "bend_resolution": 32,
                 "cut_eight_fraction": 0.1,
-                "roll_eight_fraction": 0.8,
+                "roll_eight_fraction": 0.9,
                 "slide_eight_fraction": 0.66,
                 "slide_pitch_threshold": 5,
                 "tempo_warp_bpms": 10,
@@ -223,6 +223,8 @@ class Groover:
 
         # work on a deepcopy to avoid side effects
         new_message = copy.deepcopy(message)
+        # change note duration
+        new_message.time = self._duration_of(new_message.time)
         new_message.time -= self._offset
 
         # add microtiming
@@ -254,9 +256,6 @@ class Groover:
         if is_note_on:
             # advance the contours
             self.advance_contours()
-
-        # change note duration
-        new_message.time = self._duration_of(new_message.time)
 
         # change loudness
         if is_note_on:
@@ -304,7 +303,7 @@ class Groover:
         """
         :return: the duration of a eight note in seconds at current tempo.
         """
-        return self._duration_of(0.5 * self._current_tempo / 1e6)
+        return 30 / mido.tempo2bpm(self._current_tempo)
 
     @property
     def tempo(self):
@@ -397,7 +396,7 @@ class Groover:
 
         elif ornament_type == ROLL:
             original_length = self._roll_duration
-            ornament_length = self._eight_duration - self._roll_duration
+            cut_length = self._eight_duration - self._roll_duration
 
             # first note
             original_0 = copy.deepcopy(message)
@@ -424,7 +423,7 @@ class Groover:
                 "note_off",
                 note=upper_pitch,
                 channel=message.channel,
-                time=ornament_length,
+                time=cut_length,
                 velocity=0,
             )
 
@@ -453,7 +452,7 @@ class Groover:
                 "note_off",
                 note=lower_pitch,
                 channel=message.channel,
-                time=ornament_length,
+                time=cut_length,
                 velocity=0,
             )
 
@@ -470,9 +469,10 @@ class Groover:
             ornaments.append(lower)
             ornaments.append(lower_off)
 
+            message.time = 0
             ornaments.append(message)
 
-            self._offset = 2 * original_length + 2 * ornament_length
+            self._offset = 2 * self._eight_duration
 
         elif ornament_type == SLIDE:
             # append original note
@@ -555,6 +555,7 @@ class Groover:
         is_beat = self._tune.is_on_a_beat()
         message_length = self._duration_of(self._contour_values["message length"])
 
+        # TODO
         if is_beat and random.uniform(0, 1) < self._config["probabilities"]["cut"]:
             options.append(CUT)
 
