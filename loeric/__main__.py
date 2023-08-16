@@ -40,7 +40,9 @@ def play(groover, tune, out, args) -> None:
         groover.reset()
 
     if args.save:
-        player.save(f"generated_{args.source}.mid")
+        name = os.path.splitext(os.path.basename(args.source))[0]
+        dirname = os.path.dirname(args.source)
+        player.save(f"{dirname}/generated_{name}.mid")
 
     print("Playback terminated.")
 
@@ -144,6 +146,7 @@ if __name__ == "__main__":
     import mido
     import threading
     import time
+    import os
 
     # args
     parser = argparse.ArgumentParser()
