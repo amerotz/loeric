@@ -23,9 +23,9 @@
 	"probabilities": {"drop": 0.1, "roll": 0.5, "slide": 0.5, "cut": 0.5},
 	"values": {
 		"bend_resolution": 32,
-		"cut_beat_divisions": 24,
-		"roll_beat_divisions": 12,
-		"slide_beat_divisions": 3,
+		"cut_eight_fraction": 0.1,
+		"roll_eight_fraction": 0.8,
+		"slide_eight_fraction": 0.66,
 		"slide_pitch_threshold": 5,
 		"tempo_warp_bpms": 10,
 		"beat_velocity_increase": 16,
@@ -33,6 +33,12 @@
 		"bpm": 120,
 		"transpose": 0,
 		"min_velocity": 0,
-		"max_velocity": 127
+		"max_velocity": 127,
+		"use_old_tempo_warp": false,
+		"old_tempo_warp": 0.1
+	},
+	"approach_from_above": {
+	},
+	"approach_from_below": {
 	}
 }

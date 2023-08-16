@@ -4,6 +4,7 @@ import copy
 import random
 import json
 import numpy as np
+import music21 as m21
 
 import tune as tu
 import contour as cnt
@@ -82,30 +83,34 @@ class Groover:
                 "human_impact": human_impact,
             },
             "probabilities": {
-                "drop": 0.1,
-                "roll": 0.5,
-                "slide": 0.5,
-                "cut": 0.5,
+                "drop": 0.05,
+                "roll": 1,
+                "slide": 1,
+                "cut": 1,
                 "error": 0.1,
             },
             "values": {
                 "bend_resolution": 32,
-                "cut_beat_divisions": 24,
-                "roll_beat_divisions": 12,
-                "slide_beat_divisions": 3,
-                "slide_pitch_threshold": 5,
-                "tempo_warp_bpms": 0,
-                "beat_velocity_increase": 16,
+                "cut_eight_fraction": 0.1,
+                "roll_eight_fraction": 0.9,
+                "slide_eight_fraction": 0.66,
+                "slide_pitch_threshold": 6,
+                "tempo_warp_bpms": 10,
+                "beat_velocity_increase": -16,
                 "midi_channel": midi_channel,
                 "bpm": bpm,
                 "transpose": transpose,
                 "min_velocity": 0,
                 "max_velocity": 127,
-                "max_pitch_error": 3,
-                "min_pitch_error": -3,
+                "max_pitch_error": 2,
+                "min_pitch_error": -2,
                 "diatonic_errors": diatonic_errors,
                 "max_microtiming_ms": 10,
+                "use_old_tempo_warp": False,
+                "old_tempo_warp": 0.1,
             },
+            "approach_from_above": {},
+            "approach_from_below": {},
         }
 
         if config_file is not None:
@@ -218,6 +223,8 @@ class Groover:
 
         # work on a deepcopy to avoid side effects
         new_message = copy.deepcopy(message)
+        # change note duration
+        new_message.time = self._duration_of(new_message.time)
         new_message.time -= self._offset
 
         # add microtiming
@@ -250,9 +257,6 @@ class Groover:
             # advance the contours
             self.advance_contours()
 
-        # change note duration
-        new_message.time = self._duration_of(new_message.time)
-
         # change loudness
         if is_note_on:
             new_message.velocity = self._current_velocity
@@ -277,18 +281,14 @@ class Groover:
         """
         :return: the duration of a slide.
         """
-        return self._duration_of(
-            self._tune.beat_duration / self._config["values"]["slide_beat_divisions"]
-        )
+        return self._eight_duration * self._config["values"]["slide_eight_fraction"]
 
     @property
     def _cut_duration(self):
         """
         :return: the duration of a cut note.
         """
-        return self._duration_of(
-            self._tune.beat_duration / self._config["values"]["cut_beat_divisions"]
-        )
+        return self._eight_duration * self._config["values"]["cut_eight_fraction"]
 
     @property
     def _roll_duration(self):
@@ -296,9 +296,14 @@ class Groover:
         :return: the duration of a single note in a roll.
         """
 
-        return self._duration_of(
-            self._tune.beat_duration / self._config["values"]["roll_beat_divisions"]
-        )
+        return self._eight_duration * self._config["values"]["roll_eight_fraction"]
+
+    @property
+    def _eight_duration(self):
+        """
+        :return: the duration of a eight note in seconds at current tempo.
+        """
+        return 30 / mido.tempo2bpm(self._current_tempo)
 
     @property
     def tempo(self):
@@ -306,6 +311,46 @@ class Groover:
         :return: the user-set tempo.
         """
         return self._user_tempo
+
+    def approach_from_above(self, note_number: int, tune: tu.Tune) -> int:
+        """
+        Return the midi note number to approach the given note from above.
+        If no special approach rule is specified in the configuration file, it will return the next note in the scale of the tune's key from the given note.
+
+        :param note_number: the note to approach.
+        :param tune: the reference tune.
+
+        :return: the note used the approach the given note from above.
+        """
+        note_name = m21.pitch.Pitch(midi=note_number).nameWithOctave
+        # use configuration
+        if note_name in self._config["approach_from_above"]:
+            pitch = m21.pitch.Pitch(self._config["approach_from_above"][note_name])
+            return pitch.midi
+        # use normal scale
+        else:
+            index = self._tune.semitones_from_tonic(note_number)
+            return lu.above_approach_scale[index] + note_number
+
+    def approach_from_below(self, note_number: int, tune: tu.Tune) -> int:
+        """
+        Return the midi note number to approach the given note from below.
+        If no special approach rule is specified in the configuration file, it will return the previous note in the scale of the tune's key from the given note.
+
+        :param note_number: the note to approach.
+        :param tune: the reference tune.
+
+        :return: the note used the approach the given note from below.
+        """
+        note_name = m21.pitch.Pitch(midi=note_number).nameWithOctave
+        # use configuration
+        if note_name in self._config["approach_from_below"]:
+            pitch = m21.pitch.Pitch(self._config["approach_from_below"][note_name])
+            return pitch.midi
+        # use normal scale
+        else:
+            index = self._tune.semitones_from_tonic(note_number)
+            return lu.below_approach_scale[index] + note_number
 
     def generate_ornament(
         self, message: mido.Message, ornament_type: str
@@ -324,8 +369,7 @@ class Groover:
         if ornament_type == CUT:
             # generate a cut
             cut = copy.deepcopy(message)
-            cut_index = self._tune.semitones_from_tonic(message.note)
-            cut.note = lu.above_approach_scale[cut_index] + message.note
+            cut.note = self.approach_from_above(message.note, self._tune)
             cut.velocity = self._current_velocity
             duration = min(
                 self._cut_duration,
@@ -351,14 +395,23 @@ class Groover:
             self._offset = duration
 
         elif ornament_type == ROLL:
-            ornament_index = self._tune.semitones_from_tonic(message.note)
-            message_length = min(
-                self._roll_duration,
-                message_length / 4,
+            original_length = self._roll_duration
+            cut_length = self._eight_duration - self._roll_duration
+
+            # first note
+            original_0 = copy.deepcopy(message)
+            original_0.time = 0
+            original_0.velocity = self._current_velocity
+            or_0_off = mido.Message(
+                "note_off",
+                note=message.note,
+                channel=message.channel,
+                time=original_length,
+                velocity=0,
             )
 
             # calculate cut
-            upper_pitch = lu.above_approach_scale[ornament_index] + message.note
+            upper_pitch = self.approach_from_above(message.note, self._tune)
             upper = mido.Message(
                 "note_on",
                 note=upper_pitch,
@@ -370,7 +423,7 @@ class Groover:
                 "note_off",
                 note=upper_pitch,
                 channel=message.channel,
-                time=message_length,
+                time=cut_length,
                 velocity=0,
             )
 
@@ -382,12 +435,12 @@ class Groover:
                 "note_off",
                 note=message.note,
                 channel=message.channel,
-                time=message_length,
+                time=original_length,
                 velocity=0,
             )
 
             # calculate cut
-            lower_pitch = lu.below_approach_scale[ornament_index] + message.note
+            lower_pitch = self.approach_from_below(message.note, self._tune)
             lower = mido.Message(
                 "note_on",
                 note=lower_pitch,
@@ -399,11 +452,14 @@ class Groover:
                 "note_off",
                 note=lower_pitch,
                 channel=message.channel,
-                time=message_length,
+                time=cut_length,
                 velocity=0,
             )
 
             # append note on and off events
+            ornaments.append(original_0)
+            ornaments.append(or_0_off)
+
             ornaments.append(upper)
             ornaments.append(upper_off)
 
@@ -413,9 +469,10 @@ class Groover:
             ornaments.append(lower)
             ornaments.append(lower_off)
 
+            message.time = 0
             ornaments.append(message)
 
-            self._offset = 3 * message_length
+            self._offset = 2 * self._eight_duration
 
         elif ornament_type == SLIDE:
             # append original note
@@ -425,8 +482,7 @@ class Groover:
             ornaments.append(original)
 
             # calculate pitch bend
-            note_index = self._tune.semitones_from_tonic(message.note)
-            diff = lu.below_approach_scale[note_index]
+            diff = self.approach_from_below(message.note, self._tune) - message.note
             bend = max(min(4096.0 * diff, 8191), -8192)
 
             # calculate duration
@@ -438,7 +494,7 @@ class Groover:
             # append messages
             for i in range(resolution, -1, -1):
                 p = i / resolution
-                p **= 5
+                p **= random.uniform(0.25, 0.5)
                 p *= bend
                 p = int(p)
                 ornaments.append(
@@ -499,12 +555,14 @@ class Groover:
         is_beat = self._tune.is_on_a_beat()
         message_length = self._duration_of(self._contour_values["message length"])
 
+        # TODO
         if is_beat and random.uniform(0, 1) < self._config["probabilities"]["cut"]:
             options.append(CUT)
 
         if (
             random.uniform(0, 1) < self._config["probabilities"]["roll"]
-            and message_length >= self._roll_duration * 4
+            # value of a dotted quarter
+            and message_length - 3 * self._eight_duration > -0.01
         ):
             options.append(ROLL)
 
@@ -553,26 +611,31 @@ class Groover:
     @property
     def _current_tempo(self) -> int:
         """
-        :return: the current tempo given the value of the tempo contour.
+        :return: the current tempo given the value of the tempo contour. If the option `use_old_tempo_warp` is set to `True` the contour affects tempo in terms of percentage of the original one (e.g. 20% faster); otherwise in terms of a fixed amount of bpms (e.g. 10 bpms faster).
         """
-        # version 1
+        # (old) version 1
         # warp as a percentage of current tempo
-        """
-        TEMPO_WARP = 0.1
-        value = int(
-            2 * TEMPO_WARP * self._user_tempo * (self._contour_values["tempo"] - 0.5)
-        )
-        """
+        if self._config["values"]["use_old_tempo_warp"]:
+            tempo_warp = self._config["values"]["old_tempo_warp"]
+            value = int(
+                2
+                * tempo_warp
+                * self._user_tempo
+                * (self._contour_values["tempo"] - 0.5)
+            )
+            return int(self._user_tempo + value)
+
         # version 2
         # warp as a fixed maximum amount of bpm
-        bpm = mido.tempo2bpm(self._user_tempo)
-        value = (
-            2
-            * self._config["values"]["tempo_warp_bpms"]
-            * (self._contour_values["tempo"] - 0.5)
-        )
+        else:
+            bpm = mido.tempo2bpm(self._user_tempo)
+            value = (
+                2
+                * self._config["values"]["tempo_warp_bpms"]
+                * (self._contour_values["tempo"] - 0.5)
+            )
 
-        return mido.bpm2tempo(int(bpm + value))
+            return mido.bpm2tempo(int(bpm + value))
 
     @property
     def _current_velocity(self) -> int:
