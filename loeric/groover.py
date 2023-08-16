@@ -371,10 +371,7 @@ class Groover:
             cut = copy.deepcopy(message)
             cut.note = self.approach_from_above(message.note, self._tune)
             cut.velocity = self._current_velocity
-            duration = min(
-                self._cut_duration,
-                message_length / 3,
-            )
+            duration = self._cut_duration
             cut.time = 0
 
             # note on
@@ -555,8 +552,11 @@ class Groover:
         is_beat = self._tune.is_on_a_beat()
         message_length = self._duration_of(self._contour_values["message length"])
 
-        # TODO
-        if is_beat and random.uniform(0, 1) < self._config["probabilities"]["cut"]:
+        if (
+            message_length >= 0.75 * self._eight_duration
+            and (is_beat or self._contour_values["pitch difference"] == 0)
+            and random.uniform(0, 1) < self._config["probabilities"]["cut"]
+        ):
             options.append(CUT)
 
         if (
