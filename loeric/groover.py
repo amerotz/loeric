@@ -83,7 +83,7 @@ class Groover:
                 "human_impact": human_impact,
             },
             "probabilities": {
-                "drop": 0.1,
+                "drop": 0.05,
                 "roll": 1,
                 "slide": 1,
                 "cut": 1,
@@ -94,9 +94,9 @@ class Groover:
                 "cut_eight_fraction": 0.1,
                 "roll_eight_fraction": 0.9,
                 "slide_eight_fraction": 0.66,
-                "slide_pitch_threshold": 5,
+                "slide_pitch_threshold": 6,
                 "tempo_warp_bpms": 10,
-                "beat_velocity_increase": 16,
+                "beat_velocity_increase": -16,
                 "midi_channel": midi_channel,
                 "bpm": bpm,
                 "transpose": transpose,
@@ -494,7 +494,7 @@ class Groover:
             # append messages
             for i in range(resolution, -1, -1):
                 p = i / resolution
-                p **= 5
+                p **= random.uniform(0.25, 0.5)
                 p *= bend
                 p = int(p)
                 ornaments.append(

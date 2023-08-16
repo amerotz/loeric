@@ -18,9 +18,9 @@
 		"shift": false
 	},
 	"probabilities": {
-		"drop": 0.0,
+		"drop": 0.1,
 		"roll": 1,
-		"slide": 1,
+		"slide": 0.5,
 		"cut": 1,
 		"error": 0
 	},
