@@ -4,7 +4,10 @@
 
 mid/
 abc/
+<<<<<<< HEAD
 *.mid
+=======
+>>>>>>> main
 loeric-env/
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
