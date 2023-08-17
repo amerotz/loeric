@@ -37,6 +37,7 @@ class Groover:
         diatonic_errors: bool = True,
         random_weight: float = 0,
         human_impact: float = 0,
+        seed: int = 42,
         apply_savgol: bool = True,
         config_file: str = None,
     ):
@@ -50,6 +51,8 @@ class Groover:
         :param transpose: the number of semitones by which to transpose the tune.
         :param diatonic_errors: whether or not error generation should be quantized to the tune's mode.
         :param random_weight: the weight of the random component in contour generation.
+        :param human_impact: the weight of the external control signal.
+        :param seed: the random seed of the performance.
         :param apply_savgol: whether or not to apply savgol filtering in contour generation. True by default (recommended).
         :param config_file: the path to the configuration file (must be a JSON file).
         """
@@ -91,12 +94,12 @@ class Groover:
             },
             "values": {
                 "bend_resolution": 32,
-                "cut_eight_fraction": 0.1,
-                "roll_eight_fraction": 0.9,
+                "cut_eight_fraction": 0.2,
+                "roll_eight_fraction": 0.8,
                 "slide_eight_fraction": 0.66,
                 "slide_pitch_threshold": 6,
                 "tempo_warp_bpms": 10,
-                "beat_velocity_increase": -16,
+                "beat_velocity_increase": 16,
                 "midi_channel": midi_channel,
                 "bpm": bpm,
                 "transpose": transpose,
@@ -108,6 +111,7 @@ class Groover:
                 "max_microtiming_ms": 10,
                 "use_old_tempo_warp": False,
                 "old_tempo_warp": 0.1,
+                "seed": seed,
             },
             "approach_from_above": {},
             "approach_from_below": {},
@@ -125,6 +129,10 @@ class Groover:
         """
         Generate all parameter settings following the current configuration.
         """
+
+        # random seed
+        random.seed(self._config["values"]["seed"])
+        np.random.seed(self._config["values"]["seed"])
 
         # set parameters
         if self._config["values"]["bpm"] is None:
@@ -536,6 +544,14 @@ class Groover:
             new_message = copy.deepcopy(message)
             new_message.note += value
             ornaments.append(new_message)
+
+            off_message = mido.Message(
+                "note_off",
+                note=new_message.note,
+                velocity=0,
+                time=message_length * random.uniform(0.2, 0.9),
+            )
+            ornaments.append(off_message)
 
         return ornaments
 

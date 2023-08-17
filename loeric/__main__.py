@@ -41,7 +41,12 @@ def play(groover, tune, out, args) -> None:
 
     if args.save:
         name = os.path.splitext(os.path.basename(args.source))[0]
-        dirname = os.path.dirname(args.source)
+        if args.output_dir is None:
+            dirname = os.path.dirname(args.source)
+        else:
+            if not os.path.isdir(args.output_dir):
+                os.makedirs(args.output_dir)
+            dirname = args.output_dir
         player.save(f"{dirname}/generated_{name}.mid")
 
     print("Playback terminated.")
@@ -110,6 +115,7 @@ def main(args):
             diatonic_errors=args.diatonic,
             random_weight=0.2,
             human_impact=args.human_impact,
+            seed=args.seed,
             config_file=args.config,
         )
 
@@ -217,6 +223,12 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
+        "--seed",
+        help="Random seed for the performance.",
+        type=int,
+        default=42,
+    )
+    parser.add_argument(
         "--save",
         help="whether or not to export the performance. Playback will be disabled.",
         action="store_true",
@@ -225,6 +237,12 @@ if __name__ == "__main__":
         "--no-prompt",
         help="whether or not to wait for user input before starting.",
         action="store_true",
+    )
+    parser.add_argument(
+        "--output-dir",
+        help="the output directory for generated performances. Defaults to the tune's directory.",
+        type=str,
+        default=None,
     )
     parser.add_argument(
         "--config",

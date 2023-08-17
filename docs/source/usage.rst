@@ -52,6 +52,7 @@ where the possible arguments are
 * ``-r REPEAT, --repeat REPEAT``: how many times the tune should be repeated;
 * ``-bpm BPM``: the tempo of the performance. If None, defaults to the original file's tempo;
 * ``--save``: whether or not to export the performance. Playback will be disabled;
+* ``--seed``: the random seed for the performance;
 * ``--no-prompt``: whether or not to wait for user input before starting;
 * ``--config CONFIG``: the path to a configuration file. Every option included in the configuration file will override command line arguments.
 
