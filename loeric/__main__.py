@@ -123,9 +123,9 @@ def main(args):
         if port is not None:
             port.callback = check_midi_control(groover, {args.control: "human"})
 
-        t = threading.Thread(target=play, args=(groover, tune, out, args))
-        t.start()
-        t.join()
+        player_thread = threading.Thread(target=play, args=(groover, tune, out, args))
+        player_thread.start()
+        player_thread.join()
 
     except KeyboardInterrupt:
         print("Playback stopped by user.")
@@ -167,11 +167,12 @@ if __name__ == "__main__":
         "--control",
         help="the MIDI control signal number to use as human control.",
         type=int,
+        default=10,
     )
     parser.add_argument(
         "-hi",
         "--human_impact",
-        help="the percentage of human impact over the performance (0: only generated, 1:only human).",
+        help="the percentage of human impact over the performance (0: only generated, 1: only human).",
         type=float,
         default=0,
     )

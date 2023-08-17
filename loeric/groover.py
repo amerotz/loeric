@@ -113,6 +113,12 @@ class Groover:
                 "old_tempo_warp": 0.1,
                 "seed": seed,
             },
+            "automation": {
+                "velocity": 46,
+                "tempo": 47,
+                "ornament": 48,
+                "human": 49,
+            },
             "approach_from_above": {},
             "approach_from_below": {},
         }
@@ -269,7 +275,27 @@ class Groover:
         if is_note_on:
             new_message.velocity = self._current_velocity
 
-        notes = [new_message]
+        notes = []
+
+        # add contour information as MIDI CC
+        for contour_name in self._config["automation"]:
+            notes.append(
+                mido.Message(
+                    "control_change",
+                    channel=self._config["values"]["midi_channel"],
+                    control=self._config["automation"][contour_name],
+                    value=round(self._contour_values[contour_name] * 127),
+                    time=0,
+                )
+            )
+        """
+
+        # add explicit tempo information
+        notes.append(mido.MetaMessage("set_tempo", tempo=self._current_tempo, time=0))
+        """
+
+        # add actual message
+        notes.append(new_message)
 
         # modify the note
         if is_note_on:
