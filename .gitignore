@@ -4,11 +4,12 @@
 
 mid/
 abc/
-<<<<<<< HEAD
 *.mid
-=======
->>>>>>> main
 loeric-env/
+mini-session/
+paper-examples/
+mini_session.sh
+generate.sh
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/
