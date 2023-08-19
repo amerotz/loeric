@@ -127,6 +127,8 @@ class Groover:
             with open(config_file, "r") as f:
                 config_file = json.load(f)
             self._config = jsonmerge.merge(self._config, config_file)
+            config_hash = int(hash(str(config_file))) % 2**31
+            self._config["values"]["seed"] = config_hash + seed
 
         # generate all parameter settings and contours
         self._instantiate()
@@ -241,10 +243,12 @@ class Groover:
         new_message.time = self._duration_of(new_message.time)
         new_message.time -= self._offset
 
+        """
         # add microtiming
         ms = self._config["values"]["max_microtiming_ms"]
         new_message.time += random.randint(-ms, ms) / 1000
         new_message.time = max(0, new_message.time)
+        """
 
         self._offset = 0
 
@@ -288,11 +292,9 @@ class Groover:
                     time=0,
                 )
             )
-        """
 
         # add explicit tempo information
         notes.append(mido.MetaMessage("set_tempo", tempo=self._current_tempo, time=0))
-        """
 
         # add actual message
         notes.append(new_message)
@@ -307,6 +309,15 @@ class Groover:
                 # generate it
                 if ornament_type is not None:
                     notes = self.generate_ornament(new_message, ornament_type)
+
+        # add microtiming
+        ms = self._config["values"]["max_microtiming_ms"]
+        for note in notes:
+            old_time = note.time
+            note.time += random.randint(-ms, ms) / 1000
+            note.time = max(0, note.time)
+            # update offset with microtiming
+            self._offset += note.time - old_time
 
         return notes
 
@@ -575,7 +586,7 @@ class Groover:
                 "note_off",
                 note=new_message.note,
                 velocity=0,
-                time=message_length * random.uniform(0.2, 0.9),
+                time=message_length * random.uniform(0.4, 0.9),
             )
             ornaments.append(off_message)
 

@@ -1,5 +1,8 @@
 {
-	"probabilities": {"drop": 0.1, "roll": 1, "slide": 1, "cut": 0.75, "error": 0.1},
+	"tempo":{
+		"random":0
+	},
+	"probabilities": {"drop": 0.1, "roll": 1, "slide": 0.5, "cut": 1, "error": 0.1},
 	"values": {
 		"max_pitch_error": 2,
 		"min_pitch_error": -2,

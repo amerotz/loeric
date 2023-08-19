@@ -32,7 +32,7 @@
 		"slide_pitch_threshold": 6,
 		"tempo_warp_bpms": 10,
 		"beat_velocity_increase": 16,
-		"min_velocity": 0,
+		"min_velocity": 1,
 		"max_velocity": 127,
 		"max_pitch_error": 2,
 		"min_pitch_error": -2,

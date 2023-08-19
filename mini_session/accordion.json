@@ -1,4 +1,7 @@
 {
+	"tempo":{
+		"random":0
+	},
 	"probabilities": {
 		"drop": 0.05,
 		"roll": 1,

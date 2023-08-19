@@ -20,7 +20,7 @@
 	"probabilities": {
 		"drop": 0.1,
 		"roll": 1,
-		"slide": 1,
+		"slide": 0.75,
 		"cut": 1,
 		"error": 0
 	},
