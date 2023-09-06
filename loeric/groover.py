@@ -86,7 +86,7 @@ class Groover:
                 "human_impact": human_impact,
             },
             "probabilities": {
-                "drop": 0.05,
+                "drop": 0.1,
                 "roll": 1,
                 "slide": 1,
                 "cut": 1,
@@ -613,10 +613,13 @@ class Groover:
             options.append(CUT)
 
         if (
-            random.uniform(0, 1) < self._config["probabilities"]["roll"]
+            # random.uniform(0, 1) < self._config["probabilities"]["roll"]
             # value of a dotted quarter
-            and message_length - 3 * self._eight_duration > -0.01
+            # and
+            message_length - 3 * self._eight_duration
+            > -0.01
         ):
+            # return ROLL
             options.append(ROLL)
 
         if (
