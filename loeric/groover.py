@@ -86,7 +86,7 @@ class Groover:
                 "human_impact": human_impact,
             },
             "probabilities": {
-                "drop": 0.05,
+                "drop": 0.1,
                 "roll": 1,
                 "slide": 1,
                 "cut": 1,
@@ -113,6 +113,12 @@ class Groover:
                 "old_tempo_warp": 0.1,
                 "seed": seed,
             },
+            "automation": {
+                "velocity": 46,
+                "tempo": 47,
+                "ornament": 48,
+                "human": 49,
+            },
             "approach_from_above": {},
             "approach_from_below": {},
         }
@@ -121,6 +127,8 @@ class Groover:
             with open(config_file, "r") as f:
                 config_file = json.load(f)
             self._config = jsonmerge.merge(self._config, config_file)
+            config_hash = int(hash(str(config_file))) % 2**31
+            self._config["values"]["seed"] = config_hash + seed
 
         # generate all parameter settings and contours
         self._instantiate()
@@ -235,10 +243,12 @@ class Groover:
         new_message.time = self._duration_of(new_message.time)
         new_message.time -= self._offset
 
+        """
         # add microtiming
         ms = self._config["values"]["max_microtiming_ms"]
         new_message.time += random.randint(-ms, ms) / 1000
         new_message.time = max(0, new_message.time)
+        """
 
         self._offset = 0
 
@@ -269,7 +279,25 @@ class Groover:
         if is_note_on:
             new_message.velocity = self._current_velocity
 
-        notes = [new_message]
+        notes = []
+
+        # add contour information as MIDI CC
+        for contour_name in self._config["automation"]:
+            notes.append(
+                mido.Message(
+                    "control_change",
+                    channel=self._config["values"]["midi_channel"],
+                    control=self._config["automation"][contour_name],
+                    value=round(self._contour_values[contour_name] * 127),
+                    time=0,
+                )
+            )
+
+        # add explicit tempo information
+        notes.append(mido.MetaMessage("set_tempo", tempo=self._current_tempo, time=0))
+
+        # add actual message
+        notes.append(new_message)
 
         # modify the note
         if is_note_on:
@@ -281,6 +309,15 @@ class Groover:
                 # generate it
                 if ornament_type is not None:
                     notes = self.generate_ornament(new_message, ornament_type)
+
+        # add microtiming
+        ms = self._config["values"]["max_microtiming_ms"]
+        for note in notes:
+            old_time = note.time
+            note.time += random.randint(-ms, ms) / 1000
+            note.time = max(0, note.time)
+            # update offset with microtiming
+            self._offset += note.time - old_time
 
         return notes
 
@@ -549,7 +586,7 @@ class Groover:
                 "note_off",
                 note=new_message.note,
                 velocity=0,
-                time=message_length * random.uniform(0.2, 0.9),
+                time=message_length * random.uniform(0.4, 0.9),
             )
             ornaments.append(off_message)
 
@@ -576,10 +613,13 @@ class Groover:
             options.append(CUT)
 
         if (
-            random.uniform(0, 1) < self._config["probabilities"]["roll"]
+            # random.uniform(0, 1) < self._config["probabilities"]["roll"]
             # value of a dotted quarter
-            and message_length - 3 * self._eight_duration > -0.01
+            # and
+            message_length - 3 * self._eight_duration
+            > -0.01
         ):
+            # return ROLL
             options.append(ROLL)
 
         if (

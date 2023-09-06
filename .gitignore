@@ -8,6 +8,7 @@ abc/
 loeric-env/
 mini-session/
 paper-examples/
+cc-test/
 mini_session.sh
 generate.sh
 ### JupyterNotebooks ###

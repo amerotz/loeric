@@ -55,8 +55,9 @@ class Player:
         """
         for msg in messages:
             if self._midi_out is not None:
-                time.sleep(msg.time)
-                self._midi_out.send(msg)
+                if not msg.is_meta:
+                    time.sleep(msg.time)
+                    self._midi_out.send(msg)
 
             if self._saving:
                 self._midi_track.append(msg)
