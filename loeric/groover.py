@@ -108,7 +108,6 @@ class Groover:
                 "max_pitch_error": 2,
                 "min_pitch_error": -2,
                 "diatonic_errors": diatonic_errors,
-                "max_microtiming_ms": 10,
                 "use_old_tempo_warp": False,
                 "old_tempo_warp": 0.1,
                 "seed": seed,
@@ -243,13 +242,6 @@ class Groover:
         new_message.time = self._duration_of(new_message.time)
         new_message.time -= self._offset
 
-        """
-        # add microtiming
-        ms = self._config["values"]["max_microtiming_ms"]
-        new_message.time += random.randint(-ms, ms) / 1000
-        new_message.time = max(0, new_message.time)
-        """
-
         self._offset = 0
 
         # change midi channel
@@ -266,6 +258,7 @@ class Groover:
             if key in self._pitch_errors:
                 value = self._pitch_errors[key]
                 new_message.note += value
+
                 # reset error
                 del self._pitch_errors[key]
 
@@ -309,15 +302,6 @@ class Groover:
                 # generate it
                 if ornament_type is not None:
                     notes = self.generate_ornament(new_message, ornament_type)
-
-        # add microtiming
-        ms = self._config["values"]["max_microtiming_ms"]
-        for note in notes:
-            old_time = note.time
-            note.time += random.randint(-ms, ms) / 1000
-            note.time = max(0, note.time)
-            # update offset with microtiming
-            self._offset += note.time - old_time
 
         return notes
 
@@ -434,7 +418,7 @@ class Groover:
 
             ornaments.append(message)
             # update offset for next message to make it shorter
-            self._offset = duration
+            self._offset += duration
 
         elif ornament_type == ROLL:
             original_length = self._roll_duration
@@ -514,7 +498,7 @@ class Groover:
             message.time = 0
             ornaments.append(message)
 
-            self._offset = 2 * self._eight_duration
+            self._offset += 2 * self._eight_duration
 
         elif ornament_type == SLIDE:
             # append original note
@@ -530,7 +514,7 @@ class Groover:
             # calculate duration
             resolution = self._config["values"]["bend_resolution"]
             slide_time = message_length / 4
-            self._offset = slide_time
+            self._offset += slide_time
             duration = slide_time / resolution
 
             # append messages
@@ -582,13 +566,15 @@ class Groover:
             new_message.note += value
             ornaments.append(new_message)
 
+            perc = random.uniform(0.4, 0.9)
             off_message = mido.Message(
                 "note_off",
                 note=new_message.note,
                 velocity=0,
-                time=message_length * random.uniform(0.4, 0.9),
+                time=message_length * perc,
             )
             ornaments.append(off_message)
+            self._offset += message_length * perc
 
         return ornaments
 
@@ -613,11 +599,9 @@ class Groover:
             options.append(CUT)
 
         if (
-            # random.uniform(0, 1) < self._config["probabilities"]["roll"]
+            random.uniform(0, 1) < self._config["probabilities"]["roll"]
             # value of a dotted quarter
-            # and
-            message_length - 3 * self._eight_duration
-            > -0.01
+            and message_length - 3 * self._eight_duration > -0.01
         ):
             # return ROLL
             options.append(ROLL)

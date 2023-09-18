@@ -47,7 +47,7 @@ def play(groover, tune, out, args) -> None:
             if not os.path.isdir(args.output_dir):
                 os.makedirs(args.output_dir)
             dirname = args.output_dir
-        player.save(f"{dirname}/generated_{name}.mid")
+        player.save(f"{dirname}/generated_{name}_{args.seed}.mid")
 
     print("Playback terminated.")
 
