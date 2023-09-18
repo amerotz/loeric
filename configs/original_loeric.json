@@ -37,7 +37,6 @@
 		"max_pitch_error": 0,
 		"min_pitch_error": 0,
 		"diatonic_errors": true,
-		"max_microtiming_ms": 0,
 		"use_old_tempo_warp": true,
 		"old_tempo_warp": 0.1
 	},

@@ -18,11 +18,11 @@
 		"shift": false
 	},
 	"probabilities": {
-		"drop": 0.05,
+		"drop": 0.1,
 		"roll": 1,
-		"slide": 0.5,
+		"slide": 1,
 		"cut": 1,
-		"error": 0.05
+		"error": 0.1
 	},
 	"values": {
 		"bend_resolution": 32,
@@ -37,7 +37,8 @@
 		"max_pitch_error": 2,
 		"min_pitch_error": -2,
 		"use_old_tempo_warp": false,
-		"old_tempo_warp": 0.1
+		"old_tempo_warp": 0.1,
+		"bpm": 200
 	},
 	"automation": {
 		"velocity": 46,
