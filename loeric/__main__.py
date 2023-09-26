@@ -98,7 +98,7 @@ def main(args):
     # consistency with MIDI spec and mido
     args.midi_channel -= 1
 
-    if args.no_prompt or (not args.save):
+    if (not args.no_prompt) and (not args.save):
         input("Press any key to start playback:")
 
     # start the player thread
