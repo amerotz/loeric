@@ -98,7 +98,7 @@ def main(args):
     # consistency with MIDI spec and mido
     args.midi_channel -= 1
 
-    if args.no_prompt or (not args.save):
+    if (not args.no_prompt) and (not args.save):
         input("Press any key to start playback:")
 
     # start the player thread
@@ -123,7 +123,9 @@ def main(args):
         if port is not None:
             port.callback = check_midi_control(groover, {args.control: "human"})
 
-        player_thread = threading.Thread(target=play, args=(groover, tune, out, args))
+        player_thread = multiprocessing.Process(
+            target=play, args=(groover, tune, out, args)
+        )
         player_thread.start()
         player_thread.join()
 
@@ -138,19 +140,19 @@ def main(args):
                         "note_off", note=i, velocity=0, channel=args.midi_channel
                     )
                 )
-        print("Done.")
-
     if port is not None:
         port.close()
     if out is not None:
         out.reset()
         out.close()
 
+    player_thread.terminate()
+
 
 if __name__ == "__main__":
     import argparse
     import mido
-    import threading
+    import multiprocessing
     import time
     import os
 
