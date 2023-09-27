@@ -31,7 +31,7 @@ class PlayerThread:
                 # send the message
                 port.send(msg)
 
-                time.sleep(1 / 20)
+                time.sleep(1 / 10)
 
 
 class AudioMonitor:
