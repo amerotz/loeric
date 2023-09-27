@@ -123,9 +123,7 @@ def main(args):
         if port is not None:
             port.callback = check_midi_control(groover, {args.control: "human"})
 
-        player_thread = multiprocessing.Process(
-            target=play, args=(groover, tune, out, args)
-        )
+        player_thread = threading.Thread(target=play, args=(groover, tune, out, args))
         player_thread.start()
         player_thread.join()
 
@@ -134,25 +132,17 @@ def main(args):
         print("Attempting graceful shutdown...")
         # make sure to turn off all notes
         if out is not None:
-            for i in range(128):
-                out.send(
-                    mido.Message(
-                        "note_off", note=i, velocity=0, channel=args.midi_channel
-                    )
-                )
-    if port is not None:
-        port.close()
-    if out is not None:
-        out.reset()
-        out.close()
+            out.reset()
+            out.close()
+            print("Closed MIDI output.")
 
-    player_thread.terminate()
+        print("Done")
 
 
 if __name__ == "__main__":
     import argparse
     import mido
-    import multiprocessing
+    import threading
     import time
     import os
 
