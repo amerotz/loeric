@@ -123,7 +123,9 @@ def main(args):
         if port is not None:
             port.callback = check_midi_control(groover, {args.control: "human"})
 
-        player_thread = threading.Thread(target=play, args=(groover, tune, out, args))
+        player_thread = multiprocessing.Process(
+            target=play, args=(groover, tune, out, args)
+        )
         player_thread.start()
         player_thread.join()
 
@@ -138,19 +140,19 @@ def main(args):
                         "note_off", note=i, velocity=0, channel=args.midi_channel
                     )
                 )
-        print("Done.")
-
     if port is not None:
         port.close()
     if out is not None:
         out.reset()
         out.close()
 
+    player_thread.terminate()
+
 
 if __name__ == "__main__":
     import argparse
     import mido
-    import threading
+    import multiprocessing
     import time
     import os
 

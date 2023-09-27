@@ -1,6 +1,7 @@
 import os
 import random
 import argparse
+import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--data-dir")
@@ -33,7 +34,6 @@ while True:
     if diatonic:
         command += " -d"
 
-    print(command)
     ret_value = os.system(command)
 
     ret_value = os.waitstatus_to_exitcode(ret_value)
