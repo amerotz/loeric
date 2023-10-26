@@ -131,12 +131,15 @@ def main(args):
         print("Playback stopped by user.")
         print("Attempting graceful shutdown...")
         # make sure to turn off all notes
-        if out is not None:
-            out.reset()
-            out.close()
-            print("Closed MIDI output.")
 
-        print("Done")
+    if out is not None:
+        for i in range(127):
+            out.send(mido.Message('note_off', velocity=0, note=i, time=0))
+        out.reset()
+        out.close()
+        print("Closed MIDI output.")
+
+    print("Done")
 
 
 if __name__ == "__main__":
