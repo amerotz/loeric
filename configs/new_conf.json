@@ -18,11 +18,11 @@
 		"shift": false
 	},
 	"probabilities": {
-		"drop": 0.1,
+		"drop": 0.05,
 		"roll": 1,
 		"slide": 1,
 		"cut": 1,
-		"error": 0.1
+		"error": 0.05
 	},
 	"values": {
 		"bend_resolution": 32,
@@ -31,7 +31,7 @@
 		"slide_eight_fraction": 0.66,
 		"slide_pitch_threshold": 6,
 		"tempo_warp_bpms": 10,
-		"beat_velocity_increase": -16,
+		"beat_velocity_increase": -32,
 		"min_velocity": 1,
 		"max_velocity": 127,
 		"max_pitch_error": 2,
