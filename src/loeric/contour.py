@@ -2,8 +2,8 @@ import mido
 import numpy as np
 from scipy.signal import savgol_filter
 
-import tune
-import loeric_utils as lu
+from . import tune
+from . import loeric_utils as lu
 
 
 class UncomputedContourError(Exception):

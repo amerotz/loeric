@@ -1,20 +1,22 @@
-import contour as cnt
-import tune as tu
-import groover as gr
-import player as pl
-import loeric_utils as lu
+import mido
+import threading
 
 from collections.abc import Callable
 
+from . import contour as cnt
+from . import tune as tu
+from . import groover as gr
+from . import player as pl
+from . import loeric_utils as lu
+
 
 # play midi file
-def play(groover, tune, out, args) -> None:
+def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
     """
     Play the given tune with the given groover.
 
     :param groover: the groover object
     :param tune: the tune object
-    :param out: the output midi port
     :param args: the performance arguments
     """
     # create player
@@ -22,13 +24,13 @@ def play(groover, tune, out, args) -> None:
         tempo=groover.tempo,
         key_signature=tune.key_signature,
         time_signature=tune.time_signature,
-        save=args.save,
+        save=kwargs["save"],
         midi_out=out,
     )
 
     # repeat as specified
-    for t in range(args.repeat):
-        print(f"Repetition {t+1}/{args.repeat}")
+    for t in range(kwargs["repeat"]):
+        print(f"Repetition {t+1}/{kwargs['repeat']}")
         # iterate over messages
         for message in tune.events():
             if not message.is_meta:
@@ -39,15 +41,15 @@ def play(groover, tune, out, args) -> None:
         # reset the groover at the end of the repetition
         groover.reset()
 
-    if args.save:
-        name = os.path.splitext(os.path.basename(args.source))[0]
+    if kwargs["save"]:
+        name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
         if args.output_dir is None:
-            dirname = os.path.dirname(args.source)
+            dirname = os.path.dirname(kwargs["source"])
         else:
             if not os.path.isdir(args.output_dir):
-                os.makedirs(args.output_dir)
-            dirname = args.output_dir
-        player.save(f"{dirname}/generated_{name}_{args.seed}.mid")
+                os.makedirs(kwargs["output_dir"])
+            dirname = kwargs["output_dir"]
+        player.save(f"{dirname}/generated_{name}_{kwargs['seed']}.mid")
 
     print("Playback terminated.")
 
@@ -78,7 +80,9 @@ def check_midi_control(
 
 def main(args):
     inport, outport = lu.get_ports(
-        input_number=args.input, output_number=args.output, list_ports=args.list_ports
+        input_number=args["input"],
+        output_number=args["output"],
+        list_ports=args["list_ports"],
     )
     if inport is None and outport is None:
         return
@@ -90,40 +94,42 @@ def main(args):
         port = None
 
     # open out
-    if args.save or outport is None:
+    if args["save"] or outport is None:
         out = None
     else:
         out = mido.open_output(outport)
 
     # consistency with MIDI spec and mido
-    args.midi_channel -= 1
+    args["midi_channel"] -= 1
 
-    if (not args.no_prompt) and (not args.save):
+    if (not args["no_prompt"]) and (not args["save"]):
         input("Press any key to start playback:")
 
     # start the player thread
     try:
         # load a tune
-        tune = tu.Tune(args.source)
+        tune = tu.Tune(args["source"])
 
         # create groover
         groover = gr.Groover(
             tune,
-            bpm=args.bpm,
-            midi_channel=args.midi_channel,
-            transpose=args.transpose,
-            diatonic_errors=args.diatonic,
+            bpm=args["bpm"],
+            midi_channel=args["midi_channel"],
+            transpose=args["transpose"],
+            diatonic_errors=args["diatonic"],
             random_weight=0.2,
-            human_impact=args.human_impact,
-            seed=args.seed,
-            config_file=args.config,
+            human_impact=args["human_impact"],
+            seed=args["seed"],
+            config_file=args["config"],
         )
 
         # set input callback
         if port is not None:
-            port.callback = check_midi_control(groover, {args.control: "human"})
+            port.callback = check_midi_control(groover, {args["control"]: "human"})
 
-        player_thread = threading.Thread(target=play, args=(groover, tune, out, args))
+        player_thread = threading.Thread(
+            target=play, args=(groover, tune, out), kwargs=args
+        )
         player_thread.start()
         player_thread.join()
 
@@ -134,7 +140,7 @@ def main(args):
 
     if out is not None:
         for i in range(127):
-            out.send(mido.Message('note_off', velocity=0, note=i, time=0))
+            out.send(mido.Message("note_off", velocity=0, note=i, time=0))
         out.reset()
         out.close()
         print("Closed MIDI output.")
@@ -248,4 +254,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(args)
+    main(vars(args))
