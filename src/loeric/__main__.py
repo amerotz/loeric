@@ -1,5 +1,8 @@
+import argparse
 import mido
 import threading
+import time
+import os
 
 from collections.abc import Callable
 
@@ -17,7 +20,7 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
 
     :param groover: the groover object
     :param tune: the tune object
-    :param args: the performance arguments
+    :param kwargs: the performance arguments
     """
     # create player
     player = pl.Player(
@@ -43,13 +46,17 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
 
     if kwargs["save"]:
         name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
-        if args.output_dir is None:
+        if kwargs['output_dir'] is None:
             dirname = os.path.dirname(kwargs["source"])
         else:
-            if not os.path.isdir(args.output_dir):
+            if not os.path.isdir(kwargs['output_dir']):
                 os.makedirs(kwargs["output_dir"])
             dirname = kwargs["output_dir"]
-        player.save(f"{dirname}/generated_{name}_{kwargs['seed']}.mid")
+
+        filename = kwargs['filename']
+        if filename is None:
+            filename = f"generated_{name}_{kwargs['seed']}.mid"
+        player.save(f"{dirname}/{filename}")
 
     print("Playback terminated.")
 
@@ -149,11 +156,6 @@ def main(args):
 
 
 if __name__ == "__main__":
-    import argparse
-    import mido
-    import threading
-    import time
-    import os
 
     # args
     parser = argparse.ArgumentParser()
@@ -243,6 +245,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output-dir",
         help="the output directory for generated performances. Defaults to the tune's directory.",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "--filename",
+        help="the output filename for the generated performance.",
         type=str,
         default=None,
     )
