@@ -1,5 +1,4 @@
 import mido
-import muspy as mp
 import music21 as m21
 
 from collections.abc import Callable
