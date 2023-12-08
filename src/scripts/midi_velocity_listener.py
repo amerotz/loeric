@@ -1,5 +1,4 @@
 import loeric.loeric_utils as lu
-import loeric.tune as tu
 
 
 def main(args) -> None:
@@ -22,7 +21,7 @@ def main(args) -> None:
                 message = msg.copy()
 
                 # check if we care about the message
-                if tu.is_note_on(msg):
+                if lu.is_note_on(msg):
                     intensity *= 1 - args.responsive
                     intensity += args.responsive * message.velocity
 
