@@ -6,11 +6,12 @@ import json
 import numpy as np
 import music21 as m21
 
-import tune as tu
-import contour as cnt
-import loeric_utils as lu
-
 from collections import defaultdict
+
+from . import tune as tu
+from . import contour as cnt
+from . import loeric_utils as lu
+
 
 CUT = "cut"
 DROP = "drop"
