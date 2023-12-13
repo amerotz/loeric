@@ -304,6 +304,10 @@ class Groover:
                 if ornament_type is not None:
                     notes = self.generate_ornament(new_message, ornament_type)
 
+        # make sure time is not negative
+        for note in notes:
+            note.time = max(0, note.time)
+
         return notes
 
     @property
