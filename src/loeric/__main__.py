@@ -36,7 +36,7 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
         print(f"Repetition {t+1}/{kwargs['repeat']}")
         # iterate over messages
         for message in tune.events():
-            if not message.is_meta:
+            if not message.is_meta and "program" not in message.type:
                 # make the groover play the messages
                 new_messages = groover.perform(message)
                 player.play(new_messages)
@@ -46,14 +46,14 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
 
     if kwargs["save"]:
         name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
-        if kwargs['output_dir'] is None:
+        if kwargs["output_dir"] is None:
             dirname = os.path.dirname(kwargs["source"])
         else:
-            if not os.path.isdir(kwargs['output_dir']):
+            if not os.path.isdir(kwargs["output_dir"]):
                 os.makedirs(kwargs["output_dir"])
             dirname = kwargs["output_dir"]
 
-        filename = kwargs['filename']
+        filename = kwargs["filename"]
         if filename is None:
             filename = f"generated_{name}_{kwargs['seed']}.mid"
         player.save(f"{dirname}/{filename}")
@@ -156,7 +156,6 @@ def main(args):
 
 
 if __name__ == "__main__":
-
     # args
     parser = argparse.ArgumentParser()
     parser.add_argument(
