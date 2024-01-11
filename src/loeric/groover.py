@@ -157,14 +157,22 @@ class Groover:
         self._contours = {}
 
         # velocity contour
-        self._contours["velocity"] = cnt.IntensityContour()
-        self._contours["velocity"].calculate(
+        velocity_intensity_contour = cnt.IntensityContour()
+        velocity_intensity_contour.calculate(
             self._tune,
             weights=np.array(self._config["velocity"]["weights"]),
             random_weight=self._config["velocity"]["random"],
             savgol=self._config["velocity"]["savgol"],
             shift=self._config["velocity"]["shift"],
         )
+
+        velocity_pitch_contour = cnt.PitchContour()
+        velocity_pitch_contour.calculate(self._tune)
+
+        self._contours["velocity"] = cnt.weighted_sum(
+            [velocity_intensity_contour, velocity_pitch_contour], np.array([0.5, 0.5])
+        )
+
         # tempo contour
         self._contours["tempo"] = cnt.IntensityContour()
         self._contours["tempo"].calculate(

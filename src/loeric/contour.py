@@ -28,6 +28,12 @@ class Contour:
         self._index = -1
         self._contour = None
 
+    def __len__(self):
+        """
+        The length of this contour.
+        """
+        return len(self._contour)
+
     def calculate(self, midi: tune.Tune) -> None:
         """
         Calculate the intensity contour for the given tune.
@@ -288,3 +294,44 @@ class PitchDifferenceContour(Contour):
         diff = np.diff(pitches)
         diff = np.insert(diff, 0, 0)
         self._contour = diff
+
+
+class PitchContour(Contour):
+    """A contour holding the pitch of notes in the tune."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(
+        self,
+        midi: tune.Tune,
+        savgol: bool = True,
+        shift: bool = True,
+    ) -> None:
+        note_events = midi.filter(lambda x: "note" in x.type)
+        pitches = np.array(
+            [msg.note for msg in note_events if lu.is_note_on(msg)]
+        ).astype(float)
+        self._contour = pitches
+
+        if savgol:
+            self._contour = self.scale_and_savgol(self._contour, shift=shift)
+
+
+def weighted_sum(contours: list[Contour], weights: np.ndarray):
+    """
+    Returns a new contour that holds the weighted sum of the input contours.
+
+    :param contours: the contours to add.
+    :param weights: the weight for each contour.
+
+    :return: a new contour holding the weighted sum of the input contours.
+    """
+    result = np.zeros(len(contours[0]))
+    weights /= np.sum(weights)
+    for c, w in zip(contours, weights):
+        result += c._contour * w
+
+    new_contour = Contour()
+    new_contour._contour = result
+    return new_contour
