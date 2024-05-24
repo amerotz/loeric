@@ -1,6 +1,7 @@
 {
             "velocity": {
                 "weights": [0.2, 0.3, 0.1, 0.2, 0.2],
+                "high_loud_weight": high_loud_weight,
                 "random": random_weight,
                 "savgol": apply_savgol,
                 "shift": false,

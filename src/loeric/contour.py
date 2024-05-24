@@ -89,6 +89,9 @@ class Contour:
         if shift:
             array += min(0.5 - array.mean(), 1 - max(array))
 
+        array[array < 0] = 0
+        array[array > 1] = 1
+
         return array
 
     def ocanainn_scores(
@@ -226,6 +229,8 @@ class IntensityContour(Contour):
         :param shift: whether or not to apply a final shifting step to bring the mean of the array close to 0.5.
         """
 
+        weights = weights.astype(float)
+
         # calculate the components
         components = self.ocanainn_scores(midi)
         # stack them
@@ -237,6 +242,7 @@ class IntensityContour(Contour):
         else:
             if weights.shape != (size, 1):
                 weights = weights.reshape(size, 1)
+            weights /= weights.sum()
 
         # weight them
         stacked_components = np.multiply(stacked_components, weights)

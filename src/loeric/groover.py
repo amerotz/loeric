@@ -38,6 +38,7 @@ class Groover:
         diatonic_errors: bool = True,
         random_weight: float = 0,
         human_impact: float = 0,
+        high_loud_weight: float = 0.25,
         seed: int = 42,
         apply_savgol: bool = True,
         config_file: str = None,
@@ -67,6 +68,7 @@ class Groover:
         self._config = {
             "velocity": {
                 "weights": [0.2, 0.3, 0.1, 0.2, 0.2],
+                "high_loud_weight": high_loud_weight,
                 "random": random_weight,
                 "savgol": apply_savgol,
                 "shift": False,
@@ -170,7 +172,13 @@ class Groover:
         velocity_pitch_contour.calculate(self._tune)
 
         self._contours["velocity"] = cnt.weighted_sum(
-            [velocity_intensity_contour, velocity_pitch_contour], np.array([0.5, 0.5])
+            [velocity_intensity_contour, velocity_pitch_contour],
+            np.array(
+                [
+                    1 - self._config["velocity"]["high_loud_weight"],
+                    self._config["velocity"]["high_loud_weight"],
+                ]
+            ),
         )
 
         # tempo contour

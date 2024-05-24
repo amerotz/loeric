@@ -1,28 +1,29 @@
 {
 	"velocity": {
-		"weights": [0.2, 0.3, 0.1, 0.2, 0.2],
+		"weights": [25, 100, 75, 35, 25],
+		"high_loud_weight": 0.25,
 		"random": 0.2,
 		"savgol": true,
 		"shift": false
 	},
 	"tempo": {
-		"weights": [0.25, 0.1, 0.3, 0.25, 0.1],
-		"random": 0.2,
+		"weights": [25, 0, 75, 25, 0],
+		"random": 0.1,
 		"savgol": true,
 		"shift": true
 	},
 	"ornament": {
-		"weights": [0.2, 0.35, 0.15, 0.15, 0.2],
-		"random": 0.2,
+		"weights": [75, 50, 100, 0, 50],
+		"random": 0.0,
 		"savgol": true,
 		"shift": false
 	},
 	"probabilities": {
-		"drop": 0.05,
+		"drop": 0.025,
 		"roll": 1,
 		"slide": 0.5,
 		"cut": 1,
-		"error": 0.05
+		"error": 0.025
 	},
 	"values": {
 		"bend_resolution": 32,
@@ -30,7 +31,7 @@
 		"roll_eight_fraction": 0.8,
 		"slide_eight_fraction": 0.66,
 		"slide_pitch_threshold": 6,
-		"tempo_warp_bpms": 10,
+		"tempo_warp_bpms": 20,
 		"beat_velocity_increase": 16,
 		"min_velocity": 1,
 		"max_velocity": 127,
