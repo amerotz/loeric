@@ -98,6 +98,7 @@ class Groover:
             "values": {
                 "bend_resolution": 32,
                 "cut_eight_fraction": 0.2,
+                "cut_velocity_fraction": 0.8,
                 "roll_eight_fraction": 0.8,
                 "slide_eight_fraction": 0.66,
                 "slide_pitch_threshold": 6,
@@ -420,7 +421,9 @@ class Groover:
             # generate a cut
             cut = copy.deepcopy(message)
             cut.note = self.approach_from_above(message.note, self._tune)
-            cut.velocity = self._current_velocity
+            cut.velocity = int(
+                self._current_velocity * self._config["values"]["cut_velocity_fraction"]
+            )
             duration = self._cut_duration
             cut.time = 0
 
@@ -444,6 +447,9 @@ class Groover:
         elif ornament_type == ROLL:
             original_length = self._roll_duration
             cut_length = self._eight_duration - self._roll_duration
+            cut_velocity = int(
+                self._current_velocity * self._config["values"]["cut_velocity_fraction"]
+            )
 
             # first note
             original_0 = copy.deepcopy(message)
@@ -464,7 +470,7 @@ class Groover:
                 note=upper_pitch,
                 channel=message.channel,
                 time=0,
-                velocity=self._current_velocity,
+                velocity=cut_velocity,
             )
             upper_off = mido.Message(
                 "note_off",
@@ -493,7 +499,7 @@ class Groover:
                 note=lower_pitch,
                 channel=message.channel,
                 time=0,
-                velocity=self._current_velocity,
+                velocity=cut_velocity,
             )
             lower_off = mido.Message(
                 "note_off",
