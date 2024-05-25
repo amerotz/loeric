@@ -327,22 +327,70 @@ class Groover:
 
         return notes
 
+    def get_end_notes(self) -> list[mido.Message]:
+        """
+        Generate an end note for the tune based on its key.
+        :return: the midi messages containing the end note
+        """
+        # get root and range
+        root = m21.pitch.Pitch(self._tune.key_signature[0]).ps
+        mode = self._tune.key_signature[-1]
+        low, high = self._tune.ambitus
+
+        # select suitable pitches (e.g. any root, third, fifth within range)
+        pitches = np.arange(
+            start=low + self._transpose_semitones,
+            stop=high + 1 + self._transpose_semitones,
+            step=1,
+        )
+
+        # major or minor
+        third = 4
+        if mode == "m":
+            third = 3
+
+        pitches = pitches[np.in1d(pitches % root, np.array([0, third, 7]))]
+
+        # sample
+        end_pitch = random.choice(pitches)
+
+        # get duration (quarter note)
+        duration = self._eight_duration * 4
+
+        # create msgs
+        on_msg = mido.Message(
+            "note_on",
+            channel=self._midi_channel,
+            note=end_pitch,
+            time=0,
+            velocity=self._current_velocity,
+        )
+        off_msg = mido.Message(
+            "note_off",
+            channel=self._midi_channel,
+            note=end_pitch,
+            time=duration,
+            velocity=0,
+        )
+
+        return [on_msg, off_msg]
+
     @property
-    def _slide_duration(self):
+    def _slide_duration(self) -> float:
         """
         :return: the duration of a slide.
         """
         return self._eight_duration * self._config["values"]["slide_eight_fraction"]
 
     @property
-    def _cut_duration(self):
+    def _cut_duration(self) -> float:
         """
         :return: the duration of a cut note.
         """
         return self._eight_duration * self._config["values"]["cut_eight_fraction"]
 
     @property
-    def _roll_duration(self):
+    def _roll_duration(self) -> float:
         """
         :return: the duration of a single note in a roll.
         """
@@ -350,14 +398,14 @@ class Groover:
         return self._eight_duration * self._config["values"]["roll_eight_fraction"]
 
     @property
-    def _eight_duration(self):
+    def _eight_duration(self) -> float:
         """
         :return: the duration of a eight note in seconds at current tempo.
         """
         return 30 / mido.tempo2bpm(self._current_tempo)
 
     @property
-    def tempo(self):
+    def tempo(self) -> int:
         """
         :return: the user-set tempo.
         """

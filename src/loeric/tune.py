@@ -63,6 +63,14 @@ class Tune:
         self._filename = filename
         self._midi = list(mido_source)
 
+        # some stats about midi
+        self._lowest_pitch = min(
+            [msg.note for msg in self._midi if msg.type in ["note_on", "note_off"]]
+        )
+        self._highest_pitch = max(
+            [msg.note for msg in self._midi if msg.type in ["note_on", "note_off"]]
+        )
+
         # key signature
         self._key_signature = self._get_key_signature()
         self._fifths = _number_of_fifths[self._key_signature]
@@ -86,6 +94,13 @@ class Tune:
 
         # to keep track of the performance
         self._performance_time = -self._offset
+
+    @property
+    def ambitus(self) -> tuple[int]:
+        """
+        :return: the tune's lowest and highest pitches in a tuple (low, high)
+        """
+        return (self._lowest_pitch, self._highest_pitch)
 
     @property
     def key_signature(self) -> str:

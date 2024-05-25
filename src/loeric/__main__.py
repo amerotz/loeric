@@ -44,6 +44,9 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
         # reset the groover at the end of the repetition
         groover.reset()
 
+    # play an end note
+    player.play(groover.get_end_notes())
+
     if kwargs["save"]:
         name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
         if kwargs["output_dir"] is None:
