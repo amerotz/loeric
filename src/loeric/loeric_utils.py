@@ -1,8 +1,50 @@
 import mido
+import numpy as np
 
 # how to approach a note from above or below in a major scale
 above_approach_scale = [2, 1, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1]
 below_approach_scale = [-1, -1, -2, -1, -2, -1, -1, -2, -1, -2, -1, -2]
+
+# calculated as the shortest "possible" length of a note
+# given the latest guinnes world record for
+# most notes played in a minute on a piano
+TRIGGER_DELTA = 0.05
+
+
+# key signatures
+number_of_fifths = {
+    "Cb": -7,
+    "Abm": -7,
+    "Gb": -6,
+    "Ebm": -6,
+    "Db": -5,
+    "Bbm": -5,
+    "Ab": -4,
+    "Fm": -4,
+    "Eb": -3,
+    "Cm": -3,
+    "Bb": -2,
+    "Gm": -2,
+    "F": -1,
+    "Dm": -1,
+    "C": 0,
+    "Am": 0,
+    "G": 1,
+    "Em": 1,
+    "D": 2,
+    "Bm": 2,
+    "A": 3,
+    "F#m": 3,
+    "E": 4,
+    "C#m": 4,
+    "B": 5,
+    "G#m": 5,
+    "F#": 6,
+    "D#m": 6,
+    "C#": 7,
+    "A#m": 7,
+}
+
 
 # pitches that need quantization to major scale (then shifted according to modes)
 needs_pitch_quantization = [
@@ -19,6 +61,20 @@ needs_pitch_quantization = [
     True,  # A#
     False,  # B
 ]
+
+
+def get_chord_pitches(harmony: int) -> np.array:
+    """
+    Return the pitches of a major or minor chord in semitones from the root.
+    :param harmony: the chord. Values 0-11 indicate a major chord. Values 12-23 indicate a minor chord.
+
+    :return: the pitches that are part of the input chord.
+    """
+    third = 4
+    if harmony >= 12:
+        third = 3
+
+    return np.array([0, third, 7])
 
 
 def is_note_on(msg: mido.Message) -> bool:

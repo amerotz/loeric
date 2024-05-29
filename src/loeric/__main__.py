@@ -44,6 +44,9 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
         # reset the groover at the end of the repetition
         groover.reset()
 
+    # wrap around contours for end note
+    groover.advance_contours()
+
     # play an end note
     player.play(groover.get_end_notes())
 

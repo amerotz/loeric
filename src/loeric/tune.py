@@ -4,44 +4,7 @@ import music21 as m21
 from collections.abc import Callable
 from typing import Generator
 
-# calculated as the shortest "possible" length of a note
-# given the latest guinnes world record for
-# most notes played in a minute on a piano
-TRIGGER_DELTA = 0.05
-
-# key signatures
-_number_of_fifths = {
-    "Cb": -7,
-    "Abm": -7,
-    "Gb": -6,
-    "Ebm": -6,
-    "Db": -5,
-    "Bbm": -5,
-    "Ab": -4,
-    "Fm": -4,
-    "Eb": -3,
-    "Cm": -3,
-    "Bb": -2,
-    "Gm": -2,
-    "F": -1,
-    "Dm": -1,
-    "C": 0,
-    "Am": 0,
-    "G": 1,
-    "Em": 1,
-    "D": 2,
-    "Bm": 2,
-    "A": 3,
-    "F#m": 3,
-    "E": 4,
-    "C#m": 4,
-    "B": 5,
-    "G#m": 5,
-    "F#": 6,
-    "D#m": 6,
-    "C#": 7,
-    "A#m": 7,
-}
+from . import loeric_utils as lu
 
 
 class Tune:
@@ -73,7 +36,8 @@ class Tune:
 
         # key signature
         self._key_signature = self._get_key_signature()
-        self._fifths = _number_of_fifths[self._key_signature]
+        self._root = int(m21.pitch.Pitch(self._key_signature[0]).ps)
+        self._fifths = lu.number_of_fifths[self._key_signature]
 
         # time signature
         self._time_signature = self._get_time_signature()
@@ -94,6 +58,13 @@ class Tune:
 
         # to keep track of the performance
         self._performance_time = -self._offset
+
+    @property
+    def root(self) -> int:
+        """
+        :return: the tune's key signature root in pitch space.
+        """
+        return self._root
 
     @property
     def ambitus(self) -> tuple[int]:
@@ -261,7 +232,7 @@ class Tune:
         ) / self._beat_duration
         diff = abs(beat_position - round(beat_position))
 
-        return diff <= TRIGGER_DELTA
+        return diff <= lu.TRIGGER_DELTA
 
     def __len__(self) -> int:
         """

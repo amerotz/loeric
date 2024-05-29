@@ -49,7 +49,7 @@ class Groover:
 
         :param tune: the tune that will be performed.
         :param bpm: the user-defined tempo in bpm for the tune.
-        :param midi_channel: the midi output channel for all messages.
+        :param midi_channel: the midi output channel for all note messages. Drone messages will be sent on midi_channel + 1 if not specified otherwise in the configuration.
         :param transpose: the number of semitones by which to transpose the tune.
         :param diatonic_errors: whether or not error generation should be quantized to the tune's mode.
         :param random_weight: the weight of the random component in contour generation.
@@ -121,6 +121,16 @@ class Groover:
                 "tempo": 47,
                 "ornament": 48,
                 "human": 49,
+            },
+            "harmony": {
+                "chord_score": [1, 0, 0, 0, 0, 1, 0, 0, 0.25, 0.25, 0, 0],
+                "allowed_chords": [2, 0, 1, 0, 1, 2, 0, 2, 0, 1, 0, 0],
+                "chords_per_bar": 2,
+            },
+            "drone": {
+                "active": False,
+                "midi_channel": midi_channel + 1,
+                "allowed_notes": [55, 62, 69, 76],
             },
             "approach_from_above": {},
             "approach_from_below": {},
@@ -207,6 +217,17 @@ class Groover:
         # pich difference
         self._contours["pitch difference"] = cnt.PitchDifferenceContour()
         self._contours["pitch difference"].calculate(self._tune)
+
+        self._contours["harmony"] = cnt.HarmonicContour()
+        self._contours["harmony"].calculate(
+            self._tune,
+            np.array(
+                self._config["harmony"]["chord_score"],
+            ),
+            chords_per_bar=self._config["harmony"]["chords_per_bar"],
+            allowed_chords=np.array(self._config["harmony"]["allowed_chords"]),
+            transpose=self._transpose_semitones,
+        )
 
         # object holding each contour's value in a given moment
         self._contour_values = {}
@@ -325,6 +346,52 @@ class Groover:
         for note in notes:
             note.time = max(0, note.time)
 
+        # add drone
+        if self._config["drone"]["active"]:
+            # figure out what note is allowed depending on harmony
+            harmony = int(self._contour_values["harmony"] % 12)
+            drone_notes = np.array(self._config["drone"]["allowed_notes"])
+
+            # filter roots and fifths of chord
+            index = np.argwhere(
+                np.bitwise_and(
+                    np.bitwise_and(
+                        np.bitwise_and(
+                            np.in1d(
+                                (12 + drone_notes - harmony) % 12,
+                                lu.get_chord_pitches(
+                                    int(self._contour_values["harmony"])
+                                ),
+                            ),
+                            drone_notes - new_message.note <= 0,
+                        ),
+                        new_message.note - drone_notes > 6,
+                    ),
+                    new_message.note - drone_notes <= 12,
+                )
+            )
+            if len(index) != 0:
+                drone_notes = drone_notes[index]
+                index = np.argmin(abs(drone_notes - new_message.note))
+                drone = int(drone_notes[index])
+
+                new_notes = []
+                i = 0
+                while i < len(notes):
+                    new_notes.append(notes[i])
+                    if lu.is_note(notes[i]):
+                        new_notes.append(
+                            mido.Message(
+                                type=notes[i].type,
+                                channel=self._config["drone"]["midi_channel"],
+                                note=drone,
+                                velocity=self._current_velocity,
+                                time=0,
+                            )
+                        )
+                    i += 1
+                notes = new_notes
+
         return notes
 
     def get_end_notes(self) -> list[mido.Message]:
@@ -333,8 +400,7 @@ class Groover:
         :return: the midi messages containing the end note
         """
         # get root and range
-        root = m21.pitch.Pitch(self._tune.key_signature[0]).ps
-        mode = self._tune.key_signature[-1]
+        root = int(self._contour_values["harmony"] % 12)
         low, high = self._tune.ambitus
 
         # select suitable pitches (e.g. any root, third, fifth within range)
@@ -345,11 +411,9 @@ class Groover:
         )
 
         # major or minor
-        third = 4
-        if mode == "m":
-            third = 3
+        chord_pitches = lu.get_chord_pitches(self._contour_values["harmony"])
 
-        pitches = pitches[np.in1d(pitches % root, np.array([0, third, 7]))]
+        pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
 
         # sample
         end_pitch = random.choice(pitches)

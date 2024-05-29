@@ -94,22 +94,21 @@ class Contour:
 
         return array
 
-    def ocanainn_scores(
-        self, midi: tune.Tune
-    ) -> tuple[np.array, np.array, np.array, np.array, np.array]:
-        """
-        Computes the individual components for the ocanainn score:
 
-        * frequency score;
-        * beat score;
-        * ambitus score;
-        * leap score;
-        * length score.
+class HarmonicContour(Contour):
+    """A contour holding harmonic information."""
 
-        :param midi: the input tune used to compute the individual scores.
+    def __init__(self):
+        super().__init__()
 
-        :return: the frequency score, the beat score, the ambitus score, the leap score and the length score.
-        """
+    def calculate(
+        self,
+        midi: tune.Tune,
+        chord_score: np.array,
+        chords_per_bar: int = 2,
+        allowed_chords: np.array = np.zeros(12),
+        transpose: int = 0,
+    ) -> None:
         # retrieve pitch and time info
         # note_events = [msg for msg in midi if "note" in msg.type]
         note_events = midi.filter(lambda x: "note" in x.type)
@@ -123,65 +122,49 @@ class Contour:
         summed_timings -= midi.offset
         summed_timings = summed_timings[note_ons]
 
-        # o canainn score
-        notes = pitches % 12
+        notes = (pitches + transpose) % 12
 
-        # frequency score
-        values, counts = np.unique(notes, return_counts=True)
-        frequency_score = np.array(
-            [counts[np.where(values == n)] for n in notes]
-        ).astype(float)
-        frequency_score = frequency_score.reshape(-1)
-        frequency_score = np.interp(
-            frequency_score, (frequency_score.min(), frequency_score.max()), (0, 1)
-        )
+        # message length
+        lengths = timings[note_offs] - timings[note_ons]
+        lengths /= midi.bar_duration
+        lengths = np.interp(lengths, (0, lengths.max()), (0, 1))
 
-        # strong beat
-        beat_position = (summed_timings % midi.bar_duration) / midi.beat_duration
-        beat_position = abs(beat_position - np.round(beat_position))
-        trigger_delta = tune.TRIGGER_DELTA
-        beats = -np.ones(notes.shape)
-        indexes = np.where(beat_position <= trigger_delta)
-        beats[indexes] = notes[indexes]
-        values, counts = np.unique(beats, return_counts=True)
-        beat_score = np.array([counts[np.where(values == n)] for n in beats]).astype(
-            float
-        )
-        beat_score = beat_score.reshape(-1)
-        beat_score[np.where(beats == -1)] = 0
-        beat_score = beat_score.reshape(-1)
-        beat_score = np.interp(beat_score, (beat_score.min(), beat_score.max()), (0, 1))
+        # estimate chord for each bar
+        harmony = np.zeros(len(note_events))
 
-        # highest/lowest score
-        highest = pitches == max(pitches)
-        lowest = pitches == min(pitches)
-        ambitus_score = (highest | lowest).astype(float)
+        t = summed_timings.min()
+        while t < summed_timings.max():
+            start = t
+            stop = t + midi.bar_duration / chords_per_bar
+            if t < 0:
+                stop = 0
 
-        # leap score
-        diff = np.diff(pitches)
-        diff = np.insert(diff, 0, 0)
-        leaps = -np.ones(pitches.shape)
-        index = np.where(diff >= 7)
-        leaps[index] = notes[index]
-        values, counts = np.unique(leaps, return_counts=True)
-        leap_score = np.array([counts[np.where(values == n)] for n in leaps]).astype(
-            float
-        )
-        leap_score = leap_score.reshape(-1)
-        leap_score[np.where(leaps == -1)] = 0
-        if leap_score.min() != leap_score.max():
-            leap_score = np.interp(
-                leap_score, (leap_score.min(), leap_score.max()), (0, 1)
+            # select bar range
+            indexes = np.where((summed_timings >= start) & (summed_timings < stop))
+            bar_notes = notes[indexes]
+            bar_lengths = lengths[indexes]
+
+            # init counts
+            chords = np.zeros(12)
+
+            for i, n in enumerate(bar_notes):
+                chords += np.roll(chord_score, n)  # * bar_lengths[i]
+
+            chords = np.multiply(
+                chords,
+                np.roll(allowed_chords, midi.root),
             )
+            root = np.random.choice(np.argwhere(chords == chords.max())[0])
+            mode = "maj"
+            harmony[indexes] = np.argmax(chords)
 
-        # long score
-        timings = timings[note_offs] - timings[note_ons]
-        values, counts = np.unique(timings, return_counts=True)
-        index = np.argmax(counts)
-        val = values[index]
-        length_score = (timings > val).astype(float)
+            if chords[(root + 3) % 12] > chords[(root + 4) % 12]:
+                mode = "min"
+                harmony[indexes] += 12
 
-        return frequency_score, beat_score, ambitus_score, leap_score, length_score
+            t = stop
+
+        self._contour = harmony
 
 
 class RandomContour(Contour):
@@ -260,6 +243,95 @@ class IntensityContour(Contour):
         # savgol filtering
         if savgol:
             self._contour = self.scale_and_savgol(self._contour, shift=shift)
+
+    def ocanainn_scores(
+        self, midi: tune.Tune
+    ) -> tuple[np.array, np.array, np.array, np.array, np.array]:
+        """
+        Computes the individual components for the ocanainn score:
+
+        * frequency score;
+        * beat score;
+        * ambitus score;
+        * leap score;
+        * length score.
+
+        :param midi: the input tune used to compute the individual scores.
+
+        :return: the frequency score, the beat score, the ambitus score, the leap score and the length score.
+        """
+        # retrieve pitch and time info
+        # note_events = [msg for msg in midi if "note" in msg.type]
+        note_events = midi.filter(lambda x: "note" in x.type)
+        timings = np.array([msg.time for msg in note_events])
+        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
+
+        # cumulative time
+        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
+        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
+        summed_timings = np.cumsum(timings)
+        summed_timings -= midi.offset
+        summed_timings = summed_timings[note_ons]
+
+        # o canainn score
+        notes = pitches % 12
+
+        # frequency score
+        values, counts = np.unique(notes, return_counts=True)
+        frequency_score = np.array(
+            [counts[np.where(values == n)] for n in notes]
+        ).astype(float)
+        frequency_score = frequency_score.reshape(-1)
+        frequency_score = np.interp(
+            frequency_score, (frequency_score.min(), frequency_score.max()), (0, 1)
+        )
+
+        # strong beat
+        beat_position = (summed_timings % midi.bar_duration) / midi.beat_duration
+        beat_position = abs(beat_position - np.round(beat_position))
+        trigger_delta = lu.TRIGGER_DELTA
+        beats = -np.ones(notes.shape)
+        indexes = np.where(beat_position <= trigger_delta)
+        beats[indexes] = notes[indexes]
+        values, counts = np.unique(beats, return_counts=True)
+        beat_score = np.array([counts[np.where(values == n)] for n in beats]).astype(
+            float
+        )
+        beat_score = beat_score.reshape(-1)
+        beat_score[np.where(beats == -1)] = 0
+        beat_score = beat_score.reshape(-1)
+        beat_score = np.interp(beat_score, (beat_score.min(), beat_score.max()), (0, 1))
+
+        # highest/lowest score
+        highest = pitches == max(pitches)
+        lowest = pitches == min(pitches)
+        ambitus_score = (highest | lowest).astype(float)
+
+        # leap score
+        diff = np.diff(pitches)
+        diff = np.insert(diff, 0, 0)
+        leaps = -np.ones(pitches.shape)
+        index = np.where(diff >= 7)
+        leaps[index] = notes[index]
+        values, counts = np.unique(leaps, return_counts=True)
+        leap_score = np.array([counts[np.where(values == n)] for n in leaps]).astype(
+            float
+        )
+        leap_score = leap_score.reshape(-1)
+        leap_score[np.where(leaps == -1)] = 0
+        if leap_score.min() != leap_score.max():
+            leap_score = np.interp(
+                leap_score, (leap_score.min(), leap_score.max()), (0, 1)
+            )
+
+        # long score
+        timings = timings[note_offs] - timings[note_ons]
+        values, counts = np.unique(timings, return_counts=True)
+        index = np.argmax(counts)
+        val = values[index]
+        length_score = (timings > val).astype(float)
+
+        return frequency_score, beat_score, ambitus_score, leap_score, length_score
 
 
 class MessageLengthContour(Contour):
@@ -340,4 +412,5 @@ def weighted_sum(contours: list[Contour], weights: np.ndarray):
 
     new_contour = Contour()
     new_contour._contour = result
+
     return new_contour
