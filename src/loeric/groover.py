@@ -230,8 +230,13 @@ class Groover:
 
         # object holding each contour's value in a given moment
         self._contour_values = {}
+
         # init the human contour
         self._contour_values["human"] = 0.5
+
+        # init the autonomy contour
+        self._contour_values["autonomy"] = 0
+
         # init all contours
         for contour_name in self._contours:
             self._contour_values[contour_name] = 0.5
@@ -248,7 +253,9 @@ class Groover:
         # add the human part
         if self._contour_values["human"] is not None:
             for contour_name in ["velocity", "tempo", "ornament"]:
-                hi = self._config[contour_name]["human_impact"]
+                hi = (1 - self._contour_values["autonomy"]) * self._config[
+                    contour_name
+                ]["human_impact"]
                 self._contour_values[contour_name] *= 1 - hi
                 self._contour_values[contour_name] += hi * self._contour_values["human"]
 

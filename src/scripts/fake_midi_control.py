@@ -1,20 +1,32 @@
+import argparse
 import mido
 import math
 import time
 
 # generate a fake control signal
-port_num = 0
 
-with mido.open_output(mido.get_output_names()[port_num]) as out:
-    while True:
-        # send a message every 0.25 seconds
-        value = round(127 * (math.sin(time.time()) + 1) / 2)
-        out.send(
-            mido.Message(
-                "control_change",
-                channel=0,
-                control=42,
-                value=value,
+
+def main(args):
+    with mido.open_output(mido.get_output_names()[args.port]) as out:
+        while True:
+            # send a message every 0.25 seconds
+            value = round(127 * (math.sin(time.time()) + 1) / 2)
+            out.send(
+                mido.Message(
+                    "control_change",
+                    channel=0,
+                    control=args.control,
+                    value=value,
+                )
             )
-        )
-        time.sleep(0.25)
+            print(args.port, args.control, value, sep="\t")
+            time.sleep(0.25)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port", type=int, default=None)
+    parser.add_argument("-c", "--control", type=int, default=None)
+
+    args = parser.parse_args()
+    main(args)

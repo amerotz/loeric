@@ -138,7 +138,9 @@ def main(args):
 
         # set input callback
         if port is not None:
-            port.callback = check_midi_control(groover, {args["control"]: "human"})
+            port.callback = check_midi_control(
+                groover, {args["control"]: "human", args["autonomy"]: "autonomy"}
+            )
 
         player_thread = threading.Thread(
             target=play, args=(groover, tune, out), kwargs=args
@@ -176,6 +178,13 @@ if __name__ == "__main__":
         help="the MIDI control signal number to use as human control.",
         type=int,
         default=10,
+    )
+    parser.add_argument(
+        "-a",
+        "--autonomy",
+        help="the MIDI control signal number to use as autonomy control.",
+        type=int,
+        default=11,
     )
     parser.add_argument(
         "-hi",

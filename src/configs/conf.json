@@ -46,7 +46,8 @@
 		"velocity": 46,
 		"tempo": 47,
 		"ornament": 48,
-		"human": 49
+		"human": 49,
+		"autonomy": 50
 	},
 	"harmony": {
 		"chord_score" :[
@@ -81,7 +82,7 @@
 		"chords_per_bar": 2
 	},
 	"drone": {
-		"active": true,
+		"active": false,
 		"midi_channel": 1,
 		"allowed_notes": [55, 62, 69, 76]
 	},
