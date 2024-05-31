@@ -226,7 +226,6 @@ class Groover:
             ),
             chords_per_bar=self._config["harmony"]["chords_per_bar"],
             allowed_chords=np.array(self._config["harmony"]["allowed_chords"]),
-            transpose=self._transpose_semitones,
         )
 
         # object holding each contour's value in a given moment
@@ -348,51 +347,68 @@ class Groover:
 
         # add drone
         if self._config["drone"]["active"]:
-            # figure out what note is allowed depending on harmony
-            harmony = int(self._contour_values["harmony"] % 12)
-            drone_notes = np.array(self._config["drone"]["allowed_notes"])
+            drone = self._get_drone(notes, new_message.note)
 
-            # filter roots and fifths of chord
-            index = np.argwhere(
-                np.bitwise_and(
-                    np.bitwise_and(
-                        np.bitwise_and(
-                            np.in1d(
-                                (12 + drone_notes - harmony) % 12,
-                                lu.get_chord_pitches(
-                                    int(self._contour_values["harmony"])
-                                ),
-                            ),
-                            drone_notes - new_message.note <= 0,
-                        ),
-                        new_message.note - drone_notes > 6,
-                    ),
-                    new_message.note - drone_notes <= 12,
-                )
-            )
-            if len(index) != 0:
-                drone_notes = drone_notes[index]
-                index = np.argmin(abs(drone_notes - new_message.note))
-                drone = int(drone_notes[index])
-
-                new_notes = []
-                i = 0
-                while i < len(notes):
-                    new_notes.append(notes[i])
-                    if lu.is_note(notes[i]):
-                        new_notes.append(
-                            mido.Message(
-                                type=notes[i].type,
-                                channel=self._config["drone"]["midi_channel"],
-                                note=drone,
-                                velocity=self._current_velocity,
-                                time=0,
-                            )
-                        )
-                    i += 1
-                notes = new_notes
+            if drone is not None:
+                notes = self._add_drone(notes, drone)
 
         return notes
+
+    def _add_drone(self, notes: np.array, drone: int) -> np.array:
+        """
+        Add a drone to each note in input.
+
+        :param notes: the notes to add a drone to.
+        :param drone: the drone note to add.
+
+        :return the input notes, with an added drone.
+        """
+        new_notes = []
+        i = 0
+        drone += self._transpose_semitones
+        while i < len(notes):
+            new_notes.append(notes[i])
+            if lu.is_note(notes[i]):
+                new_notes.append(
+                    mido.Message(
+                        type=notes[i].type,
+                        channel=self._config["drone"]["midi_channel"],
+                        note=drone,
+                        velocity=self._current_velocity,
+                        time=0,
+                    )
+                )
+            i += 1
+        return new_notes
+
+    def _get_drone(self, notes: np.array, reference: int) -> int:
+        # figure out what note is allowed depending on harmony
+        harmony = int(self._contour_values["harmony"] % 12)
+        drone_notes = np.array(self._config["drone"]["allowed_notes"])
+
+        # filter roots and fifths of chord
+        index = np.argwhere(
+            np.bitwise_and(
+                np.bitwise_and(
+                    np.bitwise_and(
+                        np.in1d(
+                            (12 + drone_notes - harmony) % 12,
+                            lu.get_chord_pitches(int(self._contour_values["harmony"])),
+                        ),
+                        drone_notes - reference <= 0,
+                    ),
+                    reference - drone_notes > 6,
+                ),
+                reference - drone_notes <= 12,
+            )
+        )
+        if len(index) != 0:
+            drone_notes = drone_notes[index]
+            index = np.argmin(abs(drone_notes - reference))
+            drone = int(drone_notes[index])
+            return drone
+
+        return None
 
     def get_end_notes(self) -> list[mido.Message]:
         """
@@ -403,20 +419,29 @@ class Groover:
         root = int(self._contour_values["harmony"] % 12)
         low, high = self._tune.ambitus
 
-        # select suitable pitches (e.g. any root, third, fifth within range)
-        pitches = np.arange(
-            start=low + self._transpose_semitones,
-            stop=high + 1 + self._transpose_semitones,
-            step=1,
-        )
-
         # major or minor
         chord_pitches = lu.get_chord_pitches(self._contour_values["harmony"])
 
+        # select pitches from tune range
+        pitches = np.arange(
+            start=low,
+            stop=high + 1,
+            step=1,
+        )
+
+        # get last note of tune
+        last_note = self._tune.filter(lu.is_note_on)[-1].note
+
+        # filter pitches that are too far away
+        # reachable within a fifth
+        pitches = pitches[abs(pitches - last_note) <= 7]
+
+        # select suitable pitches (e.g. any root, third, fifth within range)
         pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
 
         # sample
         end_pitch = random.choice(pitches)
+        end_pitch += self._transpose_semitones
 
         # get duration (quarter note)
         duration = self._eight_duration * 4

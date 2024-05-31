@@ -122,7 +122,7 @@ class HarmonicContour(Contour):
         summed_timings -= midi.offset
         summed_timings = summed_timings[note_ons]
 
-        notes = (pitches + transpose) % 12
+        notes = pitches % 12
 
         # message length
         lengths = timings[note_offs] - timings[note_ons]

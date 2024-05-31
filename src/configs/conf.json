@@ -81,7 +81,7 @@
 		"chords_per_bar": 2
 	},
 	"drone": {
-		"active": false,
+		"active": true,
 		"midi_channel": 1,
 		"allowed_notes": [55, 62, 69, 76]
 	},
