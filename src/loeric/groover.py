@@ -64,6 +64,8 @@ class Groover:
 
         # offset for messages after ornaments
         self._offset = 0
+        # delay to randomize message length
+        self._delay = 0
 
         self._config = {
             "velocity": {
@@ -131,6 +133,7 @@ class Groover:
                 "active": False,
                 "midi_channel": midi_channel + 1,
                 "allowed_notes": [55, 62, 69, 76],
+                "free": [False, False, False, False],
             },
             "approach_from_above": {},
             "approach_from_below": {},
@@ -165,6 +168,14 @@ class Groover:
         self._transpose_semitones = self._config["values"]["transpose"]
         # table for pitch errors
         self._pitch_errors = defaultdict(int)
+
+        # droning
+        self._drone_notes = np.array(self._config["drone"]["allowed_notes"])
+        self._upper_drone_interval = np.append(np.diff(self._drone_notes), 0)
+        self._lower_drone_interval = self._drone_notes + np.insert(
+            0, 0, np.diff(self._drone_notes)
+        )
+        print(np.insert(0, 0, np.diff(self._drone_notes)))
 
         # create contours
         self._contours = {}
@@ -297,8 +308,12 @@ class Groover:
             # transpose note
             new_message.note += self._transpose_semitones
 
-        # change note offs of errors
         if lu.is_note_off(new_message):
+            # randomize end time
+            mult = random.uniform(0.8, 1)
+            self._delay = new_message.time * (1 - mult)
+            new_message.time *= mult
+            # change note offs of errors
             key = new_message.note
             if key in self._pitch_errors:
                 value = self._pitch_errors[key]
@@ -312,10 +327,10 @@ class Groover:
         if is_note_on:
             # advance the contours
             self.advance_contours()
-
-        # change loudness
-        if is_note_on:
+            # change loudness
             new_message.velocity = self._current_velocity
+            # add delayed start
+            new_message.time = new_message.time + self._delay
 
         notes = []
 
@@ -370,43 +385,46 @@ class Groover:
 
         :return the input notes, with an added drone.
         """
-        new_notes = []
         i = 0
         drone += self._transpose_semitones
-        while i < len(notes):
-            new_notes.append(notes[i])
-            if lu.is_note(notes[i]):
-                new_notes.append(
-                    mido.Message(
-                        type=notes[i].type,
-                        channel=self._config["drone"]["midi_channel"],
-                        note=drone,
-                        velocity=self._current_velocity,
-                        time=0,
-                    )
-                )
-            i += 1
-        return new_notes
+        notes.insert(
+            1,
+            mido.Message(
+                type="note_on",
+                channel=self._config["drone"]["midi_channel"],
+                note=drone,
+                velocity=self._current_velocity,
+                time=0,
+            ),
+        )
+        notes.append(
+            mido.Message(
+                type="note_off",
+                channel=self._config["drone"]["midi_channel"],
+                note=drone,
+                velocity=self._current_velocity,
+                time=0,
+            ),
+        )
+
+        return notes
 
     def _get_drone(self, notes: np.array, reference: int) -> int:
         # figure out what note is allowed depending on harmony
         harmony = int(self._contour_values["harmony"] % 12)
-        drone_notes = np.array(self._config["drone"]["allowed_notes"])
+        drone_notes = self._drone_notes
 
         # filter roots and fifths of chord
         index = np.argwhere(
             np.bitwise_and(
                 np.bitwise_and(
-                    np.bitwise_and(
-                        np.in1d(
-                            (12 + drone_notes - harmony) % 12,
-                            lu.get_chord_pitches(int(self._contour_values["harmony"])),
-                        ),
-                        drone_notes - reference <= 0,
+                    np.in1d(
+                        (12 + drone_notes - harmony) % 12,
+                        lu.get_chord_pitches(int(self._contour_values["harmony"])),
                     ),
-                    reference - drone_notes > 6,
+                    drone_notes <= reference - self._upper_drone_interval,
                 ),
-                reference - drone_notes <= 12,
+                drone_notes >= reference - 7,
             )
         )
         if len(index) != 0:
@@ -440,8 +458,8 @@ class Groover:
         last_note = self._tune.filter(lu.is_note_on)[-1].note
 
         # filter pitches that are too far away
-        # reachable within a fifth
-        pitches = pitches[abs(pitches - last_note) <= 7]
+        # reachable within a third
+        pitches = pitches[abs(pitches - last_note) <= 4]
 
         # select suitable pitches (e.g. any root, third, fifth within range)
         pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
