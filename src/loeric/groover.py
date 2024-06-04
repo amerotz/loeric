@@ -172,10 +172,11 @@ class Groover:
         # droning
         self._drone_notes = np.array(self._config["drone"]["allowed_notes"])
         self._upper_drone_interval = np.append(np.diff(self._drone_notes), 0)
-        self._lower_drone_interval = self._drone_notes + np.insert(
-            0, 0, np.diff(self._drone_notes)
+        self._lower_drone_interval = self._upper_drone_interval + np.append(
+            np.append(np.diff(self._drone_notes)[1:], 0), -127
         )
-        print(np.insert(0, 0, np.diff(self._drone_notes)))
+        print(self._upper_drone_interval)
+        print(self._lower_drone_interval)
 
         # create contours
         self._contours = {}
@@ -369,7 +370,7 @@ class Groover:
 
         # add drone
         if self._config["drone"]["active"]:
-            drone = self._get_drone(notes, new_message.note)
+            drone = self._get_drone(new_message.note)
 
             if drone is not None:
                 notes = self._add_drone(notes, drone)
@@ -386,7 +387,9 @@ class Groover:
         :return the input notes, with an added drone.
         """
         i = 0
-        drone += self._transpose_semitones
+        if self._config["drone"]["transpose"]:
+            drone += self._transpose_semitones
+
         notes.insert(
             1,
             mido.Message(
@@ -409,9 +412,12 @@ class Groover:
 
         return notes
 
-    def _get_drone(self, notes: np.array, reference: int) -> int:
+    def _get_drone(self, reference: int) -> int:
         # figure out what note is allowed depending on harmony
         harmony = int(self._contour_values["harmony"] % 12)
+        if not self._config["drone"]["transpose"]:
+            harmony += self._transpose_semitones
+
         drone_notes = self._drone_notes
 
         # filter roots and fifths of chord
@@ -422,9 +428,9 @@ class Groover:
                         (12 + drone_notes - harmony) % 12,
                         lu.get_chord_pitches(int(self._contour_values["harmony"])),
                     ),
-                    drone_notes <= reference - self._upper_drone_interval,
+                    drone_notes - reference < self._upper_drone_interval,
                 ),
-                drone_notes >= reference - 7,
+                reference - drone_notes < self._lower_drone_interval,
             )
         )
         if len(index) != 0:

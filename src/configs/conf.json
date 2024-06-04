@@ -51,7 +51,7 @@
 	},
 	"harmony": {
 		"chord_score" :[
-			2,  
+			1,  
 			0,
 			0,
 			0,
@@ -85,7 +85,8 @@
 		"active": true,
 		"midi_channel": 1,
 		"allowed_notes": [57, 64, 69, 73],
-		"free": [false, false, false, false]
+		"free": [false, false, false, false],
+		"transpose":true
 	},
 	"approach_from_above": {},
 	"approach_from_below": {}
