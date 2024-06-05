@@ -36,7 +36,7 @@ class Tune:
 
         # key signature
         self._key_signature = self._get_key_signature()
-        self._root = int(m21.pitch.Pitch(self._key_signature[0]).ps)
+        self._root = int(m21.pitch.Pitch(self._key_signature[0]).ps) % 12
         self._fifths = lu.number_of_fifths[self._key_signature]
 
         # time signature

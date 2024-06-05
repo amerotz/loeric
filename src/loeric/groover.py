@@ -170,13 +170,8 @@ class Groover:
         self._pitch_errors = defaultdict(int)
 
         # droning
-        self._drone_notes = np.array(self._config["drone"]["allowed_notes"])
-        self._upper_drone_interval = np.append(np.diff(self._drone_notes), 0)
-        self._lower_drone_interval = self._upper_drone_interval + np.append(
-            np.append(np.diff(self._drone_notes)[1:], 0), -127
-        )
-        print(self._upper_drone_interval)
-        print(self._lower_drone_interval)
+        self._drone_notes = np.array(self._config["drone"]["strings"])
+        self._free_drone_notes = np.array(self._config["drone"]["free_strings"])
 
         # create contours
         self._contours = {}
@@ -377,69 +372,116 @@ class Groover:
 
         return notes
 
-    def _add_drone(self, notes: np.array, drone: int) -> np.array:
+    def _add_drone(self, notes: np.array, drones: np.array) -> np.array:
         """
-        Add a drone to each note in input.
+        Add drones to each note in input.
 
         :param notes: the notes to add a drone to.
-        :param drone: the drone note to add.
+        :param drone: the drone notes to add.
 
         :return the input notes, with an added drone.
         """
-        i = 0
-        if self._config["drone"]["transpose"]:
-            drone += self._transpose_semitones
+        for drone in drones:
+            i = 0
+            if self._config["drone"]["transpose"]:
+                drone += self._transpose_semitones
 
-        notes.insert(
-            1,
-            mido.Message(
-                type="note_on",
-                channel=self._config["drone"]["midi_channel"],
-                note=drone,
-                velocity=self._current_velocity,
-                time=0,
-            ),
-        )
-        notes.append(
-            mido.Message(
-                type="note_off",
-                channel=self._config["drone"]["midi_channel"],
-                note=drone,
-                velocity=self._current_velocity,
-                time=0,
-            ),
-        )
+            notes.insert(
+                1,
+                mido.Message(
+                    type="note_on",
+                    channel=self._config["drone"]["midi_channel"],
+                    note=drone,
+                    velocity=int(
+                        self._current_velocity
+                        * self._config["drone"]["velocity_multiplier"]
+                    ),
+                    time=0,
+                ),
+            )
+            notes.append(
+                mido.Message(
+                    type="note_off",
+                    channel=self._config["drone"]["midi_channel"],
+                    note=drone,
+                    velocity=0,
+                    time=0,
+                ),
+            )
 
         return notes
 
-    def _get_drone(self, reference: int) -> int:
+    def _get_drone(self, reference: int) -> np.array:
         # figure out what note is allowed depending on harmony
-        harmony = int(self._contour_values["harmony"] % 12)
+        harmony = self._contour_values["harmony"]
         if not self._config["drone"]["transpose"]:
             harmony += self._transpose_semitones
 
-        drone_notes = self._drone_notes
+        harmony = int(harmony % 12)
 
-        # filter roots and fifths of chord
-        index = np.argwhere(
-            np.bitwise_and(
-                np.bitwise_and(
-                    np.in1d(
-                        (12 + drone_notes - harmony) % 12,
-                        lu.get_chord_pitches(int(self._contour_values["harmony"])),
-                    ),
-                    drone_notes - reference < self._upper_drone_interval,
-                ),
-                reference - drone_notes < self._lower_drone_interval,
+        # check on what string the note could be played
+        distances = reference - self._drone_notes
+        distances[distances < 0] = 127
+        string = np.argmin(distances)
+        index = []
+
+        # add lower string if there
+        if string > 0:
+            index.append(string - 1)
+
+        # add upper string if there
+        if string < len(self._drone_notes) - 1:
+            index.append(string + 1)
+
+        allowed_harmony = lu.get_chord_pitches(int(self._contour_values["harmony"]))
+
+        # append root
+        if self._config["drone"]["allow_root"]:
+            allowed_harmony = np.append(
+                allowed_harmony,
+                (24 + self._tune.root + self._transpose_semitones - harmony) % 12,
             )
-        )
-        if len(index) != 0:
-            drone_notes = drone_notes[index]
-            index = np.argmin(abs(drone_notes - reference))
-            drone = int(drone_notes[index])
-            return drone
 
-        return None
+        index = np.array(index)
+        index = index[
+            np.in1d((12 + self._drone_notes[index] - harmony) % 12, allowed_harmony)
+        ]
+
+        free_index = np.arange(len(self._free_drone_notes))
+        free_index = free_index[
+            np.in1d(
+                (12 + self._free_drone_notes[free_index] - harmony) % 12,
+                allowed_harmony,
+            )
+        ]
+
+        drone = np.array([-1]).astype(int)
+
+        if len(index) != 0:
+            drone_notes = self._drone_notes[index]
+            index = np.argsort(abs(drone_notes - reference))
+            drone = np.concatenate(
+                (
+                    drone,
+                    drone_notes[
+                        index[: self._config["drone"]["strings_at_once"]]
+                    ].astype(int),
+                )
+            )
+
+        if len(free_index) != 0:
+            free_drone_notes = self._free_drone_notes[free_index]
+            free_index = np.argsort(-abs(free_drone_notes - reference))
+            drone = np.concatenate(
+                (
+                    drone,
+                    free_drone_notes[
+                        free_index[: self._config["drone"]["free_strings_at_once"]]
+                    ].astype(int),
+                )
+            )
+
+        return drone[1:]
 
     def get_end_notes(self) -> list[mido.Message]:
         """
