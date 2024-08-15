@@ -127,13 +127,21 @@ class Groover:
             "harmony": {
                 "chord_score": [1, 0, 0, 0, 0, 1, 0, 0, 0.25, 0.25, 0, 0],
                 "allowed_chords": [2, 0, 1, 0, 1, 2, 0, 2, 0, 1, 0, 0],
-                "chords_per_bar": 2,
+                "chords_per_bar": self._tune.beat_count,
             },
             "drone": {
                 "active": False,
                 "midi_channel": midi_channel + 1,
-                "allowed_notes": [55, 62, 69, 76],
-                "free": [False, False, False, False],
+                "threshold": 0.5,
+                "bind": "velocity",
+                "velocity_multiplier": 1,
+                "strings_at_once": 1,
+                "free_strings": [38, 43, 45],
+                "free_strings_at_once": 0,
+                "transpose": False,
+                "allow_root": False,
+                "notes_per_bar": 4,
+                "delay_range": 0.01,
             },
             "approach_from_above": {},
             "approach_from_below": {},
@@ -172,6 +180,9 @@ class Groover:
         # droning
         self._drone_notes = np.array(self._config["drone"]["strings"])
         self._free_drone_notes = np.array(self._config["drone"]["free_strings"])
+        self._drone_threshold = float(self._config["drone"]["threshold"])
+        self._drone_bound_contour = self._config["drone"]["bind"]
+        self._last_played_drones = []
 
         # create contours
         self._contours = {}
@@ -260,9 +271,12 @@ class Groover:
         # add the human part
         if self._contour_values["human"] is not None:
             for contour_name in ["velocity", "tempo", "ornament"]:
+                hi = 1 - self._contour_values["autonomy"]
+                """
                 hi = (1 - self._contour_values["autonomy"]) * self._config[
                     contour_name
                 ]["human_impact"]
+                """
                 self._contour_values[contour_name] *= 1 - hi
                 self._contour_values[contour_name] += hi * self._contour_values["human"]
 
@@ -365,49 +379,67 @@ class Groover:
 
         # add drone
         if self._config["drone"]["active"]:
-            drone = self._get_drone(new_message.note)
+            if self._contour_values[self._drone_bound_contour] >= self._drone_threshold:
+                drone = self._get_drone(new_message.note)
 
-            if drone is not None:
-                notes = self._add_drone(notes, drone)
+                if drone is not None:
+                    notes = self._add_drone(notes, drone, is_note_on)
 
         return notes
 
-    def _add_drone(self, notes: np.array, drones: np.array) -> np.array:
+    def _add_drone(
+        self, notes: np.array, drones: np.array, is_note_on: bool
+    ) -> np.array:
         """
         Add drones to each note in input.
 
         :param notes: the notes to add a drone to.
         :param drone: the drone notes to add.
+        :param is_note_on: whether this is a note on message or not.
 
         :return the input notes, with an added drone.
         """
-        for drone in drones:
-            i = 0
-            if self._config["drone"]["transpose"]:
-                drone += self._transpose_semitones
+        note_duration = self._tune.bar_duration / self._config["drone"]["notes_per_bar"]
+        should_play = (
+            self._tune.get_performance_time() % note_duration <= lu.TRIGGER_DELTA
+        )
 
-            notes.insert(
-                1,
-                mido.Message(
-                    type="note_on",
-                    channel=self._config["drone"]["midi_channel"],
-                    note=drone,
-                    velocity=int(
-                        self._current_velocity
-                        * self._config["drone"]["velocity_multiplier"]
+        if should_play and is_note_on:
+            for drone in self._last_played_drones:
+                notes.insert(
+                    0,
+                    mido.Message(
+                        type="note_off",
+                        channel=self._config["drone"]["midi_channel"],
+                        note=drone,
+                        velocity=0,
+                        time=0,
                     ),
-                    time=0,
-                ),
-            )
-            notes.append(
-                mido.Message(
-                    type="note_off",
-                    channel=self._config["drone"]["midi_channel"],
-                    note=drone,
-                    velocity=0,
-                    time=0,
-                ),
-            )
+                )
+
+            list_offset = len(self._last_played_drones)
+            self._last_played_drones = []
+
+            for drone in drones:
+                if self._config["drone"]["transpose"]:
+                    drone += self._transpose_semitones
+
+                delay = random.uniform(0, self._config["drone"]["delay_range"])
+                notes.insert(
+                    1 + list_offset,
+                    mido.Message(
+                        type="note_on",
+                        channel=self._config["drone"]["midi_channel"],
+                        note=drone,
+                        velocity=int(
+                            self._current_velocity
+                            * self._config["drone"]["velocity_multiplier"]
+                        ),
+                        time=delay,
+                    ),
+                )
+                self._offset += delay
+                self._last_played_drones.append(drone)
 
         return notes
 

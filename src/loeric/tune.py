@@ -60,6 +60,13 @@ class Tune:
         self._performance_time = -self._offset
 
     @property
+    def beat_count(self) -> int:
+        """
+        :return: the numebr of beats in the tune.
+        """
+        return self._time_signature.beatCount
+
+    @property
     def root(self) -> int:
         """
         :return: the tune's key signature root in pitch space.
@@ -114,6 +121,18 @@ class Tune:
         :return: the tune's performance offset (i.e. the length of the pickup bar) in seconds.
         """
         return self._offset
+
+    def reset_performance_time(self) -> None:
+        """
+        :return: the current performance time
+        """
+        self._performance_time = -self._offset
+
+    def get_performance_time(self) -> float:
+        """
+        :return: the current performance time
+        """
+        return self._performance_time
 
     @property
     def _quarter_duration(self) -> float:

@@ -150,16 +150,19 @@ class HarmonicContour(Contour):
             for i, n in enumerate(bar_notes):
                 chords += np.roll(chord_score, n)  # * bar_lengths[i]
 
-            chords = np.multiply(
+            root_chord = np.multiply(
                 chords,
                 np.roll(allowed_chords, midi.root),
             )
-            root = np.random.choice(np.argwhere(chords == chords.max())[0])
-            mode = "maj"
-            harmony[indexes] = np.argmax(chords)
+            root = np.random.choice(np.argwhere(root_chord == root_chord.max())[0])
+
+            is_major = np.roll(lu.is_major, midi.root)[root]
 
             if chords[(root + 3) % 12] > chords[(root + 4) % 12]:
-                mode = "min"
+                is_major = False
+
+            harmony[indexes] = root
+            if not is_major:
                 harmony[indexes] += 12
 
             t = stop

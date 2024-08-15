@@ -6,6 +6,7 @@ dist/
 mid/
 abc/
 *.mid
+*.scl
 loeric-env/
 mini-session/
 paper-examples/

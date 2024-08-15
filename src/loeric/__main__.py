@@ -36,13 +36,15 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
         print(f"Repetition {t+1}/{kwargs['repeat']}")
         # iterate over messages
         for message in tune.events():
-            if not message.is_meta and "program" not in message.type:
+            # if not message.is_meta and "program" not in message.type:
+            if lu.is_note(message):
                 # make the groover play the messages
                 new_messages = groover.perform(message)
                 player.play(new_messages)
 
         # reset the groover at the end of the repetition
         groover.reset()
+        tune.reset_performance_time()
 
     # wrap around contours for end note
     groover.advance_contours()

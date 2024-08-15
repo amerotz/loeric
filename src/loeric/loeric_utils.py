@@ -45,6 +45,8 @@ number_of_fifths = {
     "A#m": 7,
 }
 
+is_major = np.array([1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0])
+
 
 # pitches that need quantization to major scale (then shifted according to modes)
 needs_pitch_quantization = [
