@@ -38,9 +38,9 @@ class Groover:
         diatonic_errors: bool = True,
         random_weight: float = 0,
         human_impact: float = 0,
+        autonomy: float = 0,
         high_loud_weight: float = 0.25,
         seed: int = 42,
-        apply_savgol: bool = True,
         config_file: str = None,
     ):
         """
@@ -55,7 +55,6 @@ class Groover:
         :param random_weight: the weight of the random component in contour generation.
         :param human_impact: the weight of the external control signal.
         :param seed: the random seed of the performance.
-        :param apply_savgol: whether or not to apply savgol filtering in contour generation. True by default (recommended).
         :param config_file: the path to the configuration file (must be a JSON file).
         """
 
@@ -72,21 +71,24 @@ class Groover:
                 "weights": [0.2, 0.3, 0.1, 0.2, 0.2],
                 "high_loud_weight": high_loud_weight,
                 "random": random_weight,
-                "savgol": apply_savgol,
+                "savgol": True,
+                "scale": False,
                 "shift": False,
                 "human_impact": human_impact,
             },
             "tempo": {
                 "weights": [0.25, 0.1, 0.3, 0.25, 0.1],
                 "random": random_weight,
-                "savgol": apply_savgol,
+                "savgol": True,
+                "scale": False,
                 "shift": True,
                 "human_impact": human_impact,
             },
             "ornament": {
                 "weights": [0.2, 0.35, 0.15, 0.15, 0.2],
                 "random": random_weight,
-                "savgol": apply_savgol,
+                "savgol": True,
+                "scale": False,
                 "shift": False,
                 "human_impact": human_impact,
             },
@@ -117,6 +119,7 @@ class Groover:
                 "use_old_tempo_warp": False,
                 "old_tempo_warp": 0.1,
                 "seed": seed,
+                "swing_ratio": 2,
             },
             "automation": {
                 "velocity": 46,
@@ -153,6 +156,8 @@ class Groover:
             self._config = jsonmerge.merge(self._config, config_file)
             config_hash = int(hash(str(config_file))) % 2**31
             self._config["values"]["seed"] = config_hash + seed
+
+        self._initial_autonomy = autonomy
 
         # generate all parameter settings and contours
         self._instantiate()
@@ -194,6 +199,7 @@ class Groover:
             weights=np.array(self._config["velocity"]["weights"]),
             random_weight=self._config["velocity"]["random"],
             savgol=self._config["velocity"]["savgol"],
+            scale=self._config["velocity"]["scale"],
             shift=self._config["velocity"]["shift"],
         )
 
@@ -217,6 +223,7 @@ class Groover:
             weights=np.array(self._config["tempo"]["weights"]),
             random_weight=self._config["tempo"]["random"],
             savgol=self._config["tempo"]["savgol"],
+            scale=self._config["tempo"]["scale"],
             shift=self._config["tempo"]["shift"],
         )
         # ornament contour
@@ -226,6 +233,7 @@ class Groover:
             weights=np.array(self._config["ornament"]["weights"]),
             random_weight=self._config["ornament"]["random"],
             savgol=self._config["ornament"]["savgol"],
+            scale=self._config["ornament"]["scale"],
             shift=self._config["ornament"]["shift"],
         )
 
@@ -250,10 +258,10 @@ class Groover:
         self._contour_values = {}
 
         # init the human contour
-        self._contour_values["human"] = 0.5
+        self._contour_values["human"] = 0
 
         # init the autonomy contour
-        self._contour_values["autonomy"] = 0
+        self._contour_values["autonomy"] = self._initial_autonomy
 
         # init all contours
         for contour_name in self._contours:
@@ -269,14 +277,17 @@ class Groover:
             self._contour_values[contour_name] = self._contours[contour_name].next()
 
         # add the human part
-        if self._contour_values["human"] is not None:
+        if self._contour_values["human"] != 0:
             for contour_name in ["velocity", "tempo", "ornament"]:
-                hi = 1 - self._contour_values["autonomy"]
-                """
+                # should autonomy control the full range of human impact (0 to 1)
+                # or control a user-defined range
+                # e.g. hi = 0.5 at the start, hi ranges from 0 to 0.5
+                # when autonomy goes from 0 to 1
+                # option 2 is implemented
                 hi = (1 - self._contour_values["autonomy"]) * self._config[
                     contour_name
                 ]["human_impact"]
-                """
+
                 self._contour_values[contour_name] *= 1 - hi
                 self._contour_values[contour_name] += hi * self._contour_values["human"]
 
@@ -304,6 +315,10 @@ class Groover:
 
         # work on a deepcopy to avoid side effects
         new_message = copy.deepcopy(message)
+
+        # apply swing
+        # new_message.time = self._apply_swing(new_message)
+
         # change note duration
         new_message.time = self._duration_of(new_message.time)
         new_message.time -= self._offset
@@ -386,6 +401,26 @@ class Groover:
                     notes = self._add_drone(notes, drone, is_note_on)
 
         return notes
+
+    def _apply_swing(self, note: mido.Message) -> float:
+        """
+        Apply a p:1 swing, where p is user defined.
+        e.g. p=1: straight eight notes; p=2: triplet swing
+
+        :param note: the note to elaborate.
+        :return: the note's time after swing has been applied.
+
+        """
+
+        u = 0.125
+        x = (
+            self._tune.get_performance_time() % (self._tune.bar_duration * 2 * u)
+        ) / self._tune.bar_duration
+        p = self._config["values"]["swing_ratio"]
+        c = (1 - abs(x - 0.5)) ** 100
+        t = (1 - c) * x + c * (x ** np.emath.logn(0.5, 1 - (1 / (1 + p))))
+
+        return t
 
     def _add_drone(
         self, notes: np.array, drones: np.array, is_note_on: bool

@@ -28,6 +28,7 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
         key_signature=tune.key_signature,
         time_signature=tune.time_signature,
         save=kwargs["save"],
+        verbose=kwargs["verbose"],
         midi_out=out,
     )
 
@@ -134,6 +135,7 @@ def main(args):
             diatonic_errors=args["diatonic"],
             random_weight=0.2,
             human_impact=args["human_impact"],
+            autonomy=args["autonomy"],
             seed=args["seed"],
             config_file=args["config"],
         )
@@ -141,7 +143,8 @@ def main(args):
         # set input callback
         if port is not None:
             port.callback = check_midi_control(
-                groover, {args["control"]: "human", args["autonomy"]: "autonomy"}
+                groover,
+                {args["control"]: "human", args["autonomy_control"]: "autonomy"},
             )
 
         player_thread = threading.Thread(
@@ -182,11 +185,18 @@ if __name__ == "__main__":
         default=10,
     )
     parser.add_argument(
-        "-a",
-        "--autonomy",
+        "-ac",
+        "--autonomy_control",
         help="the MIDI control signal number to use as autonomy control.",
         type=int,
         default=11,
+    )
+    parser.add_argument(
+        "-a",
+        "--autonomy",
+        help="the initial value of the autonomy parameter (0: system listens to human with hi percentage; 1: system is independent)",
+        type=float,
+        default=1,
     )
     parser.add_argument(
         "-hi",
@@ -275,6 +285,11 @@ if __name__ == "__main__":
         help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
         type=str,
         default=None,
+    )
+    parser.add_argument(
+        "--verbose",
+        help="whether to write generated messages to terminal or not",
+        action="store_true",
     )
     args = parser.parse_args()
 

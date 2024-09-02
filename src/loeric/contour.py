@@ -68,23 +68,37 @@ class Contour:
         """
         self._index = -1
 
-    def scale_and_savgol(self, array: np.ndarray, shift: bool = False) -> np.ndarray:
+    def scale_and_savgol(
+        self, array: np.ndarray, savgol: bool = True, shift: bool = False, scale=False
+    ) -> np.ndarray:
         """
-        Scale the contour, then apply a Savitzky-Golay filter with a window of 15 and order 3.
+        Scale the contour to have it range between 0 and 1.
+        Optionally, apply a Savitzky-Golay filter with a window of 15 and order 3.
+        Optionally, rescale the array to bring the extremes to 0 and 1.
         Optionally, shift the array to bring its mean closer to 0.5.
 
         :param array: the input contour.
+        :param savgol: whether or not to apply the savgol filter.
+        :param scale: whether or not to rescale the array to use the full range.
         :param shift: whether or not to shift the filtered array so that its mean is close to 0.5.
 
-        :return: the filtered array.
+        :return: the processed array.
         """
+
+        # this is a mandatory scaling step, since the contour needs
+        # to have range 0 to 1
         array -= min(array)
         array /= max(array)
 
-        window = 15
-        array = np.pad(array, (window, window), "mean")
-        array = savgol_filter(array, window, 3)
-        array = array[window:-window]
+        if savgol:
+            window = 15
+            array = np.pad(array, (window, window), "mean")
+            array = savgol_filter(array, window, 3)
+            array = array[window:-window]
+
+        if scale:
+            array -= min(array)
+            array /= max(array)
 
         if shift:
             array += min(0.5 - array.mean(), 1 - max(array))
@@ -203,6 +217,7 @@ class IntensityContour(Contour):
         random_weight: float = 0,
         savgol: bool = True,
         shift: bool = False,
+        scale: bool = False,
     ) -> None:
         """
         Compute the contour as the weighted sum of O'Canainn component.
@@ -244,8 +259,9 @@ class IntensityContour(Contour):
             self._contour += random_contour._contour * random_weight
 
         # savgol filtering
-        if savgol:
-            self._contour = self.scale_and_savgol(self._contour, shift=shift)
+        self._contour = self.scale_and_savgol(
+            self._contour, savgol=savgol, shift=shift, scale=scale
+        )
 
     def ocanainn_scores(
         self, midi: tune.Tune
