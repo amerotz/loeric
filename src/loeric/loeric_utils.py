@@ -119,7 +119,11 @@ def is_note(msg: mido.Message) -> bool:
 
 
 def get_ports(
-    input_number: int = None, output_number: int = None, list_ports: bool = False
+    input_number: int = None,
+    output_number: int = None,
+    list_ports: bool = False,
+    create_in: bool = False,
+    create_out: bool = False,
 ):
     """
     Return the port names associated to the given indexes.
@@ -128,6 +132,8 @@ def get_ports(
     :param input_number: the input port index.
     :param output_number: the output port index.
     :param list_ports: whether or not to list port names and return.
+    :param create_in: whether or not a new input will be created.
+    :param create_out: whether or not a new output will be created.
 
     :return: a tuple (input, output) containing the input and output port names.
     """
@@ -147,7 +153,7 @@ def get_ports(
         return inport, outport
 
     # if no input is defined
-    if input_number is None:
+    if input_number is None and not create_in:
         names = mido.get_input_names()
         if len(names) == 0:
             print("No input port available.")
@@ -162,7 +168,7 @@ def get_ports(
         in_index = input_number
 
     # if no output is defined
-    if output_number is None:
+    if output_number is None and not create_out:
         names = mido.get_output_names()
         if len(names) == 0:
             print("No output port available.")

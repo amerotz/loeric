@@ -67,6 +67,13 @@ class Tune:
         return self._time_signature.beatCount
 
     @property
+    def quarter_duration(self) -> float:
+        """
+        :return: the duration of a quarter note in the tune given its original tempo.
+        """
+        return self._quarter_duration
+
+    @property
     def root(self) -> int:
         """
         :return: the tune's key signature root in pitch space.
