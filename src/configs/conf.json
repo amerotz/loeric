@@ -29,7 +29,7 @@
 		"error": 0.0
 	},
 	"swing": {
-		"min": 2,
+		"min": 1,
 		"max": 1,
 		"bind": "tempo"
 	},
@@ -92,15 +92,15 @@
 		"active": true,
 		"threshold": 0.2,
 		"bind": "velocity",
-		"midi_channel": 1,
-		"velocity_multiplier": 0.6, 
+		"midi_channel": 0,
+		"velocity_multiplier": 0.8, 
 		"strings": [55, 62, 69, 76],
 		"strings_at_once": 1,
-		"free_strings": [38, 40, 43, 45, 47],
+		"free_strings": [38, 43, 45, 47, 50, 52],
 		"free_strings_at_once": 0,
 		"transpose": false,
 		"allow_root": false, 
-		"notes_per_bar": 8,
+		"notes_per_bar": 4,
 		"delay_range": 0.02
 	},
 	"approach_from_above": {},

@@ -1,5 +1,6 @@
 import mido
 import numpy as np
+import music21 as m21
 
 # how to approach a note from above or below in a major scale
 above_approach_scale = [2, 1, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1]
@@ -44,6 +45,28 @@ number_of_fifths = {
     "C#": 7,
     "A#m": 7,
 }
+
+
+def get_root(key_signature: str) -> int:
+    """
+    Return the tonic of a given key signature.
+
+    :param key_signature: the key signature in the following format: [A-G](#|b)?m?
+    :return: the toinc of the key signature.
+    """
+
+    base = int(m21.pitch.Pitch(key_signature[0]).ps)
+
+    if "b" in key_signature:
+        base -= 1
+    elif "#" in key_signature:
+        base += 1
+
+    base += 12
+    base %= 12
+
+    return base
+
 
 is_major = np.array([1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0])
 
