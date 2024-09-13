@@ -157,6 +157,7 @@ class Groover:
             self._config["values"]["seed"] = config_hash + seed
 
         self._initial_human_impact = human_impact
+        self._did_swing = False
 
         # generate all parameter settings and contours
         self._instantiate()
@@ -325,9 +326,6 @@ class Groover:
             # transpose note
             new_message.note += self._transpose_semitones
 
-        # apply swing
-        self._offset += self._apply_swing()
-
         if lu.is_note_off(new_message):
             # randomize end time
             mult = random.uniform(0.8, 1)
@@ -348,10 +346,15 @@ class Groover:
         if is_note_on:
             # advance the contours
             self.advance_contours()
+
             # change loudness
             new_message.velocity = self._current_velocity
+
             # add delayed start
             new_message.time = new_message.time + self._delay
+
+            # apply swing
+            self._offset += self._apply_swing()
 
         notes = []
 
@@ -391,11 +394,11 @@ class Groover:
 
         # add drone
         if self._config["drone"]["active"]:
+            drone = []
             if self._contour_values[self._drone_bound_contour] >= self._drone_threshold:
                 drone = self._get_drone(new_message.note)
 
-                if drone is not None:
-                    notes = self._add_drone(notes, drone, is_note_on)
+            notes = self._add_drone(notes, drone, is_note_on)
 
         return notes
 
@@ -407,6 +410,7 @@ class Groover:
         duration = self._contour_values["message length"]
 
         x = 0.25 * self._tune.get_performance_time() / self._tune.quarter_duration
+        # duration normalized so that quarter note = 0.25
         d = (duration / self._tune.quarter_duration) * 0.25
         p = self._current_swing
 
@@ -419,8 +423,14 @@ class Groover:
         swing_it = right_time and right_duration
 
         t = 0
+        # on  on  on  on
+        # on   on on   on
         if swing_it:
-            t = 2 * u * (p / (p + 1) - 0.5)
+            t = 2 * u * ((p / (p + 1)) - 0.5)
+            self._did_swing = True
+        elif self._did_swing:
+            t = -2 * u * ((p / (p + 1)) - 0.5)
+            self._did_swing = False
 
         # scale back t to tune tempo
         t = 4 * t * self._tune.quarter_duration
@@ -543,7 +553,7 @@ class Groover:
 
         if len(free_index) != 0:
             free_drone_notes = self._free_drone_notes[free_index]
-            free_index = np.argsort(-abs(free_drone_notes - reference))
+            free_index = np.argsort(abs(free_drone_notes - harmony) % 12)
             drone = np.concatenate(
                 (
                     drone,
