@@ -18,10 +18,10 @@ Features
 
 Creative Works
 --------------
-* The folktronica project `Saorga <https://saorga.bandcamp.com/>`_
+- The folktronica project `Saorga <https://saorga.bandcamp.com/>`_
 
 Research Outputs
 ----------------
-* M. Amerotti, S. Benford, B. L. T. Sturm and C. Vear, “A Live Performance Rule System Informed by Irish Traditional Dance Music”, in Proc. Computer Music Multidisciplinary Research, 2023.
-
-* M. Amerotti, B. L. T. Sturm, S. Benford, H. Maruri-Aguilar and C. Vear, “Evaluation of an Interactive Music Performance System in the Context of Irish Traditional Dance Music”, in Proc. New Instruments for Musical Expression, 2024.
+- Benford, S., Amerotti, M., Sturm, B., Martinez Avila, J. “Negotiating Autonomy and Trust when Performing with an AI Musician”. Proceedings from TAS’24, the International Symposium on Trustworthy Autonomous Systems, 2024.
+- Amerotti, M., Sturm, B., Benford, S., Maruri-Aguilar H., Vear, C. “Evaluation of an Interactive Music Performance System in the Context of Irish Traditional Dance Music”. Proceedings from NIME’24, the International Conference on New Interfaces for Musical Expression, 2024.
+- Amerotti, M., Benford, S., Sturm, B., Vear, C. “A Live Performance Rule System arising from Irish Traditional Dance Music”. Proceedings from CMMR’23, the 16th International Symposium on Computer Music Multidisciplinary Research, 2023
