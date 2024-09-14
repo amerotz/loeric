@@ -28,6 +28,7 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
         key_signature=tune.key_signature,
         time_signature=tune.time_signature,
         save=kwargs["save"],
+        verbose=kwargs["verbose"],
         midi_out=out,
     )
 
@@ -36,13 +37,21 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
         print(f"Repetition {t+1}/{kwargs['repeat']}")
         # iterate over messages
         for message in tune.events():
-            if not message.is_meta and "program" not in message.type:
+            # if not message.is_meta and "program" not in message.type:
+            if lu.is_note(message):
                 # make the groover play the messages
                 new_messages = groover.perform(message)
                 player.play(new_messages)
 
         # reset the groover at the end of the repetition
         groover.reset()
+        tune.reset_performance_time()
+
+    # wrap around contours for end note
+    groover.advance_contours()
+
+    # play an end note
+    player.play(groover.get_end_notes())
 
     if kwargs["save"]:
         name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
@@ -86,22 +95,35 @@ def check_midi_control(
 
 
 def main(args):
+    if args["create_in"]:
+        port = mido.open_input("LOERIC MIDI in", virtual=True)
+
+    if args["create_out"]:
+        out = mido.open_output("LOERIC MIDI out", virtual=True)
+
     inport, outport = lu.get_ports(
         input_number=args["input"],
         output_number=args["output"],
         list_ports=args["list_ports"],
+        create_in=args["create_in"],
+        create_out=args["create_out"],
     )
-    if inport is None and outport is None:
+
+    if args["list_ports"]:
         return
 
     # open in
-    if inport is not None:
+    if args["create_in"]:
+        pass
+    elif inport is not None:
         port = mido.open_input(inport)
     else:
         port = None
 
     # open out
-    if args["save"] or outport is None:
+    if args["create_out"]:
+        pass
+    elif args["save"] or outport is None:
         out = None
     else:
         out = mido.open_output(outport)
@@ -132,7 +154,13 @@ def main(args):
 
         # set input callback
         if port is not None:
-            port.callback = check_midi_control(groover, {args["control"]: "human"})
+            port.callback = check_midi_control(
+                groover,
+                {
+                    args["intensity_control"]: "intensity",
+                    args["human_impact_control"]: "human_impact",
+                },
+            )
 
         player_thread = threading.Thread(
             target=play, args=(groover, tune, out), kwargs=args
@@ -165,32 +193,25 @@ if __name__ == "__main__":
     )
     parser.add_argument("source", help="the midi file to play.", nargs="?", default="")
     parser.add_argument(
-        "-c",
-        "--control",
-        help="the MIDI control signal number to use as human control.",
+        "-ic",
+        "--intensity_control",
+        help="the MIDI control signal number to use as intensity control.",
         type=int,
         default=10,
     )
     parser.add_argument(
+        "-hic",
+        "--human_impact_control",
+        help="the MIDI control signal number to use as human impact control.",
+        type=int,
+        default=11,
+    )
+    parser.add_argument(
         "-hi",
         "--human_impact",
-        help="the percentage of human impact over the performance (0: only generated, 1: only human).",
+        help="the initial percentage of human impact over the performance (0: only generated, 1: only human).",
         type=float,
         default=0,
-    )
-    parser.add_argument(
-        "-i",
-        "--input",
-        help="the input MIDI port for the control signal.",
-        type=int,
-        default=None,
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        help="the output MIDI port for the performance.",
-        type=int,
-        default=None,
     )
     parser.add_argument(
         "-mc",
@@ -257,6 +278,39 @@ if __name__ == "__main__":
         "--config",
         help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
         type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "--verbose",
+        help="whether to write generated messages to terminal or not",
+        action="store_true",
+    )
+
+    input_args = parser.add_mutually_exclusive_group()
+    input_args.add_argument(
+        "--create_in",
+        help="whether to create a new MIDI input port or not",
+        action="store_true",
+    )
+    input_args.add_argument(
+        "-i",
+        "--input",
+        help="the input MIDI port for the performance.",
+        type=int,
+        default=None,
+    )
+
+    output_args = parser.add_mutually_exclusive_group()
+    output_args.add_argument(
+        "--create_out",
+        help="whether to create a new MIDI output port or not",
+        action="store_true",
+    )
+    output_args.add_argument(
+        "-o",
+        "--output",
+        help="the output MIDI port for the performance.",
+        type=int,
         default=None,
     )
     args = parser.parse_args()

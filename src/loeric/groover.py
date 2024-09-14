@@ -38,8 +38,8 @@ class Groover:
         diatonic_errors: bool = True,
         random_weight: float = 0,
         human_impact: float = 0,
+        high_loud_weight: float = 0.25,
         seed: int = 42,
-        apply_savgol: bool = True,
         config_file: str = None,
     ):
         """
@@ -48,13 +48,12 @@ class Groover:
 
         :param tune: the tune that will be performed.
         :param bpm: the user-defined tempo in bpm for the tune.
-        :param midi_channel: the midi output channel for all messages.
+        :param midi_channel: the midi output channel for all note messages. Drone messages will be sent on midi_channel + 1 if not specified otherwise in the configuration.
         :param transpose: the number of semitones by which to transpose the tune.
         :param diatonic_errors: whether or not error generation should be quantized to the tune's mode.
         :param random_weight: the weight of the random component in contour generation.
-        :param human_impact: the weight of the external control signal.
+        :param human_impact: the initial weight of the external control signal.
         :param seed: the random seed of the performance.
-        :param apply_savgol: whether or not to apply savgol filtering in contour generation. True by default (recommended).
         :param config_file: the path to the configuration file (must be a JSON file).
         """
 
@@ -63,28 +62,34 @@ class Groover:
 
         # offset for messages after ornaments
         self._offset = 0
+        # delay to randomize message length
+        self._delay = 0
 
         self._config = {
             "velocity": {
                 "weights": [0.2, 0.3, 0.1, 0.2, 0.2],
+                "high_loud_weight": high_loud_weight,
                 "random": random_weight,
-                "savgol": apply_savgol,
+                "savgol": True,
+                "scale": False,
                 "shift": False,
-                "human_impact": human_impact,
+                "human_impact_scale": human_impact,
             },
             "tempo": {
                 "weights": [0.25, 0.1, 0.3, 0.25, 0.1],
                 "random": random_weight,
-                "savgol": apply_savgol,
+                "savgol": True,
+                "scale": False,
                 "shift": True,
-                "human_impact": human_impact,
+                "human_impact_scale": human_impact,
             },
             "ornament": {
                 "weights": [0.2, 0.35, 0.15, 0.15, 0.2],
                 "random": random_weight,
-                "savgol": apply_savgol,
+                "savgol": True,
+                "scale": False,
                 "shift": False,
-                "human_impact": human_impact,
+                "human_impact_scale": human_impact,
             },
             "probabilities": {
                 "drop": 0.1,
@@ -93,9 +98,11 @@ class Groover:
                 "cut": 1,
                 "error": 0.1,
             },
+            "swing": {"min": 2, "max": 2, "bind": "tempo"},
             "values": {
                 "bend_resolution": 32,
                 "cut_eight_fraction": 0.2,
+                "cut_velocity_fraction": 0.8,
                 "roll_eight_fraction": 0.8,
                 "slide_eight_fraction": 0.66,
                 "slide_pitch_threshold": 6,
@@ -117,7 +124,26 @@ class Groover:
                 "velocity": 46,
                 "tempo": 47,
                 "ornament": 48,
-                "human": 49,
+                "intensity": 49,
+            },
+            "harmony": {
+                "chord_score": [1, 0, 0, 0, 0, 1, 0, 0, 0.25, 0.25, 0, 0],
+                "allowed_chords": [2, 0, 1, 0, 1, 2, 0, 2, 0, 1, 0, 0],
+                "chords_per_bar": self._tune.beat_count,
+            },
+            "drone": {
+                "active": False,
+                "midi_channel": midi_channel + 1,
+                "threshold": 0.5,
+                "bind": "velocity",
+                "velocity_multiplier": 1,
+                "strings_at_once": 1,
+                "free_strings": [38, 43, 45],
+                "free_strings_at_once": 0,
+                "transpose": False,
+                "allow_root": False,
+                "notes_per_bar": self._tune.beat_count,
+                "delay_range": 0.01,
             },
             "approach_from_above": {},
             "approach_from_below": {},
@@ -129,6 +155,9 @@ class Groover:
             self._config = jsonmerge.merge(self._config, config_file)
             config_hash = int(hash(str(config_file))) % 2**31
             self._config["values"]["seed"] = config_hash + seed
+
+        self._initial_human_impact = human_impact
+        self._did_swing = False
 
         # generate all parameter settings and contours
         self._instantiate()
@@ -153,18 +182,40 @@ class Groover:
         # table for pitch errors
         self._pitch_errors = defaultdict(int)
 
+        # droning
+        self._drone_notes = np.array(self._config["drone"]["strings"])
+        self._free_drone_notes = np.array(self._config["drone"]["free_strings"])
+        self._drone_threshold = float(self._config["drone"]["threshold"])
+        self._drone_bound_contour = self._config["drone"]["bind"]
+        self._last_played_drones = []
+
         # create contours
         self._contours = {}
 
         # velocity contour
-        self._contours["velocity"] = cnt.IntensityContour()
-        self._contours["velocity"].calculate(
+        velocity_intensity_contour = cnt.IntensityContour()
+        velocity_intensity_contour.calculate(
             self._tune,
             weights=np.array(self._config["velocity"]["weights"]),
             random_weight=self._config["velocity"]["random"],
             savgol=self._config["velocity"]["savgol"],
+            scale=self._config["velocity"]["scale"],
             shift=self._config["velocity"]["shift"],
         )
+
+        velocity_pitch_contour = cnt.PitchContour()
+        velocity_pitch_contour.calculate(self._tune)
+
+        self._contours["velocity"] = cnt.weighted_sum(
+            [velocity_intensity_contour, velocity_pitch_contour],
+            np.array(
+                [
+                    1 - self._config["velocity"]["high_loud_weight"],
+                    self._config["velocity"]["high_loud_weight"],
+                ]
+            ),
+        )
+
         # tempo contour
         self._contours["tempo"] = cnt.IntensityContour()
         self._contours["tempo"].calculate(
@@ -172,6 +223,7 @@ class Groover:
             weights=np.array(self._config["tempo"]["weights"]),
             random_weight=self._config["tempo"]["random"],
             savgol=self._config["tempo"]["savgol"],
+            scale=self._config["tempo"]["scale"],
             shift=self._config["tempo"]["shift"],
         )
         # ornament contour
@@ -181,6 +233,7 @@ class Groover:
             weights=np.array(self._config["ornament"]["weights"]),
             random_weight=self._config["ornament"]["random"],
             savgol=self._config["ornament"]["savgol"],
+            scale=self._config["ornament"]["scale"],
             shift=self._config["ornament"]["shift"],
         )
 
@@ -191,10 +244,23 @@ class Groover:
         self._contours["pitch difference"] = cnt.PitchDifferenceContour()
         self._contours["pitch difference"].calculate(self._tune)
 
+        self._contours["harmony"] = cnt.HarmonicContour()
+        self._contours["harmony"].calculate(
+            self._tune,
+            np.array(
+                self._config["harmony"]["chord_score"],
+            ),
+            chords_per_bar=self._config["harmony"]["chords_per_bar"],
+            allowed_chords=np.array(self._config["harmony"]["allowed_chords"]),
+        )
+
         # object holding each contour's value in a given moment
         self._contour_values = {}
+
         # init the human contour
-        self._contour_values["human"] = 0.5
+        self._contour_values["intensity"] = 0.5
+        self._contour_values["human_impact"] = self._initial_human_impact
+
         # init all contours
         for contour_name in self._contours:
             self._contour_values[contour_name] = 0.5
@@ -209,11 +275,18 @@ class Groover:
             self._contour_values[contour_name] = self._contours[contour_name].next()
 
         # add the human part
-        if self._contour_values["human"] is not None:
+        if self._contour_values["intensity"] != 0:
             for contour_name in ["velocity", "tempo", "ornament"]:
-                hi = self._config[contour_name]["human_impact"]
+                #
+                hi = (
+                    self._contour_values["human_impact"]
+                    * self._config[contour_name]["human_impact_scale"]
+                )
+
                 self._contour_values[contour_name] *= 1 - hi
-                self._contour_values[contour_name] += hi * self._contour_values["human"]
+                self._contour_values[contour_name] += (
+                    hi * self._contour_values["intensity"]
+                )
 
     def set_contour_value(self, contour_name: str, value: float) -> None:
         """
@@ -239,8 +312,8 @@ class Groover:
 
         # work on a deepcopy to avoid side effects
         new_message = copy.deepcopy(message)
+
         # change note duration
-        new_message.time = self._duration_of(new_message.time)
         new_message.time -= self._offset
 
         self._offset = 0
@@ -253,8 +326,13 @@ class Groover:
             # transpose note
             new_message.note += self._transpose_semitones
 
-        # change note offs of errors
         if lu.is_note_off(new_message):
+            # randomize end time
+            mult = random.uniform(0.8, 1)
+            self._delay = new_message.time * (1 - mult)
+            new_message.time *= mult
+
+            # change note offs of errors
             key = new_message.note
             if key in self._pitch_errors:
                 value = self._pitch_errors[key]
@@ -269,9 +347,14 @@ class Groover:
             # advance the contours
             self.advance_contours()
 
-        # change loudness
-        if is_note_on:
+            # change loudness
             new_message.velocity = self._current_velocity
+
+            # add delayed start
+            new_message.time = new_message.time + self._delay
+
+            # apply swing
+            self._offset += self._apply_swing()
 
         notes = []
 
@@ -305,27 +388,271 @@ class Groover:
                     notes = self.generate_ornament(new_message, ornament_type)
 
         # make sure time is not negative
+        # and scale things according to tempo
         for note in notes:
-            note.time = max(0, note.time)
+            note.time = self._duration_of(max(0, note.time))
+
+        # add drone
+        if self._config["drone"]["active"]:
+            drone = []
+            if self._contour_values[self._drone_bound_contour] >= self._drone_threshold:
+                drone = self._get_drone(new_message.note)
+
+            notes = self._add_drone(notes, drone, is_note_on)
 
         return notes
 
+    def _apply_swing(self) -> float:
+        """
+        Apply a p:1 swing by offsetting the start time of the next note, where p is user defined.  e.g. p=1: straight eight notes; p=2: triplet swing
+        """
+
+        duration = self._contour_values["message length"]
+
+        x = 0.25 * self._tune.get_performance_time() / self._tune.quarter_duration
+        # duration normalized so that quarter note = 0.25
+        d = (duration / self._tune.quarter_duration) * 0.25
+        p = self._current_swing
+
+        # the base unit to consider for swing
+        # u = 0.125 = quaver
+        u = 0.125
+
+        right_duration = d - u > -0.012
+        right_time = abs((x % (2 * u)) - u) < 0.012
+        swing_it = right_time and right_duration
+
+        t = 0
+        # on  on  on  on
+        # on   on on   on
+        if swing_it:
+            t = 2 * u * ((p / (p + 1)) - 0.5)
+            self._did_swing = True
+        elif self._did_swing:
+            t = -2 * u * ((p / (p + 1)) - 0.5)
+            self._did_swing = False
+
+        # scale back t to tune tempo
+        t = 4 * t * self._tune.quarter_duration
+
+        return t
+
+    def _add_drone(
+        self, notes: np.array, drones: np.array, is_note_on: bool
+    ) -> np.array:
+        """
+        Add drones to each note in input.
+
+        :param notes: the notes to add a drone to.
+        :param drone: the drone notes to add.
+        :param is_note_on: whether this is a note on message or not.
+
+        :return the input notes, with an added drone.
+        """
+        note_duration = self._tune.bar_duration / self._config["drone"]["notes_per_bar"]
+        should_play = (
+            self._tune.get_performance_time() % note_duration <= lu.TRIGGER_DELTA
+        )
+
+        if should_play and is_note_on:
+            for drone in self._last_played_drones:
+                notes.insert(
+                    0,
+                    mido.Message(
+                        type="note_off",
+                        channel=self._config["drone"]["midi_channel"],
+                        note=drone,
+                        velocity=0,
+                        time=0,
+                    ),
+                )
+
+            list_offset = len(self._last_played_drones)
+            self._last_played_drones = []
+
+            for drone in drones:
+                if self._config["drone"]["transpose"]:
+                    drone += self._transpose_semitones
+
+                delay = random.uniform(0, self._config["drone"]["delay_range"])
+                notes.insert(
+                    1 + list_offset,
+                    mido.Message(
+                        type="note_on",
+                        channel=self._config["drone"]["midi_channel"],
+                        note=drone,
+                        velocity=int(
+                            self._current_velocity
+                            * self._config["drone"]["velocity_multiplier"]
+                        ),
+                        time=delay,
+                    ),
+                )
+                self._offset += delay
+                self._last_played_drones.append(drone)
+
+        return notes
+
+    def _get_drone(self, reference: int) -> np.array:
+        # figure out what note is allowed depending on harmony
+        harmony = self._contour_values["harmony"]
+        if not self._config["drone"]["transpose"]:
+            harmony += self._transpose_semitones
+
+        harmony = int(harmony % 12)
+
+        # check on what string the note could be played
+        distances = reference - self._drone_notes
+        distances[distances < 0] = 127
+        string = np.argmin(distances)
+        index = []
+
+        # add lower string if there
+        if string > 0:
+            index.append(string - 1)
+
+        # add upper string if there
+        if string < len(self._drone_notes) - 1:
+            index.append(string + 1)
+
+        allowed_harmony = lu.get_chord_pitches(int(self._contour_values["harmony"]))
+
+        # append root
+        if self._config["drone"]["allow_root"]:
+            allowed_harmony = np.append(
+                allowed_harmony,
+                (24 + self._tune.root + self._transpose_semitones - harmony) % 12,
+            )
+
+        index = np.array(index)
+        index = index[
+            np.in1d((12 + self._drone_notes[index] - harmony) % 12, allowed_harmony)
+        ]
+
+        free_index = np.arange(len(self._free_drone_notes))
+        free_index = free_index[
+            np.in1d(
+                (12 + self._free_drone_notes[free_index] - harmony) % 12,
+                allowed_harmony,
+            )
+        ]
+
+        drone = np.array([-1]).astype(int)
+
+        if len(index) != 0:
+            drone_notes = self._drone_notes[index]
+            index = np.argsort(abs(drone_notes - reference))
+            drone = np.concatenate(
+                (
+                    drone,
+                    drone_notes[
+                        index[: self._config["drone"]["strings_at_once"]]
+                    ].astype(int),
+                )
+            )
+
+        if len(free_index) != 0:
+            free_drone_notes = self._free_drone_notes[free_index]
+            # this prioritizes roots and fifths over other possible pitches
+            number = (
+                (1 + (free_drone_notes - harmony + 12) % 3) * 10000
+                + 254
+                - free_drone_notes
+                + reference
+            )
+            # free_index = np.argsort((free_drone_notes - harmony + 12) % 3)
+            free_index = np.argsort(number)
+            drone = np.concatenate(
+                (
+                    drone,
+                    free_drone_notes[
+                        free_index[: self._config["drone"]["free_strings_at_once"]]
+                    ].astype(int),
+                )
+            )
+
+        return drone[1:]
+
+    def get_end_notes(self) -> list[mido.Message]:
+        """
+        Generate an end note for the tune based on its key.
+        :return: the midi messages containing the end note
+        """
+        # get root and range
+        root = int(self._contour_values["harmony"] % 12)
+        low, high = self._tune.ambitus
+
+        # major or minor
+        chord_pitches = lu.get_chord_pitches(self._contour_values["harmony"])
+
+        # select pitches from tune range
+        pitches = np.arange(
+            start=low,
+            stop=high + 1,
+            step=1,
+        )
+
+        # get last note of tune
+        last_note = self._tune.filter(lu.is_note_on)[-1].note
+
+        # filter pitches that are too far away
+        # reachable within a third
+        pitches = pitches[abs(pitches - last_note) <= 4]
+
+        # select suitable pitches (e.g. any root, third, fifth within range)
+        pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
+
+        # sample
+        end_pitch = random.choice(pitches)
+        end_pitch += self._transpose_semitones
+
+        # get duration (quarter note)
+        duration = self._eight_duration * 4
+
+        # create msgs
+        on_msg = mido.Message(
+            "note_on",
+            channel=self._midi_channel,
+            note=end_pitch,
+            time=0,
+            velocity=self._current_velocity,
+        )
+        off_msg = mido.Message(
+            "note_off",
+            channel=self._midi_channel,
+            note=end_pitch,
+            time=duration,
+            velocity=0,
+        )
+
+        return [on_msg, off_msg]
+
     @property
-    def _slide_duration(self):
+    def _current_swing(self) -> float:
+        """
+        :return: the current swing amount given the bound countour.
+        """
+        s1 = self._config["swing"]["min"]
+        s2 = self._config["swing"]["max"]
+        perc = self._contour_values[self._config["swing"]["bind"]]
+        return s1 * (1 - perc) + s2 * perc
+
+    @property
+    def _slide_duration(self) -> float:
         """
         :return: the duration of a slide.
         """
         return self._eight_duration * self._config["values"]["slide_eight_fraction"]
 
     @property
-    def _cut_duration(self):
+    def _cut_duration(self) -> float:
         """
         :return: the duration of a cut note.
         """
         return self._eight_duration * self._config["values"]["cut_eight_fraction"]
 
     @property
-    def _roll_duration(self):
+    def _roll_duration(self) -> float:
         """
         :return: the duration of a single note in a roll.
         """
@@ -333,14 +660,14 @@ class Groover:
         return self._eight_duration * self._config["values"]["roll_eight_fraction"]
 
     @property
-    def _eight_duration(self):
+    def _eight_duration(self) -> float:
         """
-        :return: the duration of a eight note in seconds at current tempo.
+        :return: the duration of a eight note in seconds at original tune tempo.
         """
-        return 30 / mido.tempo2bpm(self._current_tempo)
+        return 30 / mido.tempo2bpm(self._tune.tempo)
 
     @property
-    def tempo(self):
+    def tempo(self) -> int:
         """
         :return: the user-set tempo.
         """
@@ -363,7 +690,9 @@ class Groover:
             return pitch.midi
         # use normal scale
         else:
-            index = self._tune.semitones_from_tonic(note_number)
+            index = self._tune.semitones_from_tonic(
+                note_number - self._transpose_semitones
+            )
             return lu.above_approach_scale[index] + note_number
 
     def approach_from_below(self, note_number: int, tune: tu.Tune) -> int:
@@ -399,12 +728,14 @@ class Groover:
         """
 
         ornaments = []
-        message_length = self._duration_of(self._contour_values["message length"])
+        message_length = self._contour_values["message length"]
         if ornament_type == CUT:
             # generate a cut
             cut = copy.deepcopy(message)
             cut.note = self.approach_from_above(message.note, self._tune)
-            cut.velocity = self._current_velocity
+            cut.velocity = int(
+                self._current_velocity * self._config["values"]["cut_velocity_fraction"]
+            )
             duration = self._cut_duration
             cut.time = 0
 
@@ -428,6 +759,9 @@ class Groover:
         elif ornament_type == ROLL:
             original_length = self._roll_duration
             cut_length = self._eight_duration - self._roll_duration
+            cut_velocity = int(
+                self._current_velocity * self._config["values"]["cut_velocity_fraction"]
+            )
 
             # first note
             original_0 = copy.deepcopy(message)
@@ -440,6 +774,7 @@ class Groover:
                 time=original_length,
                 velocity=0,
             )
+            self._offset += original_length
 
             # calculate cut
             upper_pitch = self.approach_from_above(message.note, self._tune)
@@ -448,7 +783,7 @@ class Groover:
                 note=upper_pitch,
                 channel=message.channel,
                 time=0,
-                velocity=self._current_velocity,
+                velocity=cut_velocity,
             )
             upper_off = mido.Message(
                 "note_off",
@@ -457,6 +792,7 @@ class Groover:
                 time=cut_length,
                 velocity=0,
             )
+            self._offset += cut_length
 
             # change original note
             original_1 = copy.deepcopy(message)
@@ -469,6 +805,7 @@ class Groover:
                 time=original_length,
                 velocity=0,
             )
+            self._offset += original_length
 
             # calculate cut
             lower_pitch = self.approach_from_below(message.note, self._tune)
@@ -477,7 +814,7 @@ class Groover:
                 note=lower_pitch,
                 channel=message.channel,
                 time=0,
-                velocity=self._current_velocity,
+                velocity=cut_velocity,
             )
             lower_off = mido.Message(
                 "note_off",
@@ -486,6 +823,7 @@ class Groover:
                 time=cut_length,
                 velocity=0,
             )
+            self._offset += cut_length
 
             # append note on and off events
             ornaments.append(original_0)
@@ -502,8 +840,6 @@ class Groover:
 
             message.time = 0
             ornaments.append(message)
-
-            self._offset += 2 * self._eight_duration
 
         elif ornament_type == SLIDE:
             # append original note
@@ -594,7 +930,7 @@ class Groover:
         options = []
 
         is_beat = self._tune.is_on_a_beat()
-        message_length = self._duration_of(self._contour_values["message length"])
+        message_length = self._contour_values["message length"]
 
         if (
             message_length >= 0.75 * self._eight_duration

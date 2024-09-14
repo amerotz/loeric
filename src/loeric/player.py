@@ -13,6 +13,7 @@ class Player:
         time_signature: m21.meter.TimeSignature,
         save: bool,
         midi_out,
+        verbose: bool = False,
     ):
         """
         Initialize the class.
@@ -28,6 +29,7 @@ class Player:
         self._saving = save
         self._midi_out = midi_out
         self._tempo = tempo
+        self._verbose = verbose
 
         if self._saving:
             self._midi_performance = mido.MidiFile(type=0)
@@ -58,6 +60,8 @@ class Player:
                 if not msg.is_meta:
                     time.sleep(msg.time)
                     self._midi_out.send(msg)
+                    if self._verbose:
+                        print(msg)
 
             if self._saving:
                 self._midi_track.append(msg)

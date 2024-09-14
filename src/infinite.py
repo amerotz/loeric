@@ -11,14 +11,14 @@ parser.add_argument("--data-dir")
 args = parser.parse_args()
 
 # generic parameters
-REPETITIONS = 1
+REPETITIONS = 3
 INPUT = 0
 OUTPUT = 0
 
 instruments = [
-    (3, "src/configs/flute.json", False),
+    (3, "src/configs/infinite.json", False),
     (2, "src/configs/infinite.json", True),
-    (1, "src/configs/flute.json", False),
+    (1, "src/configs/infinite.json", False),
 ]
 
 tune_list = os.listdir(args.data_dir)
@@ -33,7 +33,7 @@ while True:
     midi_channel, config_file, diatonic = instruments[index]
 
     # play this tune
-    bpm = random.randrange(130, 160)
+    bpm = random.randrange(140, 180)
 
     loeric_args = defaultdict(str)
     loeric_args["source"] = f"{args.data_dir}/{tune}"

@@ -28,6 +28,12 @@ class Contour:
         self._index = -1
         self._contour = None
 
+    def __len__(self):
+        """
+        The length of this contour.
+        """
+        return len(self._contour)
+
     def calculate(self, midi: tune.Tune) -> None:
         """
         Calculate the intensity contour for the given tune.
@@ -62,28 +68,222 @@ class Contour:
         """
         self._index = -1
 
-    def scale_and_savgol(self, array: np.ndarray, shift: bool = False) -> np.ndarray:
+    def scale_and_savgol(
+        self, array: np.ndarray, savgol: bool = True, shift: bool = False, scale=False
+    ) -> np.ndarray:
         """
-        Scale the contour, then apply a Savitzky-Golay filter with a window of 15 and order 3.
+        Scale the contour to have it range between 0 and 1.
+        Optionally, apply a Savitzky-Golay filter with a window of 15 and order 3.
+        Optionally, rescale the array to bring the extremes to 0 and 1.
         Optionally, shift the array to bring its mean closer to 0.5.
 
         :param array: the input contour.
+        :param savgol: whether or not to apply the savgol filter.
+        :param scale: whether or not to rescale the array to use the full range.
         :param shift: whether or not to shift the filtered array so that its mean is close to 0.5.
 
-        :return: the filtered array.
+        :return: the processed array.
         """
+
+        # this is a mandatory scaling step, since the contour needs
+        # to have range 0 to 1
         array -= min(array)
         array /= max(array)
 
-        window = 15
-        array = np.pad(array, (window, window), "mean")
-        array = savgol_filter(array, window, 3)
-        array = array[window:-window]
+        if savgol:
+            window = 15
+            array = np.pad(array, (window, window), "mean")
+            array = savgol_filter(array, window, 3)
+            array = array[window:-window]
+
+        if scale:
+            array -= min(array)
+            array /= max(array)
 
         if shift:
             array += min(0.5 - array.mean(), 1 - max(array))
 
+        array[array < 0] = 0
+        array[array > 1] = 1
+
         return array
+
+
+class HarmonicContour(Contour):
+    """A contour holding harmonic information."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(
+        self,
+        midi: tune.Tune,
+        chord_score: np.array,
+        chords_per_bar: int = 2,
+        allowed_chords: np.array = np.zeros(12),
+        transpose: int = 0,
+    ) -> None:
+        # retrieve pitch and time info
+        # note_events = [msg for msg in midi if "note" in msg.type]
+        note_events = midi.filter(lambda x: "note" in x.type)
+        timings = np.array([msg.time for msg in note_events])
+        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
+
+        # cumulative time
+        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
+        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
+        summed_timings = np.cumsum(timings)
+        summed_timings -= midi.offset
+        summed_timings = summed_timings[note_ons]
+
+        notes = pitches % 12
+
+        # message length
+        lengths = timings[note_offs] - timings[note_ons]
+        lengths /= midi.bar_duration
+        lengths = np.interp(lengths, (0, lengths.max()), (0, 1))
+
+        # estimate chord for each bar
+        harmony = np.zeros(len(note_events))
+
+        t = summed_timings.min()
+        while t < summed_timings.max():
+            start = t
+            stop = t + midi.bar_duration / chords_per_bar
+            if t < 0:
+                stop = 0
+
+            # select bar range
+            indexes = np.where((summed_timings >= start) & (summed_timings < stop))
+            bar_notes = notes[indexes]
+            bar_lengths = lengths[indexes]
+
+            # init counts
+            chords = np.zeros(12)
+
+            # add chord score for each note
+            for i, n in enumerate(bar_notes):
+                chords += np.roll(chord_score, n)  # * bar_lengths[i]
+
+            # filter out chords that are not allowed
+            root_chord = np.multiply(
+                chords,
+                np.roll(allowed_chords, midi.root),
+            )
+            # choose the chord with the highest score
+            root = np.random.choice(np.argwhere(root_chord == root_chord.max())[0])
+
+            # check if the selected chord should be major according to the mode
+            chord_quality = np.roll(lu.chord_quality, midi.root)[root]
+
+            harmony_value = root
+
+            # check if the note score suggests minor chord
+            # (e.g. minor IV etc, minor V, etc)
+            if chords[(root + 3) % 12] > chords[(root + 4) % 12]:
+                # if not diminished already
+                if chord_quality != 2:
+                    # make it minor
+                    chord_quality = 1
+
+            # check if the note score suggests diminished chord
+            if chords[(root + 6) % 12] > chords[(root + 7) % 12]:
+                chord_quality = 2
+
+            """
+            # check if the note score suggests augmented chord
+            if chords[(root + 8) % 12] > chords[(root + 7) % 12]:
+                chord_quality = 3
+            """
+
+            harmony_value = root + 12 * chord_quality
+
+            # assign chord to notes in bar interval
+            harmony[indexes] = harmony_value
+
+            t = stop
+
+        self._contour = harmony
+
+
+class RandomContour(Contour):
+    """A randomly initialized contour."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(self, midi: tune.Tune, extremes: tuple[float, float] = None) -> None:
+        """
+        Compute a random contour following a uniform distribution in the specified range, by default between 0 and 1.
+
+        :param midi: the input tune.
+        :param extremes: the upper and lower bound for the random contour. If None, the range will be (0, 1).
+        """
+        note_events = midi.filter(lambda x: lu.is_note_on(x))
+        size = len(note_events)
+        if extremes is None:
+            extremes = (0, 1)
+        self._contour = np.random.uniform(*extremes, size=size)
+
+
+class IntensityContour(Contour):
+    """A contour given by the weighted sum of O'Canainn components."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(
+        self,
+        midi: tune.Tune,
+        weights: np.array = None,
+        random_weight: float = 0,
+        savgol: bool = True,
+        shift: bool = False,
+        scale: bool = False,
+    ) -> None:
+        """
+        Compute the contour as the weighted sum of O'Canainn component.
+        An optional random component can be added.
+
+        :param midi: the input tune.
+        :param weights: the weights for the components, respectively frequency score, beat score, ambitus score, leap score and length score.
+        :param random_weight: the weight of the random component over the sum of the weighted O'Canainn scores. If None, the components will be averaged together.
+        :param savgol: whether or not to apply a final savgol filtering step (recommended).
+        :param shift: whether or not to apply a final shifting step to bring the mean of the array close to 0.5.
+        """
+
+        weights = weights.astype(float)
+
+        # calculate the components
+        components = self.ocanainn_scores(midi)
+        # stack them
+        stacked_components = np.stack(components, axis=0)
+        size = stacked_components.shape[0]
+
+        if weights is None:
+            weights = np.ones((size, 1)) / size
+        else:
+            if weights.shape != (size, 1):
+                weights = weights.reshape(size, 1)
+            weights /= weights.sum()
+
+        # weight them
+        stacked_components = np.multiply(stacked_components, weights)
+        # sum them
+        stacked_components = stacked_components.sum(axis=0)
+
+        # add the random contour
+        self._contour = stacked_components
+        if random_weight != 0:
+            self._contour *= 1 - random_weight
+            random_contour = RandomContour()
+            random_contour.calculate(midi, extremes=(0, 1))
+            self._contour += random_contour._contour * random_weight
+
+        # savgol filtering
+        self._contour = self.scale_and_savgol(
+            self._contour, savgol=savgol, shift=shift, scale=scale
+        )
 
     def ocanainn_scores(
         self, midi: tune.Tune
@@ -130,7 +330,7 @@ class Contour:
         # strong beat
         beat_position = (summed_timings % midi.bar_duration) / midi.beat_duration
         beat_position = abs(beat_position - np.round(beat_position))
-        trigger_delta = tune.TRIGGER_DELTA
+        trigger_delta = lu.TRIGGER_DELTA
         beats = -np.ones(notes.shape)
         indexes = np.where(beat_position <= trigger_delta)
         beats[indexes] = notes[indexes]
@@ -175,81 +375,6 @@ class Contour:
         return frequency_score, beat_score, ambitus_score, leap_score, length_score
 
 
-class RandomContour(Contour):
-    """A randomly initialized contour."""
-
-    def __init__(self):
-        super().__init__()
-
-    def calculate(self, midi: tune.Tune, extremes: tuple[float, float] = None) -> None:
-        """
-        Compute a random contour following a uniform distribution in the specified range, by default between 0 and 1.
-
-        :param midi: the input tune.
-        :param extremes: the upper and lower bound for the random contour. If None, the range will be (0, 1).
-        """
-        note_events = midi.filter(lambda x: lu.is_note_on(x))
-        size = len(note_events)
-        if extremes is None:
-            extremes = (0, 1)
-        self._contour = np.random.uniform(*extremes, size=size)
-
-
-class IntensityContour(Contour):
-    """A contour given by the weighted sum of O'Canainn components."""
-
-    def __init__(self):
-        super().__init__()
-
-    def calculate(
-        self,
-        midi: tune.Tune,
-        weights: np.array = None,
-        random_weight: float = 0,
-        savgol: bool = True,
-        shift: bool = False,
-    ) -> None:
-        """
-        Compute the contour as the weighted sum of O'Canainn component.
-        An optional random component can be added.
-
-        :param midi: the input tune.
-        :param weights: the weights for the components, respectively frequency score, beat score, ambitus score, leap score and length score.
-        :param random_weight: the weight of the random component over the sum of the weighted O'Canainn scores. If None, the components will be averaged together.
-        :param savgol: whether or not to apply a final savgol filtering step (recommended).
-        :param shift: whether or not to apply a final shifting step to bring the mean of the array close to 0.5.
-        """
-
-        # calculate the components
-        components = self.ocanainn_scores(midi)
-        # stack them
-        stacked_components = np.stack(components, axis=0)
-        size = stacked_components.shape[0]
-
-        if weights is None:
-            weights = np.ones((size, 1)) / size
-        else:
-            if weights.shape != (size, 1):
-                weights = weights.reshape(size, 1)
-
-        # weight them
-        stacked_components = np.multiply(stacked_components, weights)
-        # sum them
-        stacked_components = stacked_components.sum(axis=0)
-
-        # add the random contour
-        self._contour = stacked_components
-        if random_weight != 0:
-            self._contour *= 1 - random_weight
-            random_contour = RandomContour()
-            random_contour.calculate(midi, extremes=(0, 1))
-            self._contour += random_contour._contour * random_weight
-
-        # savgol filtering
-        if savgol:
-            self._contour = self.scale_and_savgol(self._contour, shift=shift)
-
-
 class MessageLengthContour(Contour):
     """A contour holding the length of each note in the tune."""
 
@@ -288,3 +413,45 @@ class PitchDifferenceContour(Contour):
         diff = np.diff(pitches)
         diff = np.insert(diff, 0, 0)
         self._contour = diff
+
+
+class PitchContour(Contour):
+    """A contour holding the pitch of notes in the tune."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(
+        self,
+        midi: tune.Tune,
+        savgol: bool = True,
+        shift: bool = True,
+    ) -> None:
+        note_events = midi.filter(lambda x: "note" in x.type)
+        pitches = np.array(
+            [msg.note for msg in note_events if lu.is_note_on(msg)]
+        ).astype(float)
+        self._contour = pitches
+
+        if savgol:
+            self._contour = self.scale_and_savgol(self._contour, shift=shift)
+
+
+def weighted_sum(contours: list[Contour], weights: np.ndarray):
+    """
+    Returns a new contour that holds the weighted sum of the input contours.
+
+    :param contours: the contours to add.
+    :param weights: the weight for each contour.
+
+    :return: a new contour holding the weighted sum of the input contours.
+    """
+    result = np.zeros(len(contours[0]))
+    weights /= np.sum(weights)
+    for c, w in zip(contours, weights):
+        result += c._contour * w
+
+    new_contour = Contour()
+    new_contour._contour = result
+
+    return new_contour

@@ -4,44 +4,7 @@ import music21 as m21
 from collections.abc import Callable
 from typing import Generator
 
-# calculated as the shortest "possible" length of a note
-# given the latest guinnes world record for
-# most notes played in a minute on a piano
-TRIGGER_DELTA = 0.05
-
-# key signatures
-_number_of_fifths = {
-    "Cb": -7,
-    "Abm": -7,
-    "Gb": -6,
-    "Ebm": -6,
-    "Db": -5,
-    "Bbm": -5,
-    "Ab": -4,
-    "Fm": -4,
-    "Eb": -3,
-    "Cm": -3,
-    "Bb": -2,
-    "Gm": -2,
-    "F": -1,
-    "Dm": -1,
-    "C": 0,
-    "Am": 0,
-    "G": 1,
-    "Em": 1,
-    "D": 2,
-    "Bm": 2,
-    "A": 3,
-    "F#m": 3,
-    "E": 4,
-    "C#m": 4,
-    "B": 5,
-    "G#m": 5,
-    "F#": 6,
-    "D#m": 6,
-    "C#": 7,
-    "A#m": 7,
-}
+from . import loeric_utils as lu
 
 
 class Tune:
@@ -63,9 +26,18 @@ class Tune:
         self._filename = filename
         self._midi = list(mido_source)
 
+        # some stats about midi
+        self._lowest_pitch = min(
+            [msg.note for msg in self._midi if msg.type in ["note_on", "note_off"]]
+        )
+        self._highest_pitch = max(
+            [msg.note for msg in self._midi if msg.type in ["note_on", "note_off"]]
+        )
+
         # key signature
         self._key_signature = self._get_key_signature()
-        self._fifths = _number_of_fifths[self._key_signature]
+        self._root = lu.get_root(self._key_signature)
+        self._fifths = lu.number_of_fifths[self._key_signature]
 
         # time signature
         self._time_signature = self._get_time_signature()
@@ -86,6 +58,38 @@ class Tune:
 
         # to keep track of the performance
         self._performance_time = -self._offset
+
+        print(f"Playing:\t{filename}")
+        print(f"Meter:\t{self._time_signature}")
+        print(f"Key:\t{self._key_signature}")
+
+    @property
+    def beat_count(self) -> int:
+        """
+        :return: the numebr of beats in the tune.
+        """
+        return self._time_signature.beatCount
+
+    @property
+    def quarter_duration(self) -> float:
+        """
+        :return: the duration of a quarter note in the tune given its original tempo.
+        """
+        return self._quarter_duration
+
+    @property
+    def root(self) -> int:
+        """
+        :return: the tune's key signature root in pitch space.
+        """
+        return self._root
+
+    @property
+    def ambitus(self) -> tuple[int]:
+        """
+        :return: the tune's lowest and highest pitches in a tuple (low, high)
+        """
+        return (self._lowest_pitch, self._highest_pitch)
 
     @property
     def key_signature(self) -> str:
@@ -128,6 +132,18 @@ class Tune:
         :return: the tune's performance offset (i.e. the length of the pickup bar) in seconds.
         """
         return self._offset
+
+    def reset_performance_time(self) -> None:
+        """
+        :return: the current performance time
+        """
+        self._performance_time = -self._offset
+
+    def get_performance_time(self) -> float:
+        """
+        :return: the current performance time
+        """
+        return self._performance_time
 
     @property
     def _quarter_duration(self) -> float:
@@ -246,7 +262,7 @@ class Tune:
         ) / self._beat_duration
         diff = abs(beat_position - round(beat_position))
 
-        return diff <= TRIGGER_DELTA
+        return diff <= lu.TRIGGER_DELTA
 
     def __len__(self) -> int:
         """
