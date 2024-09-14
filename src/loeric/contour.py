@@ -161,23 +161,45 @@ class HarmonicContour(Contour):
             # init counts
             chords = np.zeros(12)
 
+            # add chord score for each note
             for i, n in enumerate(bar_notes):
                 chords += np.roll(chord_score, n)  # * bar_lengths[i]
 
+            # filter out chords that are not allowed
             root_chord = np.multiply(
                 chords,
                 np.roll(allowed_chords, midi.root),
             )
+            # choose the chord with the highest score
             root = np.random.choice(np.argwhere(root_chord == root_chord.max())[0])
 
-            is_major = np.roll(lu.is_major, midi.root)[root]
+            # check if the selected chord should be major according to the mode
+            chord_quality = np.roll(lu.chord_quality, midi.root)[root]
 
+            harmony_value = root
+
+            # check if the note score suggests minor chord
+            # (e.g. minor IV etc, minor V, etc)
             if chords[(root + 3) % 12] > chords[(root + 4) % 12]:
-                is_major = False
+                # if not diminished already
+                if chord_quality != 2:
+                    # make it minor
+                    chord_quality = 1
 
-            harmony[indexes] = root
-            if not is_major:
-                harmony[indexes] += 12
+            # check if the note score suggests diminished chord
+            if chords[(root + 6) % 12] > chords[(root + 7) % 12]:
+                chord_quality = 2
+
+            """
+            # check if the note score suggests augmented chord
+            if chords[(root + 8) % 12] > chords[(root + 7) % 12]:
+                chord_quality = 3
+            """
+
+            harmony_value = root + 12 * chord_quality
+
+            # assign chord to notes in bar interval
+            harmony[indexes] = harmony_value
 
             t = stop
 

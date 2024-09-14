@@ -59,6 +59,10 @@ class Tune:
         # to keep track of the performance
         self._performance_time = -self._offset
 
+        print(f"Playing:\t{filename}")
+        print(f"Meter:\t{self._time_signature}")
+        print(f"Key:\t{self._key_signature}")
+
     @property
     def beat_count(self) -> int:
         """

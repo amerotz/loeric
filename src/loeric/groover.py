@@ -142,7 +142,7 @@ class Groover:
                 "free_strings_at_once": 0,
                 "transpose": False,
                 "allow_root": False,
-                "notes_per_bar": 4,
+                "notes_per_bar": self._tune.beat_count,
                 "delay_range": 0.01,
             },
             "approach_from_above": {},
@@ -553,7 +553,15 @@ class Groover:
 
         if len(free_index) != 0:
             free_drone_notes = self._free_drone_notes[free_index]
-            free_index = np.argsort(abs(free_drone_notes - harmony) % 12)
+            # this prioritizes roots and fifths over other possible pitches
+            number = (
+                (1 + (free_drone_notes - harmony + 12) % 3) * 10000
+                + 254
+                - free_drone_notes
+                + reference
+            )
+            # free_index = np.argsort((free_drone_notes - harmony + 12) % 3)
+            free_index = np.argsort(number)
             drone = np.concatenate(
                 (
                     drone,
@@ -682,7 +690,9 @@ class Groover:
             return pitch.midi
         # use normal scale
         else:
-            index = self._tune.semitones_from_tonic(note_number)
+            index = self._tune.semitones_from_tonic(
+                note_number - self._transpose_semitones
+            )
             return lu.above_approach_scale[index] + note_number
 
     def approach_from_below(self, note_number: int, tune: tu.Tune) -> int:

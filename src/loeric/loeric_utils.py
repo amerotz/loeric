@@ -68,7 +68,12 @@ def get_root(key_signature: str) -> int:
     return base
 
 
-is_major = np.array([1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0])
+# 0 = major
+# 1 = minor
+# 2 = diminished
+# 3 = augmented
+##########################C C#  D Eb  E  F F#  G G#  A A#  B
+chord_quality = np.array([0, 2, 1, 2, 1, 0, 2, 0, 2, 1, 0, 2])
 
 
 # pitches that need quantization to major scale (then shifted according to modes)
@@ -91,15 +96,23 @@ needs_pitch_quantization = [
 def get_chord_pitches(harmony: int) -> np.array:
     """
     Return the pitches of a major or minor chord in semitones from the root.
-    :param harmony: the chord. Values 0-11 indicate a major chord. Values 12-23 indicate a minor chord.
+    :param harmony: the chord. Values 0-11 indicate a major chord. Values 12-23 indicate a minor chord. Values 24-35 indicate a diminished chord. Values 36-48 indicate an augmented chord.
 
     :return: the pitches that are part of the input chord.
     """
     third = 4
-    if harmony >= 12:
-        third = 3
+    fifth = 7
 
-    return np.array([0, third, 7])
+    chord_quality = int(harmony / 12)
+    if chord_quality == 1:
+        third = 3
+    elif chord_quality == 2:
+        third = 3
+        fifth = 6
+    elif chord_quality == 3:
+        fifth = 8
+
+    return np.array([0, third, fifth])
 
 
 def is_note_on(msg: mido.Message) -> bool:
