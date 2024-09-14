@@ -27,5 +27,6 @@ requests==2.31.0
 rpds-py==0.13.2
 scipy==1.11.4
 six==1.16.0
+sphinx-rtd-theme
 urllib3==2.1.0
 webcolors==1.13
