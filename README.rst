@@ -11,6 +11,7 @@ Features
 * Dynamics modeling
 * Traditional ornamentation
 * Tempo changes and variations
+* Harmony recognition and droning
 * Real-time
 * Interactive and controllable
 * MIDI-based
