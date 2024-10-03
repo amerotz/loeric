@@ -20,7 +20,7 @@ Features
 
 Creative Works
 --------------
-- ☎️ LOERIC is now featured as waiting-call music for Loquantur <https://loquantur.com/machine-ai-by-professor-steve-benford-and-doctor-bob-l-t-sturm/>_.
+- ☎️ LOERIC is now featured as waiting-call music for `Loquantur <https://loquantur.com/machine-ai-by-professor-steve-benford-and-doctor-bob-l-t-sturm/>`_.
 - 💿 The folktronica project `Saorga <https://saorga.bandcamp.com/>`_
 
 Research Outputs
