@@ -42,7 +42,7 @@
 		"slide_eight_fraction": 0.2,
 		"slide_pitch_threshold": 6,
 		"tempo_warp_bpms": 5,
-		"beat_velocity_increase": 16,
+		"beat_velocity_increase": -16,
 		"min_velocity": 1,
 		"max_velocity": 127,
 		"max_pitch_error": 2,
@@ -52,9 +52,9 @@
         "diatonic_errors": true
 	},
 	"automation": {
-		"velocity": 1,
+		"velocity": 11,
 		"tempo": 47,
-		"ornament": 1,
+		"ornament": 48,
 		"intensity": 49,
 		"human_impact": 50
 	},
@@ -88,21 +88,21 @@
 			0,
 			0
 		],
-		"_chords_per_bar": 1
+		"chords_per_bar": 4
 	},
 	"drone": {
-		"active": false,
-		"threshold": 0.0,
-		"bind": "velocity",
+		"active": true,
+		"threshold": 0.7,
+		"bind": "intensity",
 		"midi_channel": 1,
 		"velocity_multiplier": 0.8, 
 		"strings": [55, 62, 69, 76],
-		"strings_at_once": 0,
+		"strings_at_once": 1,
 		"free_strings": [38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52],
-		"free_strings_at_once": 3,
+		"free_strings_at_once": 0,
 		"transpose": false,
 		"allow_root": false, 
-		"_notes_per_bar": 3,
+		"notes_per_bar": 8,
 		"delay_range": 0.02
 	},
 	"approach_from_above": {},
