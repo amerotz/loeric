@@ -11,6 +11,8 @@ below_approach_scale = [-1, -1, -2, -1, -2, -1, -1, -2, -1, -2, -1, -2]
 # most notes played in a minute on a piano
 TRIGGER_DELTA = 0.05
 
+MAX_TEMPO = 2**24 - 1
+
 
 # key signatures
 number_of_fifths = {

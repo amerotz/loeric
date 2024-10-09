@@ -5,6 +5,7 @@ import random
 import json
 import numpy as np
 import music21 as m21
+import time
 
 from collections import defaultdict
 
@@ -106,7 +107,6 @@ class Groover:
                 "roll_eight_fraction": 0.8,
                 "slide_eight_fraction": 0.66,
                 "slide_pitch_threshold": 6,
-                "tempo_warp_bpms": 10,
                 "beat_velocity_increase": 16,
                 "midi_channel": midi_channel,
                 "bpm": bpm,
@@ -116,9 +116,12 @@ class Groover:
                 "max_pitch_error": 2,
                 "min_pitch_error": -2,
                 "diatonic_errors": diatonic_errors,
+                "seed": seed,
+            },
+            "tempo_control": {
+                "tempo_warp_bpms": 10,
                 "use_old_tempo_warp": False,
                 "old_tempo_warp": 0.1,
-                "seed": seed,
             },
             "automation": {
                 "velocity": 46,
@@ -188,6 +191,10 @@ class Groover:
         self._drone_threshold = float(self._config["drone"]["threshold"])
         self._drone_bound_contour = self._config["drone"]["bind"]
         self._last_played_drones = []
+
+        # tempo sync
+        self._external_tempo = None
+        self._last_clock_time = None
 
         # create contours
         self._contours = {}
@@ -301,6 +308,32 @@ class Groover:
             raise UnknownContourError
         self._contour_values[contour_name] = value
 
+    def reset_clock(self) -> None:
+        """
+        Reset the MIDI clock to initial tempo.
+        """
+
+        self._last_clock_time = None
+        self._external_tempo = None
+
+    def set_clock(self) -> None:
+        """
+        Register a MIDI clock message and calculate the requested tempo.
+        """
+        now = time.time()
+        if self._last_clock_time is not None:
+
+            # update tempo
+            # 24 clocks per quarter note
+            diff = now - self._last_clock_time
+            self._external_tempo = mido.bpm2tempo(60 / (24 * diff))
+
+            # if too long, reset
+            if self._external_tempo > lu.MAX_TEMPO:
+                self._external_tempo = None
+
+        self._last_clock_time = now
+
     def perform(self, message: mido.Message) -> list[mido.Message]:
         """
         'Perform' a single note event by affecting its timing, pitch, velocity and adding ornaments.
@@ -371,7 +404,7 @@ class Groover:
             )
 
         # add explicit tempo information
-        notes.append(mido.MetaMessage("set_tempo", tempo=self._current_tempo, time=0))
+        notes.append(mido.MetaMessage("set_tempo", tempo=self.current_tempo, time=0))
 
         # add actual message
         notes.append(new_message)
@@ -979,7 +1012,7 @@ class Groover:
 
         :return: the new duration of the input time value in seconds.
         """
-        tempo_ratio = self._current_tempo / self._tune.tempo
+        tempo_ratio = self.current_tempo / self._tune.tempo
         return tempo_ratio * time
 
     def reset(self) -> None:
@@ -990,33 +1023,39 @@ class Groover:
             self._contours[contour_name].reset()
 
     @property
-    def _current_tempo(self) -> int:
+    def current_tempo(self) -> int:
         """
         :return: the current tempo given the value of the tempo contour. If the option `use_old_tempo_warp` is set to `True` the contour affects tempo in terms of percentage of the original one (e.g. 20% faster); otherwise in terms of a fixed amount of bpms (e.g. 10 bpms faster).
+        If an external tempo has been set, the calculated tempo will be interpolated with it according to the user specified percentage.
         """
+
         # (old) version 1
         # warp as a percentage of current tempo
-        if self._config["values"]["use_old_tempo_warp"]:
-            tempo_warp = self._config["values"]["old_tempo_warp"]
+        calculated_tempo = None
+        base_tempo = self._user_tempo
+        if self._external_tempo is not None:
+            base_tempo = self._external_tempo
+
+        if self._config["tempo_control"]["use_old_tempo_warp"]:
+            tempo_warp = self._config["tempo_control"]["old_tempo_warp"]
             value = int(
-                2
-                * tempo_warp
-                * self._user_tempo
-                * (self._contour_values["tempo"] - 0.5)
+                2 * tempo_warp * base_tempo * (self._contour_values["tempo"] - 0.5)
             )
-            return int(self._user_tempo + value)
+            calculated_tempo = int(self._user_tempo + value)
 
         # version 2
         # warp as a fixed maximum amount of bpm
         else:
-            bpm = mido.tempo2bpm(self._user_tempo)
+            bpm = mido.tempo2bpm(base_tempo)
             value = (
                 2
-                * self._config["values"]["tempo_warp_bpms"]
+                * self._config["tempo_control"]["tempo_warp_bpms"]
                 * (self._contour_values["tempo"] - 0.5)
             )
 
-            return mido.bpm2tempo(int(bpm + value))
+            calculated_tempo = mido.bpm2tempo(int(bpm + value))
+
+        return calculated_tempo
 
     @property
     def _current_velocity(self) -> int:
