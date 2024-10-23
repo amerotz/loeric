@@ -4,8 +4,8 @@
 		"high_loud_weight": 0.3,
 		"random": 0.2,
 		"savgol": true,
-		"scale": false,
-		"shift": false 
+		"scale": true,
+		"shift": true 
 	},
 	"tempo": {
 		"weights": [25, 0, 75, 25, 0],
@@ -52,7 +52,7 @@
         "diatonic_errors": true
 	},
 	"automation": {
-		"velocity": 11,
+		"velocity": 46,
 		"tempo": 47,
 		"ornament": 48,
 		"intensity": 49,
@@ -87,13 +87,12 @@
 			1,
 			0,
 			0
-		],
-		"chords_per_bar": 4
+		]
 	},
 	"drone": {
-		"active": true,
-		"threshold": 0.7,
-		"bind": "intensity",
+		"active": false,
+		"threshold": 0.5,
+		"bind": "velocity",
 		"midi_channel": 1,
 		"velocity_multiplier": 0.8, 
 		"strings": [55, 62, 69, 76],
@@ -102,8 +101,7 @@
 		"free_strings_at_once": 0,
 		"transpose": false,
 		"allow_root": false, 
-		"notes_per_bar": 8,
-		"delay_range": 0.02
+		"delay_range": 0.01
 	},
 	"approach_from_above": {},
 	"approach_from_below": {}
