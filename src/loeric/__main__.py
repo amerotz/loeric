@@ -17,6 +17,7 @@ from . import loeric_utils as lu
 faulthandler.enable()
 # bad code goes here
 
+
 # play midi file
 def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
     try:
@@ -56,7 +57,8 @@ def play(groover: gr.Groover, tune: tu.Tune, out, **kwargs) -> None:
         groover.advance_contours()
 
         # play an end note
-        player.play(groover.get_end_notes())
+        if not kwargs["no_end_note"]:
+            player.play(groover.get_end_notes())
 
         if kwargs["save"]:
             name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
@@ -190,7 +192,6 @@ def main(args):
         print("Closed MIDI output.")
 
 
-
 if __name__ == "__main__":
     # args
     parser = argparse.ArgumentParser()
@@ -291,6 +292,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--verbose",
         help="whether to write generated messages to terminal or not",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--no-end-note",
+        help="removes the generation of a final note at the end of all repetitions",
         action="store_true",
     )
 

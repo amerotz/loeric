@@ -554,20 +554,20 @@ class Groover:
         if len(free_index) != 0:
             free_drone_notes = self._free_drone_notes[free_index]
             # this prioritizes roots and fifths over other possible pitches
+            """
             number = (
                 (1 + (free_drone_notes - harmony + 12) % 3) * 10000
                 + 254
                 - free_drone_notes
                 + reference
             )
+            """
             # free_index = np.argsort((free_drone_notes - harmony + 12) % 3)
-            free_index = np.argsort(number)
+            # free_index = np.argsort(number)
             drone = np.concatenate(
                 (
                     drone,
-                    free_drone_notes[
-                        free_index[: self._config["drone"]["free_strings_at_once"]]
-                    ].astype(int),
+                    free_drone_notes[ : self._config["drone"]["free_strings_at_once"]].astype(int),
                 )
             )
 
