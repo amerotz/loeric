@@ -7,9 +7,10 @@ import numpy as np
 
 
 class PlayerThread:
-    def __init__(self, port_num, control_num):
+    def __init__(self, port_num, control_num, invert):
         self.outport = mido.get_output_names()[port_num]
         self.control_num = control_num
+        self.invert = invert
 
     def send_control(self, audio_monitor, listener):
         # get midi file
@@ -19,6 +20,9 @@ class PlayerThread:
             while True:
                 # get the audio level as percentage
                 perc = audio_monitor.get()
+
+                if self.invert:
+                    perc = 1-perc
 
                 # adjust velocity
                 value = int(perc * 127)
@@ -161,7 +165,7 @@ def main(args):
     audio_monitor = AudioMonitor()
 
     # create playback thread
-    player = PlayerThread(args.output, args.control)
+    player = PlayerThread(args.output, args.control, args.invert)
 
     # go until midi is playing
     l = threading.Thread(target=listener.listen, args=(audio_monitor, args.responsive))
@@ -201,6 +205,11 @@ if __name__ == "__main__":
         help="the weight of incoming values when computing intensity, in range 0 to 1.",
         default=1,
         type=float,
+    )
+    parser.add_argument(
+        "--invert",
+        action="store_true",
+        help="whether to invert the signal or not"
     )
     args = parser.parse_args()
 

@@ -1,56 +1,60 @@
 {
 	"velocity": {
-		"weights": [25, 100, 75, 35, 25],
+		"weights": [25, -100, 75, 35, 25],
 		"high_loud_weight": 0.3,
 		"random": 0.2,
 		"savgol": true,
 		"scale": true,
-		"shift": true 
+		"shift": true,
+		"human_impact_scale": 0
 	},
 	"tempo": {
-		"weights": [25, 0, 75, 25, 0],
-		"random": 0.2,
-		"savgol": true,
-		"scale": false,
-		"shift": true
-	},
-	"ornament": {
-		"weights": [75, 50, 100, 0, 50],
-		"random": 0.2,
+		"weights": [0, -1, 0, 0, 0],
+		"random": 0.05,
 		"savgol": true,
 		"scale": true,
-		"shift": true 
+		"shift": true,
+		"human_impact_scale": 0.0
+	},
+	"ornament": {
+		"weights": [0.5,1,0.1,1,0.1],
+		"random": 0.1,
+		"savgol": true,
+		"scale": true,
+		"shift": true,
+		"human_impact_scale": 0
 	},
 	"probabilities": {
 		"drop": 0.01,
 		"roll": 1,
 		"slide": 1,
 		"cut": 1,
-		"error": 0.01
+		"error": 0.05
 	},
 	"swing": {
-		"min": 3,
-		"max": 2,
+		"min": 1,
+		"max": 1,
 		"bind": "tempo"
 	},
 	"values": {
 		"midi_channel": 0,
 		"bend_resolution": 32,
-		"cut_eight_fraction": 0.1,
+		"cut_eight_fraction": 0.3,
 		"cut_velocity_fraction": 0.4,
-		"roll_eight_fraction": 0.8,
+		"roll_eight_fraction_max": 0.5,
+		"roll_eight_fraction_min": 0.3,
+		"roll_velocity_fraction": 0.4,
 		"slide_eight_fraction": 0.2,
 		"slide_pitch_threshold": 6,
-		"tempo_warp_bpms": 2,
-		"beat_velocity_increase": -16,
+		"tempo_warp_bpms": 1,
+		"beat_velocity_increase": -8,
 		"min_velocity": 1,
-		"max_velocity": 127,
-		"max_pitch_error": 2,
-		"min_pitch_error": -2,
+		"max_velocity": 120,
+		"max_pitch_error": 4,
+		"min_pitch_error": -4,
 		"use_old_tempo_warp": false,
 		"old_tempo_warp": 0.1,
-        "diatonic_errors": true,
-		"transpose": 0
+        "diatonic_errors": true 
 	},
 	"automation": {
 		"velocity": 46,
@@ -92,18 +96,20 @@
 	},
 	"drone": {
 		"active": false,
-		"threshold": 0.0,
-		"bind": "velocity",
+		"threshold": 0.5,
+		"bind": "intensity",
 		"midi_channel": 1,
 		"velocity_multiplier": 0.8, 
 		"strings": [55, 62, 69, 76],
-		"strings_at_once": 0,
-		"free_strings": [43, 38, 50, 57, 54, 59, 48],
-		"free_strings_at_once": 1,
+		"strings_at_once": 1,
+		"free_strings": [
+			38, 50, 52, 54, 55, 57, 59
+		],
+		"free_strings_at_once": 0,
 		"transpose": false,
 		"allow_root": true, 
 		"delay_range": 0.001,
-		"notes_per_bar": 1
+		"notes_per_bar": 8
 	},
 	"approach_from_above": {},
 	"approach_from_below": {}

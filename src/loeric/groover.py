@@ -62,6 +62,7 @@ class Groover:
 
         # offset for messages after ornaments
         self._offset = 0
+
         # delay to randomize message length
         self._delay = 0
 
@@ -103,6 +104,7 @@ class Groover:
                 "bend_resolution": 32,
                 "cut_eight_fraction": 0.2,
                 "cut_velocity_fraction": 0.8,
+                "roll_velocity_fraction": 0.8,
                 "roll_eight_fraction": 0.8,
                 "slide_eight_fraction": 0.66,
                 "slide_pitch_threshold": 6,
@@ -153,7 +155,9 @@ class Groover:
             with open(config_file, "r") as f:
                 config_file = json.load(f)
             self._config = jsonmerge.merge(self._config, config_file)
-            config_hash = int(hash(str(config_file))) % 2**31
+            config_hash = int(
+                hash(str(config_file)
+                     )) % 2**31
             self._config["values"]["seed"] = config_hash + seed
 
         self._initial_human_impact = human_impact
@@ -192,6 +196,11 @@ class Groover:
         # create contours
         self._contours = {}
 
+        '''
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(2)
+        '''
+
         # velocity contour
         velocity_intensity_contour = cnt.IntensityContour()
         velocity_intensity_contour.calculate(
@@ -202,6 +211,7 @@ class Groover:
             scale=self._config["velocity"]["scale"],
             shift=self._config["velocity"]["shift"],
         )
+
 
         velocity_pitch_contour = cnt.PitchContour()
         velocity_pitch_contour.calculate(self._tune)
@@ -216,6 +226,7 @@ class Groover:
             ),
         )
 
+
         # tempo contour
         self._contours["tempo"] = cnt.IntensityContour()
         self._contours["tempo"].calculate(
@@ -226,6 +237,13 @@ class Groover:
             scale=self._config["tempo"]["scale"],
             shift=self._config["tempo"]["shift"],
         )
+
+        '''
+        ax[0].plot(self._contours["velocity"]._contour)
+        ax[1].plot(self._contours["tempo"]._contour)
+        plt.show()
+        '''
+
         # ornament contour
         self._contours["ornament"] = cnt.IntensityContour()
         self._contours["ornament"].calculate(
@@ -275,18 +293,17 @@ class Groover:
             self._contour_values[contour_name] = self._contours[contour_name].next()
 
         # add the human part
-        if self._contour_values["intensity"] != 0:
-            for contour_name in ["velocity", "tempo", "ornament"]:
-                #
-                hi = (
-                    self._contour_values["human_impact"]
-                    * self._config[contour_name]["human_impact_scale"]
-                )
+        for contour_name in ["velocity", "tempo", "ornament"]:
+            #
+            hi = (
+                self._contour_values["human_impact"]
+                * self._config[contour_name]["human_impact_scale"]
+            )
 
-                self._contour_values[contour_name] *= 1 - hi
-                self._contour_values[contour_name] += (
-                    hi * self._contour_values["intensity"]
-                )
+            self._contour_values[contour_name] *= 1 - hi
+            self._contour_values[contour_name] += (
+                hi * self._contour_values["intensity"]
+            )
 
     def set_contour_value(self, contour_name: str, value: float) -> None:
         """
@@ -532,7 +549,7 @@ class Groover:
         free_index = np.arange(len(self._free_drone_notes))
         free_index = free_index[
             np.in1d(
-                (12 + self._free_drone_notes[free_index] - harmony) % 12,
+                (12 + self._free_drone_notes - harmony) % 12,
                 allowed_harmony,
             )
         ]
@@ -657,7 +674,11 @@ class Groover:
         :return: the duration of a single note in a roll.
         """
 
-        return self._eight_duration * self._config["values"]["roll_eight_fraction"]
+        tempo_impact = self._contour_values["tempo"]
+        calculated = tempo_impact * (self._config["values"]["roll_eight_fraction_max"] - self._config["values"]["roll_eight_fraction_min"])
+        calculated += self._config["values"]["roll_eight_fraction_min"]
+
+        return self._eight_duration * calculated
 
     @property
     def _eight_duration(self) -> float:
@@ -743,8 +764,7 @@ class Groover:
             ornaments.append(cut)
             # note off
             ornaments.append(
-                mido.Message(
-                    "note_off",
+                mido.Message( "note_off",
                     channel=cut.channel,
                     note=cut.note,
                     time=duration,
@@ -760,7 +780,7 @@ class Groover:
             original_length = self._roll_duration
             cut_length = self._eight_duration - self._roll_duration
             cut_velocity = int(
-                self._current_velocity * self._config["values"]["cut_velocity_fraction"]
+                self._current_velocity * self._config["values"]["roll_velocity_fraction"]
             )
 
             # first note
@@ -957,7 +977,7 @@ class Groover:
         if not is_beat and random.uniform(0, 1) < self._config["probabilities"]["drop"]:
             options.append(DROP)
 
-        if random.uniform(0, 1) < self._config["probabilities"]["error"]:
+        if not is_beat and random.uniform(0, 1) < self._config["probabilities"]["error"]:
             options.append(ERROR)
 
         if len(options) == 0:
