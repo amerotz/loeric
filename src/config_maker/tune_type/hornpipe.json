@@ -1,0 +1,30 @@
+{
+    "velocity": {
+		"weights": [25, -100, 75, 35, 25],
+		"high_loud_weight": 0.3,
+		"random": 0.0,
+		"savgol": true,
+		"scale": true,
+		"shift": true 
+	},
+	"tempo": {
+		"weights": [0, 1, 0, 0, 0],
+		"random": 0.05,
+		"savgol": true,
+		"scale": false,
+		"shift": true
+	},
+    "swing": {"min": 3, "max": 2, "bind": "tempo"},
+    "values": {
+        "beat_velocity_increase": -16,
+        "use_old_tempo_warp": false,
+		"tempo_warp_bpms": 1
+    },
+    "harmony": {
+        "chords_per_bar": 4
+    },
+    "drone": {
+        "notes_per_bar": 8
+    }
+}
+

@@ -1,0 +1,50 @@
+{
+	"probabilities": {
+		"roll": 1,
+		"slide": 1,
+		"cut": 1
+	},
+	"approach_from_above": {
+		"D4": "E4",
+		"D5": "E5",
+		"E4": "F#4",
+		"E5": "F#5",
+		"F4": "G4",
+		"F#4": "G4",
+		"F#5": "A5",
+		"G4": "A4",
+		"G5": "A5",
+		"A4": "B4",
+		"A5": "B5",
+		"B3": "C4",
+		"B4": "D5",
+		"C4": "D4",
+		"C5": "D5"
+	},
+	"approach_from_below": {
+		"D5": "C#5",
+		"E4": "D4",
+		"E5": "D5",
+		"F4": "E4",
+		"F5": "E5",
+		"F#4": "E4",
+		"F#5": "E5",
+		"G4": "F#4",
+		"G5": "F#5",
+		"A5": "G5",
+		"B3": "A3",
+		"B4": "A4",
+		"C4": "B3",
+		"C5": "B4"
+	},
+	"drone": {
+		"active": true,
+		"threshold": 0.5,
+		"bind": "velocity",
+		"midi_channel": 1,
+		"velocity_multiplier": 0.6, 
+		"strings": [55, 62, 69, 76],
+		"strings_at_once": 1,
+		"free_strings_at_once": 0
+	}
+}
