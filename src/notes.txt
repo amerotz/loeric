@@ -1,4 +1,0 @@
-roll 0.6
-velocity 0.8 too much
-velocity 0.8 too much
-		"weights": [75, 50, 100, 0, 50],

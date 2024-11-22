@@ -1,0 +1,25 @@
+{
+	"probabilities": {
+		"roll": 1,
+		"slide": 0,
+		"cut": 1
+	},
+	"values": {
+		"cut_velocity_fraction": 0.9,
+		"roll_velocity_fraction": 0.9
+	},
+	"approach_from_above": {
+	},
+	"approach_from_below": {
+	},
+	"drone": {
+		"active": true,
+		"threshold": 0.5,
+		"bind": "velocity",
+		"midi_channel": 1,
+		"velocity_multiplier": 0.9, 
+		"strings_at_once": 0,
+		"free_strings": [53, 55, 56, 58, 60, 62, 63, 65, 67, 68, 70, 72, 74, 75, 77, 79, 80, 82, 84, 86, 87, 89, 91, 92, 94] ,
+		"free_strings_at_once": 3
+	}
+}
