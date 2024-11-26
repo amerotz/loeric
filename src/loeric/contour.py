@@ -302,7 +302,6 @@ class IntensityContour(Contour):
         :return: the frequency score, the beat score, the ambitus score, the leap score and the length score.
         """
         # retrieve pitch and time info
-        # note_events = [msg for msg in midi if "note" in msg.type]
         note_events = midi.filter(lambda x: "note" in x.type)
         timings = np.array([msg.time for msg in note_events])
         pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
@@ -435,6 +434,78 @@ class PitchContour(Contour):
 
         if savgol:
             self._contour = self.scale_and_savgol(self._contour, shift=shift)
+
+
+class PatternContour(Contour):
+    """A contour made of a repeating pattern."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(
+        self,
+        midi: tune.Tune,
+        mean: np.array = np.array([1]),
+        std: np.array = np.array([0]),
+        period: float = 0.5,
+    ) -> None:
+        """
+        Create the contour by repeating the input weights over the specified period.
+        If standard deviatons are specified, the resulting patter is sampled from each distribution at each loaction.
+
+        :param mean: the pattern to repeat.
+        :param std: the std of the pattern to repeat, for every item.
+        :param period: the length of the pattern, in bars.
+        """
+        # retrieve pitch and time info
+        note_events = midi.filter(lambda x: "note" in x.type)
+        timings = np.array([msg.time for msg in note_events])
+        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
+
+        # cumulative time
+        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
+        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
+        summed_timings = np.cumsum(timings)
+        summed_timings -= midi.offset
+        summed_timings = summed_timings[note_ons]
+
+        bar_position = summed_timings / midi.bar_duration
+
+        pattern_means = np.interp(
+            bar_position, np.arange(len(mean)) / len(mean), mean, period=period
+        )
+
+        pattern_stds = np.interp(
+            bar_position, np.arange(len(std)) / len(std), std, period=period
+        )
+
+        pattern = np.random.rand(len(pattern_means)) * pattern_stds + pattern_means
+
+        """
+        import matplotlib.pyplot as plt
+
+        plt.step(summed_timings, pattern)
+        plt.show()
+        """
+
+        self._contour = pattern
+
+
+def multiply(contours: list[Contour]):
+    """
+    Returns a new contour that holds the product of the input contours.
+
+    :param contours: the contours to multiply.
+
+    :return: a new contour holding the product of the input contours.
+    """
+    new_contour = Contour()
+    result = np.ones(len(contours[0]))
+    for c in contours:
+        result = np.multiply(result, c._contour)
+    new_contour._contour = result
+
+    return new_contour
 
 
 def weighted_sum(contours: list[Contour], weights: np.ndarray):

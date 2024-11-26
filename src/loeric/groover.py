@@ -70,6 +70,9 @@ class Groover:
             "velocity": {
                 "weights": [0.2, 0.3, 0.1, 0.2, 0.2],
                 "high_loud_weight": high_loud_weight,
+                "pattern_means": [1.0],
+                "pattern_stds": [0],
+                "period": 1,
                 "random": random_weight,
                 "savgol": True,
                 "scale": False,
@@ -78,6 +81,9 @@ class Groover:
             },
             "tempo": {
                 "weights": [0.25, 0.1, 0.3, 0.25, 0.1],
+                "pattern_means": [1.0],
+                "pattern_stds": [0],
+                "period": 1,
                 "random": random_weight,
                 "savgol": True,
                 "scale": False,
@@ -205,6 +211,15 @@ class Groover:
             shift=self._config["velocity"]["shift"],
         )
 
+        # pattern contour
+        self._contours["velocity_pattern"] = cnt.PatternContour()
+        self._contours["velocity_pattern"].calculate(
+            self._tune,
+            mean=np.array(self._config["velocity"]["pattern_means"]),
+            std=np.array(self._config["velocity"]["pattern_stds"]),
+            period=self._config["velocity"]["period"],
+        )
+
         velocity_pitch_contour = cnt.PitchContour()
         velocity_pitch_contour.calculate(self._tune)
 
@@ -227,6 +242,14 @@ class Groover:
             savgol=self._config["tempo"]["savgol"],
             scale=self._config["tempo"]["scale"],
             shift=self._config["tempo"]["shift"],
+        )
+
+        self._contours["tempo_pattern"] = cnt.PatternContour()
+        self._contours["tempo_pattern"].calculate(
+            self._tune,
+            mean=np.array(self._config["tempo"]["pattern_means"]),
+            std=np.array(self._config["tempo"]["pattern_stds"]),
+            period=self._config["tempo"]["period"],
         )
 
         # ornament contour
@@ -1006,7 +1029,7 @@ class Groover:
                 * self._user_tempo
                 * (self._contour_values["tempo"] - 0.5)
             )
-            return int(self._user_tempo + value)
+            value = int(self._user_tempo + value)
 
         # version 2
         # warp as a fixed maximum amount of bpm
@@ -1018,7 +1041,11 @@ class Groover:
                 * (self._contour_values["tempo"] - 0.5)
             )
 
-            return mido.bpm2tempo(int(bpm + value))
+            value = mido.bpm2tempo(int(bpm + value))
+
+        value *= self._contour_values["tempo_pattern"]
+        value = int(value)
+        return value
 
     @property
     def _current_velocity(self) -> int:
@@ -1028,10 +1055,11 @@ class Groover:
         max_velocity = self._config["values"]["max_velocity"]
         min_velocity = self._config["values"]["min_velocity"]
         velocity_range = max_velocity - min_velocity
-        value = int(self._contour_values["velocity"] * velocity_range)
+        value = self._contour_values["velocity"] * velocity_range
         if self._tune.is_on_a_beat():
             value += self._config["values"]["beat_velocity_increase"]
 
+        value *= self._contour_values["velocity_pattern"]
         # clamp velocity
         value = max(min(value, max_velocity), min_velocity)
-        return value
+        return int(value)
