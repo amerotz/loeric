@@ -1,4 +1,5 @@
 import mido
+import os
 import jsonmerge
 import copy
 import random
@@ -66,97 +67,47 @@ class Groover:
         # delay to randomize message length
         self._delay = 0
 
+        # only define command line values
+        # rest is part of loeric_config/base.json
         self._config = {
             "velocity": {
-                "weights": [0.2, 0.3, 0.1, 0.2, 0.2],
                 "high_loud_weight": high_loud_weight,
-                "pattern_means": [1.0],
-                "pattern_stds": [0],
-                "period": 1,
                 "random": random_weight,
-                "savgol": True,
-                "scale": False,
-                "shift": False,
                 "human_impact_scale": human_impact,
             },
             "tempo": {
-                "weights": [0.25, 0.1, 0.3, 0.25, 0.1],
-                "pattern_means": [1.0],
-                "pattern_stds": [0],
-                "period": 1,
                 "random": random_weight,
-                "savgol": True,
-                "scale": False,
-                "shift": True,
                 "human_impact_scale": human_impact,
             },
             "ornament": {
-                "weights": [0.2, 0.35, 0.15, 0.15, 0.2],
                 "random": random_weight,
-                "savgol": True,
-                "scale": False,
-                "shift": False,
                 "human_impact_scale": human_impact,
             },
-            "probabilities": {
-                "drop": 0.1,
-                "roll": 1,
-                "slide": 1,
-                "cut": 1,
-                "error": 0.1,
-            },
-            "swing": {"min": 2, "max": 2, "bind": "tempo"},
             "values": {
-                "bend_resolution": 32,
-                "cut_eight_fraction": 0.2,
-                "cut_velocity_fraction": 0.8,
-                "roll_velocity_fraction": 0.8,
-                "roll_eight_fraction": 0.8,
-                "slide_eight_fraction": 0.66,
-                "slide_pitch_threshold": 6,
-                "tempo_warp_bpms": 10,
-                "beat_velocity_increase": 16,
                 "midi_channel": midi_channel,
                 "bpm": bpm,
                 "transpose": transpose,
-                "min_velocity": 0,
-                "max_velocity": 127,
-                "max_pitch_error": 2,
-                "min_pitch_error": -2,
                 "diatonic_errors": diatonic_errors,
-                "use_old_tempo_warp": False,
-                "old_tempo_warp": 0.1,
                 "seed": seed,
             },
-            "automation": {
-                "velocity": 46,
-                "tempo": 47,
-                "ornament": 48,
-                "intensity": 49,
-            },
             "harmony": {
-                "chord_score": [1, 0, 0, 0, 0, 1, 0, 0, 0.25, 0.25, 0, 0],
-                "allowed_chords": [2, 0, 1, 0, 1, 2, 0, 2, 0, 1, 0, 0],
                 "chords_per_bar": self._tune.beat_count,
             },
             "drone": {
-                "active": False,
                 "midi_channel": midi_channel + 1,
-                "threshold": 0.5,
-                "bind": "velocity",
-                "velocity_multiplier": 1,
-                "strings_at_once": 1,
-                "free_strings": [38, 43, 45],
-                "free_strings_at_once": 0,
-                "transpose": False,
-                "allow_root": False,
                 "notes_per_bar": self._tune.beat_count,
-                "delay_range": 0.01,
             },
-            "approach_from_above": {},
-            "approach_from_below": {},
         }
 
+        # merge base configuration with command line values
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        with open(f"{dir_path}/loeric_config/base.json", "r") as f:
+            base_config = json.load(f)
+            self._config = jsonmerge.merge(base_config, self._config)
+
+        # use external configuration if specified
+        # the configuration file overwrites any defaults
+        # specified by command line
         if config_file is not None:
             with open(config_file, "r") as f:
                 config_file = json.load(f)

@@ -5,27 +5,28 @@ import os
 
 
 def main():
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--id", default=None, type=str)
     parser.add_argument("--tune_type", default=None, type=str)
     parser.add_argument("--instrument", default=None, type=str)
-    parser.add_argument("--output", default=None, type=str)
+    parser.add_argument("--output", default=f"{dir_path}/loeric_config.json", type=str)
     args = vars(parser.parse_args())
 
     # load base config
-    dir_path = os.path.dirname(os.path.realpath(__file__))
     with open(f"{dir_path}/base.json", "r") as f:
         base = json.load(f)
 
     # select files
     config_name = []
     for a in args:
-        if args[a] is None:
+        if args[a] is None or a == "output":
             continue
         elif a == "id":
             config_name.append(args[a])
             continue
-        name = f"{a}/{args[a]}.json"
+        name = f"{dir_path}/{a}/{args[a]}.json"
         print(name)
         config_name.append(args[a])
         with open(name, "r") as f:
@@ -34,7 +35,7 @@ def main():
 
     config_name = "_".join(config_name) + ".json"
 
-    if args.output is not None:
+    if args["output"] is not None:
         config_name = args["output"]
 
     with open(config_name, "w") as f:

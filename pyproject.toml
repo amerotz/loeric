@@ -16,3 +16,5 @@ where = ["src"]
 loeric = "loeric.__main__:main" 
 loeric-config = "loeric.loeric_config.loeric_config:main"
 loeric-listen = "loeric.listeners.playalong:main"
+loeric-combine= "loeric.listeners.combine:main"
+loeric-dummy-control = "loeric.listeners.fake_midi_control:main"

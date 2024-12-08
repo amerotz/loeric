@@ -1,19 +1,21 @@
 {
 	"velocity": {
-		"pattern_means": [0.98, 0.98, 1.05, 1.0, 1.01, 0.97, 1.0, 1.01],
-		"pattern_stds": [0.1, 0.09, 0.11, 0.1, 0.08, 0.14, 0.09, 0.08]
+		"pattern_means": [0.998, 0.994, 1.012, 1.012, 0.999, 0.999, 1.005, 0.983],
+		"pattern_stds": [0.14, 0.09, 0.09, 0.087, 0.094, 0.089, 0.085, 0.185],
+		"period": 1
 	},
 	"tempo": {
-		"pattern_means": [1.1, 0.78, 1.32, 1.05, 0.93, 0.91, 1.05, 0.86],
-		"pattern_stds": [0]
+		"pattern_means": [1.03, 1.021, 1.024, 1.037, 0.979, 1.015, 0.986, 1.005],
+		"pattern_stds": [0.066, 0.073, 0.068, 0.066, 0.064, 0.069, 0.065, 0.067],
+		"period": 1
 	},
 	"values": {
 		"beat_velocity_increase": 0,
-		"tempo_warp_bpms": 0,
+		"tempo_warp_bpms": 1,
 		"use_old_tempo_warp": false
 	},
 	"swing": {
-		"min": 1,
+		"min": 1.5,
 		"max": 1,
 		"bind": "tempo"
 	}

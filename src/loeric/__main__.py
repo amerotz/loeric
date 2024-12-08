@@ -196,11 +196,12 @@ def main():
         type=str,
         default=None,
     )
+    dir_path = os.path.dirname(os.path.realpath(__file__))
     parser.add_argument(
         "--config",
         help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
         type=str,
-        default=None,
+        default=f"{dir_path}/loeric_config/loeric_config.json",
     )
     parser.add_argument(
         "--verbose",
