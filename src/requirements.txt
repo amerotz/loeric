@@ -1,7 +1,0 @@
-jsonmerge==1.9.2
-mido==1.3.2
-music21==9.1.0
-numpy==2.1.1
-processing_py==0.3.7
-pyaudio==0.2.14
-scipy==1.14.1

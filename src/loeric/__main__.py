@@ -3,6 +3,7 @@ import mido
 import threading
 import time
 import os
+import faulthandler
 
 from collections.abc import Callable
 
@@ -13,72 +14,78 @@ from . import player as pl
 from . import loeric_utils as lu
 
 
+faulthandler.enable()
+# bad code goes here
+
+
 # play midi file
 def play(
     groover: gr.Groover, tune: tu.Tune, out: mido.ports.BaseOutput, **kwargs
 ) -> None:
-    """
-    Play the given tune with the given groover.
-
-    :param groover: the groover object
-    :param tune: the tune object
-    :param out: the MIDI output port
-    :param kwargs: the performance arguments
-    """
     global done_playing, received_start
+    try:
+        """
+        Play the given tune with the given groover.
 
-    # create player
-    player = pl.Player(
-        tempo=groover.tempo,
-        key_signature=tune.key_signature,
-        time_signature=tune.time_signature,
-        save=kwargs["save"],
-        verbose=kwargs["verbose"],
-        midi_out=out,
-    )
+        :param groover: the groover object
+        :param tune: the tune object
+        :param kwargs: the performance arguments
+        """
+        # create player
+        player = pl.Player(
+            tempo=groover.tempo,
+            key_signature=tune.key_signature,
+            time_signature=tune.time_signature,
+            save=kwargs["save"],
+            verbose=kwargs["verbose"],
+            midi_out=out,
+        )
 
-    # wait for start
-    if kwargs["sync"]:
-        received_start.acquire()
+        # wait for start
+        if kwargs["sync"]:
+            received_start.acquire()
 
-    # repeat as specified
-    for t in range(kwargs["repeat"]):
-        print(f"Repetition {t+1}/{kwargs['repeat']}")
-        # iterate over messages
-        for message in tune.events():
-            # if not message.is_meta and "program" not in message.type:
-            if lu.is_note(message):
-                # make the groover play the messages
-                new_messages = groover.perform(message)
-                player.play(new_messages)
+        # repeat as specified
+        for t in range(kwargs["repeat"]):
+            print(f"Repetition {t+1}/{kwargs['repeat']}")
+            # iterate over messages
+            for message in tune.events():
+                # if not message.is_meta and "program" not in message.type:
+                if lu.is_note(message):
+                    # make the groover play the messages
+                    new_messages = groover.perform(message)
+                    player.play(new_messages)
 
-        # reset the groover at the end of the repetition
-        groover.reset()
-        tune.reset_performance_time()
+            # reset the groover at the end of the repetition
+            groover.reset()
+            tune.reset_performance_time()
 
-    # wrap around contours for end note
-    groover.advance_contours()
+        # wrap around contours for end note
+        groover.advance_contours()
 
-    # play an end note
-    player.play(groover.get_end_notes())
+        # play an end note
+        if not kwargs["no_end_note"]:
+            player.play(groover.get_end_notes())
 
-    if kwargs["save"]:
-        name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
-        if kwargs["output_dir"] is None:
-            dirname = os.path.dirname(kwargs["source"])
-        else:
-            if not os.path.isdir(kwargs["output_dir"]):
-                os.makedirs(kwargs["output_dir"])
-            dirname = kwargs["output_dir"]
+        if kwargs["save"]:
+            name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
+            if kwargs["output_dir"] is None:
+                dirname = os.path.dirname(kwargs["source"])
+            else:
+                if not os.path.isdir(kwargs["output_dir"]):
+                    os.makedirs(kwargs["output_dir"])
+                dirname = kwargs["output_dir"]
 
-        filename = kwargs["filename"]
-        if filename is None:
-            filename = f"generated_{name}_{kwargs['seed']}.mid"
-        player.save(f"{dirname}/{filename}")
+            filename = kwargs["filename"]
+            if filename is None:
+                filename = f"generated_{name}_{kwargs['seed']}.mid"
+            player.save(f"{dirname}/{filename}")
 
-    # stop clock thread
-    done_playing = True
-    print("\nPlayback terminated.")
+    except Exception as e:
+        # stop clock thread
+        done_playing = True
+        print("Playback terminated.")
+        raise e
 
 
 def clock(groover: gr.Groover, sync_port_out: mido.ports.BaseOutput) -> None:
@@ -134,6 +141,8 @@ def check_midi_control(
     """
 
     def callback(msg):
+        if lu.is_note(msg):
+            pass
         for event_number in control2contour:
             if msg.is_cc(event_number):
                 contour_name = control2contour[event_number]
@@ -261,8 +270,6 @@ def main(args):
         sync_port_out.close()
         print("Closed SYNC output.")
 
-    # print(threading.enumerate())
-
 
 if __name__ == "__main__":
     # args
@@ -369,6 +376,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--verbose",
         help="whether to write generated messages to terminal or not",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--no-end-note",
+        help="removes the generation of a final note at the end of all repetitions",
         action="store_true",
     )
 
