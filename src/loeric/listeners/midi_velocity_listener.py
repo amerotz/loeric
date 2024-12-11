@@ -1,15 +1,32 @@
 import loeric.loeric_utils as lu
+import mido
+import argparse
 
 
-def main(args) -> None:
+def main() -> None:
     """
     Monitor the velocity of MIDI events on the specified port and send it as a control signal on the given output port.
-
-    :param args: the performance arguments.
     """
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--input", help="the input MIDI port.", type=int)
+    parser.add_argument("-o", "--output", help="the output MIDI port.", type=int)
+    parser.add_argument(
+        "-c",
+        "--control",
+        help="the control channel on which intensity is sent.",
+        type=int,
+    )
+    parser.add_argument(
+        "-r",
+        "--responsive",
+        help="the weight of incoming values when computing intensity, in range 0 to 1.",
+        type=float,
+    )
+    args = parser.parse_args()
+
     inport, outport = lu.get_ports(
-        input_number=args.input, output_number=args.output, list_ports=args.list_ports
+        input_number=args.input, output_number=args.output, list_ports=False
     )
     if inport is None and outport is None:
         return
@@ -36,32 +53,3 @@ def main(args) -> None:
                     )
 
                 out.send(message)
-
-
-if __name__ == "__main__":
-    import mido
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--list_ports",
-        help="list available input and output MIDI ports and exit.",
-        action="store_true",
-    )
-    parser.add_argument("-i", "--input", help="the input MIDI port.", type=int)
-    parser.add_argument("-o", "--output", help="the output MIDI port.", type=int)
-    parser.add_argument(
-        "-c",
-        "--control",
-        help="the control channel on which intensity is sent.",
-        type=int,
-    )
-    parser.add_argument(
-        "-r",
-        "--responsive",
-        help="the weight of incoming values when computing intensity, in range 0 to 1.",
-        type=float,
-    )
-    args = parser.parse_args()
-
-    main(args)
