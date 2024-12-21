@@ -201,6 +201,7 @@ class Groover:
             mean=np.array(self._config["tempo"]["pattern_means"]),
             std=np.array(self._config["tempo"]["pattern_stds"]),
             period=self._config["tempo"]["period"],
+            normalize=True,
         )
 
         # ornament contour

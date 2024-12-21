@@ -11,6 +11,7 @@ def main():
     parser.add_argument("--id", default=None, type=str)
     parser.add_argument("--tune_type", default=None, type=str)
     parser.add_argument("--instrument", default=None, type=str)
+    parser.add_argument("--drone", default=None, type=str)
     parser.add_argument("--output", default=f"{dir_path}/loeric_config.json", type=str)
     args = vars(parser.parse_args())
 
@@ -25,13 +26,14 @@ def main():
             continue
         elif a == "id":
             config_name.append(args[a])
-            continue
-        name = f"{dir_path}/{a}/{args[a]}.json"
-        print(name)
-        config_name.append(args[a])
-        with open(name, "r") as f:
-            selected = json.load(f)
-            base = jsonmerge.merge(base, selected)
+        else:
+            for option in args[a].split("-"):
+                name = f"{dir_path}/{a}/{option}.json"
+                print(name)
+                config_name.append(args[a])
+                with open(name, "r") as f:
+                    selected = json.load(f)
+                    base = jsonmerge.merge(base, selected)
 
     config_name = "_".join(config_name) + ".json"
 

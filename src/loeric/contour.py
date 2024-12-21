@@ -447,6 +447,7 @@ class PatternContour(Contour):
         midi: tune.Tune,
         mean: np.array = np.array([1]),
         std: np.array = np.array([0]),
+        normalize: bool = False,
         period: float = 0.5,
     ) -> None:
         """
@@ -481,12 +482,19 @@ class PatternContour(Contour):
 
         pattern = np.random.rand(len(pattern_means)) * pattern_stds + pattern_means
 
-        """
-        import matplotlib.pyplot as plt
+        if normalize:
+            bars = summed_timings // midi.bar_duration
 
-        plt.step(summed_timings, pattern)
-        plt.show()
-        """
+            for i in np.unique(bars):
+
+                indexes = np.argwhere(bars == i)
+                min_i = min(indexes)
+                max_i = min(max(indexes) + 1, len(summed_timings) - 1)
+                bar_sum = summed_timings[max_i] - summed_timings[min_i]
+                if abs(bar_sum - midi.bar_duration) < lu.TRIGGER_DELTA:
+                    pattern[indexes] /= pattern[indexes].sum()
+                    pattern[indexes] -= pattern[indexes].mean()
+                    pattern[indexes] += 1
 
         self._contour = pattern
 
