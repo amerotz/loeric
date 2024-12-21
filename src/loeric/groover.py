@@ -1,4 +1,5 @@
 import mido
+import os
 import jsonmerge
 import copy
 import random
@@ -66,91 +67,47 @@ class Groover:
         # delay to randomize message length
         self._delay = 0
 
+        # only define command line values
+        # rest is part of loeric_config/base.json
         self._config = {
             "velocity": {
-                "weights": [0.2, 0.3, 0.1, 0.2, 0.2],
                 "high_loud_weight": high_loud_weight,
                 "random": random_weight,
-                "savgol": True,
-                "scale": False,
-                "shift": False,
                 "human_impact_scale": human_impact,
             },
             "tempo": {
-                "weights": [0.25, 0.1, 0.3, 0.25, 0.1],
                 "random": random_weight,
-                "savgol": True,
-                "scale": False,
-                "shift": True,
                 "human_impact_scale": human_impact,
             },
             "ornament": {
-                "weights": [0.2, 0.35, 0.15, 0.15, 0.2],
                 "random": random_weight,
-                "savgol": True,
-                "scale": False,
-                "shift": False,
                 "human_impact_scale": human_impact,
             },
-            "probabilities": {
-                "drop": 0.1,
-                "roll": 1,
-                "slide": 1,
-                "cut": 1,
-                "error": 0.1,
-            },
-            "swing": {"min": 2, "max": 2, "bind": "tempo"},
             "values": {
-                "bend_resolution": 32,
-                "cut_eight_fraction": 0.2,
-                "cut_velocity_fraction": 0.8,
-                "roll_velocity_fraction": 0.8,
-                "roll_eight_fraction": 0.8,
-                "slide_eight_fraction": 0.66,
-                "slide_pitch_threshold": 6,
-                "tempo_warp_bpms": 10,
-                "beat_velocity_increase": 16,
                 "midi_channel": midi_channel,
                 "bpm": bpm,
                 "transpose": transpose,
-                "min_velocity": 0,
-                "max_velocity": 127,
-                "max_pitch_error": 2,
-                "min_pitch_error": -2,
                 "diatonic_errors": diatonic_errors,
-                "use_old_tempo_warp": False,
-                "old_tempo_warp": 0.1,
                 "seed": seed,
             },
-            "automation": {
-                "velocity": 46,
-                "tempo": 47,
-                "ornament": 48,
-                "intensity": 49,
-            },
             "harmony": {
-                "chord_score": [1, 0, 0, 0, 0, 1, 0, 0, 0.25, 0.25, 0, 0],
-                "allowed_chords": [2, 0, 1, 0, 1, 2, 0, 2, 0, 1, 0, 0],
                 "chords_per_bar": self._tune.beat_count,
             },
             "drone": {
-                "active": False,
                 "midi_channel": midi_channel + 1,
-                "threshold": 0.5,
-                "bind": "velocity",
-                "velocity_multiplier": 1,
-                "strings_at_once": 1,
-                "free_strings": [38, 43, 45],
-                "free_strings_at_once": 0,
-                "transpose": False,
-                "allow_root": False,
                 "notes_per_bar": self._tune.beat_count,
-                "delay_range": 0.01,
             },
-            "approach_from_above": {},
-            "approach_from_below": {},
         }
 
+        # merge base configuration with command line values
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        with open(f"{dir_path}/loeric_config/base.json", "r") as f:
+            base_config = json.load(f)
+            self._config = jsonmerge.merge(base_config, self._config)
+
+        # use external configuration if specified
+        # the configuration file overwrites any defaults
+        # specified by command line
         if config_file is not None:
             with open(config_file, "r") as f:
                 config_file = json.load(f)
@@ -205,6 +162,15 @@ class Groover:
             shift=self._config["velocity"]["shift"],
         )
 
+        # pattern contour
+        self._contours["velocity_pattern"] = cnt.PatternContour()
+        self._contours["velocity_pattern"].calculate(
+            self._tune,
+            mean=np.array(self._config["velocity"]["pattern_means"]),
+            std=np.array(self._config["velocity"]["pattern_stds"]),
+            period=self._config["velocity"]["period"],
+        )
+
         velocity_pitch_contour = cnt.PitchContour()
         velocity_pitch_contour.calculate(self._tune)
 
@@ -227,6 +193,15 @@ class Groover:
             savgol=self._config["tempo"]["savgol"],
             scale=self._config["tempo"]["scale"],
             shift=self._config["tempo"]["shift"],
+        )
+
+        self._contours["tempo_pattern"] = cnt.PatternContour()
+        self._contours["tempo_pattern"].calculate(
+            self._tune,
+            mean=np.array(self._config["tempo"]["pattern_means"]),
+            std=np.array(self._config["tempo"]["pattern_stds"]),
+            period=self._config["tempo"]["period"],
+            normalize=True,
         )
 
         # ornament contour
@@ -1006,7 +981,7 @@ class Groover:
                 * self._user_tempo
                 * (self._contour_values["tempo"] - 0.5)
             )
-            return int(self._user_tempo + value)
+            value = int(self._user_tempo + value)
 
         # version 2
         # warp as a fixed maximum amount of bpm
@@ -1018,7 +993,11 @@ class Groover:
                 * (self._contour_values["tempo"] - 0.5)
             )
 
-            return mido.bpm2tempo(int(bpm + value))
+            value = mido.bpm2tempo(int(bpm + value))
+
+        value *= self._contour_values["tempo_pattern"]
+        value = int(value)
+        return value
 
     @property
     def _current_velocity(self) -> int:
@@ -1028,10 +1007,11 @@ class Groover:
         max_velocity = self._config["values"]["max_velocity"]
         min_velocity = self._config["values"]["min_velocity"]
         velocity_range = max_velocity - min_velocity
-        value = int(self._contour_values["velocity"] * velocity_range)
+        value = self._contour_values["velocity"] * velocity_range
         if self._tune.is_on_a_beat():
             value += self._config["values"]["beat_velocity_increase"]
 
+        value *= self._contour_values["velocity_pattern"]
         # clamp velocity
         value = max(min(value, max_velocity), min_velocity)
-        return value
+        return int(value)

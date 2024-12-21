@@ -2,34 +2,39 @@
 	"velocity": {
 		"weights": [25, -100, 75, 35, 25],
 		"high_loud_weight": 0.3,
-		"random": 0.2,
-		"savgol": true,
-		"scale": true,
-		"shift": true,
-		"human_impact_scale": 0
-	},
-	"tempo": {
-		"weights": [0, -1, 0, 0, 0],
-		"random": 0.05,
-		"savgol": true,
-		"scale": true,
-		"shift": true,
-		"human_impact_scale": 0.0
-	},
-	"ornament": {
-		"weights": [0.5,1,0.1,1,0.1],
+		"pattern_means": [1.013, 0.978, 1.015, 1.0, 0.981, 1.014],
+		"pattern_stds": [0.0091, 0.0094, 0.0089, 0.0088, 0.0099, 0.0088],
+		"period": 1,
 		"random": 0.1,
 		"savgol": true,
 		"scale": true,
 		"shift": true,
 		"human_impact_scale": 0
 	},
+	"tempo": {
+		"weights": [1, 1, 1, 1, 1],
+		"pattern_means": [1.071, 0.842, 1.074, 1.101, 0.844, 1.069],
+		"pattern_stds": [0.0479, 0.0409, 0.0405, 0.0499, 0.0435, 0.0413],
+		"period": 1,
+		"random": 0.05,
+		"savgol": true,
+		"scale": true,
+		"shift": true,
+		"human_impact_scale": 0
+	},
+	"ornament": {
+		"weights": [0.5,1,0.1,1,0.1],
+		"random": 0.1,
+		"savgol": true,
+		"scale": true,
+		"shift": true
+	},
 	"probabilities": {
 		"drop": 0.01,
 		"roll": 1,
-		"slide": 1,
+		"slide": 0,
 		"cut": 1,
-		"error": 0.05
+		"error": 0.01
 	},
 	"swing": {
 		"min": 1,
@@ -46,12 +51,12 @@
 		"roll_velocity_fraction": 0.4,
 		"slide_eight_fraction": 0.2,
 		"slide_pitch_threshold": 6,
-		"tempo_warp_bpms": 1,
-		"beat_velocity_increase": -8,
-		"min_velocity": 1,
-		"max_velocity": 120,
-		"max_pitch_error": 4,
-		"min_pitch_error": -4,
+		"tempo_warp_bpms": 0,
+		"beat_velocity_increase": 0,
+		"min_velocity": 0,
+		"max_velocity": 127,
+		"max_pitch_error": 2,
+		"min_pitch_error": -2,
 		"use_old_tempo_warp": false,
 		"old_tempo_warp": 0.1,
         "diatonic_errors": true 

@@ -105,94 +105,7 @@ def check_midi_control(
     return callback
 
 
-def main(args):
-    if args["create_in"]:
-        port = mido.open_input("LOERIC MIDI in", virtual=True)
-
-    if args["create_out"]:
-        out = mido.open_output("LOERIC MIDI out", virtual=True)
-
-    inport, outport = lu.get_ports(
-        input_number=args["input"],
-        output_number=args["output"],
-        list_ports=args["list_ports"],
-        create_in=args["create_in"],
-        create_out=args["create_out"],
-    )
-
-    if args["list_ports"]:
-        return
-
-    # open in
-    if args["create_in"]:
-        pass
-    elif inport is not None:
-        port = mido.open_input(inport)
-    else:
-        port = None
-
-    # open out
-    if args["create_out"]:
-        pass
-    elif args["save"] or outport is None:
-        out = None
-    else:
-        out = mido.open_output(outport)
-
-    # consistency with MIDI spec and mido
-    args["midi_channel"] -= 1
-
-    if (not args["no_prompt"]) and (not args["save"]):
-        input("Press any key to start playback:")
-
-    # start the player thread
-    try:
-        # load a tune
-        tune = tu.Tune(args["source"])
-
-        # create groover
-        groover = gr.Groover(
-            tune,
-            bpm=args["bpm"],
-            midi_channel=args["midi_channel"],
-            transpose=args["transpose"],
-            diatonic_errors=args["diatonic"],
-            random_weight=0.2,
-            human_impact=args["human_impact"],
-            seed=args["seed"],
-            config_file=args["config"],
-        )
-
-        # set input callback
-        if port is not None:
-            port.callback = check_midi_control(
-                groover,
-                {
-                    args["intensity_control"]: "intensity",
-                    args["human_impact_control"]: "human_impact",
-                },
-            )
-
-        player_thread = threading.Thread(
-            target=play, args=(groover, tune, out), kwargs=args
-        )
-        player_thread.start()
-        player_thread.join()
-
-    except KeyboardInterrupt:
-        print("Playback stopped by user.")
-        print("Attempting graceful shutdown...")
-
-    # make sure to turn off all notes
-    if out is not None:
-        for i in range(127):
-            out.send(mido.Message("note_off", velocity=0, note=i, time=0))
-        out.reset()
-        out.close()
-        print("Closed MIDI output.")
-
-
-if __name__ == "__main__":
+def main():
     # args
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -283,11 +196,12 @@ if __name__ == "__main__":
         type=str,
         default=None,
     )
+    dir_path = os.path.dirname(os.path.realpath(__file__))
     parser.add_argument(
         "--config",
         help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
         type=str,
-        default=None,
+        default=f"{dir_path}/loeric_config/loeric_config.json",
     )
     parser.add_argument(
         "--verbose",
@@ -328,5 +242,89 @@ if __name__ == "__main__":
         default=None,
     )
     args = parser.parse_args()
+    args = vars(args)
 
-    main(vars(args))
+    if args["create_in"]:
+        port = mido.open_input("LOERIC MIDI in", virtual=True)
+
+    if args["create_out"]:
+        out = mido.open_output("LOERIC MIDI out", virtual=True)
+
+    inport, outport = lu.get_ports(
+        input_number=args["input"],
+        output_number=args["output"],
+        list_ports=args["list_ports"],
+        create_in=args["create_in"],
+        create_out=args["create_out"],
+    )
+
+    if args["list_ports"]:
+        return
+
+    # open in
+    if args["create_in"]:
+        pass
+    elif inport is not None:
+        port = mido.open_input(inport)
+    else:
+        port = None
+
+    # open out
+    if args["create_out"]:
+        pass
+    elif args["save"] or outport is None:
+        out = None
+    else:
+        out = mido.open_output(outport)
+
+    # consistency with MIDI spec and mido
+    args["midi_channel"] -= 1
+
+    if (not args["no_prompt"]) and (not args["save"]):
+        input("Press any key to start playback:")
+
+    # start the player thread
+    try:
+        # load a tune
+        tune = tu.Tune(args["source"])
+
+        # create groover
+        groover = gr.Groover(
+            tune,
+            bpm=args["bpm"],
+            midi_channel=args["midi_channel"],
+            transpose=args["transpose"],
+            diatonic_errors=args["diatonic"],
+            random_weight=0.2,
+            human_impact=args["human_impact"],
+            seed=args["seed"],
+            config_file=args["config"],
+        )
+
+        # set input callback
+        if port is not None:
+            port.callback = check_midi_control(
+                groover,
+                {
+                    args["intensity_control"]: "intensity",
+                    args["human_impact_control"]: "human_impact",
+                },
+            )
+
+        player_thread = threading.Thread(
+            target=play, args=(groover, tune, out), kwargs=args
+        )
+        player_thread.start()
+        player_thread.join()
+
+    except KeyboardInterrupt:
+        print("Playback stopped by user.")
+        print("Attempting graceful shutdown...")
+
+    # make sure to turn off all notes
+    if out is not None:
+        for i in range(127):
+            out.send(mido.Message("note_off", velocity=0, note=i, time=0))
+        out.reset()
+        out.close()
+        print("Closed MIDI output.")
