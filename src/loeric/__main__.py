@@ -122,7 +122,7 @@ def sync_callback(msg: mido.Message) -> None:
     elif msg.type == "start":
         received_start.release(n=2)
         print("Received START.")
-    elif msg.type == "end":
+    elif msg.type == "stop":
         done_playing = True
         print("Received END.")
 
@@ -157,7 +157,7 @@ received_start = threading.Semaphore(value=0)
 done_playing = False
 
 
-def main(args):
+def main():
     global received_start, done_playing
 
     # args
@@ -384,13 +384,17 @@ def main(args):
         )
         player_thread.start()
 
+        """
         if args["sync"]:
             clock_thread = threading.Thread(target=clock, args=(groover, sync_port_out))
             clock_thread.start()
+        """
 
         player_thread.join()
+        """
         if args["sync"]:
             clock_thread.join()
+        """
 
     except KeyboardInterrupt:
         print("\nPlayback stopped by user.")
