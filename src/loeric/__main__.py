@@ -160,118 +160,6 @@ done_playing = False
 def main(args):
     global received_start, done_playing
 
-    if args["create_in"]:
-        port = mido.open_input("LOERIC MIDI in", virtual=True)
-
-    if args["create_out"]:
-        out = mido.open_output("LOERIC MIDI out", virtual=True)
-
-    # sync port
-    if args["sync"]:
-        sync_port_in = mido.open_input("LOERIC SYNC in", virtual=True)
-        sync_port_out = mido.open_output("LOERIC SYNC out", virtual=True)
-
-    inport, outport = lu.get_ports(
-        input_number=args["input"],
-        output_number=args["output"],
-        list_ports=args["list_ports"],
-        create_in=args["create_in"],
-        create_out=args["create_out"],
-    )
-
-    if args["list_ports"]:
-        return
-
-    # open in
-    if args["create_in"]:
-        pass
-    elif inport is not None:
-        port = mido.open_input(inport)
-    else:
-        port = None
-
-    # open out
-    if args["create_out"]:
-        pass
-    elif args["save"] or outport is None:
-        out = None
-    else:
-        out = mido.open_output(outport)
-
-    # consistency with MIDI spec and mido
-    args["midi_channel"] -= 1
-
-    if not args["sync"] and not args["no_prompt"] and not args["save"]:
-        input("Press any key to start playback:")
-
-    # start the player thread
-    try:
-        # load a tune
-        tune = tu.Tune(args["source"])
-
-        # create groover
-        groover = gr.Groover(
-            tune,
-            bpm=args["bpm"],
-            midi_channel=args["midi_channel"],
-            transpose=args["transpose"],
-            diatonic_errors=args["diatonic"],
-            random_weight=0.2,
-            human_impact=args["human_impact"],
-            seed=args["seed"],
-            config_file=args["config"],
-        )
-
-        # set input callback
-        if port is not None:
-            port.callback = check_midi_control(
-                groover,
-                {
-                    args["intensity_control"]: "intensity",
-                    args["human_impact_control"]: "human_impact",
-                },
-            )
-
-        if args["sync"]:
-            sync_port_in.callback = sync_callback
-            print("\nWaiting for START message...")
-
-        player_thread = threading.Thread(
-            target=play, args=(groover, tune, out), kwargs=args
-        )
-        player_thread.start()
-
-        if args["sync"]:
-            clock_thread = threading.Thread(target=clock, args=(groover, sync_port_out))
-            clock_thread.start()
-
-        player_thread.join()
-        if args["sync"]:
-            clock_thread.join()
-
-    except KeyboardInterrupt:
-        print("\nPlayback stopped by user.")
-        print("Attempting graceful shutdown...")
-
-    done_playing = True
-
-    # make sure to turn off all notes
-    if out is not None:
-        for i in range(127):
-            out.send(mido.Message("note_off", velocity=0, note=i, time=0))
-        out.reset()
-        out.close()
-        print("Closed MIDI output.")
-
-    if args["sync"]:
-        sync_port_in.close()
-        print("Closed SYNC input.")
-        sync_port_out.reset()
-        sync_port_out.close()
-        print("Closed SYNC output.")
-
-
-if __name__ == "__main__":
     # args
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -413,4 +301,112 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(vars(args))
+    if args["create_in"]:
+        port = mido.open_input("LOERIC MIDI in", virtual=True)
+
+    if args["create_out"]:
+        out = mido.open_output("LOERIC MIDI out", virtual=True)
+
+    # sync port
+    if args["sync"]:
+        sync_port_in = mido.open_input("LOERIC SYNC in", virtual=True)
+        sync_port_out = mido.open_output("LOERIC SYNC out", virtual=True)
+
+    inport, outport = lu.get_ports(
+        input_number=args["input"],
+        output_number=args["output"],
+        list_ports=args["list_ports"],
+        create_in=args["create_in"],
+        create_out=args["create_out"],
+    )
+
+    if args["list_ports"]:
+        return
+
+    # open in
+    if args["create_in"]:
+        pass
+    elif inport is not None:
+        port = mido.open_input(inport)
+    else:
+        port = None
+
+    # open out
+    if args["create_out"]:
+        pass
+    elif args["save"] or outport is None:
+        out = None
+    else:
+        out = mido.open_output(outport)
+
+    # consistency with MIDI spec and mido
+    args["midi_channel"] -= 1
+
+    if not args["sync"] and not args["no_prompt"] and not args["save"]:
+        input("Press any key to start playback:")
+
+    # start the player thread
+    try:
+        # load a tune
+        tune = tu.Tune(args["source"])
+
+        # create groover
+        groover = gr.Groover(
+            tune,
+            bpm=args["bpm"],
+            midi_channel=args["midi_channel"],
+            transpose=args["transpose"],
+            diatonic_errors=args["diatonic"],
+            random_weight=0.2,
+            human_impact=args["human_impact"],
+            seed=args["seed"],
+            config_file=args["config"],
+        )
+
+        # set input callback
+        if port is not None:
+            port.callback = check_midi_control(
+                groover,
+                {
+                    args["intensity_control"]: "intensity",
+                    args["human_impact_control"]: "human_impact",
+                },
+            )
+
+        if args["sync"]:
+            sync_port_in.callback = sync_callback
+            print("\nWaiting for START message...")
+
+        player_thread = threading.Thread(
+            target=play, args=(groover, tune, out), kwargs=args
+        )
+        player_thread.start()
+
+        if args["sync"]:
+            clock_thread = threading.Thread(target=clock, args=(groover, sync_port_out))
+            clock_thread.start()
+
+        player_thread.join()
+        if args["sync"]:
+            clock_thread.join()
+
+    except KeyboardInterrupt:
+        print("\nPlayback stopped by user.")
+        print("Attempting graceful shutdown...")
+
+    done_playing = True
+
+    # make sure to turn off all notes
+    if out is not None:
+        for i in range(127):
+            out.send(mido.Message("note_off", velocity=0, note=i, time=0))
+        out.reset()
+        out.close()
+        print("Closed MIDI output.")
+
+    if args["sync"]:
+        sync_port_in.close()
+        print("Closed SYNC input.")
+        sync_port_out.reset()
+        sync_port_out.close()
+        print("Closed SYNC output.")
