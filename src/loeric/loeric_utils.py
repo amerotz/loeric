@@ -117,6 +117,15 @@ def get_chord_pitches(harmony: int) -> np.array:
     return np.array([0, third, fifth])
 
 
+'''
+def is_contour_valid(msg: mido.Message) -> bool:
+    """
+    Check if a midi event is to be considered to calculate a contour.
+    """
+    return is_note_on(msg)
+'''
+
+
 def is_note_on(msg: mido.Message) -> bool:
     """
     Check if a midi event is to be considered a note-on event, that is:

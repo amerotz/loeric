@@ -6,6 +6,7 @@ import random
 import json
 import numpy as np
 import music21 as m21
+import threading
 import time
 
 from collections import defaultdict
@@ -64,6 +65,10 @@ class Groover:
 
         # offset for messages after ornaments
         self._offset = 0
+        # index to yield note events
+        # will be increased before yielding message
+        self._note_index = -1
+        self._note_index_lock = threading.Lock()
 
         # delay to randomize message length
         self._delay = 0
@@ -258,9 +263,11 @@ class Groover:
         Retrieve the next value of each contour and store it for future use.
         """
 
-        # update all contours
-        for contour_name in self._contours:
-            self._contour_values[contour_name] = self._contours[contour_name].next()
+        print("advanced")
+        with self._note_index_lock:
+            # update all contours
+            for contour_name in self._contours:
+                self._contour_values[contour_name] = self._contours[contour_name].next()
 
         # add the human part
         for contour_name in ["velocity", "tempo", "ornament"]:
@@ -286,6 +293,47 @@ class Groover:
             raise UnknownContourError
         self._contour_values[contour_name] = value
 
+    '''
+    def has_next(self):
+        """
+        Check if there is any event that will be returned by a call to `nextEvent`.
+        """
+        with self._note_index_lock:
+            return self._note_index + 1 < len(self._tune)
+    '''
+
+    def next_event(self):
+        """
+        Return the current event in the tune. Returns none if no event is available.
+        """
+
+        with self._note_index_lock:
+            self._note_index += 1
+            if self._note_index >= len(self._tune):
+                return None
+            note = self._tune[self._note_index]
+            return note
+
+    def jump_to_pos(self, pos: int) -> None:
+        """
+        Jump to the specified song position.
+
+        :param pos: the position to jump to.
+        """
+
+        with self._note_index_lock:
+            if pos > self._tune._max_songpos:
+                print(
+                    f"Cannot jump to position {pos} with max pos {self._tune._max_songpos}"
+                )
+                return
+            self._note_index, contour_index = self._tune.index_map[pos]
+            print("GRVR", pos, self._note_index, contour_index)
+
+            # update all contours
+            for contour_name in self._contours:
+                self._contours[contour_name].jump(contour_index - 1)
+
     def reset_clock(self) -> None:
         """
         Reset the MIDI clock to initial tempo.
@@ -300,7 +348,6 @@ class Groover:
         """
         now = time.time()
         if self._last_clock_time is not None:
-
             # update tempo
             # 24 clocks per quarter note
             diff = now - self._last_clock_time
@@ -995,12 +1042,13 @@ class Groover:
         tempo_ratio = self.current_tempo / self._tune.tempo
         return tempo_ratio * time
 
-    def reset(self) -> None:
+    def reset_contours(self) -> None:
         """
         Reset all contours so that the next call to `next()` will yield the first value of each contour.
         """
-        for contour_name in self._contours:
-            self._contours[contour_name].reset()
+        with self._note_index_lock:
+            for contour_name in self._contours:
+                self._contours[contour_name].reset()
 
     @property
     def current_tempo(self) -> int:
@@ -1009,13 +1057,13 @@ class Groover:
         If an external tempo has been set, the calculated tempo will be interpolated with it according to the user specified percentage.
         """
 
-        # (old) version 1
-        # warp as a percentage of current tempo
         calculated_tempo = None
         base_tempo = self._user_tempo
         if self._external_tempo is not None:
             base_tempo = self._external_tempo
 
+        # (old) version 1
+        # warp as a percentage of current tempo
         if self._config["tempo_control"]["use_old_tempo_warp"]:
             tempo_warp = self._config["tempo_control"]["old_tempo_warp"]
             value = int(
@@ -1026,7 +1074,7 @@ class Groover:
         # version 2
         # warp as a fixed maximum amount of bpm
         else:
-            bpm = mido.tempo2bpm(base_tempo)
+            bpm = max(mido.tempo2bpm(base_tempo), 1)
             value = (
                 2
                 * self._config["tempo_control"]["tempo_warp_bpms"]

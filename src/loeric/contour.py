@@ -42,6 +42,21 @@ class Contour:
         """
         pass
 
+    def jump(self, index: int) -> None:
+        """
+        Jump to the specified index in the contour.
+
+        :param index: the index to jump to.
+        :raise contour.InvalidIndexError: if the index exceeds the length of the contour.
+        """
+
+        if index >= len(self._contour):
+            raise InvalidIndexError(
+                f"Cannot jump to index {index} with contour length {len(self._contour)}"
+            )
+        else:
+            self._index = index
+
     def next(self) -> float:
         """
         Return the next element (i.e. intensity value) of the intensity contour.
@@ -59,7 +74,9 @@ class Contour:
         self._index += 1
 
         if self._index < 0 or self._index >= len(self._contour):
-            raise InvalidIndexError("Cannot index contour.")
+            raise InvalidIndexError(
+                f"Cannot index contour with length {len(self._contour)} with index {self._index}."
+            )
         return self._contour[self._index]
 
     def reset(self) -> None:
