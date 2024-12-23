@@ -255,11 +255,12 @@ def main(args):
         type=str,
         default=None,
     )
+    dir_path = os.path.dirname(os.path.realpath(__file__))
     parser.add_argument(
         "--config",
         help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
         type=str,
-        default=None,
+        default=f"{dir_path}/loeric_config/loeric_config.json",
     )
     parser.add_argument(
         "--verbose",
@@ -300,6 +301,7 @@ def main(args):
         default=None,
     )
     args = parser.parse_args()
+    args = vars(args)
 
     if args["create_in"]:
         port = mido.open_input("LOERIC MIDI in", virtual=True)

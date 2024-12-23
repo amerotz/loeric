@@ -8,3 +8,15 @@ authors = [{name = "Marco Amerotti", email = "amerotti@kth.se"}]
 dynamic = ["version", "description"]
 [tool.setuptools.dynamic]
 version = {attr = "loeric.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+loeric = "loeric.__main__:main" 
+loeric-config = "loeric.loeric_config.loeric_config:main"
+loeric-listen = "loeric.listeners.playalong:main"
+loeric-combine= "loeric.listeners.combine:main"
+loeric-dummy-control = "loeric.listeners.fake_midi_control:main"
+loeric-osc = "loeric.listeners.loeric_osc:main"
+loeric-midi-listen = "loeric.listeners.midi_velocity_listener:main"

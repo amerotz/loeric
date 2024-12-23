@@ -32,7 +32,15 @@ def default_handler(address, *args):
     print(f"Unknown message {address}")
 
 
-def main(args):
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port", type=int, default=None)
+    parser.add_argument("-m", "--message", type=str, default="/loeric/control")
+    parser.add_argument("-op", "--osc-port", type=int, default=None)
+    parser.add_argument("-c", "--control", type=int, default=None)
+    parser.add_argument("-s", "--server", type=str, default="127.0.0.1")
+
+    args = parser.parse_args()
     with mido.open_output(mido.get_output_names()[args.port]) as out:
         dispatcher = Dispatcher()
         dispatcher.map(args.message, send_control(args.control, out))
@@ -44,15 +52,3 @@ def main(args):
         server = BlockingOSCUDPServer((ip, port), dispatcher)
 
         server.serve_forever()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--port", type=int, default=None)
-    parser.add_argument("-m", "--message", type=str, default="/loeric/control")
-    parser.add_argument("-op", "--osc-port", type=int, default=None)
-    parser.add_argument("-c", "--control", type=int, default=None)
-    parser.add_argument("-s", "--server", type=str, default="127.0.0.1")
-
-    args = parser.parse_args()
-    main(args)

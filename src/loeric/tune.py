@@ -45,9 +45,6 @@ class Tune:
         # tempo in microseconds per quarter
         self._tempo = self._get_original_tempo()
 
-        # pickup bar
-        self._offset = self._get_performance_offset()
-
         # number of quarter notes per bar
         quarters_per_bar = (
             4 * self._time_signature.numerator / self._time_signature.denominator
@@ -55,6 +52,9 @@ class Tune:
         # bar and beat duration in seconds
         self._bar_duration = quarters_per_bar * self._quarter_duration
         self._beat_duration = self._bar_duration / self._time_signature.beatCount
+
+        # pickup bar
+        self._offset = self._get_performance_offset()
 
         # to keep track of the performance
         self._performance_time = -self._offset
@@ -180,6 +180,8 @@ class Tune:
 
         # convert quarter length to seconds
         offset *= self._quarter_duration
+        offset %= self._bar_duration
+
         return offset
 
     def _get_original_tempo(self) -> int:

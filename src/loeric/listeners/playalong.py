@@ -1,4 +1,5 @@
 import threading
+import argparse
 import mido
 import pyaudio
 import math
@@ -22,7 +23,7 @@ class PlayerThread:
                 perc = audio_monitor.get()
 
                 if self.invert:
-                    perc = 1-perc
+                    perc = 1 - perc
 
                 # adjust velocity
                 value = int(perc * 127)
@@ -30,11 +31,13 @@ class PlayerThread:
                 value = min(127, value)
 
                 if value != old_value:
-
                     old_value = value
 
                     msg = mido.Message(
-                        "control_change", channel=0, control=self.control_num, value=value
+                        "control_change",
+                        channel=0,
+                        control=self.control_num,
+                        value=value,
                     )
 
                     # send the message
@@ -70,12 +73,12 @@ class AudioMonitor:
         self.level = level
 
         min_l = min(self.min_level, self.level)
-        self.min_level *= 1-perc
-        self.min_level += perc*min_l
+        self.min_level *= 1 - perc
+        self.min_level += perc * min_l
 
         max_l = max(self.max_level, self.level)
-        self.max_level *= 1-perc
-        self.max_level += perc*max_l
+        self.max_level *= 1 - perc
+        self.max_level += perc * max_l
 
         self.lock.release()
 
@@ -84,7 +87,6 @@ class AudioMonitor:
 
     # return percentage
     def get(self):
-
         self.lock.acquire()
 
         min_level = self.min_level
@@ -97,9 +99,7 @@ class AudioMonitor:
         if diff == 0:
             value = 0
         else:
-            value = (level - min_level) / (
-                max_level - min_level
-            )
+            value = (level - min_level) / (max_level - min_level)
         value = max(value, 0)
         value = min(value, 1)
         return value
@@ -156,31 +156,7 @@ class ListenerThread:
         self.p.terminate()
 
 
-def main(args):
-    # create listening thread
-    listener = ListenerThread(48000, args.chunks_per_second)
-    listener.open_stream()
-
-    # create audio monitor
-    audio_monitor = AudioMonitor()
-
-    # create playback thread
-    player = PlayerThread(args.output, args.control, args.invert)
-
-    # go until midi is playing
-    l = threading.Thread(target=listener.listen, args=(audio_monitor, args.responsive))
-
-    p = threading.Thread(target=player.send_control, args=(audio_monitor, listener))
-
-    l.start()
-    # a = input()
-    p.start()
-
-
-if __name__ == "__main__":
-    import mido
-    import argparse
-
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-o", "--output", help="the output MIDI port.", default=None, type=int
@@ -207,10 +183,25 @@ if __name__ == "__main__":
         type=float,
     )
     parser.add_argument(
-        "--invert",
-        action="store_true",
-        help="whether to invert the signal or not"
+        "--invert", action="store_true", help="whether to invert the signal or not"
     )
     args = parser.parse_args()
 
-    main(args)
+    # create listening thread
+    listener = ListenerThread(48000, args.chunks_per_second)
+    listener.open_stream()
+
+    # create audio monitor
+    audio_monitor = AudioMonitor()
+
+    # create playback thread
+    player = PlayerThread(args.output, args.control, args.invert)
+
+    # go until midi is playing
+    l = threading.Thread(target=listener.listen, args=(audio_monitor, args.responsive))
+
+    p = threading.Thread(target=player.send_control, args=(audio_monitor, listener))
+
+    l.start()
+    # a = input()
+    p.start()

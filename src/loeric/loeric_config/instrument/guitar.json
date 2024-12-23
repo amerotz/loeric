@@ -5,7 +5,7 @@
 		"cut": 1
 	},
 	"drone": {
-		"active": true,
+		"active": false,
 		"threshold": 0.2,
 		"bind": "velocity",
 		"midi_channel": 1,

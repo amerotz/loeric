@@ -13,7 +13,7 @@
 	"approach_from_below": {
 	},
 	"drone": {
-		"active": true,
+		"active": false,
 		"threshold": 0.5,
 		"bind": "velocity",
 		"midi_channel": 1,
