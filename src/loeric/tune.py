@@ -69,21 +69,27 @@ class Tune:
         # intertwine songpos messages every n notes
         new_midi = []
         # 16383 is the max value for songpos
-        every_n = max(6, round(len(self._midi) / 16383))
+        # every_n = max(6, round(len(self._midi) / 16383))
+        every_duration = 2 * self._quarter_duration
         note_index = 0
         songpos = 0
 
         # go through tune
+        cumulative_duration = 0
         for msg in self._midi:
             if not lu.is_note(msg):
                 continue
             # add songpos
-            if note_index % every_n == 0:
+            if abs(
+                ((cumulative_duration - every_duration * 0.5) % every_duration)
+                - every_duration * 0.5
+            ) <= self._quarter_duration * 0.0625 and lu.is_note_on(msg):
                 new_midi.append(mido.Message("songpos", pos=songpos))
                 songpos += 1
             # advance the notes
             if lu.is_note(msg):
                 note_index += 1
+                cumulative_duration += msg.time
                 new_midi.append(msg)
 
         self.index_map = {}
@@ -96,7 +102,7 @@ class Tune:
                 contour_index += 1
 
         self._midi = new_midi
-        self._max_songpos = songpos
+        self._max_songpos = max(self.index_map.keys())
 
         print(f"Playing:\t{filename}")
         print(f"Meter:\t{self._time_signature}")

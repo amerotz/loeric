@@ -263,7 +263,6 @@ class Groover:
         Retrieve the next value of each contour and store it for future use.
         """
 
-        print("advanced")
         with self._note_index_lock:
             # update all contours
             for contour_name in self._contours:
@@ -328,8 +327,6 @@ class Groover:
                 )
                 return
             self._note_index, contour_index = self._tune.index_map[pos]
-            print("GRVR", pos, self._note_index, contour_index)
-
             # update all contours
             for contour_name in self._contours:
                 self._contours[contour_name].jump(contour_index - 1)

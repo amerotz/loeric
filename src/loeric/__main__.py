@@ -17,10 +17,17 @@ from . import loeric_utils as lu
 faulthandler.enable()
 # bad code goes here
 
+received_start = threading.Semaphore(value=0)
+done_playing = threading.Event()
+
 
 # play midi file
 def play(
-    groover: gr.Groover, tune: tu.Tune, out: mido.ports.BaseOutput, **kwargs
+    groover: gr.Groover,
+    tune: tu.Tune,
+    out: mido.ports.BaseOutput,
+    sync_out: mido.ports.BaseOutput,
+    **kwargs,
 ) -> None:
     global done_playing, received_start
     try:
@@ -46,22 +53,38 @@ def play(
             received_start.acquire()
 
         # repeat as specified
-        for t in range(kwargs["repeat"]):
-            print(f"Repetition {t+1}/{kwargs['repeat']}")
-            # iterate over messages
-            for message in tune.events():
-                # if not message.is_meta and "program" not in message.type:
-                if lu.is_note(message):
-                    # make the groover play the messages
-                    new_messages = groover.perform(message)
-                    player.play(new_messages)
+        # iterate over messages
+        while True:
+            message = groover.next_event()
+            if message is None:
+                break
 
-            # reset the groover at the end of the repetition
-            groover.reset()
-            tune.reset_performance_time()
+            if message.type == "sysex":
+                print(f"Repetition {message.data[0]+1}/{kwargs['repeat']}")
+                continue
+            # perform notes
+            elif lu.is_note(message):
+                # make the groover play the messages
+                new_messages = groover.perform(message)
+            # keep meta messages intact
+            else:
+                if message.type == "songpos":
+                    print(
+                        "MAIN",
+                        message.pos,
+                        groover._note_index,
+                        groover._contours["velocity"]._index,
+                    )
+                    if sync_out is not None:
+                        sync_out.send(message)
+                        print(f"Sent songpos {message.pos}")
+                new_messages = [message]
+            # play
+            player.play(new_messages)
 
-        # wrap around contours for end note
-        groover.advance_contours()
+            # stop execution if received "STOP"
+            if done_playing.is_set():
+                break
 
         # play an end note
         if not kwargs["no_end_note"]:
@@ -81,23 +104,24 @@ def play(
                 filename = f"generated_{name}_{kwargs['seed']}.mid"
             player.save(f"{dirname}/{filename}")
 
+        done_playing.set()
+        print("Player thread terminated.")
+
     except Exception as e:
         # stop clock thread
-        done_playing = True
-        print("Playback terminated.")
+        done_playing.set()
+        print("Player thread terminated.")
         raise e
 
 
-def clock(groover: gr.Groover, sync_port_out: mido.ports.BaseOutput) -> None:
+def clock_thread(groover: gr.Groover, sync_port_out: mido.ports.BaseOutput) -> None:
     """
     Dedicated thread to send real-time clock and song position messages.
     """
-    global done_playing
-
     # wait for start
     received_start.acquire()
 
-    while not done_playing:
+    while not done_playing.is_set():
         sync_port_out.send(
             mido.Message(
                 "clock",
@@ -106,25 +130,33 @@ def clock(groover: gr.Groover, sync_port_out: mido.ports.BaseOutput) -> None:
         )
         time.sleep((60 / groover.current_tempo) / 24)
 
-    print("Clock terminated.")
+    print("Clock thread terminated.")
 
 
-def sync_callback(msg: mido.Message) -> None:
+def sync_thread(
+    groover: gr.Groover, sync_port_in: mido.ports.BaseInput, out: mido.ports.BaseOutput
+) -> None:
     """
-    Callback to handle MIDI start, clock, songpos and end messages.
+    Handle MIDI start, clock, songpos and end messages.
     """
-    global done_playing, received_start
+    while not done_playing.is_set():
+        msg = sync_port_in.receive(block=True)
+        if msg.type == "clock":
+            groover.set_clock()
+        elif msg.type == "reset":
+            groover.reset_clock()
+        elif msg.type == "songpos":
+            print(f"Received JUMP {msg.pos}.")
+            out.reset()
+            groover.jump_to_pos(msg.pos)
+        elif msg.type == "start":
+            received_start.release(n=2)
+            print("Received START.")
+        elif msg.type == "stop":
+            done_playing.set()
+            print("Received STOP.")
 
-    if msg.type == "clock":
-        groover.set_clock()
-    elif msg.type == "reset":
-        groover.reset_clock()
-    elif msg.type == "start":
-        received_start.release(n=2)
-        print("Received START.")
-    elif msg.type == "stop":
-        done_playing = True
-        print("Received END.")
+    print("Sync thread terminated.")
 
 
 def check_midi_control(
@@ -153,13 +185,8 @@ def check_midi_control(
     return callback
 
 
-received_start = threading.Semaphore(value=0)
-done_playing = False
-
-
 def main():
     global received_start, done_playing
-
     # args
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -350,7 +377,7 @@ def main():
     # start the player thread
     try:
         # load a tune
-        tune = tu.Tune(args["source"])
+        tune = tu.Tune(args["source"], args["repeat"])
 
         # create groover
         groover = gr.Groover(
@@ -376,31 +403,41 @@ def main():
             )
 
         if args["sync"]:
-            sync_port_in.callback = sync_callback
             print("\nWaiting for START message...")
 
-        player_thread = threading.Thread(
-            target=play, args=(groover, tune, out), kwargs=args
+        player_t = threading.Thread(
+            target=play, args=(groover, tune, out, sync_port_out), kwargs=args
         )
-        player_thread.start()
+        player_t.start()
 
-        """
         if args["sync"]:
-            clock_thread = threading.Thread(target=clock, args=(groover, sync_port_out))
-            clock_thread.start()
-        """
+            """
+            clock_t = threading.Thread(
+                target=clock_thread, args=(groover, sync_port_out)
+            )
+            clock_t.start()
+            """
 
-        player_thread.join()
-        """
+            sync_t = threading.Thread(
+                target=sync_thread, args=(groover, sync_port_in, out)
+            )
+            sync_t.start()
+
+        player_t.join()
         if args["sync"]:
-            clock_thread.join()
-        """
+            # clock_t.join()
+            sync_t.join()
 
     except KeyboardInterrupt:
         print("\nPlayback stopped by user.")
-        print("Attempting graceful shutdown...")
 
-    done_playing = True
+    print("Closing midi ports...")
+
+    # close midi input
+    if port is not None:
+        port.close()
+        if port.closed:
+            print("Closed MIDI input.")
 
     # make sure to turn off all notes
     if out is not None:
@@ -408,11 +445,16 @@ def main():
             out.send(mido.Message("note_off", velocity=0, note=i, time=0))
         out.reset()
         out.close()
-        print("Closed MIDI output.")
+        if out.closed:
+            print("Closed MIDI output.")
 
+    # close sync ports
     if args["sync"]:
+        print("Closing sync ports...")
         sync_port_in.close()
-        print("Closed SYNC input.")
+        if sync_port_in.closed:
+            print("Closed SYNC input.")
         sync_port_out.reset()
         sync_port_out.close()
-        print("Closed SYNC output.")
+        if sync_port_out.closed:
+            print("Closed SYNC output.")

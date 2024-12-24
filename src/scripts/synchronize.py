@@ -4,11 +4,13 @@ import time
 
 current_pos = 0
 done = threading.Event()
+last_tempo = 100
+last_pos = -1
 
 
 def sync_thread(inport, outport):
     print("Sync ON")
-    global current_pos
+    global current_pos, last_pos
     while not done.is_set():
         msg = inport.poll()
         if msg is None:
@@ -16,10 +18,13 @@ def sync_thread(inport, outport):
         else:
             print("Received", msg)
             if msg.type == "songpos":
-                current_pos = 1 + max(msg.pos, current_pos)
-            msg = mido.Message(cmd, pos=current_pos)
-            outport.send(msg)
-            print(msg)
+                current_pos = max(msg.pos, current_pos)
+            if last_pos != current_pos:
+                time.sleep(2 * 60 / last_tempo)
+                last_pos = current_pos
+                msg = mido.Message("songpos", pos=current_pos + 1)
+                outport.send(msg)
+                print(msg)
     print("Sync OFF")
 
 
@@ -62,6 +67,8 @@ while True:
     # sync songpos
     elif command == "sync":
         st = threading.Thread(target=sync_thread, args=(multi_in, multi_out))
+        done = threading.Event()
+        current_pos = 0
         st.start()
     # list ports
     elif command == "list":
@@ -76,7 +83,8 @@ while True:
     elif command in ["start", "stop"]:
         msg = mido.Message(command)
         multi_out.send(msg)
-        done.set()
+        if command == "stop":
+            done.set()
         print(msg)
     # song position
     elif command.startswith("songpos"):
@@ -92,6 +100,7 @@ while True:
     # tempo change
     elif command.startswith("tempo"):
         val = int(command.split(" ")[-1])
+        last_tempo = val
         msg = mido.Message(
             "clock",
             time=0,
