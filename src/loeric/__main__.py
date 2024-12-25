@@ -19,6 +19,8 @@ faulthandler.enable()
 
 received_start = threading.Semaphore(value=0)
 done_playing = threading.Event()
+stopped = threading.Event()
+playback_resumed = threading.Condition()
 
 
 # play midi file
@@ -29,7 +31,7 @@ def play(
     sync_out: mido.ports.BaseOutput,
     **kwargs,
 ) -> None:
-    global done_playing, received_start
+    global received_start
     try:
         """
         Play the given tune with the given groover.
@@ -55,6 +57,9 @@ def play(
         # repeat as specified
         # iterate over messages
         while True:
+            if stopped.is_set():
+                with playback_resumed:
+                    playback_resumed.wait()
             message = groover.next_event()
             if message is None:
                 break
@@ -81,10 +86,6 @@ def play(
                 new_messages = [message]
             # play
             player.play(new_messages)
-
-            # stop execution if received "STOP"
-            if done_playing.is_set():
-                break
 
         # play an end note
         if not kwargs["no_end_note"]:
@@ -139,6 +140,7 @@ def sync_thread(
     """
     Handle MIDI start, clock, songpos and end messages.
     """
+    global stopped
     while not done_playing.is_set():
         msg = sync_port_in.receive(block=True)
         if msg.type == "clock":
@@ -147,14 +149,22 @@ def sync_thread(
             groover.reset_clock()
         elif msg.type == "songpos":
             print(f"Received JUMP {msg.pos}.")
-            out.reset()
-            groover.jump_to_pos(msg.pos)
+            if stopped.is_set():
+                out.reset()
+                groover.jump_to_pos(msg.pos)
+            else:
+                print(f"Ignoring JUMP because playback is active.")
         elif msg.type == "start":
             received_start.release(n=2)
             print("Received START.")
         elif msg.type == "stop":
-            done_playing.set()
+            stopped.set()
             print("Received STOP.")
+        elif msg.type == "continue":
+            stopped = threading.Event()
+            with playback_resumed:
+                playback_resumed.notify_all()
+            print("Received CONTINUE.")
 
     print("Sync thread terminated.")
 

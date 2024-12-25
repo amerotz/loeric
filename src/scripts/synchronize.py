@@ -2,32 +2,6 @@ import mido
 import threading
 import time
 
-current_pos = 0
-done = threading.Event()
-last_tempo = 100
-last_pos = -1
-
-
-def sync_thread(inport, outport):
-    print("Sync ON")
-    global current_pos, last_pos
-    while not done.is_set():
-        msg = inport.poll()
-        if msg is None:
-            time.sleep(1 / 10)
-        else:
-            print("Received", msg)
-            if msg.type == "songpos":
-                current_pos = max(msg.pos, current_pos)
-            if last_pos != current_pos:
-                time.sleep(2 * 60 / last_tempo)
-                last_pos = current_pos
-                msg = mido.Message("songpos", pos=current_pos + 1)
-                outport.send(msg)
-                print(msg)
-    print("Sync OFF")
-
-
 while True:
     command = input("\033[1m\033[92;40mLOERIC >\033[0m ")
     # connect to LOERIC ports
@@ -63,13 +37,6 @@ while True:
 
         if arg not in ["in", "out", "connect"]:
             print("Could not parse command.")
-
-    # sync songpos
-    elif command == "sync":
-        st = threading.Thread(target=sync_thread, args=(multi_in, multi_out))
-        done = threading.Event()
-        current_pos = 0
-        st.start()
     # list ports
     elif command == "list":
         arg = command.split(" ")[-1]
@@ -83,8 +50,11 @@ while True:
     elif command in ["start", "stop"]:
         msg = mido.Message(command)
         multi_out.send(msg)
-        if command == "stop":
-            done.set()
+        print(msg)
+    # song position
+    elif command.startswith("continue"):
+        msg = mido.Message(command)
+        multi_out.send(msg)
         print(msg)
     # song position
     elif command.startswith("songpos"):
@@ -100,7 +70,6 @@ while True:
     # tempo change
     elif command.startswith("tempo"):
         val = int(command.split(" ")[-1])
-        last_tempo = val
         msg = mido.Message(
             "clock",
             time=0,
