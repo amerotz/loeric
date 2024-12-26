@@ -28,7 +28,7 @@ def play(
     groover: gr.Groover,
     tune: tu.Tune,
     out: mido.ports.BaseOutput,
-    sync_out: mido.ports.BaseOutput,
+    sync_port_out: mido.ports.BaseOutput,
     **kwargs,
 ) -> None:
     global received_start
@@ -80,8 +80,8 @@ def play(
                         groover._note_index,
                         groover._contours["velocity"]._index,
                     )
-                    if sync_out is not None:
-                        sync_out.send(message)
+                    if sync_port_out is not None:
+                        sync_port_out.send(message)
                         print(f"Sent songpos {message.pos}")
                 new_messages = [message]
             # play
@@ -161,6 +161,7 @@ def sync_thread(
             stopped.set()
             print("Received STOP.")
         elif msg.type == "continue":
+            out.reset()
             stopped = threading.Event()
             with playback_resumed:
                 playback_resumed.notify_all()
@@ -337,19 +338,45 @@ def main():
         type=int,
         default=None,
     )
+
+    sync_args = parser.add_mutually_exclusive_group()
+    sync_args.add_argument(
+        "--create_sync",
+        help="whether to create a new MIDI sync port or not",
+        action="store_true",
+    )
+    sync_ports = sync_args.add_argument_group("sync ports")
+    sync_ports.add_argument(
+        "-si",
+        "--sync_in",
+        help="the sync input MIDI port for the performance.",
+        type=int,
+        default=None,
+    )
+    sync_ports.add_argument(
+        "-so",
+        "--sync_out",
+        help="the sync output MIDI port for the performance.",
+        type=int,
+        default=None,
+    )
     args = parser.parse_args()
     args = vars(args)
 
+    # loeric instance id
+    loeric_id = int(time.time())
+
     if args["create_in"]:
-        port = mido.open_input("LOERIC MIDI in", virtual=True)
+        port = mido.open_input(f"LOERIC in #{loeric_id}#", virtual=True)
 
     if args["create_out"]:
-        out = mido.open_output("LOERIC MIDI out", virtual=True)
+        out = mido.open_output(f"LOERIC out #{loeric_id}#", virtual=True)
 
     # sync port
     if args["sync"]:
-        sync_port_in = mido.open_input("LOERIC SYNC in", virtual=True)
-        sync_port_out = mido.open_output("LOERIC SYNC out", virtual=True)
+        if args["create_sync"]:
+            sync_port_in = mido.open_input(f"LOERIC SYNC #{loeric_id}#", virtual=True)
+            sync_port_out = mido.open_output(f"LOERIC SYNC #{loeric_id}#", virtual=True)
 
     inport, outport = lu.get_ports(
         input_number=args["input"],
@@ -358,6 +385,16 @@ def main():
         create_in=args["create_in"],
         create_out=args["create_out"],
     )
+
+    sync_inport, sync_outport = None, None
+    if args["sync"]:
+        sync_inport, sync_outport = lu.get_ports(
+            input_number=args["sync_in"],
+            output_number=args["sync_out"],
+            list_ports=False,
+            create_in=args["create_sync"],
+            create_out=args["create_sync"],
+        )
 
     if args["list_ports"]:
         return
@@ -377,6 +414,16 @@ def main():
         out = None
     else:
         out = mido.open_output(outport)
+
+    # open sync
+    if args["create_sync"]:
+        pass
+    elif args["save"] or sync_inport is None or sync_outport is None:
+        sync_port_in = None
+        sync_port_out = None
+    else:
+        sync_port_in = mido.open_input(sync_inport)
+        sync_port_out = mido.open_output(sync_outport)
 
     # consistency with MIDI spec and mido
     args["midi_channel"] -= 1
