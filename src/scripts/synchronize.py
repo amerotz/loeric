@@ -11,7 +11,7 @@ from collections import defaultdict
 last_tempo = 120
 sync_duration = 0
 songpos_wait = 0
-min_window_size = 0.05
+min_window_size = 0.1
 max_window_size = 0.25
 window_size = max_window_size
 exiting = threading.Event()
@@ -150,7 +150,7 @@ def congestion_control():
                     min_window_size -= 0.0001
                 window_size -= 0.001
 
-            window_size = max(window_size, min_window_size)
+            window_size = max(window_size, min_window_size, 0.1)
             window_size = min(window_size, max_window_size)
 
             update_tempo(last_tempo)
@@ -218,9 +218,9 @@ while True:
             sync_thread = threading.Thread(
                 target=sync_loeric, args=([sync_ports_in, sync_ports_out])
             )
+            sync_thread.start()
             # reset termination flag
             exiting.clear()
-            sync_thread.start()
             # start window_thread
             increase_window.clear()
             window_thread = threading.Thread(target=congestion_control)

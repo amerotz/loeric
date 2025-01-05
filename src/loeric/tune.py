@@ -75,6 +75,7 @@ class Tune:
         songpos = 0
 
         # go through tune
+        self.duration_map = {}
         cumulative_duration = 0
         for msg in self._midi:
             if not lu.is_note(msg):
@@ -85,6 +86,7 @@ class Tune:
                 - every_duration * 0.5
             ) <= self._quarter_duration * 0.0625 and lu.is_note_on(msg):
                 new_midi.append(mido.Message("songpos", pos=songpos))
+                self.duration_map[songpos] = cumulative_duration - self._offset
                 songpos += 1
             # advance the notes
             if lu.is_note(msg):
