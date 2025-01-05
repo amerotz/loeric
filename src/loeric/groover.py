@@ -41,9 +41,9 @@ class Groover:
         diatonic_errors: bool = True,
         random_weight: float = 0,
         human_impact: float = 0,
-        high_loud_weight: float = 0.25,
         seed: int = 42,
         config_file: str = None,
+        syncing: bool = False,
     ):
         """
         Initialize the groover class by setting user-defined parameters and creating the contours.
@@ -58,6 +58,7 @@ class Groover:
         :param human_impact: the initial weight of the external control signal.
         :param seed: the random seed of the performance.
         :param config_file: the path to the configuration file (must be a JSON file).
+        :param syncing: whether or not synchronization with multiple LOERIC istances is active.
         """
 
         # tune
@@ -77,7 +78,6 @@ class Groover:
         # rest is part of loeric_config/base.json
         self._config = {
             "velocity": {
-                "high_loud_weight": high_loud_weight,
                 "random": random_weight,
                 "human_impact_scale": human_impact,
             },
@@ -128,6 +128,7 @@ class Groover:
 
         self._initial_human_impact = human_impact
         self._did_swing = False
+        self._syncing = syncing
 
         # generate all parameter settings and contours
         self._instantiate()
@@ -368,6 +369,9 @@ class Groover:
         # work on a deepcopy to avoid side effects
         new_message = copy.deepcopy(message)
 
+        # warp note duration according to contour
+        new_message.time *= self._contour_values["tempo_pattern"]
+
         # change note duration
         new_message.time -= self._offset
 
@@ -381,7 +385,11 @@ class Groover:
             # transpose note
             new_message.note += self._transpose_semitones
 
-        if lu.is_note_off(new_message):
+        # check if note on event
+        is_note_on = lu.is_note_on(new_message)
+        is_note_off = lu.is_note_off(new_message)
+
+        if is_note_off:
             # randomize end time
             mult = random.uniform(0.8, 1)
             self._delay = new_message.time * (1 - mult)
@@ -396,9 +404,7 @@ class Groover:
                 # reset error
                 del self._pitch_errors[key]
 
-        # check if note on event
-        is_note_on = lu.is_note_on(new_message)
-        if is_note_on:
+        elif is_note_on:
             # advance the contours
             self.advance_contours()
 
@@ -425,12 +431,13 @@ class Groover:
                 )
             )
 
-        # add explicit tempo information
-        notes.append(mido.MetaMessage("set_tempo", tempo=self.current_tempo, time=0))
+        if not self._syncing:
+            # add explicit tempo information
+            notes.append(
+                mido.MetaMessage("set_tempo", tempo=self.current_tempo, time=0)
+            )
 
-        # add actual message
-        notes.append(new_message)
-
+        notes_to_add = [new_message]
         # modify the note
         if is_note_on:
             # create ornaments
@@ -440,12 +447,33 @@ class Groover:
 
                 # generate it
                 if ornament_type is not None:
-                    notes = self.generate_ornament(new_message, ornament_type)
+                    notes_to_add = self.generate_ornament(new_message, ornament_type)
 
-        # make sure time is not negative
-        # and scale things according to tempo
+        # add actual message
+        notes.extend(notes_to_add)
+
         for note in notes:
             note.time = self._duration_of(max(0, note.time))
+
+        """
+        # make sure time is not negative
+        # and scale things according to tempo
+        new_notes = []
+        for note in notes:
+            note.time = self._duration_of(max(0, note.time))
+            # add pitchbend
+            if lu.is_note_on(note):
+                bend = int(0.05 * (random.random() * 2 - 1) * 8192)
+                new_notes.append(
+                    mido.Message("pitchwheel", channel=note.channel, pitch=bend)
+                )
+            new_notes.append(note)
+            if lu.is_note_off(note):
+                new_notes.append(
+                    mido.Message("pitchwheel", channel=note.channel, pitch=0)
+                )
+        notes = new_notes
+        """
 
         # add drone
         if self._config["drone"]["active"]:
@@ -629,7 +657,8 @@ class Groover:
         low, high = self._tune.ambitus
 
         # major or minor
-        chord_pitches = lu.get_chord_pitches(self._contour_values["harmony"])
+        # chord_pitches = lu.get_chord_pitches(self._contour_values["harmony"])
+        chord_pitches = [0]
 
         # select pitches from tune range
         pitches = np.arange(
@@ -642,8 +671,8 @@ class Groover:
         last_note = self._tune.filter(lu.is_note_on)[-1].note
 
         # filter pitches that are too far away
-        # reachable within a third
-        pitches = pitches[abs(pitches - last_note) <= 4]
+        # reachable within a fifth
+        pitches = pitches[abs(pitches - last_note) <= 7]
 
         # select suitable pitches (e.g. any root, third, fifth within range)
         pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
@@ -784,13 +813,18 @@ class Groover:
         message_length = self._contour_values["message length"]
         if ornament_type == CUT:
             # generate a cut
-            cut = copy.deepcopy(message)
-            cut.note = self.approach_from_above(message.note, self._tune)
-            cut.velocity = int(
-                self._current_velocity * self._config["values"]["cut_velocity_fraction"]
+            cut_note = self.approach_from_above(message.note, self._tune)
+            cut = mido.Message(
+                "note_on",
+                note=cut_note,
+                velocity=int(
+                    self._current_velocity
+                    * self._config["values"]["cut_velocity_fraction"]
+                ),
+                time=0,
+                channel=message.channel,
             )
             duration = self._cut_duration
-            cut.time = 0
 
             # note on
             ornaments.append(cut)
@@ -805,6 +839,7 @@ class Groover:
                 )
             )
 
+            message.time = 0
             ornaments.append(message)
             # update offset for next message to make it shorter
             self._offset += duration
@@ -1080,8 +1115,6 @@ class Groover:
 
             calculated_tempo = mido.bpm2tempo(int(bpm + value))
 
-        calculated_tempo *= self._contour_values["tempo_pattern"]
-        calculated_tempo = int(calculated_tempo)
         return calculated_tempo
 
     @property

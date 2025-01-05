@@ -99,7 +99,7 @@
         "max_velocity": 127,
         "max_pitch_error": 2,
         "min_pitch_error": -2,
-        "midi_channel": 0
+        "midi_channel": 2
     },
     "tempo_control": {
         "tempo_warp_bpms": 0,
@@ -107,7 +107,7 @@
         "old_tempo_warp": 0.1
     },
     "automation": {
-        "velocity": 15,
+        "velocity": 17,
         "tempo": 47,
         "ornament": 48,
         "intensity": 49,
@@ -145,7 +145,7 @@
         "chords_per_bar": 2
     },
     "drone": {
-        "active": false,
+        "active": true,
         "threshold": 0.5,
         "bind": "velocity",
         "velocity_multiplier": 0.6,
@@ -170,7 +170,7 @@
         "allow_root": false,
         "delay_range": 0.001,
         "notes_per_bar": 6,
-        "midi_channel": 1
+        "midi_channel": 3
     },
     "approach_from_above": {
         "D4": "E4",

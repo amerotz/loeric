@@ -9,27 +9,23 @@
         ],
         "high_loud_weight": 0.3,
         "pattern_means": [
-            0.998,
-            0.994,
-            1.012,
-            1.012,
             0.999,
             0.999,
-            1.005,
-            0.983
+            1.012,
+            0.997,
+            1.003,
+            0.99
         ],
         "pattern_stds": [
             0.14,
-            0.09,
-            0.09,
-            0.087,
-            0.094,
-            0.089,
-            0.085,
-            0.185
+            0.092,
+            0.096,
+            0.097,
+            0.092,
+            0.161
         ],
         "period": 1,
-        "random": 0.2,
+        "random": 0.1,
         "savgol": true,
         "scale": true,
         "shift": true
@@ -43,24 +39,20 @@
             0
         ],
         "pattern_means": [
-            1.03,
-            1.021,
             1.024,
-            1.037,
-            0.979,
-            1.015,
-            0.986,
-            1.005
+            1.004,
+            1.012,
+            1.001,
+            1.006,
+            0.991
         ],
         "pattern_stds": [
-            0.066,
-            0.073,
-            0.068,
-            0.066,
-            0.064,
-            0.069,
-            0.065,
-            0.067
+            0.06,
+            0.061,
+            0.06,
+            0.058,
+            0.062,
+            0.061
         ],
         "period": 1,
         "random": 0.2,
@@ -102,17 +94,20 @@
         "roll_eight_fraction_min": 0.3,
         "slide_eight_fraction": 0.2,
         "slide_pitch_threshold": 6,
-        "tempo_warp_bpms": 1,
         "beat_velocity_increase": 0,
         "min_velocity": 1,
         "max_velocity": 127,
         "max_pitch_error": 2,
         "min_pitch_error": -2,
+        "midi_channel": 1
+    },
+    "tempo_control": {
+        "tempo_warp_bpms": 0,
         "use_old_tempo_warp": false,
         "old_tempo_warp": 0.1
     },
     "automation": {
-        "velocity": 17,
+        "velocity": 16,
         "tempo": 47,
         "ornament": 48,
         "intensity": 49,
@@ -146,7 +141,8 @@
             1,
             0,
             0
-        ]
+        ],
+        "chords_per_bar": 2
     },
     "drone": {
         "active": false,
@@ -172,7 +168,8 @@
         "free_strings_at_once": 0,
         "transpose": false,
         "allow_root": false,
-        "delay_range": 0.001
+        "delay_range": 0.001,
+        "notes_per_bar": 6
     },
     "approach_from_above": {
         "E4": "F#4",

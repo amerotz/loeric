@@ -1,91 +1,171 @@
 import mido
+import numpy as np
+import re
 import math
 import threading
 import time
+import traceback
 from collections import defaultdict
 
 
-def update_tempo(tempo):
-    global last_tempo, sync_duration, songpos_wait
-    last_tempo = tempo
-    sync_duration = 0.25 * 60 / last_tempo
-    songpos_wait = 2 * 60 / last_tempo
-
-
 last_tempo = 120
-sync_duration = 0.25 * 60 / last_tempo
-songpos_wait = 2 * 60 / last_tempo
-pos_dict = defaultdict(float)
+sync_duration = 0
+songpos_wait = 0
+min_window_size = 0.05
+max_window_size = 0.25
+window_size = max_window_size
 exiting = threading.Event()
+increase_window = threading.Event()
 sync_thread = None
 port_lock = threading.Lock()
-tempo_lock = threading.Lock()
+window_lock = threading.Lock()
+
+
+def update_tempo(tempo):
+    global last_tempo, sync_duration, songpos_wait, window_size, window_lock
+    last_tempo = tempo
+    sync_duration = window_size * 60 / last_tempo
+    songpos_wait = 1 * 60 / last_tempo
 
 
 def sync_loeric(inports, outports):
-    global sync_duration, pos_dict, exiting
-    print("Sync ON.")
+    global sync_duration, exiting, min_window_size, window_size, last_tempo
+    print("\nSync ON.")
+    pos_dict = {}
+    sleepers = []
     while not exiting.is_set():
         try:
+
+            # awake sleeping loerics
+            new_sleepers = []
+            for s in sleepers:
+
+                current = time.time()
+
+                lid, start_time, wait_time, port, pos = s
+
+                # if enough time has passed
+                if current - start_time >= wait_time:
+                    with port_lock:
+                        pos_dict[lid] = (current, pos)
+                        port.send(mido.Message("continue"))
+                        # print(re.search("#.*#", port.name)[0])
+                        # print(f"{lid}: AWAKEN at {pos}")
+                        # print()
+                else:
+                    # put them back
+                    new_sleepers.append(s)
+
+            sleepers = new_sleepers
 
             # receive message and port
             with port_lock:
                 bundle = list(
                     mido.ports.multi_receive(inports, yield_ports=True, block=False)
                 )
+            now = time.time()
             if len(bundle) == 0:
                 continue
             port, msg = bundle[0]
-            now = time.time()
             if msg.type != "songpos":
                 continue
-            pos = msg.pos
 
-            # update time for position if greater
-            if pos not in pos_dict:
-                pos_dict[pos] = now
+            # who sent this?
+            loeric_id = re.search("#.*#", port.name)[0]
+            # print(f"{loeric_id}: SENT {msg.pos} ({now})")
+
+            # check if pending old message
+            # and ignore in case
+            if loeric_id in pos_dict and pos_dict[loeric_id][1] >= msg.pos:
+                print(f"OLD POSITION {msg.pos} FROM {loeric_id}")
+                print("---------")
                 continue
 
-            # if difference in songpos is more than one eigth
-            diff = now - pos_dict[pos]
-            print(diff, sync_duration)
+            # check what position we should consider
+            # store a tuple (time, position) for each
+            pos_dict[loeric_id] = (now, msg.pos)
 
-            # obtain output port
-            loeric_id = port.name.split("#")[1]
-            out_port = None
-            for p in outports:
-                if loeric_id == p.name.split("#")[1]:
-                    out_port = p
-                    break
+            # agree on which position
+            pos = max([t[1] for t in pos_dict.values()])
+            # print(f"SYNC {pos}")
 
+            # agree on what time
+            timestamp = np.mean([t[0] for t in pos_dict.values() if t[1] == pos])
+
+            # calculate difference in timestamp
+            diff = now - timestamp
+
+            with window_lock:
+                thr = sync_duration
+                win = window_size
+                print(window_size)
             # fix timing
-            if diff >= sync_duration:
+            if diff >= thr or msg.pos != pos:
 
-                # tell port to wait
-                out_port.send(mido.Message("stop"))
+                # output port
+                out_port = None
+                for p in outports:
+                    if loeric_id == re.search("#.*#", p.name)[0]:
+                        out_port = p
+                        break
 
-                # conpensate duration
-                # songpos messages are sent every
-                # half-note at current tempo
-                multiplier = math.ceil(diff / songpos_wait)
-                print(songpos_wait - diff, multiplier)
-                time.sleep(multiplier * songpos_wait - diff)
+                with port_lock:
+                    # tell port to wait
+                    out_port.send(mido.Message("stop"))
+                    # tell port to start at next songpos
+                    out_port.send(mido.Message("songpos", pos=pos + 1))
 
-                # tell port to start at next songpos
-                out_port.send(mido.Message("songpos", pos=msg.pos + multiplier))
-                out_port.send(mido.Message("continue"))
+                # print(f"{loeric_id}: SLEEP at {pos}")
+
+                sleepers.append(
+                    (loeric_id, now, songpos_wait - diff, out_port, pos + 1)
+                )
+
+                min_window_size = win
+
+                # if things are out of time, give more slack
+                increase_window.set()
+
+            # print("---------")
 
         except Exception as e:
-            print(e)
+            traceback.print_exception(e)
             exiting.set()
     print("\nSync OFF.")
 
 
+def congestion_control():
+    """
+    Handle the congestion window.
+    """
+    global window_size, min_window_size, max_window_size
+    while not exiting.is_set():
+        with window_lock:
+            if increase_window.is_set():
+                window_size *= 2
+                increase_window.clear()
+            else:
+                # if things are smooth, increase precision
+                if window_size <= min_window_size:
+                    min_window_size -= 0.0001
+                window_size -= 0.001
+
+            window_size = max(window_size, min_window_size)
+            window_size = min(window_size, max_window_size)
+
+            update_tempo(last_tempo)
+        time.sleep(songpos_wait / 10)
+
+
+update_tempo(last_tempo)
+sync_thread = threading.Thread()
+window_thread = threading.Thread()
 while True:
     command = input("\033[1m\033[92;40mLOERIC >\033[0m ")
     # connect to LOERIC ports
     if command.startswith("connect"):
         arg = command.split(" ")[-1]
+
         if arg == "in" or arg == "connect":
             # ports to input messages from loeric
             sync_ports_in = [
@@ -99,8 +179,7 @@ while True:
                 print("LOERIC 2 Shell connected.")
                 # stop the sync thread
                 # next call to start will start it again
-                if sync_thread is not None and sync_thread.is_alive():
-                    exiting.set()
+                exiting.set()
 
         if arg == "out" or arg == "connect":
             # ports to output messages to loeric
@@ -118,6 +197,7 @@ while True:
 
         if arg not in ["in", "out", "connect"]:
             print("Could not parse command.")
+
     # list ports
     elif command == "list":
         arg = command.split(" ")[-1]
@@ -128,24 +208,28 @@ while True:
             print("Outputs:")
             print(mido.get_output_names())
     # start and stop
-    elif command in ["start", "stop", "continue"]:
+    elif command in ["sync", "start", "stop", "continue"]:
         # start syncing
-        if command == "start":
-            # reset positions
-            pos_dict = defaultdict(float)
-            # if thread is dead
-            if sync_thread is None or not sync_thread.is_alive():
-                # reset termination flag
-                exiting.clear()
-                # create and start thread
-                sync_thread = threading.Thread(
-                    target=sync_loeric, args=([sync_ports_in, sync_ports_out])
-                )
-                sync_thread.start()
-        # send message
-        msg = mido.Message(command)
-        multi_out.send(msg)
-        print(msg)
+        if command in ["start", "sync"]:
+            # kill sync thread
+            # this also kills the window thread
+            exiting.set()
+            # create and start thread
+            sync_thread = threading.Thread(
+                target=sync_loeric, args=([sync_ports_in, sync_ports_out])
+            )
+            # reset termination flag
+            exiting.clear()
+            sync_thread.start()
+            # start window_thread
+            increase_window.clear()
+            window_thread = threading.Thread(target=congestion_control)
+            window_thread.start()
+        if command != "sync":
+            # send message
+            msg = mido.Message(command)
+            multi_out.send(msg)
+            print(msg)
     # song position
     elif command.startswith("songpos"):
         cmd = "songpos"
