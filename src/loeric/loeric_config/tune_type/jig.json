@@ -19,9 +19,7 @@
 		"bind": "tempo"
 	},
 	"values": {
-		"tempo_warp_bpms": 1,
-		"beat_velocity_increase": 0,
-		"use_old_tempo_warp": false
+		"beat_velocity_increase": 0
 	},
 	"harmony": {
         "chords_per_bar": 2

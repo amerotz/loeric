@@ -48,12 +48,14 @@
 		"roll_eight_fraction_min": 0.3,
 		"slide_eight_fraction": 0.2,
 		"slide_pitch_threshold": 6,
-		"tempo_warp_bpms": 2,
-		"beat_velocity_increase": -16,
+		"beat_velocity_increase": 0,
 		"min_velocity": 1,
 		"max_velocity": 127,
 		"max_pitch_error": 2,
-		"min_pitch_error": -2,
+		"min_pitch_error": -2
+	},
+	"tempo_control": {
+		"tempo_warp_bpms": 0,
 		"use_old_tempo_warp": false,
 		"old_tempo_warp": 0.1
 	},

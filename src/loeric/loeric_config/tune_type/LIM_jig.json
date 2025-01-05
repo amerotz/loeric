@@ -15,10 +15,12 @@
     },
     "swing": {"min": 1.1, "max": 1, "bind": "tempo"},
     "values": {
-        "beat_velocity_increase": 8,
-        "use_old_tempo_warp": false,
-		"tempo_warp_bpms": 1
-    },
+		"beat_velocity_increase": 8
+	},
+	"tempo_control": {
+		"tempo_warp_bpms": 1,
+		"use_old_tempo_warp": false
+	},
     "harmony": {
         "chords_per_bar": 2
     },
