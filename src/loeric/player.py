@@ -88,6 +88,13 @@ class Player:
             if self._saving:
                 self._midi_track.append(msg)
 
+    def reset(self) -> None:
+        """
+        Reset the output port.
+        """
+        if self._midi_out is not None:
+            self._midi_out.reset()
+
     def save(self, filename: str) -> None:
         """
         Save the generated performance as a midi file.

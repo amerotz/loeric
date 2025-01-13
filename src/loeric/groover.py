@@ -164,6 +164,7 @@ class Groover:
 
         # tempo sync
         self._external_tempo = None
+        self._tempo_lock = threading.Lock()
         self._last_clock_time = None
 
         # create contours
@@ -218,6 +219,7 @@ class Groover:
             self._tune,
             mean=np.array(self._config["tempo"]["pattern_means"]),
             std=np.array(self._config["tempo"]["pattern_stds"]),
+            std_scale=self._config["tempo"]["std_scale"],
             period=self._config["tempo"]["period"],
             normalize=True,
         )
@@ -344,8 +346,19 @@ class Groover:
         """
 
         self._last_clock_time = None
-        self._external_tempo = None
+        with self._tempo_lock:
+            self._external_tempo = None
 
+    def set_tempo(self, tempo: int) -> None:
+        """
+        Set the new performance tempo.
+
+        :param tempo: the requested tempo in bpms.
+        """
+        with self._tempo_lock:
+            self._external_tempo = mido.bpm2tempo(tempo)
+
+    '''
     def set_clock(self) -> None:
         """
         Register a MIDI clock message and calculate the requested tempo.
@@ -355,13 +368,16 @@ class Groover:
             # update tempo
             # 24 clocks per quarter note
             diff = now - self._last_clock_time
-            self._external_tempo = mido.bpm2tempo(60 / (24 * diff))
+            new_tempo = mido.bpm2tempo(60 / (24 * diff))
 
             # if too long, reset
-            if self._external_tempo > lu.MAX_TEMPO:
-                self._external_tempo = None
+            if new_tempo > lu.MAX_TEMPO:
+                new_tempo = None
 
+            with self._tempo_lock:
+                self._external_tempo = new_tempo
         self._last_clock_time = now
+    '''
 
     def perform(self, message: mido.Message) -> list[mido.Message]:
         """
@@ -375,11 +391,12 @@ class Groover:
         # work on a deepcopy to avoid side effects
         new_message = copy.deepcopy(message)
 
+        # warp note duration according to contour
+        # print(self._contour_values["tempo_pattern"])
+        new_message.time *= self._contour_values["tempo_pattern"]
+
         # change note duration
         new_message.time -= self._offset
-
-        # warp note duration according to contour
-        new_message.time *= self._contour_values["tempo_pattern"]
 
         self._offset = 0
 
@@ -1093,8 +1110,9 @@ class Groover:
 
         calculated_tempo = None
         base_tempo = self._user_tempo
-        if self._external_tempo is not None:
-            base_tempo = self._external_tempo
+        with self._tempo_lock:
+            if self._external_tempo is not None:
+                base_tempo = self._external_tempo
 
         # (old) version 1
         # warp as a percentage of current tempo
