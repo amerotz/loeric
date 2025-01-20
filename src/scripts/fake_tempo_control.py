@@ -8,7 +8,7 @@ import time
 
 def main(args):
     sync_ports_out = [
-        mido.open_output(p) for p in mido.get_output_names() if "LOERIC SYNC in" in p
+        mido.open_output(p) for p in mido.get_output_names() if "LOERIC SYNC" in p
     ]
     out = mido.ports.MultiPort(sync_ports_out)
     try:
@@ -23,6 +23,7 @@ def main(args):
                 )
             )
             time.sleep((60 / args.tempo) / 24)
+            """
             if i % 36 == 0:
                 print("Beat")
             n = 72
@@ -35,10 +36,11 @@ def main(args):
                         time=0,
                     )
                 )
+            """
             i += 1
     except KeyboardInterrupt:
         if args.kill:
-            out.send(mido.Message("stop", time=0))
+            out.send(mido.Message("reset", time=0))
         print("Stopping.")
 
 

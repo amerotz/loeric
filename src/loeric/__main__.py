@@ -136,6 +136,10 @@ def sync_thread(
             print(f"Received SET TEMPO {tempo}.")
         elif msg.type == "reset":
             groover.reset_clock()
+            print(f"Received RESET.")
+        elif msg.type == "clock":
+            groover.set_clock()
+            print(f"Received CLOCK.")
         elif msg.type == "songpos":
             print(f"Received JUMP {msg.pos}.")
             if stopped.is_set():

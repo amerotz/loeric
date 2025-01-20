@@ -358,7 +358,6 @@ class Groover:
         with self._tempo_lock:
             self._external_tempo = mido.bpm2tempo(tempo)
 
-    '''
     def set_clock(self) -> None:
         """
         Register a MIDI clock message and calculate the requested tempo.
@@ -377,7 +376,6 @@ class Groover:
             with self._tempo_lock:
                 self._external_tempo = new_tempo
         self._last_clock_time = now
-    '''
 
     def perform(self, message: mido.Message) -> list[mido.Message]:
         """
