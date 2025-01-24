@@ -1,0 +1,42 @@
+{
+	"intensity_control_in": 46,
+	"human_impact_control_in": 50,
+	"intensity_control_out": 21,
+	"human_impact_control_out": 22,
+	"tempo_policy": {
+		"fix_sync_multiplier": 0.0625,
+		"stop_sync_multiplier": 0.5,
+		"wait_duration": 2,
+		"position": "max"
+	},
+	"attention_policy": {
+		"attention_group_size": 1000,
+		"switch_every": 16,
+		"behaviors":{
+			"backoff": {
+				"intensity_multiplier": 0.8,
+				"intensity_constant": 0.0,
+				"intensity_aggregator": "min",
+				"human_impact_multiplier": 0.0,
+				"human_impact_constant": 0.75,
+				"human_impact_aggregator": "min"
+			},
+			"match": {
+				"intensity_multiplier": 1,
+				"intensity_constant": 0.0,
+				"intensity_aggregator": "mean",
+				"human_impact_multiplier": 0.0,
+				"human_impact_constant": 0.75,
+				"human_impact_aggregator": "min"
+			},
+			"lead": {
+				"intensity_multiplier": 1.2,
+				"intensity_constant": 0.0,
+				"intensity_aggregator": "max",
+				"human_impact_multiplier": 0.0,
+				"human_impact_constant": 0.75,
+				"human_impact_aggregator": "min"
+			}
+		}
+	}
+}

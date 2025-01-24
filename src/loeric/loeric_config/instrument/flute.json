@@ -2,6 +2,11 @@
 	"probabilities": {
 		"roll": 1, "slide": 1, "cut": 1
 	},
+	"values": {
+		"cut_eight_fraction": 0.2,
+		"cut_velocity_fraction": 0.4,
+		"roll_velocity_fraction": 0.4
+	},
 	"approach_from_above": {
 		"E4": "F#4",
 		"E5": "F#5",

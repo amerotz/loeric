@@ -70,7 +70,8 @@ class Tune:
         new_midi = []
         # 16383 is the max value for songpos
         # every_n = max(6, round(len(self._midi) / 16383))
-        every_duration = 1 * self._quarter_duration
+        every_duration = self.beat_duration
+        print("Sync every", quarters_per_bar / self._time_signature.beatCount)
         note_index = 0
         songpos = 0
 

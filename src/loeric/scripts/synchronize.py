@@ -1,4 +1,6 @@
 import mido
+import os
+import pandas as pd
 import numpy as np
 import re
 import math
@@ -6,17 +8,18 @@ import threading
 import random
 import time
 import traceback
+import json
 from collections import defaultdict
 
 
-last_tempo = 120
+songpos_wait = 0
+last_tempo = 0
+switch_timer = 0
 fix_sync_duration = 0
 stop_sync_duration = 0
-songpos_wait = 0
+
+# parallel stuff
 exiting = threading.Event()
-switch_timer = 0
-sync_thread = None
-intensity_thread = None
 port_lock = threading.Lock()
 all_dead = threading.Semaphore(value=2)
 
@@ -32,20 +35,25 @@ def send_tempo(tempo, port):
 
 
 def update_tempo(tempo):
-    global last_tempo, stop_sync_duration, fix_sync_duration, songpos_wait, switch_timer
+    global songpos_wait, last_tempo, switch_timer, fix_sync_duration, stop_sync_duration, config
     last_tempo = tempo
-    fix_sync_duration = 0.0625 * 60 / last_tempo
-    stop_sync_duration = 0.5 * 60 / last_tempo
-    songpos_wait = 1 * 60 / last_tempo
-    switch_timer = 20 * songpos_wait
+    fix_sync_duration = config["tempo_policy"]["fix_sync_multiplier"] * 60 / last_tempo
+    stop_sync_duration = (
+        config["tempo_policy"]["stop_sync_multiplier"] * 60 / last_tempo
+    )
+    songpos_wait = config["tempo_policy"]["wait_duration"] * 60 / last_tempo
+    switch_timer = config["attention_policy"]["switch_every"] * songpos_wait
 
 
 def sync_intensity(inports, outports):
-    global exiting, switch_timer, all_dead
+    global songpos_wait, last_tempo, switch_timer, fix_sync_duration, stop_sync_duration, exiting, all_dead, config
     all_dead.acquire()
     shell_print("Intensity Sync ON.")
-    int_dict = {}
+    int_dict = defaultdict(int)
+    hi_dict = defaultdict(int)
     action_dict = {}
+    df_action = pd.DataFrame(columns=["TIME", "ID", "ACTION", "GROUP"])
+    df_values = pd.DataFrame(columns=["TIME", "ID", "TYPE", "VALUE", "PARAM"])
     while not exiting.is_set():
         try:
             # receive message and port
@@ -56,22 +64,49 @@ def sync_intensity(inports, outports):
             if len(bundle) == 0:
                 continue
             port, msg = bundle[0]
-            if msg.type != "control_change" or msg.control != 69:
+            if msg.type != "control_change" or (
+                msg.control != config["human_impact_control_in"]
+                and msg.control != config["intensity_control_in"]
+            ):
                 continue
 
             # who sent this?
             loeric_id = re.search("#.*#", port.name)[0]
 
+            now = time.time()
             # keep track of intensity
-            int_dict[loeric_id] = msg.value
+            if msg.control == config["intensity_control_in"]:
+                int_dict[loeric_id] = msg.value / 127
+
+                df_values.loc[len(df_values)] = [
+                    now,
+                    loeric_id,
+                    "receive",
+                    msg.value,
+                    "intensity",
+                ]
+            # keep track of human_impact
+            elif msg.control == config["human_impact_control_in"]:
+                hi_dict[loeric_id] = msg.value / 127
+
+                df_values.loc[len(df_values)] = [
+                    now,
+                    loeric_id,
+                    "receive",
+                    msg.value,
+                    "human_impact",
+                ]
 
             # don't consider human for actions
             if "HUMAN" in port.name:
                 continue
 
-            now = time.time()
             if loeric_id not in action_dict:
-                action_dict[loeric_id] = (now, "match", loeric_id)
+                action_dict[loeric_id] = (
+                    now - random.random() * switch_timer,
+                    "match",
+                    loeric_id,
+                )
                 print("added")
 
             diff = now - action_dict[loeric_id][0]
@@ -82,16 +117,26 @@ def sync_intensity(inports, outports):
                 # backoff or
                 # match
                 # any group of players
-                action = random.choice(["listen", "invert"])
+                # action = random.choice(["backoff", "match", "lead"])
+                action = random.choice(
+                    list(config["attention_policy"]["behaviors"].keys())
+                )
                 n = 1
                 if len(players) < 1:
                     continue
                 elif len(players) > 1:
-                    n = random.randint(1, len(players))
+                    n = random.randint(
+                        1,
+                        min(
+                            config["attention_policy"]["attention_group_size"],
+                            len(players),
+                        ),
+                    )
                 group = random.sample(players, n)
 
                 action_dict[loeric_id] = (now, action, group)
                 print(loeric_id, action, group)
+                df_action.loc[len(df_action)] = [now, loeric_id, action, group]
 
             # output port
             out_port = None
@@ -103,30 +148,115 @@ def sync_intensity(inports, outports):
             _, action, group = action_dict[loeric_id]
             if type(group) is not list:
                 group = [group]
+
+            # intensity
+            int_value = 0
+            algorithm = config["attention_policy"]["behaviors"][action][
+                "intensity_aggregator"
+            ]
+            if algorithm == "mean":
+                int_value = np.mean([int_dict[p] for p in group])
+            elif algorithm == "min":
+                int_value = np.min([int_dict[p] for p in group])
+            elif algorithm == "max":
+                int_value = np.max([int_dict[p] for p in group])
+            elif algorithm == "constant":
+                pass
+
+            int_value *= config["attention_policy"]["behaviors"][action][
+                "intensity_multiplier"
+            ]
+            int_value += config["attention_policy"]["behaviors"][action][
+                "intensity_constant"
+            ]
+
+            hi_value = 0
+            algorithm = config["attention_policy"]["behaviors"][action][
+                "human_impact_aggregator"
+            ]
+            if algorithm == "mean":
+                hi_value = np.mean([hi_dict[p] for p in group])
+            elif algorithm == "min":
+                hi_value = np.min([hi_dict[p] for p in group])
+            elif algorithm == "max":
+                hi_value = np.max([hi_dict[p] for p in group])
+            elif algorithm == "constant":
+                pass
+
+            hi_value *= config["attention_policy"]["behaviors"][action][
+                "human_impact_multiplier"
+            ]
+            hi_value += config["attention_policy"]["behaviors"][action][
+                "human_impact_constant"
+            ]
+            """
             # send intensity signal according to action
-            value = np.mean([int_dict[p] for p in group])
-            if action == "invert":
-                value = 127 - value
+            int_value = np.mean([int_dict[p] for p in group])
+            hi_value = 0.5
+            if action == "backoff":
+                int_value = np.min([int_dict[p] for p in group])
+                hi_value = 0
+                int_value *= 0.5
+            elif action == "lead":
+                int_value = np.max([int_dict[p] for p in group])
+                int_value *= 1.5
+                hi_value = 1
+            elif action == "match":
+                pass
+            """
 
-            value = int(value)
-            value = min(value, 127)
-            value = max(value, 0)
+            int_value *= 127
+            int_value = int(int_value)
+            int_value = min(int_value, 127)
+            int_value = max(int_value, 0)
 
-            # shell_print(loeric_id, value, out_port)
+            hi_value *= 127
+            hi_value = int(hi_value)
+            hi_value = min(hi_value, 127)
+            hi_value = max(hi_value, 0)
+
+            # shell_print(loeric_id, int_value, out_port)
             # prepare message
             if out_port is not None:
-                msg = mido.Message("control_change", value=value, control=42)
+                msg = mido.Message(
+                    "control_change",
+                    value=int_value,
+                    control=config["intensity_control_out"],
+                )
                 out_port.send(msg)
+                msg = mido.Message(
+                    "control_change",
+                    value=hi_value,
+                    control=config["human_impact_control_out"],
+                )
+                out_port.send(msg)
+
+            df_values.loc[len(df_values)] = [
+                now,
+                loeric_id,
+                "send",
+                int_value,
+                "intensity",
+            ]
+            df_values.loc[len(df_values)] = [
+                now,
+                loeric_id,
+                "send",
+                hi_value,
+                "human_impact",
+            ]
 
         except Exception as e:
             traceback.print_exception(e)
             exiting.set()
+    df_action.to_csv("action_log.csv")
+    df_values.to_csv("values_log.csv")
     all_dead.release()
     shell_print("Intensity Sync OFF.")
 
 
 def sync_loeric(inports, outports):
-    global stop_sync_duration, fix_sync_duration, exiting, last_tempo, num_clocks, all_dead, songpos_wait
+    global songpos_wait, last_tempo, switch_timer, fix_sync_duration, stop_sync_duration, exiting, all_dead, config
     all_dead.acquire()
     shell_print("Sync ON.")
     pos_dict = {}
@@ -177,7 +307,11 @@ def sync_loeric(inports, outports):
             pos_dict[loeric_id] = (now, msg.pos)
 
             # agree on which position
-            pos = max([t[1] for t in pos_dict.values()])
+            algorithm = config["tempo_policy"]["position"]
+            if algorithm == "max":
+                pos = max([t[1] for t in pos_dict.values()])
+            elif algorithm == "min":
+                pos = min([t[1] for t in pos_dict.values()])
             # shell_print(f"SYNC {pos}")
 
             # agree on what time
@@ -250,7 +384,7 @@ def shell_print(s):
 
 
 def close_shell():
-    global exiting, all_dead
+    global songpos_wait, last_tempo, switch_timer, fix_sync_duration, stop_sync_duration, exiting, all_dead
     exiting.set()
     all_dead.acquire()
     all_dead.acquire()
@@ -272,7 +406,16 @@ def check_args(command, num_args=0, values=[], optional=True):
 
 
 def main():
-    update_tempo(last_tempo)
+
+    global config, sync_thread, intensity_thread
+
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
+    # load base config
+    with open(f"{dir_path}/shell.json", "r") as f:
+        config = json.load(f)
+
+    update_tempo(120)
     sync_thread = threading.Thread()
     intensity_thread = threading.Thread()
     sync_ports_in = []
@@ -379,6 +522,7 @@ def main():
                 # start syncing
                 s = []
                 if command in ["start", "sync"]:
+                    assert config["tempo_policy"]["position"] in ["min", "max"]
                     # kill sync thread
                     # this also kills the window thread
                     exiting.set()
