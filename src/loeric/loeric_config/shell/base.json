@@ -3,15 +3,15 @@
 	"human_impact_control_in": 50,
 	"intensity_control_out": 21,
 	"human_impact_control_out": 22,
+	"sync_interval": 2,
+	"switch_every": 16,
 	"tempo_policy": {
 		"fix_sync_multiplier": 0.0625,
 		"stop_sync_multiplier": 0.5,
-		"wait_duration": 2,
 		"position": "max"
 	},
 	"attention_policy": {
 		"attention_group_size": 1000,
-		"switch_every": 16,
 		"behaviors":{
 			"backoff": {
 				"intensity_multiplier": 0.8,

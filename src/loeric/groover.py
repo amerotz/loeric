@@ -114,7 +114,7 @@ class Groover:
 
         # merge base configuration with command line values
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        with open(f"{dir_path}/loeric_config/base.json", "r") as f:
+        with open(f"{dir_path}/loeric_config/performance/base.json", "r") as f:
             base_config = json.load(f)
             self._config = jsonmerge.merge(base_config, self._config)
 

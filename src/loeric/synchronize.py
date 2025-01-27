@@ -9,6 +9,7 @@ import random
 import time
 import traceback
 import json
+import argparse
 from collections import defaultdict
 
 
@@ -41,8 +42,8 @@ def update_tempo(tempo):
     stop_sync_duration = (
         config["tempo_policy"]["stop_sync_multiplier"] * 60 / last_tempo
     )
-    songpos_wait = config["tempo_policy"]["wait_duration"] * 60 / last_tempo
-    switch_timer = config["attention_policy"]["switch_every"] * songpos_wait
+    songpos_wait = config["sync_interval"] * 60 / last_tempo
+    switch_timer = config["switch_every"] * songpos_wait
 
 
 def sync_intensity(inports, outports):
@@ -407,12 +408,19 @@ def check_args(command, num_args=0, values=[], optional=True):
 
 def main():
 
-    global config, sync_thread, intensity_thread
-
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--config", default=f"{dir_path}/loeric_config/shell/config.json", type=str
+    )
+    args = parser.parse_args()
+    args = vars(args)
+
+    global config, sync_thread, intensity_thread
+
     # load base config
-    with open(f"{dir_path}/shell.json", "r") as f:
+    with open(args["config"], "r") as f:
         config = json.load(f)
 
     update_tempo(120)
@@ -429,7 +437,9 @@ def main():
             command = input()
             arg_0 = command.split(" ")[0]
             # connect to LOERIC ports
-            if arg_0 == "connect":
+            if arg_0 == "dump":
+                shell_print(config)
+            elif arg_0 == "connect":
                 if not check_args(
                     command, num_args=1, values=["in", "out"], optional=True
                 ):

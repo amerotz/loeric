@@ -296,7 +296,7 @@ def main():
         "--config",
         help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
         type=str,
-        default=f"{dir_path}/loeric_config/loeric_config.json",
+        default=f"{dir_path}/loeric_config/performance/config.json",
     )
     parser.add_argument(
         "--verbose",
