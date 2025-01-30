@@ -303,9 +303,30 @@ def sync_loeric(inports, outports):
             loeric_id = re.search("#.*#", port.name)[0]
             # shell_print(f"{loeric_id}: SENT {msg.pos} ({now})")
 
+            # don't sync the human
+            if "HUMAN" in port.name:
+                if (
+                    # if first time
+                    not loeric_id in pos_dict
+                    # or skipped a beat
+                    or now - pos_dict[loeric_id][0] > 2 * songpos_wait
+                ):
+                    positions = [t[1] for t in pos_dict.values()]
+                    value = 0
+                    if len(positions) != 0:
+                        value = max(positions)
+                    pos_dict[loeric_id] = (now, value)
+                # only advance human position
+                else:
+                    pos_dict[loeric_id] = (now, pos_dict[loeric_id][1] + 1)
+                # print(pos_dict)
+                continue
+
             # check what position we should consider
             # store a tuple (time, position) for each
             pos_dict[loeric_id] = (now, msg.pos)
+
+            print(pos_dict)
 
             # agree on which position
             algorithm = config["tempo_policy"]["position"]
@@ -472,7 +493,7 @@ def main():
                         sync_ports_in = [
                             mido.open_input(p)
                             for p in mido.get_input_names()
-                            if "LOERIC SYNC" in p
+                            if "SYNC" in p
                         ]
                         if len(sync_ports_in) == 0:
                             s.append("No SYNC input to connect to.")
