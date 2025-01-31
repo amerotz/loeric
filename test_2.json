@@ -1,0 +1,201 @@
+{
+    "velocity": {
+        "weights": [
+            1,
+            1,
+            1,
+            1,
+            1
+        ],
+        "high_loud_weight": 0.3,
+        "phrase_weight": 0.3,
+        "pattern_means": [
+            0.999,
+            0.999,
+            1.012,
+            0.997,
+            1.003,
+            0.99
+        ],
+        "pattern_stds": [
+            0.14,
+            0.092,
+            0.096,
+            0.097,
+            0.092,
+            0.161
+        ],
+        "std_scale": 1,
+        "period": 1,
+        "random": 0.2,
+        "savgol": false,
+        "scale": true,
+        "shift": true
+    },
+    "tempo": {
+        "weights": [
+            1,
+            1,
+            1,
+            1,
+            1
+        ],
+        "phrase_weight": 0.3,
+        "pattern_means": [
+            0.171,
+            0.167,
+            0.169,
+            0.167,
+            0.168,
+            0.165
+        ],
+        "pattern_stds": [
+            0.06,
+            0.061,
+            0.06,
+            0.058,
+            0.062,
+            0.061
+        ],
+        "std_scale": 0.1,
+        "period": 1,
+        "random": 0.1,
+        "savgol": true,
+        "scale": false,
+        "shift": true
+    },
+    "ornament": {
+        "weights": [
+            75,
+            50,
+            100,
+            0,
+            50
+        ],
+        "random": 0.2,
+        "savgol": true,
+        "scale": true,
+        "shift": true
+    },
+    "probabilities": {
+        "drop": 0.01,
+        "roll": 1,
+        "slide": 1,
+        "cut": 1,
+        "error": 0.01
+    },
+    "swing": {
+        "min": 1,
+        "max": 1,
+        "bind": "tempo"
+    },
+    "values": {
+        "bend_resolution": 32,
+        "cut_eight_fraction": 0.2,
+        "cut_velocity_fraction": 0.4,
+        "roll_velocity_fraction": 0.4,
+        "roll_eight_fraction_max": 0.8,
+        "roll_eight_fraction_min": 0.3,
+        "slide_eight_fraction": 0.2,
+        "slide_pitch_threshold": 6,
+        "beat_velocity_increase": 0,
+        "min_velocity": 1,
+        "max_velocity": 127,
+        "max_pitch_error": 2,
+        "min_pitch_error": -2,
+        "legato_min": 0.8,
+        "legato_max": 1
+    },
+    "tempo_control": {
+        "tempo_warp_bpms": 1,
+        "use_old_tempo_warp": false,
+        "old_tempo_warp": 0.1
+    },
+    "automation": {
+        "velocity": 46,
+        "tempo": 47,
+        "ornament": 48,
+        "intensity": 49,
+        "human_impact": 50
+    },
+    "harmony": {
+        "chord_score": [
+            2,
+            0,
+            0,
+            0,
+            0,
+            1,
+            -1,
+            0,
+            1,
+            1,
+            0,
+            0
+        ],
+        "allowed_chords": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0
+        ],
+        "chords_per_bar": 2
+    },
+    "drone": {
+        "active": false,
+        "threshold": 0.5,
+        "bind": "velocity",
+        "velocity_multiplier": 0.6,
+        "strings": [
+            55,
+            62,
+            69,
+            76
+        ],
+        "strings_at_once": 1,
+        "free_strings": [
+            43,
+            38,
+            50,
+            57,
+            54,
+            59,
+            48
+        ],
+        "free_strings_at_once": 0,
+        "transpose": false,
+        "allow_root": false,
+        "delay_range": 0.001,
+        "notes_per_bar": 6
+    },
+    "approach_from_above": {
+        "E4": "F#4",
+        "E5": "F#5",
+        "F#4": "A4",
+        "F#5": "A5",
+        "G4": "A4",
+        "G5": "A5",
+        "A4": "B4",
+        "A5": "B5",
+        "B4": "C#5"
+    },
+    "approach_from_below": {
+        "E4": "D4",
+        "E5": "D5",
+        "F#4": "E4",
+        "F#5": "E5",
+        "G4": "F#4",
+        "G5": "F#5",
+        "A4": "G4",
+        "A5": "G5",
+        "B4": "A4"
+    }
+}

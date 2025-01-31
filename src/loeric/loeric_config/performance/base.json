@@ -1,17 +1,20 @@
 {
 	"velocity": {
-		"weights": [25, 100, 75, 35, 25],
+		"weights": [1, 1, 1, 1, 1],
 		"high_loud_weight": 0.3,
+		"phrase_weight": 0.3,
 		"pattern_means": [1.0],
 		"pattern_stds": [0],
+		"std_scale": 1,
 		"period": 1,
 		"random": 0.2,
-		"savgol": true,
+		"savgol": false,
 		"scale": true,
 		"shift": true 
 	},
 	"tempo": {
-		"weights": [25, 0, 75, 25, 0],
+		"weights": [1, 1, 1, 1, 1],
+		"phrase_weight": 0.3,
 		"pattern_means": [1.0],
 		"pattern_stds": [0],
 		"std_scale": 1,
@@ -53,10 +56,12 @@
 		"min_velocity": 1,
 		"max_velocity": 127,
 		"max_pitch_error": 2,
-		"min_pitch_error": -2
+		"min_pitch_error": -2,
+        "legato_min": 0.8,
+        "legato_max": 1
 	},
 	"tempo_control": {
-		"tempo_warp_bpms": 0,
+		"tempo_warp_bpms": 1,
 		"use_old_tempo_warp": false,
 		"old_tempo_warp": 0.1
 	},

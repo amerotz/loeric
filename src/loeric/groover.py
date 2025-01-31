@@ -155,6 +155,11 @@ class Groover:
         # table for pitch errors
         self._pitch_errors = defaultdict(int)
 
+        # legato
+        self._legato_amount = (
+            self._config["values"]["legato_max"] - self._config["values"]["legato_min"]
+        )
+
         # droning
         self._drone_notes = np.array(self._config["drone"]["strings"])
         self._free_drone_notes = np.array(self._config["drone"]["free_strings"])
@@ -193,19 +198,29 @@ class Groover:
         velocity_pitch_contour = cnt.PitchContour()
         velocity_pitch_contour.calculate(self._tune)
 
+        velocity_phrasing_contour = cnt.PhraseContour()
+        velocity_phrasing_contour.calculate(self._tune)
+
         self._contours["velocity"] = cnt.weighted_sum(
-            [velocity_intensity_contour, velocity_pitch_contour],
+            [
+                velocity_intensity_contour,
+                velocity_pitch_contour,
+                velocity_phrasing_contour,
+            ],
             np.array(
                 [
-                    1 - self._config["velocity"]["high_loud_weight"],
+                    1
+                    - self._config["velocity"]["high_loud_weight"]
+                    - self._config["velocity"]["phrase_weight"],
                     self._config["velocity"]["high_loud_weight"],
+                    self._config["velocity"]["phrase_weight"],
                 ]
             ),
         )
 
         # tempo contour
-        self._contours["tempo"] = cnt.IntensityContour()
-        self._contours["tempo"].calculate(
+        tempo_intensity_contour = cnt.IntensityContour()
+        tempo_intensity_contour.calculate(
             self._tune,
             weights=np.array(self._config["tempo"]["weights"]),
             random_weight=self._config["tempo"]["random"],
@@ -213,6 +228,26 @@ class Groover:
             scale=self._config["tempo"]["scale"],
             shift=self._config["tempo"]["shift"],
         )
+
+        self._contours["phrasing"] = cnt.PhraseContour()
+        self._contours["phrasing"].calculate(self._tune)
+
+        self._contours["tempo"] = cnt.weighted_sum(
+            [tempo_intensity_contour, self._contours["phrasing"]],
+            np.array(
+                [
+                    1 - self._config["tempo"]["phrase_weight"],
+                    self._config["tempo"]["phrase_weight"],
+                ]
+            ),
+        )
+
+        """
+        import matplotlib.pyplot as plt
+
+        plt.plot(self._contours["tempo"]._contour)
+        plt.show()
+        """
 
         self._contours["tempo_pattern"] = cnt.PatternContour()
         self._contours["tempo_pattern"].calculate(
@@ -407,9 +442,9 @@ class Groover:
             new_message.note += self._transpose_semitones
 
         if lu.is_note_off(new_message):
-            # randomize end time
-            mult = random.uniform(max(1 - self._delay_max, 0.95), 1)
-            self._delay_max = mult
+            # randomize end time and legato
+            mult = np.random.normal(loc=self._config["values"]["legato_min"] + self._legato_amount * self._contour_values["phrasing"],scale=0.05)
+            # self._delay_max = mult
             new_length = new_message.time * mult
             self._delay = new_message.time - new_length
             new_message.time = new_length
