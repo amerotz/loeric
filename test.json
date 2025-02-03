@@ -73,17 +73,11 @@
         "shift": true
     },
     "ornament": {
-        "weights": [
-            75,
-            50,
-            100,
-            0,
-            50
-        ],
-        "random": 0.2,
-        "savgol": true,
+		"weights": [1, 1, 1, 1, 1],
+        "random": 0.1,
+        "savgol": false,
         "scale": true,
-        "shift": true
+        "shift": false 
     },
     "probabilities": {
         "drop": 0.01,
@@ -93,7 +87,7 @@
         "error": 0.01
     },
     "swing": {
-        "min": 1,
+        "min": 1.5,
         "max": 1,
         "bind": "tempo"
     },
@@ -157,10 +151,10 @@
         ]
     },
     "drone": {
-        "active": false,
+        "active": true,
         "threshold": 0.5,
         "bind": "velocity",
-        "velocity_multiplier": 0.6,
+        "velocity_multiplier": 0.9,
         "strings": [
             55,
             62,
