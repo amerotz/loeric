@@ -11,7 +11,8 @@
 		"position": "max"
 	},
 	"attention_policy": {
-		"attention_group_size": 1000,
+		"attention_group_min_size": 1000,
+		"attention_group_max_size": 1000,
 		"behaviors":{
 			"backoff": {
 				"intensity_multiplier": 0.8,

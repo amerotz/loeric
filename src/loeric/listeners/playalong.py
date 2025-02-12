@@ -18,7 +18,7 @@ class PlayerThread:
             human_id = int(time.time())
             port = mido.open_output(f"HUMAN out #{human_id}#", virtual=True)
         else:
-            port = mido.open_output(mido.get_output_names()[port_numself.outport])
+            port = mido.open_output(mido.get_output_names()[self.outport])
 
         try:
             old_value = -1

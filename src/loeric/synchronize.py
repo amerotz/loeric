@@ -26,7 +26,7 @@ all_dead = threading.Semaphore(value=2)
 
 
 def send_tempo(tempo, port):
-    tup = []
+    tup = [69]
     while tempo > 0:
         v = min(tempo, 127)
         tup.append(v)
@@ -127,9 +127,12 @@ def sync_intensity(inports, outports):
                     continue
                 elif len(players) > 1:
                     n = random.randint(
-                        1,
                         min(
-                            config["attention_policy"]["attention_group_size"],
+                            config["attention_policy"]["attention_group_min_size"],
+                            len(players),
+                        ),
+                        min(
+                            config["attention_policy"]["attention_group_max_size"],
                             len(players),
                         ),
                     )
@@ -326,7 +329,7 @@ def sync_loeric(inports, outports):
             # store a tuple (time, position) for each
             pos_dict[loeric_id] = (now, msg.pos)
 
-            print(pos_dict)
+            # print(pos_dict)
 
             # agree on which position
             algorithm = config["tempo_policy"]["position"]

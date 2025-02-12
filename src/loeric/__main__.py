@@ -130,8 +130,8 @@ def sync_thread(
     global stopped
     while not done_playing.is_set():
         msg = sync_port_in.receive(block=True)
-        if msg.type == "sysex":
-            tempo = sum(msg.data)
+        if msg.type == "sysex" and msg.data[0] == 69:
+            tempo = sum(msg.data[1:])
             groover.set_tempo(tempo)
             print(f"Received SET TEMPO {tempo}.")
         elif msg.type == "reset":
