@@ -3,11 +3,11 @@
     "human_impact_control_in": 50,
     "intensity_control_out": 21,
     "human_impact_control_out": 22,
-    "sync_interval": 1.5,
+    "sync_interval": 2.0,
     "switch_every": 32.0,
     "tempo_policy": {
-        "fix_sync_multiplier": 0.0625,
-        "stop_sync_multiplier": 0.5,
+        "fix_sync_multiplier": 0.00625,
+        "stop_sync_multiplier": 0.25,
         "position": "max"
     },
     "attention_policy": {

@@ -23,6 +23,7 @@ def main() -> None:
         "-i2", "--input_2", help="the second input MIDI port.", type=int
     )
     parser.add_argument("-o", "--output", help="the output MIDI port.", type=int)
+    parser.add_argument("--create_output", help="whether a new output MIDI port should be created.", action="store_true")
     parser.add_argument(
         "-i1c",
         "--input-1-control",
@@ -71,7 +72,8 @@ def main() -> None:
 
     input_1 = mido.get_input_names()[args.input_1]
     input_2 = mido.get_input_names()[args.input_2]
-    output = mido.get_output_names()[args.output]
+    if not args.create_output:
+        output = mido.get_output_names()[args.output]
     intensity = 64
 
     values[input_1] = 64
@@ -83,22 +85,27 @@ def main() -> None:
     t2.start()
 
     try:
-        with mido.open_output(output) as out:
-            while True:
-                v1 = values[input_1]
-                v2 = values[input_2]
-                value = aggregators[args.mode](v1, v2)
-                value = min(127, value)
-                value = max(0, value)
-                value = int(value)
-                print(v1, v2, value, sep="\t")
+        if args.create_output:
+            out = mido.open_output(f"HUMAN out COMBINE", virtual=True)
+        else:
+            out = mido.open_output(output)
+        while True:
+            v1 = values[input_1]
+            v2 = values[input_2]
+            value = aggregators[args.mode](v1, v2)
+            value = min(127, value)
+            value = max(0, value)
+            value = int(value)
+            print(v1, v2, value, sep="\t")
 
-                message = mido.Message(
-                    "control_change", channel=0, control=args.control, value=value
-                )
+            message = mido.Message(
+                "control_change", channel=0, control=args.control, value=value
+            )
 
-                out.send(message)
-                time.sleep(1 / 10)
+            out.send(message)
+            time.sleep(1 / 10)
     except KeyboardInterrupt as e:
         done_listening = True
+        out.reset()
+        out.close()
         print(e)

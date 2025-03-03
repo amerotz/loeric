@@ -62,7 +62,8 @@
         "random": 0.1,
         "savgol": true,
         "scale": false,
-        "shift": true
+        "shift": true,
+        "human_impact_scale": 0
     },
     "ornament": {
 		"weights": [1, 1, 1, 1, 1],
@@ -100,16 +101,12 @@
         "legato_max": 1
     },
     "tempo_control": {
-        "tempo_warp_bpms": 1,
+        "tempo_warp_bpms": 3,
         "use_old_tempo_warp": false,
         "old_tempo_warp": 0.1
     },
     "automation": {
-        "velocity": 46,
-        "tempo": 47,
-        "ornament": 48,
-        "intensity": 49,
-        "human_impact": 50
+        "velocity": 46
     },
     "harmony": {
         "chord_score": [

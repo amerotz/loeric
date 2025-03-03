@@ -5,7 +5,6 @@ import time
 import os
 import faulthandler
 
-from collections.abc import Callable
 
 from . import contour as cnt
 from . import tune as tu
@@ -159,32 +158,6 @@ def sync_thread(
             print("Received CONTINUE.")
 
     print("Sync thread terminated.")
-
-
-def check_midi_control(
-    groover: gr.Groover, control2contour: dict[int, str]
-) -> Callable[[], None]:
-    """
-    Returns a function that associates a contour name (values) for every MIDI control number in the dictionary (keys) and updates the groover accordingly.
-    The value of the contour will be the control value mapped in the interval [0, 1].
-
-    :param groover: the groover object.
-    :param control2contour: a dictionary of control numbers associated to contour names.
-
-    :return: a callback function that will check for the given values.
-    """
-
-    def callback(msg):
-        if lu.is_note(msg):
-            pass
-        for event_number in control2contour:
-            if msg.is_cc(event_number):
-                contour_name = control2contour[event_number]
-                value = msg.value / 127
-                groover.set_contour_value(contour_name, value)
-                print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
-
-    return callback
 
 
 def main():
@@ -452,18 +425,14 @@ def main():
             human_impact=args["human_impact"],
             seed=args["seed"],
             config_file=args["config"],
+            intensity_control=args["intensity_control"],
+            human_impact_control=args["human_impact_control"],
             syncing=args["sync"],
         )
 
         # set input callback
         if port is not None:
-            port.callback = check_midi_control(
-                groover,
-                {
-                    args["intensity_control"]: "intensity",
-                    args["human_impact_control"]: "human_impact",
-                },
-            )
+            port.callback = groover.check_midi_control()
 
         if args["sync"]:
             print("\nWaiting for START message...")

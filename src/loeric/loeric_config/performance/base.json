@@ -58,19 +58,15 @@
 		"max_pitch_error": 2,
 		"min_pitch_error": -2,
         "legato_min": 0.8,
-        "legato_max": 1
+        "legato_max": 1,
+		"pitch_deviation_cents": 10
 	},
 	"tempo_control": {
 		"tempo_warp_bpms": 1,
 		"use_old_tempo_warp": false,
 		"old_tempo_warp": 0.1
 	},
-	"automation": {
-		"velocity": 46,
-		"tempo": 47,
-		"ornament": 48,
-		"intensity": 49,
-		"human_impact": 50
+	"contour_2_control": {
 	},
 	"harmony": {
 		"chord_score" :[

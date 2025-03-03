@@ -4,8 +4,10 @@
 	},
 	"values": {
 		"cut_eight_fraction": 0.2,
-		"cut_velocity_fraction": 0.4,
-		"roll_velocity_fraction": 0.4
+		"cut_velocity_fraction": 0.1,
+        "roll_velocity_fraction": 0.1,
+        "roll_eight_fraction_max": 0.1,
+        "roll_eight_fraction_min": 0.1
 	},
 	"approach_from_above": {
 		"E4": "F#4",

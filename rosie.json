@@ -8,7 +8,7 @@
             1
         ],
         "high_loud_weight": 0.3,
-        "phrase_weight": 0.3,
+        "phrase_weight": 0.2,
         "pattern_means": [
             0.998,
             0.994,
@@ -44,7 +44,7 @@
             1,
             1
         ],
-        "phrase_weight": 0.3,
+        "phrase_weight": 0.4,
         "pattern_means": [
             0.129,
             0.128,
@@ -69,28 +69,24 @@
         "period": 1,
         "random": 0.2,
         "savgol": true,
-        "scale": false,
-        "shift": true
+        "scale": true,
+        "shift": true,
+        "human_impact_scale": 0
     },
     "ornament": {
-        "weights": [
-            1,
-            1,
-            1,
-            1,
-            1
-        ],
-        "random": 0.2,
-        "savgol": true,
+		"weights": [1, 1, 1, 1, 1],
+        "random": 0.1,
+        "savgol": false,
         "scale": true,
-        "shift": true
+        "shift": true,
+        "human_impact_scale": 1
     },
     "probabilities": {
         "drop": 0.01,
         "roll": 1,
-        "slide": 1,
+        "slide": 0,
         "cut": 1,
-        "error": 0.01
+        "error": 0.1
     },
     "swing": {
         "min": 1.5,
@@ -100,36 +96,31 @@
     "values": {
         "bend_resolution": 32,
         "cut_eight_fraction": 0.1,
-        "cut_velocity_fraction": 0.4,
-        "roll_velocity_fraction": 0.4,
-        "roll_eight_fraction_max": 0.8,
-        "roll_eight_fraction_min": 0.3,
+        "cut_velocity_fraction": 0.1,
+        "roll_velocity_fraction": 0.1,
+        "roll_eight_fraction_max": 0.1,
+        "roll_eight_fraction_min": 0.1,
         "slide_eight_fraction": 0.2,
         "slide_pitch_threshold": 6,
-        "beat_velocity_increase": 0,
+        "beat_velocity_increase": 16,
         "min_velocity": 1,
         "max_velocity": 127,
         "max_pitch_error": 2,
         "min_pitch_error": -2,
-        "legato_min": 0.4,
-        "legato_max": 1,
-        "pitch_deviation_cents": 10
+        "legato_min": 1,
+        "legato_max": 1
     },
     "tempo_control": {
-        "tempo_warp_bpms": 20,
+        "tempo_warp_bpms": 3,
         "use_old_tempo_warp": false,
         "old_tempo_warp": 0.1
     },
-    "contour_2_control": {
-    },
-    "control_2_contour":{
-        "velocity_intensity": 77,
-        "velocity_human_impact": 78,
-        "tempo_intensity": 79,
-        "tempo_human_impact": 80,
-        "ornament_intensity": 81,
-        "ornament_human_impact":82,
-        "drone": 83
+    "automation": {
+        "velocity": 46,
+        "tempo": 47,
+        "ornament": 48,
+        "intensity": 49,
+        "human_impact": 50
     },
     "harmony": {
         "chord_score": [
@@ -162,10 +153,10 @@
         ]
     },
     "drone": {
-        "active": true,
+        "active": false,
         "threshold": 0.5,
-        "bind": "drone",
-        "velocity_multiplier": 0.6,
+        "bind": "velocity",
+        "velocity_multiplier": 0.9,
         "strings": [
             55,
             62,
@@ -185,40 +176,28 @@
         "free_strings_at_once": 0,
         "transpose": false,
         "allow_root": false,
-        "delay_range": 0.001,
-        "midi_channel": 1
+        "delay_range": 0.001
     },
     "approach_from_above": {
-        "D4": "E4",
-        "D5": "E5",
         "E4": "F#4",
         "E5": "F#5",
-        "F4": "G4",
-        "F#4": "G4",
+        "F#4": "A4",
         "F#5": "A5",
         "G4": "A4",
         "G5": "A5",
         "A4": "B4",
         "A5": "B5",
-        "B3": "C4",
-        "B4": "D5",
-        "C4": "D4",
-        "C5": "D5"
+        "B4": "C#5"
     },
     "approach_from_below": {
-        "D5": "C#5",
         "E4": "D4",
         "E5": "D5",
-        "F4": "E4",
-        "F5": "E5",
         "F#4": "E4",
         "F#5": "E5",
         "G4": "F#4",
         "G5": "F#5",
+        "A4": "G4",
         "A5": "G5",
-        "B3": "A3",
-        "B4": "A4",
-        "C4": "B3",
-        "C5": "B4"
+        "B4": "A4"
     }
 }

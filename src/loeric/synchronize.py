@@ -108,7 +108,7 @@ def sync_intensity(inports, outports):
                     "match",
                     loeric_id,
                 )
-                print("added")
+                #print("added")
 
             diff = now - action_dict[loeric_id][0]
             # choose new action
@@ -139,7 +139,7 @@ def sync_intensity(inports, outports):
                 group = random.sample(players, n)
 
                 action_dict[loeric_id] = (now, action, group)
-                print(loeric_id, action, group)
+                #print(loeric_id, action, group)
                 df_action.loc[len(df_action)] = [now, loeric_id, action, group]
 
             # output port
@@ -322,7 +322,7 @@ def sync_loeric(inports, outports):
                 # only advance human position
                 else:
                     pos_dict[loeric_id] = (now, pos_dict[loeric_id][1] + 1)
-                # print(pos_dict)
+                    print(pos_dict)
                 continue
 
             # check what position we should consider

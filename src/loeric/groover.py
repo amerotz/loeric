@@ -10,6 +10,8 @@ import threading
 import time
 
 from collections import defaultdict
+from collections.abc import Callable
+
 
 from . import tune as tu
 from . import contour as cnt
@@ -43,6 +45,8 @@ class Groover:
         human_impact: float = 0,
         seed: int = 42,
         config_file: str = None,
+        intensity_control: int = 1,
+        human_impact_control: int = 11,
         syncing: bool = False,
     ):
         """
@@ -102,6 +106,14 @@ class Groover:
                 "tempo_warp_bpms": 10,
                 "use_old_tempo_warp": False,
                 "old_tempo_warp": 0.1,
+            },
+            "control_2_contour": {
+                "velocity_intensity": str(intensity_control),
+                "tempo_intensity": str(intensity_control),
+                "ornament_intensity": str(intensity_control),
+                "velocity_human_impact": str(human_impact_control),
+                "tempo_human_impact": str(human_impact_control),
+                "ornament_human_impact": str(human_impact_control),
             },
             "harmony": {
                 "chords_per_bar": self._tune.beat_count,
@@ -290,13 +302,37 @@ class Groover:
         # object holding each contour's value in a given moment
         self._contour_values = {}
 
-        # init the human contour
-        self._contour_values["intensity"] = 0.5
-        self._contour_values["human_impact"] = self._initial_human_impact
+        for contour_name in self._config["control_2_contour"]:
+            self._contour_values[contour_name] = 0.5
 
         # init all contours
         for contour_name in self._contours:
+            # init the human contours
             self._contour_values[contour_name] = 0.5
+            self._contour_values[f"{contour_name}_intensity"] = 0.5
+            self._contour_values[f"{contour_name}_human_impact"] = (
+                self._initial_human_impact
+            )
+
+    def check_midi_control(self) -> Callable[[], None]:
+        """
+        Returns a function that associates a contour name (values) for every MIDI control number in the dictionary (keys) and updates the groover accordingly.
+        The value of the contour will be the control value mapped in the interval [0, 1].
+
+        :return: a callback function that will check for the given values.
+        """
+
+        def callback(msg):
+            if lu.is_note(msg):
+                pass
+            for contour_name, event_number in self._config["control_2_contour"].items():
+                if msg.is_cc(int(event_number)):
+                    value = msg.value / 127
+                    self.set_contour_value(contour_name, value)
+                    # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
+                    print(f"{contour_name}:\t{round(value, 2)}")
+
+        return callback
 
     def advance_contours(self) -> None:
         """
@@ -312,12 +348,14 @@ class Groover:
         for contour_name in ["velocity", "tempo", "ornament"]:
             #
             hi = (
-                self._contour_values["human_impact"]
+                self._contour_values[f"{contour_name}_human_impact"]
                 * self._config[contour_name]["human_impact_scale"]
             )
 
             self._contour_values[contour_name] *= 1 - hi
-            self._contour_values[contour_name] += hi * self._contour_values["intensity"]
+            self._contour_values[contour_name] += (
+                hi * self._contour_values[f"{contour_name}_intensity"]
+            )
 
     def set_contour_value(self, contour_name: str, value: float) -> None:
         """
@@ -328,8 +366,10 @@ class Groover:
 
         :raise groover.UnknownContourError: if the contour name does not correspond to any of the Groover's contours.
         """
+
         if contour_name not in self._contour_values:
             raise UnknownContourError
+
         self._contour_values[contour_name] = value
 
     '''
@@ -443,7 +483,11 @@ class Groover:
 
         if lu.is_note_off(new_message):
             # randomize end time and legato
-            mult = np.random.normal(loc=self._config["values"]["legato_min"] + self._legato_amount * self._contour_values["phrasing"],scale=0.05)
+            mult = np.random.normal(
+                loc=self._config["values"]["legato_min"]
+                + self._legato_amount * self._contour_values["phrasing"],
+                scale=0.05,
+            )
             # self._delay_max = mult
             new_length = new_message.time * mult
             self._delay = new_message.time - new_length
@@ -476,12 +520,12 @@ class Groover:
         notes = []
 
         # add contour information as MIDI CC
-        for contour_name in self._config["automation"]:
+        for contour_name in self._config["contour_2_control"]:
             notes.append(
                 mido.Message(
                     "control_change",
                     channel=self._config["values"]["midi_channel"],
-                    control=self._config["automation"][contour_name],
+                    control=self._config["contour_2_control"][contour_name],
                     value=round(self._contour_values[contour_name] * 127),
                     time=0,
                 )
@@ -515,7 +559,12 @@ class Groover:
             note.time = self._duration_of(max(0, note.time))
             # add pitchbend
             if lu.is_note_on(note):
-                bend = int(0.05 * (random.random() * 2 - 1) * 8192)
+                bend = int(
+                    self._config["values"]["pitch_deviation_cents"]
+                    * 0.01
+                    * (random.random() * 2 - 1)
+                    * 8192
+                )
                 new_notes.append(
                     mido.Message("pitchwheel", channel=note.channel, pitch=bend)
                 )
@@ -584,9 +633,7 @@ class Groover:
         :return the input notes, with an added drone.
         """
         note_duration = self._tune.bar_duration / self._config["drone"]["notes_per_bar"]
-        should_play = (
-            self._tune.get_performance_time() % note_duration <= lu.TRIGGER_DELTA
-        )
+        should_play = self._performance_time % note_duration <= lu.TRIGGER_DELTA
 
         if should_play and is_note_on:
             for drone in self._last_played_drones:
@@ -1070,7 +1117,7 @@ class Groover:
         """
         options = []
 
-        is_beat = self._tune.is_on_a_beat()
+        is_beat = self._is_on_a_beat()
         message_length = self._contour_values["message length"]
 
         if (
@@ -1098,11 +1145,9 @@ class Groover:
         if not is_beat and random.uniform(0, 1) < self._config["probabilities"]["drop"]:
             options.append(DROP)
 
-        if (
-            not is_beat
-            and random.uniform(0, 1) < self._config["probabilities"]["error"]
-        ):
-            options.append(ERROR)
+        if not is_beat:
+            if random.uniform(0, 1) < self._config["probabilities"]["error"]:
+                options.append(ERROR)
 
         if len(options) == 0:
             return None
@@ -1133,6 +1178,19 @@ class Groover:
         with self._note_index_lock:
             for contour_name in self._contours:
                 self._contours[contour_name].reset()
+
+    def _is_on_a_beat(self) -> bool:
+        """
+        Decide if we are on a beat or not, given the current cumulative performance time.
+
+        :return: True if we are on a beat.
+        """
+        beat_position = (
+            self._performance_time % self._tune._bar_duration
+        ) / self._tune._beat_duration
+        diff = abs(beat_position - round(beat_position))
+
+        return diff <= lu.TRIGGER_DELTA
 
     @property
     def current_tempo(self) -> int:
@@ -1179,7 +1237,7 @@ class Groover:
         min_velocity = self._config["values"]["min_velocity"]
         velocity_range = max_velocity - min_velocity
         value = self._contour_values["velocity"] * velocity_range
-        if self._tune.is_on_a_beat():
+        if self._is_on_a_beat():
             value += self._config["values"]["beat_velocity_increase"]
 
         value *= self._contour_values["velocity_pattern"]
