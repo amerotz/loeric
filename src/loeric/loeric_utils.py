@@ -1,4 +1,5 @@
 import mido
+import muspy as mp
 import numpy as np
 import music21 as m21
 
@@ -15,6 +16,14 @@ MAX_TEMPO = 2**24 - 1
 
 
 # key signatures
+number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
+mode_offset = {
+    "major": 0,
+    "minor": 3,
+    "dorian": 10,
+    "mixolydian": 5,
+}
+'''
 number_of_fifths = {
     "Cb": -7,
     "Abm": -7,
@@ -69,6 +78,7 @@ def get_root(key_signature: str) -> int:
 
     return base
 
+'''
 
 # 0 = major
 # 1 = minor

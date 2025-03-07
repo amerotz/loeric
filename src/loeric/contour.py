@@ -34,6 +34,12 @@ class Contour:
         """
         return len(self._contour)
 
+    def __getitem__(self, index):
+        """
+        The length of this contour.
+        """
+        return self._contour[index]
+
     def calculate(self, midi: tune.Tune) -> None:
         """
         Calculate the intensity contour for the given tune.
@@ -548,7 +554,9 @@ class PatternContour(Contour):
             pattern_means[index] = np.mean(mean[add_indexes])
             pattern_stds[index] = np.mean(std[add_indexes])
 
-        pattern = np.random.normal(loc=pattern_means, scale=std_scale * pattern_stds,size=len(pattern_means))
+        pattern = np.random.normal(
+            loc=pattern_means, scale=std_scale * pattern_stds, size=len(pattern_means)
+        )
 
         if normalize:
             bars = summed_timings // midi.bar_duration

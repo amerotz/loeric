@@ -1,4 +1,5 @@
 import mido
+import muspy as mp
 import music21 as m21
 
 from collections.abc import Callable
@@ -22,9 +23,19 @@ class Tune:
         :param repeats: how many times the tune should be repeated.
 
         """
-        mido_source = mido.MidiFile(filename)
-
         self._filename = filename
+        if filename.endswith(".mid"):
+            mido_source = mp.read_midi(filename)
+        elif filename.endswith(".abc"):
+            mido_source = mp.read_abc(filename)
+
+        # key signature
+        self._key_signature = mido_source.key_signatures[0]
+        self._root = self._key_signature.root
+        self._fifths = lu.number_of_fifths[
+            (self._root + lu.mode_offset[self._key_signature.mode]) % 12
+        ]
+        mido_source = mido_source.to_mido(use_note_off_message=True)
 
         # load midi notes and repeat them
         self._midi = []
@@ -40,11 +51,6 @@ class Tune:
         self._highest_pitch = max(
             [msg.note for msg in self._midi if msg.type in ["note_on", "note_off"]]
         )
-
-        # key signature
-        self._key_signature = self._get_key_signature()
-        self._root = lu.get_root(self._key_signature)
-        self._fifths = lu.number_of_fifths[self._key_signature]
 
         # time signature
         self._time_signature = self._get_time_signature()
