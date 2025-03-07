@@ -118,7 +118,7 @@ class Contour:
             array /= max(array)
 
         if shift:
-            array += min(0.5 - array.mean(), 1 - max(array))
+            array /= 2 * array.mean()
 
         array[array < 0] = 0
         array[array > 1] = 1
@@ -241,6 +241,47 @@ class RandomContour(Contour):
         if extremes is None:
             extremes = (0, 1)
         self._contour = np.random.uniform(*extremes, size=size)
+
+
+class PhraseContour(Contour):
+    """A contour representing phrase arcs."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(self, midi: tune.Tune) -> None:
+        """
+        Compute a phrasing contour using a sum of sine functions.
+
+        :param midi: the input tune.
+        """
+        # retrieve pitch and time info
+        note_events = midi.filter(lambda x: "note" in x.type)
+        timings = np.array([msg.time for msg in note_events])
+        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
+
+        # cumulative time
+        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
+        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
+        summed_timings = np.cumsum(timings)
+        summed_timings -= midi.offset
+        summed_timings = summed_timings[note_ons]
+
+        bar_length = midi.bar_duration
+        phrase_levels = 3
+
+        self._contour = self.scale_and_savgol(
+            np.sum(
+                [
+                    np.abs(np.sin((np.pi * summed_timings) / (bar_length * 2**n)))
+                    for n in range(1, phrase_levels + 1)
+                ],
+                axis=0,
+            ),
+            savgol=False,
+            shift=False,
+            scale=True,
+        )
 
 
 class IntensityContour(Contour):
@@ -507,10 +548,7 @@ class PatternContour(Contour):
             pattern_means[index] = np.mean(mean[add_indexes])
             pattern_stds[index] = np.mean(std[add_indexes])
 
-        pattern = (
-            pattern_means
-            + std_scale * np.random.rand(len(pattern_means)) * pattern_stds
-        )
+        pattern = np.random.normal(loc=pattern_means, scale=std_scale * pattern_stds,size=len(pattern_means))
 
         if normalize:
             bars = summed_timings // midi.bar_duration
