@@ -5,14 +5,12 @@
 		"period": 1
 	},
 	"tempo": {
-		"pattern_means": [1.101, 1.07, 1.056, 0.955, 0.944, 0.968, 1.003, 0.973],
+		"pattern_means": [0.138, 0.134, 0.132, 0.119, 0.118, 0.121, 0.125, 0.122],
 		"pattern_stds": [0.08, 0.077, 0.081, 0.076, 0.076, 0.061, 0.067, 0.078],
 		"period": 1
 	},
 	"values": {
-		"beat_velocity_increase": 0,
-		"tempo_warp_bpms": 1,
-		"use_old_tempo_warp": false
+		"beat_velocity_increase": 0
 	},
 	"swing": {
 		"min": 1,

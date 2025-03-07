@@ -10,7 +10,7 @@ from . import loeric_utils as lu
 class Tune:
     """A wrapper for a midi file."""
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, repeats: int):
         """
         Initialize the class. A number of properties is computed:
 
@@ -19,12 +19,19 @@ class Tune:
         * the time signature (only the first encountered is considered, time signature changes are not supported);
 
         :param filename: the path to the midi file.
+        :param repeats: how many times the tune should be repeated.
 
         """
         mido_source = mido.MidiFile(filename)
 
         self._filename = filename
-        self._midi = list(mido_source)
+
+        # load midi notes and repeat them
+        self._midi = []
+        for i in range(repeats):
+            # should find another way to handle repetitions
+            self._midi.append(mido.Message("sysex", data=[i]))
+            self._midi.extend(list(mido_source))
 
         # some stats about midi
         self._lowest_pitch = min(
@@ -58,6 +65,47 @@ class Tune:
 
         # to keep track of the performance
         self._performance_time = -self._offset
+
+        # intertwine songpos messages every n notes
+        new_midi = []
+        # 16383 is the max value for songpos
+        # every_n = max(6, round(len(self._midi) / 16383))
+        every_duration = self.beat_duration
+        print("Sync every", quarters_per_bar / self._time_signature.beatCount)
+        note_index = 0
+        songpos = 0
+
+        # go through tune
+        self.duration_map = {}
+        cumulative_duration = 0
+        for msg in self._midi:
+            if not lu.is_note(msg):
+                continue
+            # add songpos
+            if abs(
+                ((cumulative_duration - every_duration * 0.5) % every_duration)
+                - every_duration * 0.5
+            ) <= self._quarter_duration * 0.0625 and lu.is_note_on(msg):
+                new_midi.append(mido.Message("songpos", pos=songpos))
+                self.duration_map[songpos] = cumulative_duration - self._offset
+                songpos += 1
+            # advance the notes
+            if lu.is_note(msg):
+                note_index += 1
+                cumulative_duration += msg.time
+                new_midi.append(msg)
+
+        self.index_map = {}
+        contour_index = 0
+        for i, msg in enumerate(new_midi):
+            if msg.type == "songpos":
+                # map songpos to next note and contour index
+                self.index_map[msg.pos] = (i, contour_index)
+            elif lu.is_note_on(msg):
+                contour_index += 1
+
+        self._midi = new_midi
+        self._max_songpos = max(self.index_map.keys())
 
         print(f"Playing:\t{filename}")
         print(f"Meter:\t{self._time_signature}")

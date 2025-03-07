@@ -6,6 +6,8 @@ import random
 import json
 import numpy as np
 import music21 as m21
+import threading
+import time
 
 from collections import defaultdict
 
@@ -39,9 +41,9 @@ class Groover:
         diatonic_errors: bool = True,
         random_weight: float = 0,
         human_impact: float = 0,
-        high_loud_weight: float = 0.25,
         seed: int = 42,
         config_file: str = None,
+        syncing: bool = False,
     ):
         """
         Initialize the groover class by setting user-defined parameters and creating the contours.
@@ -56,6 +58,7 @@ class Groover:
         :param human_impact: the initial weight of the external control signal.
         :param seed: the random seed of the performance.
         :param config_file: the path to the configuration file (must be a JSON file).
+        :param syncing: whether or not synchronization with multiple LOERIC istances is active.
         """
 
         # tune
@@ -63,15 +66,20 @@ class Groover:
 
         # offset for messages after ornaments
         self._offset = 0
+        # index to yield note events
+        # will be increased before yielding message
+        self._note_index = -1
+        self._note_index_lock = threading.Lock()
+        self._performance_time = -tune.offset
 
         # delay to randomize message length
         self._delay = 0
+        self._delay_max = 0
 
         # only define command line values
         # rest is part of loeric_config/base.json
         self._config = {
             "velocity": {
-                "high_loud_weight": high_loud_weight,
                 "random": random_weight,
                 "human_impact_scale": human_impact,
             },
@@ -90,6 +98,11 @@ class Groover:
                 "diatonic_errors": diatonic_errors,
                 "seed": seed,
             },
+            "tempo_control": {
+                "tempo_warp_bpms": 10,
+                "use_old_tempo_warp": False,
+                "old_tempo_warp": 0.1,
+            },
             "harmony": {
                 "chords_per_bar": self._tune.beat_count,
             },
@@ -101,7 +114,7 @@ class Groover:
 
         # merge base configuration with command line values
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        with open(f"{dir_path}/loeric_config/base.json", "r") as f:
+        with open(f"{dir_path}/loeric_config/performance/base.json", "r") as f:
             base_config = json.load(f)
             self._config = jsonmerge.merge(base_config, self._config)
 
@@ -117,6 +130,7 @@ class Groover:
 
         self._initial_human_impact = human_impact
         self._did_swing = False
+        self._syncing = syncing
 
         # generate all parameter settings and contours
         self._instantiate()
@@ -147,6 +161,11 @@ class Groover:
         self._drone_threshold = float(self._config["drone"]["threshold"])
         self._drone_bound_contour = self._config["drone"]["bind"]
         self._last_played_drones = []
+
+        # tempo sync
+        self._external_tempo = None
+        self._tempo_lock = threading.Lock()
+        self._last_clock_time = None
 
         # create contours
         self._contours = {}
@@ -200,6 +219,7 @@ class Groover:
             self._tune,
             mean=np.array(self._config["tempo"]["pattern_means"]),
             std=np.array(self._config["tempo"]["pattern_stds"]),
+            std_scale=self._config["tempo"]["std_scale"],
             period=self._config["tempo"]["period"],
             normalize=True,
         )
@@ -248,9 +268,10 @@ class Groover:
         Retrieve the next value of each contour and store it for future use.
         """
 
-        # update all contours
-        for contour_name in self._contours:
-            self._contour_values[contour_name] = self._contours[contour_name].next()
+        with self._note_index_lock:
+            # update all contours
+            for contour_name in self._contours:
+                self._contour_values[contour_name] = self._contours[contour_name].next()
 
         # add the human part
         for contour_name in ["velocity", "tempo", "ornament"]:
@@ -276,6 +297,86 @@ class Groover:
             raise UnknownContourError
         self._contour_values[contour_name] = value
 
+    '''
+    def has_next(self):
+        """
+        Check if there is any event that will be returned by a call to `nextEvent`.
+        """
+        with self._note_index_lock:
+            return self._note_index + 1 < len(self._tune)
+    '''
+
+    def next_event(self):
+        """
+        Return the current event in the tune. Returns none if no event is available.
+        """
+
+        with self._note_index_lock:
+            self._note_index += 1
+            if self._note_index >= len(self._tune):
+                return None
+            note = self._tune[self._note_index]
+            # update performance time
+            self._performance_time += note.time
+            return note
+
+    def jump_to_pos(self, pos: int) -> None:
+        """
+        Jump to the specified song position.
+
+        :param pos: the position to jump to.
+        """
+
+        with self._note_index_lock:
+            if pos > self._tune._max_songpos:
+                print(
+                    f"Cannot jump to position {pos} with max pos {self._tune._max_songpos}"
+                )
+                return
+            self._note_index, contour_index = self._tune.index_map[pos]
+            # update performance time
+            self._performance_time = self._tune.duration_map[pos]
+            # update all contours
+            for contour_name in self._contours:
+                self._contours[contour_name].jump(contour_index - 1)
+
+    def reset_clock(self) -> None:
+        """
+        Reset the MIDI clock to initial tempo.
+        """
+
+        self._last_clock_time = None
+        with self._tempo_lock:
+            self._external_tempo = None
+
+    def set_tempo(self, tempo: int) -> None:
+        """
+        Set the new performance tempo.
+
+        :param tempo: the requested tempo in bpms.
+        """
+        with self._tempo_lock:
+            self._external_tempo = mido.bpm2tempo(tempo)
+
+    def set_clock(self) -> None:
+        """
+        Register a MIDI clock message and calculate the requested tempo.
+        """
+        now = time.time()
+        if self._last_clock_time is not None:
+            # update tempo
+            # 24 clocks per quarter note
+            diff = now - self._last_clock_time
+            new_tempo = mido.bpm2tempo(60 / (24 * diff))
+
+            # if too long, reset
+            if new_tempo > lu.MAX_TEMPO:
+                new_tempo = None
+
+            with self._tempo_lock:
+                self._external_tempo = new_tempo
+        self._last_clock_time = now
+
     def perform(self, message: mido.Message) -> list[mido.Message]:
         """
         'Perform' a single note event by affecting its timing, pitch, velocity and adding ornaments.
@@ -287,6 +388,10 @@ class Groover:
 
         # work on a deepcopy to avoid side effects
         new_message = copy.deepcopy(message)
+
+        # warp note duration according to contour
+        # print(self._contour_values["tempo_pattern"])
+        new_message.time *= self._contour_values["tempo_pattern"]
 
         # change note duration
         new_message.time -= self._offset
@@ -303,9 +408,11 @@ class Groover:
 
         if lu.is_note_off(new_message):
             # randomize end time
-            mult = random.uniform(0.8, 1)
-            self._delay = new_message.time * (1 - mult)
-            new_message.time *= mult
+            mult = random.uniform(max(1 - self._delay_max, 0.95), 1)
+            self._delay_max = mult
+            new_length = new_message.time * mult
+            self._delay = new_message.time - new_length
+            new_message.time = new_length
 
             # change note offs of errors
             key = new_message.note
@@ -326,7 +433,7 @@ class Groover:
             new_message.velocity = self._current_velocity
 
             # add delayed start
-            new_message.time = new_message.time + self._delay
+            new_message.time += self._delay
 
             # apply swing
             self._offset += self._apply_swing()
@@ -345,12 +452,13 @@ class Groover:
                 )
             )
 
-        # add explicit tempo information
-        notes.append(mido.MetaMessage("set_tempo", tempo=self._current_tempo, time=0))
+        if not self._syncing:
+            # add explicit tempo information
+            notes.append(
+                mido.MetaMessage("set_tempo", tempo=self.current_tempo, time=0)
+            )
 
-        # add actual message
-        notes.append(new_message)
-
+        notes_to_add = [new_message]
         # modify the note
         if is_note_on:
             # create ornaments
@@ -360,12 +468,28 @@ class Groover:
 
                 # generate it
                 if ornament_type is not None:
-                    notes = self.generate_ornament(new_message, ornament_type)
+                    notes_to_add = self.generate_ornament(new_message, ornament_type)
+
+        # add actual message
+        notes.extend(notes_to_add)
 
         # make sure time is not negative
         # and scale things according to tempo
+        new_notes = []
         for note in notes:
             note.time = self._duration_of(max(0, note.time))
+            # add pitchbend
+            if lu.is_note_on(note):
+                bend = int(0.05 * (random.random() * 2 - 1) * 8192)
+                new_notes.append(
+                    mido.Message("pitchwheel", channel=note.channel, pitch=bend)
+                )
+            new_notes.append(note)
+            if lu.is_note_off(note):
+                new_notes.append(
+                    mido.Message("pitchwheel", channel=note.channel, pitch=0)
+                )
+        notes = new_notes
 
         # add drone
         if self._config["drone"]["active"]:
@@ -384,7 +508,7 @@ class Groover:
 
         duration = self._contour_values["message length"]
 
-        x = 0.25 * self._tune.get_performance_time() / self._tune.quarter_duration
+        x = 0.25 * self._performance_time / self._tune.quarter_duration
         # duration normalized so that quarter note = 0.25
         d = (duration / self._tune.quarter_duration) * 0.25
         p = self._current_swing
@@ -549,7 +673,8 @@ class Groover:
         low, high = self._tune.ambitus
 
         # major or minor
-        chord_pitches = lu.get_chord_pitches(self._contour_values["harmony"])
+        # chord_pitches = lu.get_chord_pitches(self._contour_values["harmony"])
+        chord_pitches = [0]
 
         # select pitches from tune range
         pitches = np.arange(
@@ -562,8 +687,8 @@ class Groover:
         last_note = self._tune.filter(lu.is_note_on)[-1].note
 
         # filter pitches that are too far away
-        # reachable within a third
-        pitches = pitches[abs(pitches - last_note) <= 4]
+        # reachable within a fifth
+        pitches = pitches[abs(pitches - last_note) <= 7]
 
         # select suitable pitches (e.g. any root, third, fifth within range)
         pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
@@ -704,13 +829,18 @@ class Groover:
         message_length = self._contour_values["message length"]
         if ornament_type == CUT:
             # generate a cut
-            cut = copy.deepcopy(message)
-            cut.note = self.approach_from_above(message.note, self._tune)
-            cut.velocity = int(
-                self._current_velocity * self._config["values"]["cut_velocity_fraction"]
+            cut_note = self.approach_from_above(message.note, self._tune)
+            cut = mido.Message(
+                "note_on",
+                note=cut_note,
+                velocity=int(
+                    self._current_velocity
+                    * self._config["values"]["cut_velocity_fraction"]
+                ),
+                time=message.time,
+                channel=message.channel,
             )
             duration = self._cut_duration
-            cut.time = 0
 
             # note on
             ornaments.append(cut)
@@ -725,6 +855,7 @@ class Groover:
                 )
             )
 
+            message.time = 0
             ornaments.append(message)
             # update offset for next message to make it shorter
             self._offset += duration
@@ -739,7 +870,7 @@ class Groover:
 
             # first note
             original_0 = copy.deepcopy(message)
-            original_0.time = 0
+            # original_0.time = 0
             original_0.velocity = self._current_velocity
             or_0_off = mido.Message(
                 "note_off",
@@ -818,7 +949,7 @@ class Groover:
         elif ornament_type == SLIDE:
             # append original note
             original = copy.deepcopy(message)
-            original.time = 0
+            # original.time = 0
             original.velocity = self._current_velocity
             ornaments.append(original)
 
@@ -833,9 +964,10 @@ class Groover:
             duration = slide_time / resolution
 
             # append messages
+            mult = random.uniform(0.25, 0.5)
             for i in range(resolution, -1, -1):
                 p = i / resolution
-                p **= random.uniform(0.25, 0.5)
+                p **= mult
                 p *= bend
                 p = int(p)
                 ornaments.append(
@@ -956,48 +1088,52 @@ class Groover:
 
         :return: the new duration of the input time value in seconds.
         """
-        tempo_ratio = self._current_tempo / self._tune.tempo
+        tempo_ratio = self.current_tempo / self._tune.tempo
         return tempo_ratio * time
 
-    def reset(self) -> None:
+    def reset_contours(self) -> None:
         """
         Reset all contours so that the next call to `next()` will yield the first value of each contour.
         """
-        for contour_name in self._contours:
-            self._contours[contour_name].reset()
+        with self._note_index_lock:
+            for contour_name in self._contours:
+                self._contours[contour_name].reset()
 
     @property
-    def _current_tempo(self) -> int:
+    def current_tempo(self) -> int:
         """
         :return: the current tempo given the value of the tempo contour. If the option `use_old_tempo_warp` is set to `True` the contour affects tempo in terms of percentage of the original one (e.g. 20% faster); otherwise in terms of a fixed amount of bpms (e.g. 10 bpms faster).
+        If an external tempo has been set, the calculated tempo will be interpolated with it according to the user specified percentage.
         """
+
+        calculated_tempo = None
+        base_tempo = self._user_tempo
+        with self._tempo_lock:
+            if self._external_tempo is not None:
+                base_tempo = self._external_tempo
+
         # (old) version 1
         # warp as a percentage of current tempo
-        if self._config["values"]["use_old_tempo_warp"]:
-            tempo_warp = self._config["values"]["old_tempo_warp"]
+        if self._config["tempo_control"]["use_old_tempo_warp"]:
+            tempo_warp = self._config["tempo_control"]["old_tempo_warp"]
             value = int(
-                2
-                * tempo_warp
-                * self._user_tempo
-                * (self._contour_values["tempo"] - 0.5)
+                2 * tempo_warp * base_tempo * (self._contour_values["tempo"] - 0.5)
             )
-            value = int(self._user_tempo + value)
+            calculated_tempo = int(self._user_tempo + value)
 
         # version 2
         # warp as a fixed maximum amount of bpm
         else:
-            bpm = mido.tempo2bpm(self._user_tempo)
+            bpm = max(mido.tempo2bpm(base_tempo), 1)
             value = (
                 2
-                * self._config["values"]["tempo_warp_bpms"]
+                * self._config["tempo_control"]["tempo_warp_bpms"]
                 * (self._contour_values["tempo"] - 0.5)
             )
 
-            value = mido.bpm2tempo(int(bpm + value))
+            calculated_tempo = mido.bpm2tempo(int(bpm + value))
 
-        value *= self._contour_values["tempo_pattern"]
-        value = int(value)
-        return value
+        return calculated_tempo
 
     @property
     def _current_velocity(self) -> int:

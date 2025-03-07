@@ -9,14 +9,18 @@ import numpy as np
 
 class PlayerThread:
     def __init__(self, port_num, control_num, invert):
-        self.outport = mido.get_output_names()[port_num]
+        self.outport = port_num
         self.control_num = control_num
         self.invert = invert
 
     def send_control(self, audio_monitor, listener):
-        # get midi file
-        with mido.open_output(self.outport) as port:
-            # forever
+        if self.outport is None:
+            human_id = int(time.time())
+            port = mido.open_output(f"HUMAN out #{human_id}#", virtual=True)
+        else:
+            port = mido.open_output(mido.get_output_names()[port_numself.outport])
+
+        try:
             old_value = -1
             while True:
                 # get the audio level as percentage
@@ -45,6 +49,9 @@ class PlayerThread:
                     print(f"{round(perc,2)}\t{msg.value}")
 
                     time.sleep(1 / 10)
+        except:
+            port.panic()
+            port.close()
 
 
 class AudioMonitor:
@@ -107,13 +114,14 @@ class AudioMonitor:
 
 class ListenerThread:
     FORMAT = pyaudio.paInt16
-    CHANNELS = 2
     stop = False
 
-    def __init__(self, sample_rate, chunk_per_sec):
+    def __init__(self, sample_rate, chunk_per_sec, device_index, num_channels):
         self.RATE = sample_rate
         self.CHUNK = sample_rate // chunk_per_sec
         self.chunk_per_sec = chunk_per_sec
+        self.device_index = device_index
+        self.CHANNELS = num_channels
 
     def open_stream(self):
         # open pyaudio instance
@@ -126,6 +134,7 @@ class ListenerThread:
             rate=self.RATE,
             input=True,
             frames_per_buffer=self.CHUNK,
+            input_device_index=self.device_index,
         )
 
     def listen(self, audio_monitor, perc):
@@ -159,6 +168,19 @@ class ListenerThread:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "-l", "--list", help="list input audio devices and exit.", action="store_true"
+    )
+    parser.add_argument(
+        "-d", "--device_index", help="the input audio device.", default=0, type=int
+    )
+    parser.add_argument(
+        "-n",
+        "--num_channels",
+        help="the number of audio channels.",
+        default=2,
+        type=int,
+    )
+    parser.add_argument(
         "-o", "--output", help="the output MIDI port.", default=None, type=int
     )
     parser.add_argument(
@@ -187,8 +209,27 @@ def main():
     )
     args = parser.parse_args()
 
+    if args.list:
+        p = pyaudio.PyAudio()
+        info = p.get_host_api_info_by_index(0)
+        numdevices = info.get("deviceCount")
+
+        for i in range(0, numdevices):
+            if (
+                p.get_device_info_by_host_api_device_index(0, i).get("maxInputChannels")
+            ) > 0:
+                print(
+                    "Input Device id ",
+                    i,
+                    " - ",
+                    p.get_device_info_by_host_api_device_index(0, i).get("name"),
+                )
+        return
+
     # create listening thread
-    listener = ListenerThread(48000, args.chunks_per_second)
+    listener = ListenerThread(
+        48000, args.chunks_per_second, args.device_index, args.num_channels
+    )
     listener.open_stream()
 
     # create audio monitor

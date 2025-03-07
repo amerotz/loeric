@@ -48,6 +48,17 @@ class Player:
                 )
             )
 
+    def init_playback(self) -> None:
+        """
+        Initialize variables useful to keep track of playback time and avoid drifting.
+        """
+
+        # obtained from
+        # mido/mido/midifiles/midifiles.py:423-424
+        # to minimize drifting
+        self._start_time = time.time()
+        self._input_time = 0.0
+
     def play(self, messages: list[mido.Message]) -> None:
         """
         Play the messages in input and append them to the generated performance.
@@ -55,16 +66,34 @@ class Player:
 
         :param messages: the midi messages to play.
         """
+
         for msg in messages:
+
+            # obtained from
+            # mido/mido/midifiles/midifiles.py:427-430
+            self._input_time += msg.time
+            playback_time = time.time() - self._start_time
+            duration_to_next_event = self._input_time - playback_time
+
             if self._midi_out is not None:
                 if not msg.is_meta:
-                    time.sleep(msg.time)
+                    # obtained from
+                    # mido/mido/midifiles/midifiles.py:432-433
+                    if duration_to_next_event > 0.0:
+                        time.sleep(duration_to_next_event)
                     self._midi_out.send(msg)
                     if self._verbose:
                         print(msg)
 
             if self._saving:
                 self._midi_track.append(msg)
+
+    def reset(self) -> None:
+        """
+        Reset the output port.
+        """
+        if self._midi_out is not None:
+            self._midi_out.reset()
 
     def save(self, filename: str) -> None:
         """

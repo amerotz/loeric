@@ -42,6 +42,21 @@ class Contour:
         """
         pass
 
+    def jump(self, index: int) -> None:
+        """
+        Jump to the specified index in the contour.
+
+        :param index: the index to jump to.
+        :raise contour.InvalidIndexError: if the index exceeds the length of the contour.
+        """
+
+        if index >= len(self._contour):
+            raise InvalidIndexError(
+                f"Cannot jump to index {index} with contour length {len(self._contour)}"
+            )
+        else:
+            self._index = index
+
     def next(self) -> float:
         """
         Return the next element (i.e. intensity value) of the intensity contour.
@@ -59,7 +74,9 @@ class Contour:
         self._index += 1
 
         if self._index < 0 or self._index >= len(self._contour):
-            raise InvalidIndexError("Cannot index contour.")
+            raise InvalidIndexError(
+                f"Cannot index contour with length {len(self._contour)} with index {self._index}."
+            )
         return self._contour[self._index]
 
     def reset(self) -> None:
@@ -447,6 +464,7 @@ class PatternContour(Contour):
         midi: tune.Tune,
         mean: np.array = np.array([1]),
         std: np.array = np.array([0]),
+        std_scale: float = 1,
         normalize: bool = False,
         period: float = 0.5,
     ) -> None:
@@ -458,6 +476,8 @@ class PatternContour(Contour):
         :param std: the std of the pattern to repeat, for every item.
         :param period: the length of the pattern, in bars.
         """
+        assert len(mean) == len(std)
+
         # retrieve pitch and time info
         note_events = midi.filter(lambda x: "note" in x.type)
         timings = np.array([msg.time for msg in note_events])
@@ -472,15 +492,25 @@ class PatternContour(Contour):
 
         bar_position = summed_timings / midi.bar_duration
 
-        pattern_means = np.interp(
-            bar_position, np.arange(len(mean)) / len(mean), mean, period=period
-        )
+        pattern_indexes = np.round(
+            len(mean) * (summed_timings % midi.bar_duration) / midi.bar_duration
+        ).astype(int) % len(mean)
+        diff = np.diff(pattern_indexes)
+        index_diff = np.argwhere(diff > 1)
 
-        pattern_stds = np.interp(
-            bar_position, np.arange(len(std)) / len(std), std, period=period
-        )
+        pattern_means = mean[pattern_indexes].astype(float)
+        pattern_stds = std[pattern_indexes].astype(float)
 
-        pattern = np.random.rand(len(pattern_means)) * pattern_stds + pattern_means
+        for index in index_diff:
+            source_index = pattern_indexes[index]
+            add_indexes = np.arange(source_index, source_index + diff[index])
+            pattern_means[index] = np.mean(mean[add_indexes])
+            pattern_stds[index] = np.mean(std[add_indexes])
+
+        pattern = (
+            pattern_means
+            + std_scale * np.random.rand(len(pattern_means)) * pattern_stds
+        )
 
         if normalize:
             bars = summed_timings // midi.bar_duration
@@ -491,10 +521,8 @@ class PatternContour(Contour):
                 min_i = min(indexes)
                 max_i = min(max(indexes) + 1, len(summed_timings) - 1)
                 bar_sum = summed_timings[max_i] - summed_timings[min_i]
-                if abs(bar_sum - midi.bar_duration) < lu.TRIGGER_DELTA:
-                    pattern[indexes] /= pattern[indexes].sum()
-                    pattern[indexes] -= pattern[indexes].mean()
-                    pattern[indexes] += 1
+                pattern[indexes] /= pattern[indexes].sum()
+                pattern[indexes] *= len(indexes)
 
         self._contour = pattern
 

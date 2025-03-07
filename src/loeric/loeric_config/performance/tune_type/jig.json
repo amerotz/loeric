@@ -9,7 +9,7 @@
 		"shift": true
 	},
 	"tempo": {
-		"pattern_means": [1.024, 1.004, 1.012, 1.001, 1.006, 0.991],
+		"pattern_means": [0.171, 0.167, 0.169, 0.167, 0.168, 0.165],
 		"pattern_stds": [0.06, 0.061, 0.06, 0.058, 0.062, 0.061],
 		"period": 1
 	},
@@ -19,9 +19,7 @@
 		"bind": "tempo"
 	},
 	"values": {
-		"tempo_warp_bpms": 1,
-		"beat_velocity_increase": 0,
-		"use_old_tempo_warp": false
+		"beat_velocity_increase": 0
 	},
 	"harmony": {
         "chords_per_bar": 2

@@ -11,6 +11,8 @@ below_approach_scale = [-1, -1, -2, -1, -2, -1, -1, -2, -1, -2, -1, -2]
 # most notes played in a minute on a piano
 TRIGGER_DELTA = 0.05
 
+MAX_TEMPO = 2**24 - 1
+
 
 # key signatures
 number_of_fifths = {
@@ -113,6 +115,15 @@ def get_chord_pitches(harmony: int) -> np.array:
         fifth = 8
 
     return np.array([0, third, fifth])
+
+
+'''
+def is_contour_valid(msg: mido.Message) -> bool:
+    """
+    Check if a midi event is to be considered to calculate a contour.
+    """
+    return is_note_on(msg)
+'''
 
 
 def is_note_on(msg: mido.Message) -> bool:
