@@ -489,6 +489,7 @@ class Groover:
                 scale=0.05,
             )
             # self._delay_max = mult
+
             new_length = new_message.time * mult
             self._delay = new_message.time - new_length
             new_message.time = new_length
@@ -565,6 +566,7 @@ class Groover:
                     * (random.random() * 2 - 1)
                     * 8192
                 )
+
                 new_notes.append(
                     mido.Message("pitchwheel", channel=note.channel, pitch=bend)
                 )

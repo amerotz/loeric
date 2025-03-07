@@ -15,6 +15,7 @@
 	"tempo": {
 		"weights": [1, 1, 1, 1, 1],
 		"phrase_weight": 0.3,
+
 		"pattern_means": [1.0],
 		"pattern_stds": [0],
 		"std_scale": 1,
@@ -67,6 +68,7 @@
 		"old_tempo_warp": 0.1
 	},
 	"contour_2_control": {
+
 	},
 	"harmony": {
 		"chord_score" :[
