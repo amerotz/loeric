@@ -1197,8 +1197,10 @@ class Groover:
     @property
     def current_tempo(self) -> int:
         """
-        :return: the current tempo given the value of the tempo contour. If the option `use_old_tempo_warp` is set to `True` the contour affects tempo in terms of percentage of the original one (e.g. 20% faster); otherwise in terms of a fixed amount of bpms (e.g. 10 bpms faster).
+        The current tempo given the value of the tempo contour. If the option `use_old_tempo_warp` is set to `True` the contour affects tempo in terms of percentage of the original one (e.g. 20% faster); otherwise in terms of a fixed amount of bpms (e.g. 10 bpms faster).
         If an external tempo has been set, the calculated tempo will be interpolated with it according to the user specified percentage.
+
+        :return: the current tempo
         """
 
         calculated_tempo = None

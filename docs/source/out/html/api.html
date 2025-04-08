@@ -1,0 +1,1436 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API &mdash; loeric 0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2709fde1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="How does LOERIC work?" href="functioning.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            loeric
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functioning.html">How does LOERIC work?</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.__main__.sync_thread"><code class="docutils literal notranslate"><span class="pre">sync_thread()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.loeric_utils.get_chord_pitches"><code class="docutils literal notranslate"><span class="pre">get_chord_pitches()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.loeric_utils.get_ports"><code class="docutils literal notranslate"><span class="pre">get_ports()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.loeric_utils.get_root"><code class="docutils literal notranslate"><span class="pre">get_root()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.loeric_utils.is_note"><code class="docutils literal notranslate"><span class="pre">is_note()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.loeric_utils.is_note_off"><code class="docutils literal notranslate"><span class="pre">is_note_off()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.loeric_utils.is_note_on"><code class="docutils literal notranslate"><span class="pre">is_note_on()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.groover.Groover"><code class="docutils literal notranslate"><span class="pre">Groover</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.__init__"><code class="docutils literal notranslate"><span class="pre">Groover.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.__weakref__"><code class="docutils literal notranslate"><span class="pre">Groover.__weakref__</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._add_drone"><code class="docutils literal notranslate"><span class="pre">Groover._add_drone()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._apply_swing"><code class="docutils literal notranslate"><span class="pre">Groover._apply_swing()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._current_swing"><code class="docutils literal notranslate"><span class="pre">Groover._current_swing</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._current_velocity"><code class="docutils literal notranslate"><span class="pre">Groover._current_velocity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._cut_duration"><code class="docutils literal notranslate"><span class="pre">Groover._cut_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._duration_of"><code class="docutils literal notranslate"><span class="pre">Groover._duration_of()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._eight_duration"><code class="docutils literal notranslate"><span class="pre">Groover._eight_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._instantiate"><code class="docutils literal notranslate"><span class="pre">Groover._instantiate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._is_on_a_beat"><code class="docutils literal notranslate"><span class="pre">Groover._is_on_a_beat()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._roll_duration"><code class="docutils literal notranslate"><span class="pre">Groover._roll_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover._slide_duration"><code class="docutils literal notranslate"><span class="pre">Groover._slide_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.advance_contours"><code class="docutils literal notranslate"><span class="pre">Groover.advance_contours()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.approach_from_above"><code class="docutils literal notranslate"><span class="pre">Groover.approach_from_above()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.approach_from_below"><code class="docutils literal notranslate"><span class="pre">Groover.approach_from_below()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.can_generate_ornament"><code class="docutils literal notranslate"><span class="pre">Groover.can_generate_ornament()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.check_midi_control"><code class="docutils literal notranslate"><span class="pre">Groover.check_midi_control()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.choose_ornament"><code class="docutils literal notranslate"><span class="pre">Groover.choose_ornament()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.current_tempo"><code class="docutils literal notranslate"><span class="pre">Groover.current_tempo</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.generate_ornament"><code class="docutils literal notranslate"><span class="pre">Groover.generate_ornament()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.get_end_notes"><code class="docutils literal notranslate"><span class="pre">Groover.get_end_notes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.jump_to_pos"><code class="docutils literal notranslate"><span class="pre">Groover.jump_to_pos()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.next_event"><code class="docutils literal notranslate"><span class="pre">Groover.next_event()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.perform"><code class="docutils literal notranslate"><span class="pre">Groover.perform()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.reset_clock"><code class="docutils literal notranslate"><span class="pre">Groover.reset_clock()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.reset_contours"><code class="docutils literal notranslate"><span class="pre">Groover.reset_contours()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.set_clock"><code class="docutils literal notranslate"><span class="pre">Groover.set_clock()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.set_contour_value"><code class="docutils literal notranslate"><span class="pre">Groover.set_contour_value()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.set_tempo"><code class="docutils literal notranslate"><span class="pre">Groover.set_tempo()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.Groover.tempo"><code class="docutils literal notranslate"><span class="pre">Groover.tempo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.groover.UnknownContourError"><code class="docutils literal notranslate"><span class="pre">UnknownContourError</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.groover.UnknownContourError.__weakref__"><code class="docutils literal notranslate"><span class="pre">UnknownContourError.__weakref__</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.Contour"><code class="docutils literal notranslate"><span class="pre">Contour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.Contour.__init__"><code class="docutils literal notranslate"><span class="pre">Contour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.Contour.__len__"><code class="docutils literal notranslate"><span class="pre">Contour.__len__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.Contour.__weakref__"><code class="docutils literal notranslate"><span class="pre">Contour.__weakref__</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.Contour.calculate"><code class="docutils literal notranslate"><span class="pre">Contour.calculate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.Contour.jump"><code class="docutils literal notranslate"><span class="pre">Contour.jump()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.Contour.next"><code class="docutils literal notranslate"><span class="pre">Contour.next()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.Contour.reset"><code class="docutils literal notranslate"><span class="pre">Contour.reset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.Contour.scale_and_savgol"><code class="docutils literal notranslate"><span class="pre">Contour.scale_and_savgol()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.HarmonicContour"><code class="docutils literal notranslate"><span class="pre">HarmonicContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.HarmonicContour.__init__"><code class="docutils literal notranslate"><span class="pre">HarmonicContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.HarmonicContour.calculate"><code class="docutils literal notranslate"><span class="pre">HarmonicContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.IntensityContour"><code class="docutils literal notranslate"><span class="pre">IntensityContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.IntensityContour.__init__"><code class="docutils literal notranslate"><span class="pre">IntensityContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.IntensityContour.calculate"><code class="docutils literal notranslate"><span class="pre">IntensityContour.calculate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.IntensityContour.ocanainn_scores"><code class="docutils literal notranslate"><span class="pre">IntensityContour.ocanainn_scores()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.InvalidIndexError"><code class="docutils literal notranslate"><span class="pre">InvalidIndexError</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.InvalidIndexError.__weakref__"><code class="docutils literal notranslate"><span class="pre">InvalidIndexError.__weakref__</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.MessageLengthContour"><code class="docutils literal notranslate"><span class="pre">MessageLengthContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.MessageLengthContour.__init__"><code class="docutils literal notranslate"><span class="pre">MessageLengthContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.MessageLengthContour.calculate"><code class="docutils literal notranslate"><span class="pre">MessageLengthContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.PatternContour"><code class="docutils literal notranslate"><span class="pre">PatternContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.PatternContour.__init__"><code class="docutils literal notranslate"><span class="pre">PatternContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.PatternContour.calculate"><code class="docutils literal notranslate"><span class="pre">PatternContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.PhraseContour"><code class="docutils literal notranslate"><span class="pre">PhraseContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.PhraseContour.__init__"><code class="docutils literal notranslate"><span class="pre">PhraseContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.PhraseContour.calculate"><code class="docutils literal notranslate"><span class="pre">PhraseContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.PitchContour"><code class="docutils literal notranslate"><span class="pre">PitchContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.PitchContour.__init__"><code class="docutils literal notranslate"><span class="pre">PitchContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.PitchContour.calculate"><code class="docutils literal notranslate"><span class="pre">PitchContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.PitchDifferenceContour"><code class="docutils literal notranslate"><span class="pre">PitchDifferenceContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.PitchDifferenceContour.__init__"><code class="docutils literal notranslate"><span class="pre">PitchDifferenceContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.PitchDifferenceContour.calculate"><code class="docutils literal notranslate"><span class="pre">PitchDifferenceContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.RandomContour"><code class="docutils literal notranslate"><span class="pre">RandomContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.RandomContour.__init__"><code class="docutils literal notranslate"><span class="pre">RandomContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.RandomContour.calculate"><code class="docutils literal notranslate"><span class="pre">RandomContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.UncomputedContourError"><code class="docutils literal notranslate"><span class="pre">UncomputedContourError</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.contour.UncomputedContourError.__weakref__"><code class="docutils literal notranslate"><span class="pre">UncomputedContourError.__weakref__</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.multiply"><code class="docutils literal notranslate"><span class="pre">multiply()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.contour.weighted_sum"><code class="docutils literal notranslate"><span class="pre">weighted_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.tune.Tune"><code class="docutils literal notranslate"><span class="pre">Tune</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.__getitem__"><code class="docutils literal notranslate"><span class="pre">Tune.__getitem__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.__init__"><code class="docutils literal notranslate"><span class="pre">Tune.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.__len__"><code class="docutils literal notranslate"><span class="pre">Tune.__len__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.__weakref__"><code class="docutils literal notranslate"><span class="pre">Tune.__weakref__</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune._get_key_signature"><code class="docutils literal notranslate"><span class="pre">Tune._get_key_signature()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune._get_original_tempo"><code class="docutils literal notranslate"><span class="pre">Tune._get_original_tempo()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune._get_performance_offset"><code class="docutils literal notranslate"><span class="pre">Tune._get_performance_offset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune._get_time_signature"><code class="docutils literal notranslate"><span class="pre">Tune._get_time_signature()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune._quarter_duration"><code class="docutils literal notranslate"><span class="pre">Tune._quarter_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.ambitus"><code class="docutils literal notranslate"><span class="pre">Tune.ambitus</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.bar_duration"><code class="docutils literal notranslate"><span class="pre">Tune.bar_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.beat_count"><code class="docutils literal notranslate"><span class="pre">Tune.beat_count</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.beat_duration"><code class="docutils literal notranslate"><span class="pre">Tune.beat_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.events"><code class="docutils literal notranslate"><span class="pre">Tune.events()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.filter"><code class="docutils literal notranslate"><span class="pre">Tune.filter()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.get_performance_time"><code class="docutils literal notranslate"><span class="pre">Tune.get_performance_time()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.is_on_a_beat"><code class="docutils literal notranslate"><span class="pre">Tune.is_on_a_beat()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.key_signature"><code class="docutils literal notranslate"><span class="pre">Tune.key_signature</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.offset"><code class="docutils literal notranslate"><span class="pre">Tune.offset</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.quarter_duration"><code class="docutils literal notranslate"><span class="pre">Tune.quarter_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.reset_performance_time"><code class="docutils literal notranslate"><span class="pre">Tune.reset_performance_time()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.root"><code class="docutils literal notranslate"><span class="pre">Tune.root</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.semitones_from_tonic"><code class="docutils literal notranslate"><span class="pre">Tune.semitones_from_tonic()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.tempo"><code class="docutils literal notranslate"><span class="pre">Tune.tempo</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.tune.Tune.time_signature"><code class="docutils literal notranslate"><span class="pre">Tune.time_signature</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#loeric.player.Player"><code class="docutils literal notranslate"><span class="pre">Player</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.player.Player.__init__"><code class="docutils literal notranslate"><span class="pre">Player.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.player.Player.__weakref__"><code class="docutils literal notranslate"><span class="pre">Player.__weakref__</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.player.Player.init_playback"><code class="docutils literal notranslate"><span class="pre">Player.init_playback()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.player.Player.play"><code class="docutils literal notranslate"><span class="pre">Player.play()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.player.Player.reset"><code class="docutils literal notranslate"><span class="pre">Player.reset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loeric.player.Player.save"><code class="docutils literal notranslate"><span class="pre">Player.save()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">loeric</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="api">
+<h1>API<a class="headerlink" href="#api" title="Link to this heading"></a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<dl class="py function" id="module-loeric.__main__">
+<dt class="sig sig-object py" id="loeric.__main__.sync_thread">
+<span class="sig-prename descclassname"><span class="pre">loeric.__main__.</span></span><span class="sig-name descname"><span class="pre">sync_thread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">groover</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.groover.Groover" title="loeric.groover.Groover"><span class="pre">Groover</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">sync_port_in</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BaseInput</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BaseOutput</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.__main__.sync_thread" title="Link to this definition"></a></dt>
+<dd><p>Handle MIDI start, stop, songpos and tempo messages.</p>
+</dd></dl>
+
+<dl class="py function" id="module-loeric.loeric_utils">
+<dt class="sig sig-object py" id="loeric.loeric_utils.get_chord_pitches">
+<span class="sig-prename descclassname"><span class="pre">loeric.loeric_utils.</span></span><span class="sig-name descname"><span class="pre">get_chord_pitches</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">harmony</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="headerlink" href="#loeric.loeric_utils.get_chord_pitches" title="Link to this definition"></a></dt>
+<dd><p>Return the pitches of a major or minor chord in semitones from the root.
+:param harmony: the chord. Values 0-11 indicate a major chord. Values 12-23 indicate a minor chord. Values 24-35 indicate a diminished chord. Values 36-48 indicate an augmented chord.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the pitches that are part of the input chord.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="loeric.loeric_utils.get_ports">
+<span class="sig-prename descclassname"><span class="pre">loeric.loeric_utils.</span></span><span class="sig-name descname"><span class="pre">get_ports</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_number</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_number</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">list_ports</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">create_in</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">create_out</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#loeric.loeric_utils.get_ports" title="Link to this definition"></a></dt>
+<dd><p>Return the port names associated to the given indexes.
+If listing ports, only input and output port names will be printed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_number</strong> – the input port index.</p></li>
+<li><p><strong>output_number</strong> – the output port index.</p></li>
+<li><p><strong>list_ports</strong> – whether or not to list port names and return.</p></li>
+<li><p><strong>create_in</strong> – whether or not a new input will be created.</p></li>
+<li><p><strong>create_out</strong> – whether or not a new output will be created.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a tuple (input, output) containing the input and output port names.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="loeric.loeric_utils.get_root">
+<span class="sig-prename descclassname"><span class="pre">loeric.loeric_utils.</span></span><span class="sig-name descname"><span class="pre">get_root</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#loeric.loeric_utils.get_root" title="Link to this definition"></a></dt>
+<dd><p>Return the tonic of a given key signature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>key_signature</strong> – the key signature in the following format: [A-G](#|b)?m?</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the toinc of the key signature.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="loeric.loeric_utils.is_note">
+<span class="sig-prename descclassname"><span class="pre">loeric.loeric_utils.</span></span><span class="sig-name descname"><span class="pre">is_note</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Message</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#loeric.loeric_utils.is_note" title="Link to this definition"></a></dt>
+<dd><p>Check if a midi event is a note event (either note-on or note-off).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>msg</strong> – the message to check.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the message is a note event.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="loeric.loeric_utils.is_note_off">
+<span class="sig-prename descclassname"><span class="pre">loeric.loeric_utils.</span></span><span class="sig-name descname"><span class="pre">is_note_off</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Message</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#loeric.loeric_utils.is_note_off" title="Link to this definition"></a></dt>
+<dd><p>Check if a midi event is to be considered a note-off event, that is:</p>
+<ul class="simple">
+<li><p>its type is “note-off” or</p></li>
+<li><p>its type is “note-on” and it has 0 velocity.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>msg</strong> – the message to check.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the message is a note on event.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="loeric.loeric_utils.is_note_on">
+<span class="sig-prename descclassname"><span class="pre">loeric.loeric_utils.</span></span><span class="sig-name descname"><span class="pre">is_note_on</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Message</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#loeric.loeric_utils.is_note_on" title="Link to this definition"></a></dt>
+<dd><p>Check if a midi event is to be considered a note-on event, that is:</p>
+<ul class="simple">
+<li><p>its type is “note-on”;</p></li>
+<li><p>it has non-zero velocity.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>msg</strong> – the message to check.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the message is a note on event.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class" id="module-loeric.groover">
+<dt class="sig sig-object py" id="loeric.groover.Groover">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.groover.</span></span><span class="sig-name descname"><span class="pre">Groover</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tune</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bpm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">midi_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transpose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diatonic_errors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">human_impact</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intensity_control</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">human_impact_control</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">11</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">syncing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#loeric.groover.Groover" title="Link to this definition"></a></dt>
+<dd><p>The class responsible for playback, ornamentation and human interaction.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tune</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bpm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">midi_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transpose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diatonic_errors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">human_impact</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intensity_control</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">human_impact_control</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">11</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">syncing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#loeric.groover.Groover.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the groover class by setting user-defined parameters and creating the contours.
+Any parameters set on class instatiation that are also present in the configuration file will be overwritten. To preserve command line arguments, omit the corresponding fields from the  configuration file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tune</strong> – the tune that will be performed.</p></li>
+<li><p><strong>bpm</strong> – the user-defined tempo in bpm for the tune.</p></li>
+<li><p><strong>midi_channel</strong> – the midi output channel for all note messages. Drone messages will be sent on midi_channel + 1 if not specified otherwise in the configuration.</p></li>
+<li><p><strong>transpose</strong> – the number of semitones by which to transpose the tune.</p></li>
+<li><p><strong>diatonic_errors</strong> – whether or not error generation should be quantized to the tune’s mode.</p></li>
+<li><p><strong>random_weight</strong> – the weight of the random component in contour generation.</p></li>
+<li><p><strong>human_impact</strong> – the initial weight of the external control signal.</p></li>
+<li><p><strong>seed</strong> – the random seed of the performance.</p></li>
+<li><p><strong>config_file</strong> – the path to the configuration file (must be a JSON file).</p></li>
+<li><p><strong>syncing</strong> – whether or not synchronization with multiple LOERIC istances is active.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="loeric.groover.Groover.__weakref__">
+<span class="sig-name descname"><span class="pre">__weakref__</span></span><a class="headerlink" href="#loeric.groover.Groover.__weakref__" title="Link to this definition"></a></dt>
+<dd><p>list of weak references to the object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover._add_drone">
+<span class="sig-name descname"><span class="pre">_add_drone</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">notes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drones</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_note_on</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="headerlink" href="#loeric.groover.Groover._add_drone" title="Link to this definition"></a></dt>
+<dd><p>Add drones to each note in input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>notes</strong> – the notes to add a drone to.</p></li>
+<li><p><strong>drone</strong> – the drone notes to add.</p></li>
+<li><p><strong>is_note_on</strong> – whether this is a note on message or not.</p></li>
+</ul>
+</dd>
+</dl>
+<p>:return the input notes, with an added drone.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover._apply_swing">
+<span class="sig-name descname"><span class="pre">_apply_swing</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover._apply_swing" title="Link to this definition"></a></dt>
+<dd><p>Apply a p:1 swing by offsetting the start time of the next note, where p is user defined.  e.g. p=1: straight eight notes; p=2: triplet swing</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.groover.Groover._current_swing">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_current_swing</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#loeric.groover.Groover._current_swing" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the current swing amount given the bound countour.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.groover.Groover._current_velocity">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_current_velocity</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#loeric.groover.Groover._current_velocity" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the current velocity given the value of the velocity contour.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.groover.Groover._cut_duration">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_cut_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#loeric.groover.Groover._cut_duration" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the duration of a cut note.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover._duration_of">
+<span class="sig-name descname"><span class="pre">_duration_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover._duration_of" title="Link to this definition"></a></dt>
+<dd><p>Calculate the duration in seconds in the current tempo of the input duration, given in tune tempo.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>time</strong> – the input time value in seconds, given the original tempo.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the new duration of the input time value in seconds.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.groover.Groover._eight_duration">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_eight_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#loeric.groover.Groover._eight_duration" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the duration of a eight note in seconds at original tune tempo.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover._instantiate">
+<span class="sig-name descname"><span class="pre">_instantiate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.groover.Groover._instantiate" title="Link to this definition"></a></dt>
+<dd><p>Generate all parameter settings following the current configuration.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover._is_on_a_beat">
+<span class="sig-name descname"><span class="pre">_is_on_a_beat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover._is_on_a_beat" title="Link to this definition"></a></dt>
+<dd><p>Decide if we are on a beat or not, given the current cumulative performance time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if we are on a beat.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.groover.Groover._roll_duration">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_roll_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#loeric.groover.Groover._roll_duration" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the duration of a single note in a roll.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.groover.Groover._slide_duration">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_slide_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#loeric.groover.Groover._slide_duration" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the duration of a slide.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.advance_contours">
+<span class="sig-name descname"><span class="pre">advance_contours</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.advance_contours" title="Link to this definition"></a></dt>
+<dd><p>Retrieve the next value of each contour and store it for future use.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.approach_from_above">
+<span class="sig-name descname"><span class="pre">approach_from_above</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">note_number</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tune</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.approach_from_above" title="Link to this definition"></a></dt>
+<dd><p>Return the midi note number to approach the given note from above.
+If no special approach rule is specified in the configuration file, it will return the next note in the scale of the tune’s key from the given note.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>note_number</strong> – the note to approach.</p></li>
+<li><p><strong>tune</strong> – the reference tune.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the note used the approach the given note from above.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.approach_from_below">
+<span class="sig-name descname"><span class="pre">approach_from_below</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">note_number</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tune</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.approach_from_below" title="Link to this definition"></a></dt>
+<dd><p>Return the midi note number to approach the given note from below.
+If no special approach rule is specified in the configuration file, it will return the previous note in the scale of the tune’s key from the given note.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>note_number</strong> – the note to approach.</p></li>
+<li><p><strong>tune</strong> – the reference tune.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the note used the approach the given note from below.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.can_generate_ornament">
+<span class="sig-name descname"><span class="pre">can_generate_ornament</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.can_generate_ornament" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>whether or not to generate an ornament given the current ornament contour.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.check_midi_control">
+<span class="sig-name descname"><span class="pre">check_midi_control</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.13)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#loeric.groover.Groover.check_midi_control" title="Link to this definition"></a></dt>
+<dd><p>Returns a function that associates a contour name (values) for every MIDI control number in the dictionary (keys) and updates the groover accordingly.
+The value of the contour will be the control value mapped in the interval [0, 1].</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a callback function that will check for the given values.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.choose_ornament">
+<span class="sig-name descname"><span class="pre">choose_ornament</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Message</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.choose_ornament" title="Link to this definition"></a></dt>
+<dd><p>Evaluate the ornament specific rules and chooose how the note will be ornamented.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>message</strong> – the midi message to ornament.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the chosen ornament type.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.groover.Groover.current_tempo">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">current_tempo</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#loeric.groover.Groover.current_tempo" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the current tempo given the value of the tempo contour. If the option <cite>use_old_tempo_warp</cite> is set to <cite>True</cite> the contour affects tempo in terms of percentage of the original one (e.g. 20% faster); otherwise in terms of a fixed amount of bpms (e.g. 10 bpms faster).</p>
+</dd>
+</dl>
+<p>If an external tempo has been set, the calculated tempo will be interpolated with it according to the user specified percentage.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.generate_ornament">
+<span class="sig-name descname"><span class="pre">generate_ornament</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Message</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ornament_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Message</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#loeric.groover.Groover.generate_ornament" title="Link to this definition"></a></dt>
+<dd><p>Generate the sequence of notes corresponding to the chosen ornament.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> – the midi message to ornament.</p></li>
+<li><p><strong>ornament_type</strong> – the type of ornament to generate.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the list of midi events corresponding to the chosen ornament.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.get_end_notes">
+<span class="sig-name descname"><span class="pre">get_end_notes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Message</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#loeric.groover.Groover.get_end_notes" title="Link to this definition"></a></dt>
+<dd><p>Generate an end note for the tune based on its key.
+:return: the midi messages containing the end note</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.jump_to_pos">
+<span class="sig-name descname"><span class="pre">jump_to_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.jump_to_pos" title="Link to this definition"></a></dt>
+<dd><p>Jump to the specified song position.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pos</strong> – the position to jump to.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.next_event">
+<span class="sig-name descname"><span class="pre">next_event</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.groover.Groover.next_event" title="Link to this definition"></a></dt>
+<dd><p>Return the current event in the tune. Returns none if no event is available.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.perform">
+<span class="sig-name descname"><span class="pre">perform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Message</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Message</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#loeric.groover.Groover.perform" title="Link to this definition"></a></dt>
+<dd><p>‘Perform’ a single note event by affecting its timing, pitch, velocity and adding ornaments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>message</strong> – the midi message to perform.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the list of midi messages corresponding to the input message’s performance.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.reset_clock">
+<span class="sig-name descname"><span class="pre">reset_clock</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.reset_clock" title="Link to this definition"></a></dt>
+<dd><p>Reset the MIDI clock to initial tempo.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.reset_contours">
+<span class="sig-name descname"><span class="pre">reset_contours</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.reset_contours" title="Link to this definition"></a></dt>
+<dd><p>Reset all contours so that the next call to <cite>next()</cite> will yield the first value of each contour.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.set_clock">
+<span class="sig-name descname"><span class="pre">set_clock</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.set_clock" title="Link to this definition"></a></dt>
+<dd><p>Register a MIDI clock message and calculate the requested tempo.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.set_contour_value">
+<span class="sig-name descname"><span class="pre">set_contour_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contour_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.set_contour_value" title="Link to this definition"></a></dt>
+<dd><p>Set the value of a given contour to a given value until the update.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>contour_name</strong> – the name of the contour.</p></li>
+<li><p><strong>value</strong> – the value to set the contour to.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#loeric.groover.UnknownContourError" title="loeric.groover.UnknownContourError"><strong>groover.UnknownContourError</strong></a> – if the contour name does not correspond to any of the Groover’s contours.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.groover.Groover.set_tempo">
+<span class="sig-name descname"><span class="pre">set_tempo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tempo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.groover.Groover.set_tempo" title="Link to this definition"></a></dt>
+<dd><p>Set the new performance tempo.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>tempo</strong> – the requested tempo in bpms.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.groover.Groover.tempo">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tempo</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#loeric.groover.Groover.tempo" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the user-set tempo.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="loeric.groover.UnknownContourError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.groover.</span></span><span class="sig-name descname"><span class="pre">UnknownContourError</span></span><a class="headerlink" href="#loeric.groover.UnknownContourError" title="Link to this definition"></a></dt>
+<dd><p>Raised if trying to set a contour whose name does not correspond to any of the Groover’s contours.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="loeric.groover.UnknownContourError.__weakref__">
+<span class="sig-name descname"><span class="pre">__weakref__</span></span><a class="headerlink" href="#loeric.groover.UnknownContourError.__weakref__" title="Link to this definition"></a></dt>
+<dd><p>list of weak references to the object</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-loeric.contour">
+<dt class="sig sig-object py" id="loeric.contour.Contour">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">Contour</span></span><a class="headerlink" href="#loeric.contour.Contour" title="Link to this definition"></a></dt>
+<dd><p>A class representing a note-wise intensity conotour.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.Contour.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.Contour.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.Contour.__len__">
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.Contour.__len__" title="Link to this definition"></a></dt>
+<dd><p>The length of this contour.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="loeric.contour.Contour.__weakref__">
+<span class="sig-name descname"><span class="pre">__weakref__</span></span><a class="headerlink" href="#loeric.contour.Contour.__weakref__" title="Link to this definition"></a></dt>
+<dd><p>list of weak references to the object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.Contour.calculate">
+<span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.Contour.calculate" title="Link to this definition"></a></dt>
+<dd><p>Calculate the intensity contour for the given tune.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>midi</strong> – the input tune.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.Contour.jump">
+<span class="sig-name descname"><span class="pre">jump</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.Contour.jump" title="Link to this definition"></a></dt>
+<dd><p>Jump to the specified index in the contour.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> – the index to jump to.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#loeric.contour.InvalidIndexError" title="loeric.contour.InvalidIndexError"><strong>contour.InvalidIndexError</strong></a> – if the index exceeds the length of the contour.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.Contour.next">
+<span class="sig-name descname"><span class="pre">next</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></span><a class="headerlink" href="#loeric.contour.Contour.next" title="Link to this definition"></a></dt>
+<dd><p>Return the next element (i.e. intensity value) of the intensity contour.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference internal" href="#loeric.contour.UncomputedContourError" title="loeric.contour.UncomputedContourError"><strong>contour.UncomputedContourError</strong></a> – if the contour has not been computed yet.</p></li>
+<li><p><a class="reference internal" href="#loeric.contour.InvalidIndexError" title="loeric.contour.InvalidIndexError"><strong>contour.InvalidIndexError</strong></a> – if the index of the current value is below 0 or exceeds the length of the contour.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the next intensity value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.Contour.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.Contour.reset" title="Link to this definition"></a></dt>
+<dd><p>Resets the contour iteration. The next call to <cite>next()</cite> will return the first element of the contour.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.Contour.scale_and_savgol">
+<span class="sig-name descname"><span class="pre">scale_and_savgol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">savgol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#loeric.contour.Contour.scale_and_savgol" title="Link to this definition"></a></dt>
+<dd><p>Scale the contour to have it range between 0 and 1.
+Optionally, apply a Savitzky-Golay filter with a window of 15 and order 3.
+Optionally, rescale the array to bring the extremes to 0 and 1.
+Optionally, shift the array to bring its mean closer to 0.5.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>array</strong> – the input contour.</p></li>
+<li><p><strong>savgol</strong> – whether or not to apply the savgol filter.</p></li>
+<li><p><strong>scale</strong> – whether or not to rescale the array to use the full range.</p></li>
+<li><p><strong>shift</strong> – whether or not to shift the filtered array so that its mean is close to 0.5.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the processed array.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="loeric.contour.HarmonicContour">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">HarmonicContour</span></span><a class="headerlink" href="#loeric.contour.HarmonicContour" title="Link to this definition"></a></dt>
+<dd><p>A contour holding harmonic information.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.HarmonicContour.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.HarmonicContour.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.HarmonicContour.calculate">
+<span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">chord_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chords_per_bar</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allowed_chords</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">array([0.,</span> <span class="pre">0.,</span> <span class="pre">0.,</span> <span class="pre">0.,</span> <span class="pre">0.,</span> <span class="pre">0.,</span> <span class="pre">0.,</span> <span class="pre">0.,</span> <span class="pre">0.,</span> <span class="pre">0.,</span> <span class="pre">0.,</span> <span class="pre">0.])</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transpose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.HarmonicContour.calculate" title="Link to this definition"></a></dt>
+<dd><p>Calculate the intensity contour for the given tune.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>midi</strong> – the input tune.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="loeric.contour.IntensityContour">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">IntensityContour</span></span><a class="headerlink" href="#loeric.contour.IntensityContour" title="Link to this definition"></a></dt>
+<dd><p>A contour given by the weighted sum of O’Canainn components.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.IntensityContour.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.IntensityContour.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.IntensityContour.calculate">
+<span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">savgol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.IntensityContour.calculate" title="Link to this definition"></a></dt>
+<dd><p>Compute the contour as the weighted sum of O’Canainn component.
+An optional random component can be added.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>midi</strong> – the input tune.</p></li>
+<li><p><strong>weights</strong> – the weights for the components, respectively frequency score, beat score, ambitus score, leap score and length score.</p></li>
+<li><p><strong>random_weight</strong> – the weight of the random component over the sum of the weighted O’Canainn scores. If None, the components will be averaged together.</p></li>
+<li><p><strong>savgol</strong> – whether or not to apply a final savgol filtering step (recommended).</p></li>
+<li><p><strong>shift</strong> – whether or not to apply a final shifting step to bring the mean of the array close to 0.5.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.IntensityContour.ocanainn_scores">
+<span class="sig-name descname"><span class="pre">ocanainn_scores</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">array</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#loeric.contour.IntensityContour.ocanainn_scores" title="Link to this definition"></a></dt>
+<dd><p>Computes the individual components for the ocanainn score:</p>
+<ul class="simple">
+<li><p>frequency score;</p></li>
+<li><p>beat score;</p></li>
+<li><p>ambitus score;</p></li>
+<li><p>leap score;</p></li>
+<li><p>length score.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>midi</strong> – the input tune used to compute the individual scores.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the frequency score, the beat score, the ambitus score, the leap score and the length score.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="loeric.contour.InvalidIndexError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">InvalidIndexError</span></span><a class="headerlink" href="#loeric.contour.InvalidIndexError" title="Link to this definition"></a></dt>
+<dd><p>Raised if the index of the current value is below 0 or exceeds the length of the contour.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="loeric.contour.InvalidIndexError.__weakref__">
+<span class="sig-name descname"><span class="pre">__weakref__</span></span><a class="headerlink" href="#loeric.contour.InvalidIndexError.__weakref__" title="Link to this definition"></a></dt>
+<dd><p>list of weak references to the object</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="loeric.contour.MessageLengthContour">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">MessageLengthContour</span></span><a class="headerlink" href="#loeric.contour.MessageLengthContour" title="Link to this definition"></a></dt>
+<dd><p>A contour holding the length of each note in the tune.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.MessageLengthContour.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.MessageLengthContour.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.MessageLengthContour.calculate">
+<span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.MessageLengthContour.calculate" title="Link to this definition"></a></dt>
+<dd><p>Calculate the contour as the length of each note message (from each note on message to the next note off message).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>midi</strong> – the input tune object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="loeric.contour.PatternContour">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">PatternContour</span></span><a class="headerlink" href="#loeric.contour.PatternContour" title="Link to this definition"></a></dt>
+<dd><p>A contour made of a repeating pattern.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.PatternContour.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.PatternContour.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.PatternContour.calculate">
+<span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">array([1])</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">array([0])</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">period</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.PatternContour.calculate" title="Link to this definition"></a></dt>
+<dd><p>Create the contour by repeating the input weights over the specified period.
+If standard deviatons are specified, the resulting patter is sampled from each distribution at each loaction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mean</strong> – the pattern to repeat.</p></li>
+<li><p><strong>std</strong> – the std of the pattern to repeat, for every item.</p></li>
+<li><p><strong>period</strong> – the length of the pattern, in bars.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="loeric.contour.PhraseContour">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">PhraseContour</span></span><a class="headerlink" href="#loeric.contour.PhraseContour" title="Link to this definition"></a></dt>
+<dd><p>A contour representing phrase arcs.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.PhraseContour.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.PhraseContour.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.PhraseContour.calculate">
+<span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.PhraseContour.calculate" title="Link to this definition"></a></dt>
+<dd><p>Compute a phrasing contour using a sum of sine functions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>midi</strong> – the input tune.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="loeric.contour.PitchContour">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">PitchContour</span></span><a class="headerlink" href="#loeric.contour.PitchContour" title="Link to this definition"></a></dt>
+<dd><p>A contour holding the pitch of notes in the tune.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.PitchContour.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.PitchContour.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.PitchContour.calculate">
+<span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">savgol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.PitchContour.calculate" title="Link to this definition"></a></dt>
+<dd><p>Calculate the intensity contour for the given tune.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>midi</strong> – the input tune.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="loeric.contour.PitchDifferenceContour">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">PitchDifferenceContour</span></span><a class="headerlink" href="#loeric.contour.PitchDifferenceContour" title="Link to this definition"></a></dt>
+<dd><p>A contour holding the pitch difference between notes in the tune.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.PitchDifferenceContour.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.PitchDifferenceContour.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.PitchDifferenceContour.calculate">
+<span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.PitchDifferenceContour.calculate" title="Link to this definition"></a></dt>
+<dd><p>Calculate the intensity contour for the given tune.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>midi</strong> – the input tune.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="loeric.contour.RandomContour">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">RandomContour</span></span><a class="headerlink" href="#loeric.contour.RandomContour" title="Link to this definition"></a></dt>
+<dd><p>A randomly initialized contour.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.RandomContour.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.RandomContour.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.contour.RandomContour.calculate">
+<span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#loeric.tune.Tune" title="loeric.tune.Tune"><span class="pre">Tune</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">extremes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.contour.RandomContour.calculate" title="Link to this definition"></a></dt>
+<dd><p>Compute a random contour following a uniform distribution in the specified range, by default between 0 and 1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>midi</strong> – the input tune.</p></li>
+<li><p><strong>extremes</strong> – the upper and lower bound for the random contour. If None, the range will be (0, 1).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="loeric.contour.UncomputedContourError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">UncomputedContourError</span></span><a class="headerlink" href="#loeric.contour.UncomputedContourError" title="Link to this definition"></a></dt>
+<dd><p>Raised if the contour has not been computed yet.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="loeric.contour.UncomputedContourError.__weakref__">
+<span class="sig-name descname"><span class="pre">__weakref__</span></span><a class="headerlink" href="#loeric.contour.UncomputedContourError.__weakref__" title="Link to this definition"></a></dt>
+<dd><p>list of weak references to the object</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="loeric.contour.multiply">
+<span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">multiply</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contours</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#loeric.contour.Contour" title="loeric.contour.Contour"><span class="pre">Contour</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.multiply" title="Link to this definition"></a></dt>
+<dd><p>Returns a new contour that holds the product of the input contours.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>contours</strong> – the contours to multiply.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a new contour holding the product of the input contours.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="loeric.contour.weighted_sum">
+<span class="sig-prename descclassname"><span class="pre">loeric.contour.</span></span><span class="sig-name descname"><span class="pre">weighted_sum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contours</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#loeric.contour.Contour" title="loeric.contour.Contour"><span class="pre">Contour</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#loeric.contour.weighted_sum" title="Link to this definition"></a></dt>
+<dd><p>Returns a new contour that holds the weighted sum of the input contours.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>contours</strong> – the contours to add.</p></li>
+<li><p><strong>weights</strong> – the weight for each contour.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a new contour holding the weighted sum of the input contours.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class" id="module-loeric.tune">
+<dt class="sig sig-object py" id="loeric.tune.Tune">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.tune.</span></span><span class="sig-name descname"><span class="pre">Tune</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">repeats</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#loeric.tune.Tune" title="Link to this definition"></a></dt>
+<dd><p>A wrapper for a midi file.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune.__getitem__">
+<span class="sig-name descname"><span class="pre">__getitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Message</span></span></span><a class="headerlink" href="#loeric.tune.Tune.__getitem__" title="Link to this definition"></a></dt>
+<dd><p>Return the item in the midi event list corresponding to the given index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>idx</strong> – the element index.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the midi message corresponding to that index.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">repeats</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#loeric.tune.Tune.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class. A number of properties is computed:</p>
+<ul class="simple">
+<li><p>the duration of the pickup bar, if there is any;</p></li>
+<li><p>the key signature (only the first encountered is considered, key signature changes are not supported);</p></li>
+<li><p>the time signature (only the first encountered is considered, time signature changes are not supported);</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> – the path to the midi file.</p></li>
+<li><p><strong>repeats</strong> – how many times the tune should be repeated.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune.__len__">
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#loeric.tune.Tune.__len__" title="Link to this definition"></a></dt>
+<dd><p>Return the length of the list of midi messages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the number of midi messages in this tune.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="loeric.tune.Tune.__weakref__">
+<span class="sig-name descname"><span class="pre">__weakref__</span></span><a class="headerlink" href="#loeric.tune.Tune.__weakref__" title="Link to this definition"></a></dt>
+<dd><p>list of weak references to the object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune._get_key_signature">
+<span class="sig-name descname"><span class="pre">_get_key_signature</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></span><a class="headerlink" href="#loeric.tune.Tune._get_key_signature" title="Link to this definition"></a></dt>
+<dd><p>Retrieve the key signature of the tune, if there is any.
+Only the first key signature will be retrieved.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the first key signature if there is any, else None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune._get_original_tempo">
+<span class="sig-name descname"><span class="pre">_get_original_tempo</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#loeric.tune.Tune._get_original_tempo" title="Link to this definition"></a></dt>
+<dd><p>Retrieve the tempo of the tune, if there is any.
+Only the first tempo change will be retrieved.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the first tempo change if there is any, else None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune._get_performance_offset">
+<span class="sig-name descname"><span class="pre">_get_performance_offset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></span><a class="headerlink" href="#loeric.tune.Tune._get_performance_offset" title="Link to this definition"></a></dt>
+<dd><p>Return the length of the pickup bar, if there is any.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the length of the pickup bar in seconds.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune._get_time_signature">
+<span class="sig-name descname"><span class="pre">_get_time_signature</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">TimeSignature</span></span></span><a class="headerlink" href="#loeric.tune.Tune._get_time_signature" title="Link to this definition"></a></dt>
+<dd><p>Retrieve the time signature of the tune, if there is any.
+Only the first time signature will be retrieved.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the first time signature if there is any, else None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune._quarter_duration">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_quarter_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#loeric.tune.Tune._quarter_duration" title="Link to this definition"></a></dt>
+<dd><p>Return the duration of a quarter note in seconds given the current tempo.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the amount of seconds corresponding to a quarter note given the current tempo.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune.ambitus">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ambitus</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#loeric.tune.Tune.ambitus" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the tune’s lowest and highest pitches in a tuple (low, high)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune.bar_duration">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">bar_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#loeric.tune.Tune.bar_duration" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the tune’s bar duration in seconds.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune.beat_count">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">beat_count</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#loeric.tune.Tune.beat_count" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the numebr of beats in the tune.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune.beat_duration">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">beat_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#loeric.tune.Tune.beat_duration" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the tune’s beat duration in seconds.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune.events">
+<span class="sig-name descname"><span class="pre">events</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generator" title="(in Python v3.13)"><span class="pre">Generator</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Message</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#loeric.tune.Tune.events" title="Link to this definition"></a></dt>
+<dd><p>A generator returning each midi event in the tune. Each time an event is retrieved, the performance time is updated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the sequence of midi events one by one</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune.filter">
+<span class="sig-name descname"><span class="pre">filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filtering_function</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.13)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Message</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Message</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#loeric.tune.Tune.filter" title="Link to this definition"></a></dt>
+<dd><p>Retrieve the midi events that fullfill the given filtering function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>filtering_function</strong> – the function filtering the midi events.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a list of midi events fullfilling the filtering function.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune.get_performance_time">
+<span class="sig-name descname"><span class="pre">get_performance_time</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></span><a class="headerlink" href="#loeric.tune.Tune.get_performance_time" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the current performance time</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune.is_on_a_beat">
+<span class="sig-name descname"><span class="pre">is_on_a_beat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#loeric.tune.Tune.is_on_a_beat" title="Link to this definition"></a></dt>
+<dd><p>Decide if we are on a beat or not, given the current cumulative performance time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if we are on a beat.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune.key_signature">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">key_signature</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></em><a class="headerlink" href="#loeric.tune.Tune.key_signature" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the tune’s key signature.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune.offset">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">offset</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#loeric.tune.Tune.offset" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the tune’s performance offset (i.e. the length of the pickup bar) in seconds.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune.quarter_duration">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">quarter_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#loeric.tune.Tune.quarter_duration" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the duration of a quarter note in the tune given its original tempo.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune.reset_performance_time">
+<span class="sig-name descname"><span class="pre">reset_performance_time</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.tune.Tune.reset_performance_time" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the current performance time</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune.root">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">root</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#loeric.tune.Tune.root" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the tune’s key signature root in pitch space.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.tune.Tune.semitones_from_tonic">
+<span class="sig-name descname"><span class="pre">semitones_from_tonic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">midi_note</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#loeric.tune.Tune.semitones_from_tonic" title="Link to this definition"></a></dt>
+<dd><p>Compute the distance between the given note and the tonic of the tune in semitones.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>midi_note</strong> – the input note.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the distance between note and the tonic in semitones.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune.tempo">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tempo</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#loeric.tune.Tune.tempo" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the tune’s tempo in microseconds per quarter.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="loeric.tune.Tune.time_signature">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">time_signature</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">TimeSignature</span></em><a class="headerlink" href="#loeric.tune.Tune.time_signature" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the tune’s time signature.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-loeric.player">
+<dt class="sig sig-object py" id="loeric.player.Player">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">loeric.player.</span></span><span class="sig-name descname"><span class="pre">Player</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tempo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TimeSignature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">midi_out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#loeric.player.Player" title="Link to this definition"></a></dt>
+<dd><p>The class responsible for performance playback and saving.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.player.Player.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tempo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TimeSignature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">midi_out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#loeric.player.Player.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tempo</strong> – the performance’s tempo in microseconds per quarter note.</p></li>
+<li><p><strong>key_signature</strong> – the performance’s key signature.</p></li>
+<li><p><strong>time_signature</strong> – the performance’s time signature.</p></li>
+<li><p><strong>save</strong> – whether or not to save the performance to a midi file</p></li>
+<li><p><strong>midi_out</strong> – the output midi port.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="loeric.player.Player.__weakref__">
+<span class="sig-name descname"><span class="pre">__weakref__</span></span><a class="headerlink" href="#loeric.player.Player.__weakref__" title="Link to this definition"></a></dt>
+<dd><p>list of weak references to the object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.player.Player.init_playback">
+<span class="sig-name descname"><span class="pre">init_playback</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.player.Player.init_playback" title="Link to this definition"></a></dt>
+<dd><p>Initialize variables useful to keep track of playback time and avoid drifting.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.player.Player.play">
+<span class="sig-name descname"><span class="pre">play</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">messages</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Message</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.player.Player.play" title="Link to this definition"></a></dt>
+<dd><p>Play the messages in input and append them to the generated performance.
+If no midi port has been specified, the messages only be saved.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>messages</strong> – the midi messages to play.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.player.Player.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.player.Player.reset" title="Link to this definition"></a></dt>
+<dd><p>Reset the output port.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="loeric.player.Player.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#loeric.player.Player.save" title="Link to this definition"></a></dt>
+<dd><p>Save the generated performance as a midi file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>filename</strong> – the path to the output midi file.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="functioning.html" class="btn btn-neutral float-left" title="How does LOERIC work?" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marco Amerotti.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
