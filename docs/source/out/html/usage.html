@@ -1,0 +1,225 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Usage &mdash; loeric 0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2709fde1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="How does LOERIC work?" href="functioning.html" />
+    <link rel="prev" title="Welcome to LOERIC’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            loeric
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#performing-a-tune">Performing a tune</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#live-interaction">Live Interaction</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#available-control-scripts">Available Control Scripts</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#midi-velocity-listener">MIDI Velocity Listener</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#other-listeners">Other Listeners</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="functioning.html">How does LOERIC work?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">loeric</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Usage</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/usage.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h1>
+<section id="installation">
+<span id="id1"></span><h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>To use the package, clone the repository</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">git clone https://github.com/amerotz/loeric</span>
+</pre></div>
+</div>
+<p>Then create a virtual environment with</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>&lt;environment<span class="w"> </span>name&gt;
+</pre></div>
+</div>
+<p>Activate the environment you created with</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span><span class="w"> </span>&lt;environment<span class="w"> </span>name&gt;/bin/activate
+</pre></div>
+</div>
+<p>Then install the required packages with</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+</pre></div>
+</div>
+</section>
+<section id="performing-a-tune">
+<h2>Performing a tune<a class="headerlink" href="#performing-a-tune" title="Link to this heading"></a></h2>
+<p>To perform a tune, invoke:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>loeric<span class="w"> </span>&lt;tune<span class="w"> </span>MIDI<span class="w"> </span>file&gt;<span class="w"> </span><span class="o">[</span><span class="nb">command</span><span class="w"> </span>line<span class="w"> </span>arguments<span class="o">]</span>
+</pre></div>
+</div>
+<p>where the possible arguments are</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">source</span></code>: the midi file to play;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-h,</span> <span class="pre">--help</span></code>: show the help message and exit;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--list_ports</span></code>: list available input and output MIDI ports and exit;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-c</span> <span class="pre">CONTROL,</span> <span class="pre">--control</span> <span class="pre">CONTROL</span></code>: the MIDI control signal number to use as human control;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-hi</span> <span class="pre">HUMAN_IMPACT,</span> <span class="pre">--human_impact</span> <span class="pre">HUMAN_IMPACT</span></code>: the percentage of human impact over the performance (0: only generated, 1:only human);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-i</span> <span class="pre">INPUT,</span> <span class="pre">--input</span> <span class="pre">INPUT</span></code>: the input MIDI port for the control signal;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">OUTPUT,</span> <span class="pre">--output</span> <span class="pre">OUTPUT</span></code>: the output MIDI port for the performance;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-mc</span> <span class="pre">MIDI_CHANNEL,</span> <span class="pre">--midi-channel</span> <span class="pre">MIDI_CHANNEL</span></code>: the output MIDI channel for the performance;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-t</span> <span class="pre">TRANSPOSE,</span> <span class="pre">--transpose</span> <span class="pre">TRANSPOSE</span></code>: the number of semitones to transpose the tune of;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-d,</span> <span class="pre">--diatonic</span></code>: whether or not error generation should be quantized to the tune’s mode;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-r</span> <span class="pre">REPEAT,</span> <span class="pre">--repeat</span> <span class="pre">REPEAT</span></code>: how many times the tune should be repeated;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-bpm</span> <span class="pre">BPM</span></code>: the tempo of the performance. If None, defaults to the original file’s tempo;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--save</span></code>: whether or not to export the performance. Playback will be disabled;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--seed</span></code>: the random seed for the performance;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--no-prompt</span></code>: whether or not to wait for user input before starting;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--config</span> <span class="pre">CONFIG</span></code>: the path to a configuration file. Every option included in the configuration file will override command line arguments.</p></li>
+</ul>
+<p>For example, to play the tune <code class="docutils literal notranslate"><span class="pre">butterfly.mid</span></code> on output port <code class="docutils literal notranslate"><span class="pre">0</span></code> on MIDI channel <code class="docutils literal notranslate"><span class="pre">2</span></code>, while reading control input on control signal <code class="docutils literal notranslate"><span class="pre">42</span></code> on input port <code class="docutils literal notranslate"><span class="pre">0</span></code>, with a human impact of <code class="docutils literal notranslate"><span class="pre">0.5</span></code>, transposing by <code class="docutils literal notranslate"><span class="pre">10</span></code> semitones, repeating <code class="docutils literal notranslate"><span class="pre">3</span></code> times, at <code class="docutils literal notranslate"><span class="pre">200</span></code> BPM:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>loeric<span class="w"> </span>butterfly.mid<span class="w"> </span>-o<span class="w"> </span><span class="m">0</span><span class="w"> </span>-mc<span class="w"> </span><span class="m">2</span><span class="w"> </span>-c<span class="w"> </span><span class="m">42</span><span class="w"> </span>-i<span class="w"> </span><span class="m">0</span><span class="w"> </span>-hi<span class="w"> </span><span class="m">0</span>.5<span class="w"> </span>-t<span class="w"> </span><span class="m">10</span><span class="w"> </span>-r<span class="w"> </span><span class="m">3</span><span class="w"> </span>-bpm<span class="w"> </span><span class="m">200</span>
+</pre></div>
+</div>
+<p>All of these parameters and many internal ones can be changed with a configuration file:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>loeric<span class="w"> </span>butterfly.mid<span class="w"> </span>--config<span class="w"> </span>conf.json
+</pre></div>
+</div>
+<p>The configuration file has precedence over command line arguments. That means that if there is a field corresponding to performance BPM in the configuration file, the bpm flag in the command invocation will be ignored.</p>
+<p>Some parameters are not specified in the configuration file and need to be given always as arguments; these are:</p>
+<ul class="simple">
+<li><p>the input port;</p></li>
+<li><p>the output port;</p></li>
+<li><p>repeats;</p></li>
+<li><p>saving;</p></li>
+<li><p>prompting.</p></li>
+</ul>
+<p>To know which ports are available for input and output, invoke:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>loeric<span class="w"> </span>--list_ports
+</pre></div>
+</div>
+<p>Alternatively, if the input port or the output port is not specified, the program will automatically list the available ones and ask the user which one to use.</p>
+</section>
+<section id="live-interaction">
+<h2>Live Interaction<a class="headerlink" href="#live-interaction" title="Link to this heading"></a></h2>
+<p>The system allows for live human interaction by reading a MIDI control signal with a given event number (0 to 127) on a specified input port. This can be a MIDI controller’s output (a knob on a keyboard, an expression pedal, etc…) or it can be generated by another script.</p>
+<p>The flag <code class="docutils literal notranslate"><span class="pre">-c</span></code> or <code class="docutils literal notranslate"><span class="pre">--control</span></code> allows to specify the event number to monitor. If set up correctly, the program should print the value of the control signal as a number between 0 and 1 at each update.</p>
+<section id="available-control-scripts">
+<h3>Available Control Scripts<a class="headerlink" href="#available-control-scripts" title="Link to this heading"></a></h3>
+<p>There are a few scripts that compute an intensity value based on some user activity and output it as a control signal on a given port.</p>
+<section id="midi-velocity-listener">
+<h4>MIDI Velocity Listener<a class="headerlink" href="#midi-velocity-listener" title="Link to this heading"></a></h4>
+<p>This script continuously reads MIDI input on the given port and sends a control signal with a given event number on a given port corresponding to “intensity” computed from the MIDI velocity of played notes.</p>
+<p>The intensity of each note is simply its velocity mapped from <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">127]</span></code> to the interval <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code>. The new intensity value is then computed as:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">value</span> <span class="o">=</span> <span class="n">old_value</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">responsiveness</span><span class="p">)</span> <span class="o">+</span> <span class="n">note_value</span> <span class="o">-</span> <span class="n">responsiveness</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">responsiveness</span></code> is the weight of the newly computed note intensity. A value of <code class="docutils literal notranslate"><span class="pre">0</span></code> newver updates the intensity, a value of <code class="docutils literal notranslate"><span class="pre">1</span></code> always returns the newest value. Note off events (and thus also note on events with velocity <code class="docutils literal notranslate"><span class="pre">0</span></code>) are excluded from this computation.</p>
+<p>Invoke using:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>midi_velocity_listener.py<span class="w"> </span><span class="o">[</span><span class="nb">command</span><span class="w"> </span>line<span class="w"> </span>arguments<span class="o">]</span>
+</pre></div>
+</div>
+<p>where possible arguments are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-h,</span> <span class="pre">--help</span></code>: show this help message and exit</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--list_ports</span></code>: list available input and output MIDI ports and exit.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-i</span> <span class="pre">INPUT,</span> <span class="pre">--input</span> <span class="pre">INPUT</span></code>: the input MIDI port.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">OUTPUT,</span> <span class="pre">--output</span> <span class="pre">OUTPUT</span></code>: the output MIDI port.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-c</span> <span class="pre">CONTROL,</span> <span class="pre">--control</span> <span class="pre">CONTROL</span></code>: the control channel on which intensity is sent.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-r</span> <span class="pre">RESPONSIVE,</span> <span class="pre">--responsive</span> <span class="pre">RESPONSIVE</span></code>: the weight of incoming values when computing intensity, in range 0 to 1.</p></li>
+</ul>
+<p>When using <code class="docutils literal notranslate"><span class="pre">loeric</span></code>, use the <code class="docutils literal notranslate"><span class="pre">--list_ports</span></code> option to identify the port you just opened and use it as input port. Make sure to monitor the same event number with the <code class="docutils literal notranslate"><span class="pre">--c</span></code> option.</p>
+</section>
+<section id="other-listeners">
+<h4>Other Listeners<a class="headerlink" href="#other-listeners" title="Link to this heading"></a></h4>
+<p>Coming soon.</p>
+</section>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to LOERIC’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="functioning.html" class="btn btn-neutral float-right" title="How does LOERIC work?" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marco Amerotti.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
