@@ -589,7 +589,9 @@ class Groover:
 
     def _apply_swing(self) -> float:
         """
-        Apply a p:1 swing by offsetting the start time of the next note, where p is user defined.  e.g. p=1: straight eight notes; p=2: triplet swing
+        Apply a p:1 swing by offsetting the start time of the next note, where p is user defined.  e.g. p=1: straight eight notes; p=2: triplet swing.
+
+        :return: the computed offset for the next note
         """
 
         duration = self._contour_values["message length"]
@@ -632,7 +634,7 @@ class Groover:
         :param drone: the drone notes to add.
         :param is_note_on: whether this is a note on message or not.
 
-        :return the input notes, with an added drone.
+        :return: the input notes, with an added drone.
         """
         note_duration = self._tune.bar_duration / self._config["drone"]["notes_per_bar"]
         should_play = self._performance_time % note_duration <= lu.TRIGGER_DELTA
@@ -750,6 +752,7 @@ class Groover:
     def get_end_notes(self) -> list[mido.Message]:
         """
         Generate an end note for the tune based on its key.
+
         :return: the midi messages containing the end note
         """
         # get root and range
