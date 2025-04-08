@@ -67,6 +67,7 @@ class Groover:
 
         # tune
         self._tune = tune
+        self._tempo = self._tune._tempo
 
         # offset for messages after ornaments
         self._offset = 0
@@ -108,12 +109,12 @@ class Groover:
                 "old_tempo_warp": 0.1,
             },
             "control_2_contour": {
-                "velocity_intensity": str(intensity_control),
-                "tempo_intensity": str(intensity_control),
-                "ornament_intensity": str(intensity_control),
-                "velocity_human_impact": str(human_impact_control),
-                "tempo_human_impact": str(human_impact_control),
-                "ornament_human_impact": str(human_impact_control),
+                "velocity_intensity": intensity_control,
+                "tempo_intensity": intensity_control,
+                "ornament_intensity": intensity_control,
+                "velocity_human_impact": human_impact_control,
+                "tempo_human_impact": human_impact_control,
+                "ornament_human_impact": human_impact_control,
             },
             "harmony": {
                 "chords_per_bar": self._tune.beat_count,
@@ -326,7 +327,7 @@ class Groover:
             if lu.is_note(msg):
                 pass
             for contour_name, event_number in self._config["control_2_contour"].items():
-                if msg.is_cc(int(event_number)):
+                if msg.is_cc(event_number):
                     value = msg.value / 127
                     self.set_contour_value(contour_name, value)
                     # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
@@ -1120,6 +1121,7 @@ class Groover:
                 ornaments.append(off_message)
                 self._offset += message_length * perc
         else:
+            print(ornament_type)
             # sample pitches
             pitches = np.random.normal(
                 loc=self._config["ornamentation"][ornament_type]["pitches_mean"],
@@ -1447,7 +1449,12 @@ class Groover:
 
             calculated_tempo = mido.bpm2tempo(int(bpm + value))
 
-        return calculated_tempo
+        if self._config["tempo_control"]["increasing"]:
+            self._tempo = min(self._tempo, calculated_tempo)
+        else:
+            self._tempo = calculated_tempo
+        print(self._temp)
+        return self._tempo
 
     @property
     def _current_velocity(self) -> int:

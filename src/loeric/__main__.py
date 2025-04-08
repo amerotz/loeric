@@ -110,14 +110,12 @@ def play(
                 filename = f"generated_{name}_{kwargs['seed']}_{loeric_id}.mid"
             player.save(f"{dirname}/{filename}")
 
-        done_playing.set()
-        print("Player thread terminated.")
-
     except Exception as e:
         # stop sync thread
+        raise e
+    finally:
         done_playing.set()
         print("Player thread terminated.")
-        raise e
 
 
 def sync_thread(
@@ -461,11 +459,10 @@ def main():
     except KeyboardInterrupt:
         print("\nPlayback stopped by user.")
 
-    # print("Closing midi ports...")
-
     # close midi input
     if port is not None:
         port.close()
+        print("Closing midi ports...")
         if port.closed:
             print("Closed MIDI input.")
 

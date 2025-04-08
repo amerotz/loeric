@@ -39,138 +39,6 @@
 		"error": 0.005
 	},
 	"ornamentation": {
-		"vibrato": {
-			"cases": ["c4"],
-			"pitches_mean": [0, 0.3, 0, -0.3, 0],
-			"pitches_std": [0.1, 0.1, 0.1, 0.1, 0.1],
-			"velocities_mean": [1, 1, 1, 1, 1],
-			"velocities_std": [0, 0, 0, 0, 0],
-			"durations_mean": [0.25, 0.25, 0.25, 0.25, 1],
-			"durations_std": [0.1, 0.1, 0.1, 0.1, 0],
-			"probability": 1,
-			"length": 2,
-			"diatonic": true,
-			"slide": true
-		},
-		"roll_1": {
-			"cases": ["c4.", "c8 c4", "c4 c8", "c8 c8 c8", "d8 d8 c8", "f8 f8 e8"],
-			"pitches_mean": [0, 1, 0, -1, 0],
-			"pitches_std": [0, 0, 0, 0, 0],
-			"velocities_mean": [1, 0.4, 1, 0.4, 1],
-			"velocities_std": [0, 0, 0, 0, 0],
-			"durations_mean": [1, 0.3, 0.7, 0.3, 0.7],
-			"durations_std": [0, 0.1, 0.1, 0.1, 0.1],
-			"probability": 1,
-			"length": 3,
-			"diatonic": true,
-			"slide": false
-		},
-		"roll_2": {
-            "cases": ["f8 e8 f8", "d8 c8 d8"],
-            "pitches_mean": [0, 1, 0, -1, 0],
-            "pitches_std": [0, 0, 0, 0, 0],
-            "velocities_mean": [1, 0.8, 0.8, 0.8, 1],
-            "velocities_std": [0, 0, 0, 0, 0],
-            "durations_mean": [1, 0.2, 0.2, 0.2, 1],
-            "durations_std": [0, 0.1, 0.1, 0.1, 0],
-            "probability": 1,
-            "length": 3,
-            "diatonic": true,
-            "slide": false
-        },
-		"cut_1": {
-			"cases": ["c8 c8"],
-			"pitches_mean": [0, 1, 0],
-			"pitches_std": [0, 0, 0],
-			"velocities_mean": [1, 0.4, 1],
-			"velocities_std": [0, 0, 0],
-			"durations_mean": [1, 0.3, 0.7],
-			"durations_std": [0, 0.1, 0.1],
-			"probability": 1,
-			"length": 2,
-			"diatonic": true,
-			"slide": false
-		},
-		"cut_2": {
-			"cases": ["beat"],
-			"pitches_mean": [1, 0],
-			"pitches_std": [1.5, 0],
-			"velocities_mean": [0.4, 1],
-			"velocities_std": [0, 0],
-			"durations_mean": [0.3, 0.7],
-			"durations_std": [0.0, 0.0],
-			"probability": 1,
-			"length": 1,
-			"diatonic": true,
-			"slide": false
-		},
-		"slide": {
-			"cases": ["beat"],
-			"pitches_mean": [-1, 0],
-			"pitches_std": [0, 0],
-			"velocities_mean": [1, 1],
-			"velocities_std": [0, 0],
-			"durations_mean": [0.2, 0.8],
-			"durations_std": [0.0, 0.0],
-			"probability": 1,
-			"length": 1,
-			"diatonic": true,
-			"slide": true
-		},
-		"error": {
-			"cases": ["not beat"],
-			"pitches_mean": [0],
-			"pitches_std": [4],
-			"velocities_mean": [1],
-			"velocities_std": [0.5],
-			"durations_mean": [1],
-			"durations_std": [1],
-			"probability": 0.01,
-			"length": 1,
-			"diatonic": false,
-			"slide": false
-		},
-		"drop": {
-			"cases": ["not beat"],
-			"pitches_mean": [0],
-			"pitches_std": [0],
-			"velocities_mean": [0],
-			"velocities_std": [0],
-			"durations_mean": [0.01],
-			"durations_std": [0],
-			"probability": 0.01,
-			"length": 1,
-			"diatonic": false,
-			"slide": false
-
-		},
-		"triplet_1": {
-			"cases": ["c4.", "c8 c4", "c4 c8", "c8 c8 c8"],
-			"pitches_mean": [0, 0, 0, 0],
-			"pitches_std": [0, 0, 0, 0],
-			"velocities_mean": [1, 1, 1, 1],
-			"velocities_std": [0, 0, 0, 0],
-			"durations_mean": [0.5, 0.5, 1, 1],
-			"durations_std": [0.1, 0.1, 0.1, 0.1],
-			"probability": 1,
-			"length": 3,
-			"diatonic": true,
-			"slide": false
-
-		},
-		"triplet_2": {
-			"cases": ["c4", "c8 c8"],
-			"pitches_mean": [0, 0, 0],
-			"pitches_std": [0, 0, 0],
-			"velocities_mean": [1, 1, 1],
-			"velocities_std": [0, 0, 0],
-			"durations_mean": [0.5, 0.5, 1],
-			"durations_std": [0.1, 0.1, 0.1],
-			"probability": 1,
-			"length": 2,
-			"diatonic": true,
-			"slide": false
-		}
 	},
 	"swing": {
 		"min": 1,
@@ -194,14 +62,23 @@
         "legato_min": 0.9,
         "legato_max": 1,
 		"pitch_deviation_cents": 10,
-		"use_old_ornaments": false
+        "use_old_ornaments": false
 	},
 	"tempo_control": {
+		"increasing": false,
 		"tempo_warp_bpms": 0,
 		"use_old_tempo_warp": false,
 		"old_tempo_warp": 0.1
 	},
 	"contour_2_control": {
+	},	
+	"control_2_contour": {
+		"velocity_intensity": 77,
+		"velocity_human_impact":  78,
+		"tempo_intensity": 79,
+		"tempo_human_impact": 80,
+		"ornament_intensity": 81,
+		"ornament_human_impact": 82
 	},
 	"harmony": {
 		"chord_score" :[
