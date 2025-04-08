@@ -168,6 +168,12 @@ class Groover:
         # table for pitch errors
         self._pitch_errors = defaultdict(int)
 
+        self._max_ornament_length = 0
+        for o in self._config["ornamentation"]:
+            self._max_ornament_length = max(
+                self._max_ornament_length, self._config["ornamentation"][o]["length"]
+            )
+
         # legato
         self._legato_amount = (
             self._config["values"]["legato_max"] - self._config["values"]["legato_min"]
@@ -1150,6 +1156,7 @@ class Groover:
 
                 # slides can be microtonal
                 new_note = message.note + p
+
                 # if not sliding, quantize
                 if not self._config["ornamentation"][ornament_type]["slide"]:
                     new_note = int(new_note)
@@ -1298,10 +1305,29 @@ class Groover:
                 options_prob.append(self._config["probabilities"]["error"])
         else:
 
+            # create pattern from source notes
             contour_index = self._contours["message length"]._index
+            case_len = 0
+            case_i = 0
+            source_case = []
+            while case_len < self._max_ornament_length:
+                index = min(
+                    contour_index + case_i,
+                    len(self._contours["message length"]) - 1,
+                )
+                p = self._contours["pitch difference"][index]
+                d = self._contours["message length"][index] / self._eight_duration
+                case_len += d
+                source_case.append((p, d))
+                case_i += 1
+
+            print(source_case)
+            input()
+
             # for each ornament
             for ornament in self._config["ornamentation"]:
                 cases = self._config["ornamentation"][ornament]["cases"]
+
                 # check elegibility for every listed case
                 for c in cases:
                     elegible = True
@@ -1453,7 +1479,6 @@ class Groover:
             self._tempo = min(self._tempo, calculated_tempo)
         else:
             self._tempo = calculated_tempo
-        print(self._temp)
         return self._tempo
 
     @property

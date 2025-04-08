@@ -46,24 +46,24 @@
         ],
         "phrase_weight": 0.3,
         "pattern_means": [
-            0.129,
-            0.128,
-            0.128,
-            0.13,
-            0.122,
-            0.127,
-            0.123,
-            0.126
+            1.074,
+            1.02,
+            1.019,
+            1.0,
+            0.977,
+            1.009,
+            0.994,
+            0.995
         ],
         "pattern_stds": [
-            0.066,
-            0.073,
-            0.068,
-            0.066,
-            0.064,
-            0.069,
-            0.065,
-            0.067
+            0.052,
+            0.051,
+            0.051,
+            0.048,
+            0.052,
+            0.046,
+            0.046,
+            0.041
         ],
         "std_scale": 0.1,
         "period": 1,
@@ -525,8 +525,8 @@
         "use_old_ornaments": false
     },
     "tempo_control": {
-        "increasing": true,
-        "tempo_warp_bpms": 20,
+        "increasing": false,
+        "tempo_warp_bpms": 0,
         "use_old_tempo_warp": false,
         "old_tempo_warp": 0.1
     },
