@@ -1,5 +1,4 @@
 import faulthandler
-import os
 import threading
 from collections.abc import Callable
 
@@ -162,7 +161,7 @@ class Musician:
                 if msg.is_cc(event_number):
                     contour_name = control2contour[event_number]
                     value = msg.value / 127
-                    groover.set_contour_value(contour_name, value)
+                    self.groover.set_contour_value(contour_name, value)
                     print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
 
         return callback
