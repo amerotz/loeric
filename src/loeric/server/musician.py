@@ -11,25 +11,33 @@ from loeric import tune as tu
 
 faulthandler.enable()
 # bad code goes here
-
+received_start = threading.Semaphore(value=0)
 
 
 class Musician:
     def __init__(
             self,
             loeric_id: int,
+            tune: tu.Tune,
             groover: gr.Groover,
+            out: mido.ports.BaseOutput
     ):
         self.loeric_id = loeric_id
+        self.tune = tune
         self.groover = groover
-        self.received_start = threading.Semaphore(value=0)
+        self.out = out
         self.done_playing = threading.Event()
         self.stopped = threading.Event()
         self.playback_resumed = threading.Condition()
         self.groover_lock = threading.Lock()
 
 
-    def play(self, )-> None:
+    def play(self)-> None:
+        self.player_t = threading.Thread(target=self.__play)
+        self.player_t.start()
+
+
+    def __play(self, )-> None:
         try:
             """
             Play the given tune with the given groover.
@@ -47,11 +55,11 @@ class Musician:
                 time_signature=self.tune.time_signature,
                 save=False,
                 verbose=False,
-                midi_out=out,
+                midi_out=self.out,
             )
 
             # wait for start
-            self.received_start.acquire()
+            received_start.acquire()
             self.player.init_playback()
 
             # repeat as specified
@@ -76,8 +84,8 @@ class Musician:
                 # keep meta messages intact
                 else:
                     if message.type == "songpos":
-                        if sync_port_out is not None:
-                            sync_port_out.send(message)
+                        #if sync_port_out is not None:
+                            #sync_port_out.send(message)
                             # print(f"{loeric_id} SENT {message.pos} ({time.time()})")
                         new_messages = []
                     else:
@@ -86,10 +94,10 @@ class Musician:
                 self.player.play(new_messages)
 
             # play an end note
-            if not kwargs["no_end_note"]:
-                self.groover.reset_contours()
-                self.groover.advance_contours()
-                self.player.play(self.groover.get_end_notes())
+            #if not kwargs["no_end_note"]:
+            self.groover.reset_contours()
+            self.groover.advance_contours()
+            self.player.play(self.groover.get_end_notes())
 
             self.done_playing.set()
             print("Player thread terminated.")
@@ -100,68 +108,3 @@ class Musician:
             print("Player thread terminated.")
             raise e
 
-
-    def sync_thread(
-            self, sync_port_in: mido.ports.BaseInput, out: mido.ports.BaseOutput
-    ) -> None:
-        """
-        Handle MIDI start, stop, songpos and tempo messages.
-        """
-        global stopped
-        while not self.done_playing.is_set():
-            msg = sync_port_in.receive(block=True)
-            if msg.type == "sysex" and msg.data[0] == 69:
-                tempo = sum(msg.data[1:])
-                self.groover.set_tempo(tempo)
-                print(f"Received SET TEMPO {tempo}.")
-            elif msg.type == "reset":
-                self.groover.reset_clock()
-                print(f"Received RESET.")
-            elif msg.type == "clock":
-                self.groover.set_clock()
-                print(f"Received CLOCK.")
-            elif msg.type == "songpos":
-                print(f"Received JUMP {msg.pos}.")
-                if stopped.is_set():
-                    self.groover.jump_to_pos(msg.pos)
-                else:
-                    print(f"Ignoring JUMP because playback is active.")
-            elif msg.type == "start":
-                self.received_start.release(n=2)
-                print("Received START.")
-            elif msg.type == "stop":
-                stopped.set()
-                print("Received STOP.")
-            elif msg.type == "continue":
-                stopped.clear()
-                with self.playback_resumed:
-                    self.playback_resumed.notify_all()
-                print("Received CONTINUE.")
-
-        print("Sync thread terminated.")
-
-
-    def check_midi_control(
-            self, control2contour: dict[int, str]
-    ) -> Callable[[], None]:
-        """
-        Returns a function that associates a contour name (values) for every MIDI control number in the dictionary (keys) and updates the groover accordingly.
-        The value of the contour will be the control value mapped in the interval [0, 1].
-
-        :param groover: the groover object.
-        :param control2contour: a dictionary of control numbers associated to contour names.
-
-        :return: a callback function that will check for the given values.
-        """
-
-        def callback(msg):
-            if lu.is_note(msg):
-                pass
-            for event_number in control2contour:
-                if msg.is_cc(event_number):
-                    contour_name = control2contour[event_number]
-                    value = msg.value / 127
-                    self.groover.set_contour_value(contour_name, value)
-                    print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
-
-        return callback
