@@ -8,7 +8,8 @@
             1
         ],
         "high_loud_weight": 0.3,
-        "phrase_weight": 0.3,
+        "phrase_weight": 0.2,
+        "phrase_exp": 10,
         "pattern_means": [
             0.998,
             0.994,
@@ -29,9 +30,9 @@
             0.085,
             0.185
         ],
-        "std_scale": 0.1,
+        "std_scale": 1,
         "period": 1,
-        "random": 0.2,
+        "random": 0.0,
         "savgol": false,
         "scale": true,
         "shift": true
@@ -45,29 +46,30 @@
             1
         ],
         "phrase_weight": 0.3,
+        "phrase_exp": 10,
         "pattern_means": [
-            1.074,
-            1.02,
-            1.019,
-            1.0,
-            0.977,
-            1.009,
-            0.994,
-            0.995
+            0.133,
+            0.127,
+            0.126,
+            0.126,
+            0.124,
+            0.125,
+            0.125,
+            0.124
         ],
         "pattern_stds": [
+            0.05,
+            0.049,
+            0.049,
+            0.045,
             0.052,
-            0.051,
-            0.051,
-            0.048,
-            0.052,
-            0.046,
-            0.046,
-            0.041
+            0.045,
+            0.045,
+            0.042
         ],
         "std_scale": 0.1,
         "period": 1,
-        "random": 0.2,
+        "random": 0.0,
         "savgol": true,
         "scale": false,
         "shift": true
@@ -80,6 +82,8 @@
             1,
             1
         ],
+        "phrase_weight": 0.5,
+        "phrase_exp": 100,
         "random": 0.2,
         "savgol": false,
         "scale": true,
@@ -95,7 +99,12 @@
     "ornamentation": {
         "vibrato": {
             "cases": [
-                "c4"
+                [
+                    [
+                        0,
+                        2
+                    ]
+                ]
             ],
             "pitches_mean": [
                 0,
@@ -146,12 +155,74 @@
         },
         "roll_1": {
             "cases": [
-                "c4.",
-                "c8 c4",
-                "c4 c8",
-                "c8 c8 c8",
-                "d8 d8 c8",
-                "f8 f8 e8"
+                [
+                    [
+                        0,
+                        3
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        2
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        2
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        -2,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        -1,
+                        1
+                    ]
+                ]
             ],
             "pitches_mean": [
                 0,
@@ -201,10 +272,7 @@
             "slide": false
         },
         "roll_2": {
-            "cases": [
-                "f8 e8 f8",
-                "d8 c8 d8"
-            ],
+            "cases": [ [ [ 0, 1 ], [ -2, 1 ], [ 0, 1 ] ], [ [ 0, 1 ], [ -1, 1 ], [ 0, 1 ] ] ],
             "pitches_mean": [
                 0,
                 1,
@@ -247,14 +315,23 @@
                 0.1,
                 0
             ],
-            "probability": 1,
+            "probability": 0.2,
             "length": 3,
             "diatonic": true,
             "slide": false
         },
         "cut_1": {
             "cases": [
-                "c8 c8"
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ]
             ],
             "pitches_mean": [
                 0,
@@ -316,8 +393,8 @@
                 0.8
             ],
             "durations_std": [
-                0.0,
-                0.0
+                0.1,
+                0.1
             ],
             "probability": 1,
             "length": 1,
@@ -349,8 +426,8 @@
                 0.8
             ],
             "durations_std": [
-                0.0,
-                0.0
+                0.1,
+                0.1
             ],
             "probability": 1,
             "length": 1,
@@ -413,10 +490,46 @@
         },
         "triplet_1": {
             "cases": [
-                "c4.",
-                "c8 c4",
-                "c4 c8",
-                "c8 c8 c8"
+                [
+                    [
+                        0,
+                        3
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        2
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        2
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ]
             ],
             "pitches_mean": [
                 0,
@@ -461,8 +574,22 @@
         },
         "triplet_2": {
             "cases": [
-                "c4",
-                "c8 c8"
+                [
+                    [
+                        0,
+                        2
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ]
             ],
             "pitches_mean": [
                 0,
@@ -519,14 +646,16 @@
         "max_velocity": 127,
         "max_pitch_error": 2,
         "min_pitch_error": -2,
-        "legato_min": 0.9,
+        "legato_min": 0.7,
         "legato_max": 1,
+        "legato_phrase_exp": 1000,
+        "phrase_levels": 1,
         "pitch_deviation_cents": 10,
         "use_old_ornaments": false
     },
     "tempo_control": {
         "increasing": false,
-        "tempo_warp_bpms": 0,
+        "tempo_warp_bpms": 3,
         "use_old_tempo_warp": false,
         "old_tempo_warp": 0.1
     },
@@ -570,7 +699,7 @@
         ]
     },
     "drone": {
-        "active": false,
+        "active": true,
         "threshold": 0.5,
         "bind": "velocity",
         "velocity_multiplier": 0.6,
@@ -593,7 +722,8 @@
         "free_strings_at_once": 0,
         "transpose": false,
         "allow_root": false,
-        "delay_range": 0.001
+        "delay_range": 0.001,
+        "notes_per_bar": 8
     },
     "approach_from_above": {},
     "approach_from_below": {}

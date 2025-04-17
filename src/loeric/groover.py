@@ -215,10 +215,16 @@ class Groover:
         )
 
         velocity_pitch_contour = cnt.PitchContour()
-        velocity_pitch_contour.calculate(self._tune)
+        velocity_pitch_contour.calculate(
+            self._tune, savgol=True, shift=True, scale=True
+        )
 
         velocity_phrasing_contour = cnt.PhraseContour()
-        velocity_phrasing_contour.calculate(self._tune)
+        velocity_phrasing_contour.calculate(
+            self._tune,
+            phrase_levels=self._config["values"]["phrase_levels"],
+            phrase_exp=self._config["velocity"]["phrase_exp"],
+        )
 
         self._contours["velocity"] = cnt.weighted_sum(
             [
@@ -247,12 +253,15 @@ class Groover:
             scale=self._config["tempo"]["scale"],
             shift=self._config["tempo"]["shift"],
         )
-
-        self._contours["phrasing"] = cnt.PhraseContour()
-        self._contours["phrasing"].calculate(self._tune)
+        tempo_phrasing_contour = cnt.PhraseContour()
+        tempo_phrasing_contour.calculate(
+            self._tune,
+            phrase_levels=self._config["values"]["phrase_levels"],
+            phrase_exp=self._config["tempo"]["phrase_exp"],
+        )
 
         self._contours["tempo"] = cnt.weighted_sum(
-            [tempo_intensity_contour, self._contours["phrasing"]],
+            [tempo_intensity_contour, tempo_phrasing_contour],
             np.array(
                 [
                     1 - self._config["tempo"]["phrase_weight"],
@@ -261,12 +270,12 @@ class Groover:
             ),
         )
 
-        """
-        import matplotlib.pyplot as plt
-
-        plt.plot(self._contours["tempo"]._contour)
-        plt.show()
-        """
+        self._contours["phrasing"] = cnt.PhraseContour()
+        self._contours["phrasing"].calculate(
+            self._tune,
+            phrase_levels=self._config["values"]["phrase_levels"],
+            phrase_exp=self._config["values"]["legato_phrase_exp"],
+        )
 
         self._contours["tempo_pattern"] = cnt.PatternContour()
         self._contours["tempo_pattern"].calculate(
@@ -279,8 +288,8 @@ class Groover:
         )
 
         # ornament contour
-        self._contours["ornament"] = cnt.IntensityContour()
-        self._contours["ornament"].calculate(
+        ornament_intensity_contour = cnt.IntensityContour()
+        ornament_intensity_contour.calculate(
             self._tune,
             weights=np.array(self._config["ornament"]["weights"]),
             random_weight=self._config["ornament"]["random"],
@@ -289,12 +298,42 @@ class Groover:
             shift=self._config["ornament"]["shift"],
         )
 
+        ornament_phrasing_contour = cnt.PhraseContour()
+        ornament_phrasing_contour.calculate(
+            self._tune,
+            phrase_levels=self._config["values"]["phrase_levels"],
+            phrase_exp=self._config["ornament"]["phrase_exp"],
+        )
+
+        self._contours["ornament"] = cnt.weighted_sum(
+            [ornament_intensity_contour, ornament_phrasing_contour],
+            np.array(
+                [
+                    1 - self._config["ornament"]["phrase_weight"],
+                    self._config["ornament"]["phrase_weight"],
+                ]
+            ),
+        )
+        """
+        import matplotlib.pyplot as plt
+
+        plt.plot(self._contours["ornament"]._contour)
+        plt.show()
+        """
+
         # message length contour
         self._contours["message length"] = cnt.MessageLengthContour()
         self._contours["message length"].calculate(self._tune)
+
         # pich difference
         self._contours["pitch difference"] = cnt.PitchDifferenceContour()
         self._contours["pitch difference"].calculate(self._tune)
+
+        # pich contour
+        self._contours["pitch contour"] = cnt.PitchContour()
+        self._contours["pitch contour"].calculate(
+            self._tune, savgol=False, shift=False, scale=False
+        )
 
         self._contours["harmony"] = cnt.HarmonicContour()
         self._contours["harmony"].calculate(
@@ -502,7 +541,7 @@ class Groover:
             mult = np.random.normal(
                 loc=self._config["values"]["legato_min"]
                 + self._legato_amount * self._contour_values["phrasing"],
-                scale=0.05,
+                scale=0.0,
             )
             # self._delay_max = mult
             new_length = new_message.time * mult
@@ -1309,20 +1348,31 @@ class Groover:
             contour_index = self._contours["message length"]._index
             case_len = 0
             case_i = 0
-            source_case = []
+            tune_notes = []
+            first_pitch = 0
+            # iterate until needed
             while case_len < self._max_ornament_length:
                 index = min(
                     contour_index + case_i,
                     len(self._contours["message length"]) - 1,
                 )
-                p = self._contours["pitch difference"][index]
-                d = self._contours["message length"][index] / self._eight_duration
-                case_len += d
-                source_case.append((p, d))
-                case_i += 1
+                # obtain pitch
+                p = self._contours["pitch contour"][index]
 
-            print(source_case)
-            input()
+                # save first pitch
+                if case_i == 0:
+                    first_pitch = p
+
+                # obtain duration
+                d = self._contours["message length"][index] / self._eight_duration
+
+                # update length counter
+                case_len += d
+
+                # add note
+                tune_notes.append([float(p - first_pitch), float(np.round(d * 4) / 4)])
+
+                case_i += 1
 
             # for each ornament
             for ornament in self._config["ornamentation"]:
@@ -1337,46 +1387,28 @@ class Groover:
                     elif c == "not beat":
                         elegible = elegible and not is_beat
                     else:
-                        case_notes = [
-                            n
-                            for n in m21.converter.parse(f"tinyNotation: {c}")
-                            .recurse()
-                            .getElementsByClass(m21.note.Note)
-                        ]
-                        reference = case_notes[0].pitch.midi
-                        # for index, note in enumerate(c.split(" ")):
-                        for index, note in enumerate(case_notes):
-                            # target duration
-                            duration = (
-                                note.duration.quarterLength * 2 * self._eight_duration
-                            )
+                        case_notes = c
 
-                            # actual duration
-                            message_length = self._contours["message length"][
-                                min(
-                                    contour_index + index,
-                                    len(self._contours["message length"]) - 1,
-                                )
-                            ]
+                        tune_i = 0
+                        for note in case_notes:
 
                             # target pitch
-                            pitch = note.pitch.midi - reference
-                            # actual pitch
-                            if index == 0:
-                                pitch_difference = 0
-                            else:
-                                pitch_difference = self._contours["pitch difference"][
-                                    min(
-                                        contour_index + index,
-                                        len(self._contours["pitch difference"]) - 1,
-                                    )
-                                ]
+                            pitch = note[0]
+
+                            # target duration
+                            duration = note[1]
+
+                            # actual pitch & duration
+                            pitch_difference = tune_notes[tune_i][0]
+                            message_length = tune_notes[tune_i][1]
+                            tune_i += 1
 
                             # check
+                            elegible = elegible and pitch_difference == pitch
+
                             elegible = (
                                 elegible and abs(message_length - duration) <= 0.01
                             )
-                            elegible = elegible and pitch_difference == pitch
 
                             # if one fails, move on
                             if not elegible:
