@@ -108,6 +108,7 @@ needs_pitch_quantization = [
 def get_chord_pitches(harmony: int) -> np.array:
     """
     Return the pitches of a major or minor chord in semitones from the root.
+
     :param harmony: the chord. Values 0-11 indicate a major chord. Values 12-23 indicate a minor chord. Values 24-35 indicate a diminished chord. Values 36-48 indicate an augmented chord.
 
     :return: the pitches that are part of the input chord.
