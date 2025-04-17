@@ -182,6 +182,8 @@ def get_ports(
     list_ports: bool = False,
     create_in: bool = False,
     create_out: bool = False,
+    prompt_in: bool = False,
+    prompt_out: bool = False,
 ):
     """
     Return the port names associated to the given indexes.
@@ -211,7 +213,7 @@ def get_ports(
         return inport, outport
 
     # if no input is defined
-    if input_number is None and not create_in:
+    if prompt_in:
         names = mido.get_input_names()
         if len(names) == 0:
             print("No input port available.")
@@ -226,7 +228,7 @@ def get_ports(
         in_index = input_number
 
     # if no output is defined
-    if output_number is None and not create_out:
+    if prompt_out:
         names = mido.get_output_names()
         if len(names) == 0:
             print("No output port available.")

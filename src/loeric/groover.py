@@ -631,24 +631,6 @@ class Groover:
         new_notes = []
         for note in notes:
             note.time = self._duration_of(max(0, note.time))
-            # add pitchbend
-            if lu.is_note_on(note):
-                bend = int(
-                    self._config["values"]["pitch_deviation_cents"]
-                    * 0.01
-                    * (random.random() * 2 - 1)
-                    * 8192
-                )
-
-                new_notes.append(
-                    mido.Message("pitchwheel", channel=note.channel, pitch=bend)
-                )
-            new_notes.append(note)
-            if lu.is_note_off(note):
-                new_notes.append(
-                    mido.Message("pitchwheel", channel=note.channel, pitch=0)
-                )
-        notes = new_notes
 
             # if it's a note message
             if lu.is_note(note):
