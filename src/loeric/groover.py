@@ -8,6 +8,8 @@ import threading
 import time
 import numpy as np
 import music21 as m21
+import threading
+import time
 
 from collections import defaultdict
 from collections.abc import Callable
@@ -226,6 +228,9 @@ class Groover:
             phrase_exp=self._config["velocity"]["phrase_exp"],
         )
 
+        velocity_phrasing_contour = cnt.PhraseContour()
+        velocity_phrasing_contour.calculate(self._tune)
+
         self._contours["velocity"] = cnt.weighted_sum(
             [
                 velocity_intensity_contour,
@@ -276,6 +281,26 @@ class Groover:
             phrase_levels=self._config["values"]["phrase_levels"],
             phrase_exp=self._config["values"]["legato_phrase_exp"],
         )
+
+        self._contours["phrasing"] = cnt.PhraseContour()
+        self._contours["phrasing"].calculate(self._tune)
+
+        self._contours["tempo"] = cnt.weighted_sum(
+            [tempo_intensity_contour, self._contours["phrasing"]],
+            np.array(
+                [
+                    1 - self._config["tempo"]["phrase_weight"],
+                    self._config["tempo"]["phrase_weight"],
+                ]
+            ),
+        )
+
+        """
+        import matplotlib.pyplot as plt
+
+        plt.plot(self._contours["tempo"]._contour)
+        plt.show()
+        """
 
         self._contours["tempo_pattern"] = cnt.PatternContour()
         self._contours["tempo_pattern"].calculate(
@@ -498,8 +523,6 @@ class Groover:
                 self._external_tempo = new_tempo
         self._last_clock_time = now
 
-    # _tmp_sum = 0
-
     def perform(self, message: mido.Message) -> list[mido.Message]:
         """
         'Perform' a single note event by affecting its timing, pitch, velocity and adding ornaments.
@@ -608,6 +631,24 @@ class Groover:
         new_notes = []
         for note in notes:
             note.time = self._duration_of(max(0, note.time))
+            # add pitchbend
+            if lu.is_note_on(note):
+                bend = int(
+                    self._config["values"]["pitch_deviation_cents"]
+                    * 0.01
+                    * (random.random() * 2 - 1)
+                    * 8192
+                )
+
+                new_notes.append(
+                    mido.Message("pitchwheel", channel=note.channel, pitch=bend)
+                )
+            new_notes.append(note)
+            if lu.is_note_off(note):
+                new_notes.append(
+                    mido.Message("pitchwheel", channel=note.channel, pitch=0)
+                )
+        notes = new_notes
 
             # if it's a note message
             if lu.is_note(note):

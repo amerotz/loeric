@@ -45,11 +45,6 @@
             1
         ],
         "phrase_weight": 0.4,
-<<<<<<< HEAD
-        "pattern_means": [1.074, 1.02, 1.019, 1.0, 0.977, 1.009, 0.994, 0.995],
-        "pattern_stds": [0.052, 0.051, 0.051, 0.048, 0.052, 0.046, 0.046, 0.041],
-        "std_scale": 1,
-=======
         "pattern_means": [
             0.129,
             0.128,
@@ -71,26 +66,27 @@
             0.067
         ],
         "std_scale": 0.1,
->>>>>>> main
         "period": 1,
         "random": 0.2,
         "savgol": true,
         "scale": true,
-        "shift": true
+        "shift": true,
+        "human_impact_scale": 0
     },
     "ornament": {
 		"weights": [1, 1, 1, 1, 1],
         "random": 0.1,
         "savgol": false,
         "scale": true,
-        "shift": true 
+        "shift": true,
+        "human_impact_scale": 1
     },
     "probabilities": {
-        "drop": 0.0,
+        "drop": 0.01,
         "roll": 1,
-        "slide": 1,
+        "slide": 0,
         "cut": 1,
-        "error": 0.0
+        "error": 0.1
     },
     "swing": {
         "min": 1.5,
@@ -99,11 +95,11 @@
     },
     "values": {
         "bend_resolution": 32,
-        "cut_eight_fraction": 0.2,
-        "cut_velocity_fraction": 0.4,
-        "roll_velocity_fraction": 0.4,
-        "roll_eight_fraction_max": 0.8,
-        "roll_eight_fraction_min": 0.3,
+        "cut_eight_fraction": 0.1,
+        "cut_velocity_fraction": 0.1,
+        "roll_velocity_fraction": 0.1,
+        "roll_eight_fraction_max": 0.1,
+        "roll_eight_fraction_min": 0.1,
         "slide_eight_fraction": 0.2,
         "slide_pitch_threshold": 6,
         "beat_velocity_increase": 16,

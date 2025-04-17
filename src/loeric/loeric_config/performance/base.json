@@ -2,13 +2,21 @@
 	"velocity": {
 		"weights": [1, 1, 1, 1, 1],
 		"high_loud_weight": 0.3,
+<<<<<<< HEAD
 		"phrase_weight": 0.2,
 		"phrase_exp": 10,
+=======
+		"phrase_weight": 0.3,
+>>>>>>> main
 		"pattern_means": [1.0],
 		"pattern_stds": [0],
 		"std_scale": 1,
 		"period": 1,
+<<<<<<< HEAD
 		"random": 0.0,
+=======
+		"random": 0.2,
+>>>>>>> main
 		"savgol": false,
 		"scale": true,
 		"shift": true 
@@ -16,18 +24,27 @@
 	"tempo": {
 		"weights": [1, 1, 1, 1, 1],
 		"phrase_weight": 0.3,
+<<<<<<< HEAD
 		"phrase_exp": 10,
+=======
+
+>>>>>>> main
 		"pattern_means": [1.0],
 		"pattern_stds": [0],
 		"std_scale": 1,
 		"period": 1,
+<<<<<<< HEAD
 		"random": 0.0,
+=======
+		"random": 0.2,
+>>>>>>> main
 		"savgol": true,
 		"scale": false,
 		"shift": true
 	},
 	"ornament": {
 		"weights": [1, 1, 1, 1, 1],
+<<<<<<< HEAD
         "phrase_weight": 0.5,
         "phrase_exp": 100,
 		"random": 0.2,
@@ -46,6 +63,22 @@
 	},
 	"swing": {
 		"min": 1,
+=======
+		"random": 0.2,
+		"savgol": true,
+		"scale": true,
+		"shift": true 
+	},
+	"probabilities": {
+		"drop": 0.01,
+		"roll": 1,
+		"slide": 1,
+		"cut": 1,
+		"error": 0.01
+	},
+	"swing": {
+		"min": 1.5,
+>>>>>>> main
 		"max": 1,
 		"bind": "tempo"
 	},
@@ -63,6 +96,7 @@
 		"max_velocity": 127,
 		"max_pitch_error": 2,
 		"min_pitch_error": -2,
+<<<<<<< HEAD
         "legato_min": 0.7,
         "legato_max": 1,
 		"legato_phrase_exp": 1000,
@@ -73,10 +107,19 @@
 	"tempo_control": {
 		"increasing": false,
 		"tempo_warp_bpms": 3,
+=======
+        "legato_min": 0.8,
+        "legato_max": 1,
+		"pitch_deviation_cents": 10
+	},
+	"tempo_control": {
+		"tempo_warp_bpms": 1,
+>>>>>>> main
 		"use_old_tempo_warp": false,
 		"old_tempo_warp": 0.1
 	},
 	"contour_2_control": {
+<<<<<<< HEAD
 	},	
 	"control_2_contour": {
 		"velocity_intensity": 77,
@@ -85,6 +128,9 @@
 		"tempo_human_impact": 80,
 		"ornament_intensity": 81,
 		"ornament_human_impact": 82
+=======
+
+>>>>>>> main
 	},
 	"harmony": {
 		"chord_score" :[

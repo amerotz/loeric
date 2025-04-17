@@ -140,6 +140,10 @@ def sync_intensity(inports, outports):
 
                 action_dict[loeric_id] = (now, action, group)
                 #print(loeric_id, action, group)
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
                 df_action.loc[len(df_action)] = [now, loeric_id, action, group]
 
             # output port
@@ -331,6 +335,10 @@ def sync_loeric(inports, outports):
 
             # print(pos_dict)
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
             # agree on which position
             algorithm = config["tempo_policy"]["position"]
             if algorithm == "max":

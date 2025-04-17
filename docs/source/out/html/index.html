@@ -1,0 +1,296 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to LOERIC’s documentation! &mdash; loeric 0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2709fde1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Usage" href="usage.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            loeric
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functioning.html">How does LOERIC work?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">loeric</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Welcome to LOERIC’s documentation!</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="welcome-to-loeric-s-documentation">
+<h1>Welcome to LOERIC’s documentation!<a class="headerlink" href="#welcome-to-loeric-s-documentation" title="Link to this heading"></a></h1>
+<p>LOERIC (Live perfOrmance rulE-system for iRish tradItional musiC) is a software package capable of performing Irish traditional music by adding expression, ornaments and live human interaction.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This project is under active development.</p>
+</div>
+<section id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#performing-a-tune">Performing a tune</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#live-interaction">Live Interaction</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#available-control-scripts">Available Control Scripts</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="usage.html#midi-velocity-listener">MIDI Velocity Listener</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage.html#other-listeners">Other Listeners</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="functioning.html">How does LOERIC work?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="functioning.html#contours">Contours</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functioning.html#ornaments">Ornaments</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="functioning.html#rolls-cuts">Rolls &amp; cuts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="functioning.html#slides">Slides</a></li>
+<li class="toctree-l3"><a class="reference internal" href="functioning.html#dropping-notes">Dropping notes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="functioning.html#errors">Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="functioning.html#dynamics">Dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functioning.html#tempo">Tempo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="functioning.html#microtiming">Microtiming</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.__main__.sync_thread"><code class="docutils literal notranslate"><span class="pre">sync_thread()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.loeric_utils.get_chord_pitches"><code class="docutils literal notranslate"><span class="pre">get_chord_pitches()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.loeric_utils.get_ports"><code class="docutils literal notranslate"><span class="pre">get_ports()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.loeric_utils.get_root"><code class="docutils literal notranslate"><span class="pre">get_root()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.loeric_utils.is_note"><code class="docutils literal notranslate"><span class="pre">is_note()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.loeric_utils.is_note_off"><code class="docutils literal notranslate"><span class="pre">is_note_off()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.loeric_utils.is_note_on"><code class="docutils literal notranslate"><span class="pre">is_note_on()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.groover.Groover"><code class="docutils literal notranslate"><span class="pre">Groover</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.__init__"><code class="docutils literal notranslate"><span class="pre">Groover.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.__weakref__"><code class="docutils literal notranslate"><span class="pre">Groover.__weakref__</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._add_drone"><code class="docutils literal notranslate"><span class="pre">Groover._add_drone()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._apply_swing"><code class="docutils literal notranslate"><span class="pre">Groover._apply_swing()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._current_swing"><code class="docutils literal notranslate"><span class="pre">Groover._current_swing</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._current_velocity"><code class="docutils literal notranslate"><span class="pre">Groover._current_velocity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._cut_duration"><code class="docutils literal notranslate"><span class="pre">Groover._cut_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._duration_of"><code class="docutils literal notranslate"><span class="pre">Groover._duration_of()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._eight_duration"><code class="docutils literal notranslate"><span class="pre">Groover._eight_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._instantiate"><code class="docutils literal notranslate"><span class="pre">Groover._instantiate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._is_on_a_beat"><code class="docutils literal notranslate"><span class="pre">Groover._is_on_a_beat()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._roll_duration"><code class="docutils literal notranslate"><span class="pre">Groover._roll_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover._slide_duration"><code class="docutils literal notranslate"><span class="pre">Groover._slide_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.advance_contours"><code class="docutils literal notranslate"><span class="pre">Groover.advance_contours()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.approach_from_above"><code class="docutils literal notranslate"><span class="pre">Groover.approach_from_above()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.approach_from_below"><code class="docutils literal notranslate"><span class="pre">Groover.approach_from_below()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.can_generate_ornament"><code class="docutils literal notranslate"><span class="pre">Groover.can_generate_ornament()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.check_midi_control"><code class="docutils literal notranslate"><span class="pre">Groover.check_midi_control()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.choose_ornament"><code class="docutils literal notranslate"><span class="pre">Groover.choose_ornament()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.current_tempo"><code class="docutils literal notranslate"><span class="pre">Groover.current_tempo</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.generate_ornament"><code class="docutils literal notranslate"><span class="pre">Groover.generate_ornament()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.get_end_notes"><code class="docutils literal notranslate"><span class="pre">Groover.get_end_notes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.jump_to_pos"><code class="docutils literal notranslate"><span class="pre">Groover.jump_to_pos()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.next_event"><code class="docutils literal notranslate"><span class="pre">Groover.next_event()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.perform"><code class="docutils literal notranslate"><span class="pre">Groover.perform()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.reset_clock"><code class="docutils literal notranslate"><span class="pre">Groover.reset_clock()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.reset_contours"><code class="docutils literal notranslate"><span class="pre">Groover.reset_contours()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.set_clock"><code class="docutils literal notranslate"><span class="pre">Groover.set_clock()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.set_contour_value"><code class="docutils literal notranslate"><span class="pre">Groover.set_contour_value()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.set_tempo"><code class="docutils literal notranslate"><span class="pre">Groover.set_tempo()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.Groover.tempo"><code class="docutils literal notranslate"><span class="pre">Groover.tempo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.groover.UnknownContourError"><code class="docutils literal notranslate"><span class="pre">UnknownContourError</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.groover.UnknownContourError.__weakref__"><code class="docutils literal notranslate"><span class="pre">UnknownContourError.__weakref__</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.Contour"><code class="docutils literal notranslate"><span class="pre">Contour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.Contour.__init__"><code class="docutils literal notranslate"><span class="pre">Contour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.Contour.__len__"><code class="docutils literal notranslate"><span class="pre">Contour.__len__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.Contour.__weakref__"><code class="docutils literal notranslate"><span class="pre">Contour.__weakref__</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.Contour.calculate"><code class="docutils literal notranslate"><span class="pre">Contour.calculate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.Contour.jump"><code class="docutils literal notranslate"><span class="pre">Contour.jump()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.Contour.next"><code class="docutils literal notranslate"><span class="pre">Contour.next()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.Contour.reset"><code class="docutils literal notranslate"><span class="pre">Contour.reset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.Contour.scale_and_savgol"><code class="docutils literal notranslate"><span class="pre">Contour.scale_and_savgol()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.HarmonicContour"><code class="docutils literal notranslate"><span class="pre">HarmonicContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.HarmonicContour.__init__"><code class="docutils literal notranslate"><span class="pre">HarmonicContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.HarmonicContour.calculate"><code class="docutils literal notranslate"><span class="pre">HarmonicContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.IntensityContour"><code class="docutils literal notranslate"><span class="pre">IntensityContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.IntensityContour.__init__"><code class="docutils literal notranslate"><span class="pre">IntensityContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.IntensityContour.calculate"><code class="docutils literal notranslate"><span class="pre">IntensityContour.calculate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.IntensityContour.ocanainn_scores"><code class="docutils literal notranslate"><span class="pre">IntensityContour.ocanainn_scores()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.InvalidIndexError"><code class="docutils literal notranslate"><span class="pre">InvalidIndexError</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.InvalidIndexError.__weakref__"><code class="docutils literal notranslate"><span class="pre">InvalidIndexError.__weakref__</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.MessageLengthContour"><code class="docutils literal notranslate"><span class="pre">MessageLengthContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.MessageLengthContour.__init__"><code class="docutils literal notranslate"><span class="pre">MessageLengthContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.MessageLengthContour.calculate"><code class="docutils literal notranslate"><span class="pre">MessageLengthContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.PatternContour"><code class="docutils literal notranslate"><span class="pre">PatternContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.PatternContour.__init__"><code class="docutils literal notranslate"><span class="pre">PatternContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.PatternContour.calculate"><code class="docutils literal notranslate"><span class="pre">PatternContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.PhraseContour"><code class="docutils literal notranslate"><span class="pre">PhraseContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.PhraseContour.__init__"><code class="docutils literal notranslate"><span class="pre">PhraseContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.PhraseContour.calculate"><code class="docutils literal notranslate"><span class="pre">PhraseContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.PitchContour"><code class="docutils literal notranslate"><span class="pre">PitchContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.PitchContour.__init__"><code class="docutils literal notranslate"><span class="pre">PitchContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.PitchContour.calculate"><code class="docutils literal notranslate"><span class="pre">PitchContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.PitchDifferenceContour"><code class="docutils literal notranslate"><span class="pre">PitchDifferenceContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.PitchDifferenceContour.__init__"><code class="docutils literal notranslate"><span class="pre">PitchDifferenceContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.PitchDifferenceContour.calculate"><code class="docutils literal notranslate"><span class="pre">PitchDifferenceContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.RandomContour"><code class="docutils literal notranslate"><span class="pre">RandomContour</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.RandomContour.__init__"><code class="docutils literal notranslate"><span class="pre">RandomContour.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.RandomContour.calculate"><code class="docutils literal notranslate"><span class="pre">RandomContour.calculate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.UncomputedContourError"><code class="docutils literal notranslate"><span class="pre">UncomputedContourError</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.contour.UncomputedContourError.__weakref__"><code class="docutils literal notranslate"><span class="pre">UncomputedContourError.__weakref__</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.multiply"><code class="docutils literal notranslate"><span class="pre">multiply()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.contour.weighted_sum"><code class="docutils literal notranslate"><span class="pre">weighted_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.tune.Tune"><code class="docutils literal notranslate"><span class="pre">Tune</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.__getitem__"><code class="docutils literal notranslate"><span class="pre">Tune.__getitem__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.__init__"><code class="docutils literal notranslate"><span class="pre">Tune.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.__len__"><code class="docutils literal notranslate"><span class="pre">Tune.__len__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.__weakref__"><code class="docutils literal notranslate"><span class="pre">Tune.__weakref__</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune._get_key_signature"><code class="docutils literal notranslate"><span class="pre">Tune._get_key_signature()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune._get_original_tempo"><code class="docutils literal notranslate"><span class="pre">Tune._get_original_tempo()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune._get_performance_offset"><code class="docutils literal notranslate"><span class="pre">Tune._get_performance_offset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune._get_time_signature"><code class="docutils literal notranslate"><span class="pre">Tune._get_time_signature()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune._quarter_duration"><code class="docutils literal notranslate"><span class="pre">Tune._quarter_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.ambitus"><code class="docutils literal notranslate"><span class="pre">Tune.ambitus</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.bar_duration"><code class="docutils literal notranslate"><span class="pre">Tune.bar_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.beat_count"><code class="docutils literal notranslate"><span class="pre">Tune.beat_count</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.beat_duration"><code class="docutils literal notranslate"><span class="pre">Tune.beat_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.events"><code class="docutils literal notranslate"><span class="pre">Tune.events()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.filter"><code class="docutils literal notranslate"><span class="pre">Tune.filter()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.get_performance_time"><code class="docutils literal notranslate"><span class="pre">Tune.get_performance_time()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.is_on_a_beat"><code class="docutils literal notranslate"><span class="pre">Tune.is_on_a_beat()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.key_signature"><code class="docutils literal notranslate"><span class="pre">Tune.key_signature</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.offset"><code class="docutils literal notranslate"><span class="pre">Tune.offset</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.quarter_duration"><code class="docutils literal notranslate"><span class="pre">Tune.quarter_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.reset_performance_time"><code class="docutils literal notranslate"><span class="pre">Tune.reset_performance_time()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.root"><code class="docutils literal notranslate"><span class="pre">Tune.root</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.semitones_from_tonic"><code class="docutils literal notranslate"><span class="pre">Tune.semitones_from_tonic()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.tempo"><code class="docutils literal notranslate"><span class="pre">Tune.tempo</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.tune.Tune.time_signature"><code class="docutils literal notranslate"><span class="pre">Tune.time_signature</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#loeric.player.Player"><code class="docutils literal notranslate"><span class="pre">Player</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.player.Player.__init__"><code class="docutils literal notranslate"><span class="pre">Player.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.player.Player.__weakref__"><code class="docutils literal notranslate"><span class="pre">Player.__weakref__</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.player.Player.init_playback"><code class="docutils literal notranslate"><span class="pre">Player.init_playback()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.player.Player.play"><code class="docutils literal notranslate"><span class="pre">Player.play()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.player.Player.reset"><code class="docutils literal notranslate"><span class="pre">Player.reset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loeric.player.Player.save"><code class="docutils literal notranslate"><span class="pre">Player.save()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="usage.html" class="btn btn-neutral float-right" title="Usage" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marco Amerotti.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -110,10 +110,13 @@ def play(
                 filename = f"generated_{name}_{kwargs['seed']}_{loeric_id}.mid"
             player.save(f"{dirname}/{filename}")
 
+        done_playing.set()
+        print("Player thread terminated.")
+
     except Exception as e:
-        # stop sync thread
         raise e
     finally:
+        # stop sync thread
         done_playing.set()
         print("Player thread terminated.")
 

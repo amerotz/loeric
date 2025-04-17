@@ -12,4 +12,4 @@ sphinx:
 python:
   install:
   - path: .
-  - requirements: requirements.txt
+  - requirements: docs/docs-requirements.txt

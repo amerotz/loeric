@@ -18,6 +18,29 @@ Features
 - 💻 Fully MIDI-compatible
 - 📋 Highly customizable via JSON
 
+Installation
+------------
+
+Create a virtual Python environment:
+
+``python3 -m venv ~/loeric-env``
+
+Activate it:
+
+``source ~/loeric-env/bin/activate``
+
+Install the library `portaudio`:
+
+``sudo apt install portaudio19-dev # debian``
+
+``sudo dnf install portaudio # fedora``
+
+``brew install portaudio #mac``
+
+Build and install:
+
+``sh compile.sh``
+
 Creative Works
 --------------
 - ☎️ LOERIC is now featured as waiting-call music for `Loquantur <https://loquantur.com/machine-ai-by-professor-steve-benford-and-doctor-bob-l-t-sturm/>`_.
