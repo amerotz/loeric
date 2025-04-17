@@ -34,6 +34,12 @@ class Contour:
         """
         return len(self._contour)
 
+    def __getitem__(self, index):
+        """
+        The length of this contour.
+        """
+        return self._contour[index]
+
     def calculate(self, midi: tune.Tune) -> None:
         """
         Calculate the intensity contour for the given tune.
@@ -249,7 +255,7 @@ class PhraseContour(Contour):
     def __init__(self):
         super().__init__()
 
-    def calculate(self, midi: tune.Tune) -> None:
+    def calculate(self, midi: tune.Tune, phrase_levels=2, phrase_exp=100) -> None:
         """
         Compute a phrasing contour using a sum of sine functions.
 
@@ -268,16 +274,11 @@ class PhraseContour(Contour):
         summed_timings = summed_timings[note_ons]
 
         bar_length = midi.bar_duration
-        phrase_levels = 3
 
         self._contour = self.scale_and_savgol(
-            np.sum(
-                [
-                    np.abs(np.sin((np.pi * summed_timings) / (bar_length * 2**n)))
-                    for n in range(1, phrase_levels + 1)
-                ],
-                axis=0,
-            ),
+            1
+            - np.cos((np.pi * summed_timings * 2 ** (phrase_levels - 1)) / bar_length)
+            ** phrase_exp,
             savgol=False,
             shift=False,
             scale=True,
@@ -483,6 +484,7 @@ class PitchContour(Contour):
         midi: tune.Tune,
         savgol: bool = True,
         shift: bool = True,
+        scale: bool = True,
     ) -> None:
         note_events = midi.filter(lambda x: "note" in x.type)
         pitches = np.array(
@@ -490,8 +492,10 @@ class PitchContour(Contour):
         ).astype(float)
         self._contour = pitches
 
-        if savgol:
-            self._contour = self.scale_and_savgol(self._contour, shift=shift)
+        if savgol or shift or scale:
+            self._contour = self.scale_and_savgol(
+                self._contour, savgol=savgol, shift=shift, scale=scale
+            )
 
 
 class PatternContour(Contour):
@@ -548,7 +552,9 @@ class PatternContour(Contour):
             pattern_means[index] = np.mean(mean[add_indexes])
             pattern_stds[index] = np.mean(std[add_indexes])
 
-        pattern = np.random.normal(loc=pattern_means, scale=std_scale * pattern_stds,size=len(pattern_means))
+        pattern = np.random.normal(
+            loc=pattern_means, scale=std_scale * pattern_stds, size=len(pattern_means)
+        )
 
         if normalize:
             bars = summed_timings // midi.bar_duration

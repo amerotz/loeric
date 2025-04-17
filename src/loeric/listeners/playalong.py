@@ -20,7 +20,6 @@ class PlayerThread:
         else:
             port = mido.open_output(mido.get_output_names()[self.outport])
 
-
         try:
             old_value = -1
             while True:

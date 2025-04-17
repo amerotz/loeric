@@ -4,6 +4,8 @@ import jsonmerge
 import copy
 import random
 import json
+import threading
+import time
 import numpy as np
 import music21 as m21
 import threading
@@ -67,6 +69,7 @@ class Groover:
 
         # tune
         self._tune = tune
+        self._tempo = self._tune._tempo
 
         # offset for messages after ornaments
         self._offset = 0
@@ -108,12 +111,12 @@ class Groover:
                 "old_tempo_warp": 0.1,
             },
             "control_2_contour": {
-                "velocity_intensity": str(intensity_control),
-                "tempo_intensity": str(intensity_control),
-                "ornament_intensity": str(intensity_control),
-                "velocity_human_impact": str(human_impact_control),
-                "tempo_human_impact": str(human_impact_control),
-                "ornament_human_impact": str(human_impact_control),
+                "velocity_intensity": intensity_control,
+                "tempo_intensity": intensity_control,
+                "ornament_intensity": intensity_control,
+                "velocity_human_impact": human_impact_control,
+                "tempo_human_impact": human_impact_control,
+                "ornament_human_impact": human_impact_control,
             },
             "harmony": {
                 "chords_per_bar": self._tune.beat_count,
@@ -167,6 +170,12 @@ class Groover:
         # table for pitch errors
         self._pitch_errors = defaultdict(int)
 
+        self._max_ornament_length = 0
+        for o in self._config["ornamentation"]:
+            self._max_ornament_length = max(
+                self._max_ornament_length, self._config["ornamentation"][o]["length"]
+            )
+
         # legato
         self._legato_amount = (
             self._config["values"]["legato_max"] - self._config["values"]["legato_min"]
@@ -208,7 +217,16 @@ class Groover:
         )
 
         velocity_pitch_contour = cnt.PitchContour()
-        velocity_pitch_contour.calculate(self._tune)
+        velocity_pitch_contour.calculate(
+            self._tune, savgol=True, shift=True, scale=True
+        )
+
+        velocity_phrasing_contour = cnt.PhraseContour()
+        velocity_phrasing_contour.calculate(
+            self._tune,
+            phrase_levels=self._config["values"]["phrase_levels"],
+            phrase_exp=self._config["velocity"]["phrase_exp"],
+        )
 
         velocity_phrasing_contour = cnt.PhraseContour()
         velocity_phrasing_contour.calculate(self._tune)
@@ -239,6 +257,29 @@ class Groover:
             savgol=self._config["tempo"]["savgol"],
             scale=self._config["tempo"]["scale"],
             shift=self._config["tempo"]["shift"],
+        )
+        tempo_phrasing_contour = cnt.PhraseContour()
+        tempo_phrasing_contour.calculate(
+            self._tune,
+            phrase_levels=self._config["values"]["phrase_levels"],
+            phrase_exp=self._config["tempo"]["phrase_exp"],
+        )
+
+        self._contours["tempo"] = cnt.weighted_sum(
+            [tempo_intensity_contour, tempo_phrasing_contour],
+            np.array(
+                [
+                    1 - self._config["tempo"]["phrase_weight"],
+                    self._config["tempo"]["phrase_weight"],
+                ]
+            ),
+        )
+
+        self._contours["phrasing"] = cnt.PhraseContour()
+        self._contours["phrasing"].calculate(
+            self._tune,
+            phrase_levels=self._config["values"]["phrase_levels"],
+            phrase_exp=self._config["values"]["legato_phrase_exp"],
         )
 
         self._contours["phrasing"] = cnt.PhraseContour()
@@ -272,8 +313,8 @@ class Groover:
         )
 
         # ornament contour
-        self._contours["ornament"] = cnt.IntensityContour()
-        self._contours["ornament"].calculate(
+        ornament_intensity_contour = cnt.IntensityContour()
+        ornament_intensity_contour.calculate(
             self._tune,
             weights=np.array(self._config["ornament"]["weights"]),
             random_weight=self._config["ornament"]["random"],
@@ -282,12 +323,42 @@ class Groover:
             shift=self._config["ornament"]["shift"],
         )
 
+        ornament_phrasing_contour = cnt.PhraseContour()
+        ornament_phrasing_contour.calculate(
+            self._tune,
+            phrase_levels=self._config["values"]["phrase_levels"],
+            phrase_exp=self._config["ornament"]["phrase_exp"],
+        )
+
+        self._contours["ornament"] = cnt.weighted_sum(
+            [ornament_intensity_contour, ornament_phrasing_contour],
+            np.array(
+                [
+                    1 - self._config["ornament"]["phrase_weight"],
+                    self._config["ornament"]["phrase_weight"],
+                ]
+            ),
+        )
+        """
+        import matplotlib.pyplot as plt
+
+        plt.plot(self._contours["ornament"]._contour)
+        plt.show()
+        """
+
         # message length contour
         self._contours["message length"] = cnt.MessageLengthContour()
         self._contours["message length"].calculate(self._tune)
+
         # pich difference
         self._contours["pitch difference"] = cnt.PitchDifferenceContour()
         self._contours["pitch difference"].calculate(self._tune)
+
+        # pich contour
+        self._contours["pitch contour"] = cnt.PitchContour()
+        self._contours["pitch contour"].calculate(
+            self._tune, savgol=False, shift=False, scale=False
+        )
 
         self._contours["harmony"] = cnt.HarmonicContour()
         self._contours["harmony"].calculate(
@@ -326,7 +397,7 @@ class Groover:
             if lu.is_note(msg):
                 pass
             for contour_name, event_number in self._config["control_2_contour"].items():
-                if msg.is_cc(int(event_number)):
+                if msg.is_cc(event_number):
                     value = msg.value / 127
                     self.set_contour_value(contour_name, value)
                     # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
@@ -464,32 +535,38 @@ class Groover:
         # work on a deepcopy to avoid side effects
         new_message = copy.deepcopy(message)
 
+        # check if note on event
+        is_note_on = lu.is_note_on(new_message)
+        if is_note_on:
+            # advance the contours
+            self.advance_contours()
+
+        # change note duration
+        should_skip = self._offset > new_message.time + lu.TRIGGER_DELTA
+        removable_offset = min(new_message.time, self._offset)
+        new_message.time -= removable_offset
+
+        self._offset -= removable_offset
+
+        if should_skip:
+            # print(self._tmp_sum)
+            return []
+
         # warp note duration according to contour
         # print(self._contour_values["tempo_pattern"])
         new_message.time *= self._contour_values["tempo_pattern"]
 
-        # change note duration
-        new_message.time -= self._offset
-
-        self._offset = 0
-
         # change midi channel
         new_message.channel = self._midi_channel
-
-        # if it's a note message
-        if lu.is_note(new_message):
-            # transpose note
-            new_message.note += self._transpose_semitones
 
         if lu.is_note_off(new_message):
             # randomize end time and legato
             mult = np.random.normal(
                 loc=self._config["values"]["legato_min"]
                 + self._legato_amount * self._contour_values["phrasing"],
-                scale=0.05,
+                scale=0.0,
             )
             # self._delay_max = mult
-
             new_length = new_message.time * mult
             self._delay = new_message.time - new_length
             new_message.time = new_length
@@ -503,12 +580,8 @@ class Groover:
                 # reset error
                 del self._pitch_errors[key]
 
-        # check if note on event
-        is_note_on = lu.is_note_on(new_message)
+        # change attributes
         if is_note_on:
-            # advance the contours
-            self.advance_contours()
-
             # change loudness
             new_message.velocity = self._current_velocity
 
@@ -577,6 +650,26 @@ class Groover:
                 )
         notes = new_notes
 
+            # if it's a note message
+            if lu.is_note(note):
+                # transpose note
+                note.note += self._transpose_semitones
+
+            # add pitchbend
+            if lu.is_note_on(note):
+                bend = int(
+                    self._config["values"]["pitch_deviation_cents"]
+                    * 0.01
+                    * np.random.normal(loc=0, scale=0.33)
+                    * 8192
+                )
+                new_notes.append(
+                    mido.Message("pitchwheel", channel=note.channel, pitch=bend)
+                )
+            new_notes.append(note)
+
+        notes = new_notes
+
         # add drone
         if self._config["drone"]["active"]:
             drone = []
@@ -585,6 +678,7 @@ class Groover:
 
             notes = self._add_drone(notes, drone, is_note_on)
 
+        # print("done")
         return notes
 
     def _apply_swing(self) -> float:
@@ -910,202 +1004,340 @@ class Groover:
         """
 
         ornaments = []
-        message_length = self._contour_values["message length"]
-        if ornament_type == CUT:
-            # generate a cut
-            cut_note = self.approach_from_above(message.note, self._tune)
-            cut = mido.Message(
-                "note_on",
-                note=cut_note,
-                velocity=int(
-                    self._current_velocity
-                    * self._config["values"]["cut_velocity_fraction"]
-                ),
-                time=message.time,
-                channel=message.channel,
-            )
-            duration = self._cut_duration
-
-            # note on
-            ornaments.append(cut)
-            # note off
-            ornaments.append(
-                mido.Message(
-                    "note_off",
-                    channel=cut.channel,
-                    note=cut.note,
-                    time=duration,
-                    velocity=0,
+        if self._config["values"]["use_old_ornaments"]:
+            message_length = self._contour_values["message length"]
+            if ornament_type == CUT:
+                # generate a cut
+                cut_note = self.approach_from_above(message.note, self._tune)
+                cut = mido.Message(
+                    "note_on",
+                    note=cut_note,
+                    velocity=int(
+                        self._current_velocity
+                        * self._config["values"]["cut_velocity_fraction"]
+                    ),
+                    time=message.time,
+                    channel=message.channel,
                 )
-            )
+                duration = self._cut_duration
 
-            message.time = 0
-            ornaments.append(message)
-            # update offset for next message to make it shorter
-            self._offset += duration
-
-        elif ornament_type == ROLL:
-            original_length = self._roll_duration
-            cut_length = self._eight_duration - self._roll_duration
-            cut_velocity = int(
-                self._current_velocity
-                * self._config["values"]["roll_velocity_fraction"]
-            )
-
-            # first note
-            original_0 = copy.deepcopy(message)
-            # original_0.time = 0
-            original_0.velocity = self._current_velocity
-            or_0_off = mido.Message(
-                "note_off",
-                note=message.note,
-                channel=message.channel,
-                time=original_length,
-                velocity=0,
-            )
-            self._offset += original_length
-
-            # calculate cut
-            upper_pitch = self.approach_from_above(message.note, self._tune)
-            upper = mido.Message(
-                "note_on",
-                note=upper_pitch,
-                channel=message.channel,
-                time=0,
-                velocity=cut_velocity,
-            )
-            upper_off = mido.Message(
-                "note_off",
-                note=upper_pitch,
-                channel=message.channel,
-                time=cut_length,
-                velocity=0,
-            )
-            self._offset += cut_length
-
-            # change original note
-            original_1 = copy.deepcopy(message)
-            original_1.time = 0
-            original_1.velocity = self._current_velocity
-            or_1_off = mido.Message(
-                "note_off",
-                note=message.note,
-                channel=message.channel,
-                time=original_length,
-                velocity=0,
-            )
-            self._offset += original_length
-
-            # calculate cut
-            lower_pitch = self.approach_from_below(message.note, self._tune)
-            lower = mido.Message(
-                "note_on",
-                note=lower_pitch,
-                channel=message.channel,
-                time=0,
-                velocity=cut_velocity,
-            )
-            lower_off = mido.Message(
-                "note_off",
-                note=lower_pitch,
-                channel=message.channel,
-                time=cut_length,
-                velocity=0,
-            )
-            self._offset += cut_length
-
-            # append note on and off events
-            ornaments.append(original_0)
-            ornaments.append(or_0_off)
-
-            ornaments.append(upper)
-            ornaments.append(upper_off)
-
-            ornaments.append(original_1)
-            ornaments.append(or_1_off)
-
-            ornaments.append(lower)
-            ornaments.append(lower_off)
-
-            message.time = 0
-            ornaments.append(message)
-
-        elif ornament_type == SLIDE:
-            # append original note
-            original = copy.deepcopy(message)
-            # original.time = 0
-            original.velocity = self._current_velocity
-            ornaments.append(original)
-
-            # calculate pitch bend
-            diff = self.approach_from_below(message.note, self._tune) - message.note
-            bend = max(min(4096.0 * diff, 8191), -8192)
-
-            # calculate duration
-            resolution = self._config["values"]["bend_resolution"]
-            slide_time = message_length / 4
-            self._offset += slide_time
-            duration = slide_time / resolution
-
-            # append messages
-            mult = random.uniform(0.25, 0.5)
-            for i in range(resolution, -1, -1):
-                p = i / resolution
-                p **= mult
-                p *= bend
-                p = int(p)
+                # note on
+                ornaments.append(cut)
+                # note off
                 ornaments.append(
                     mido.Message(
-                        "pitchwheel", channel=message.channel, pitch=p, time=duration
+                        "note_off",
+                        channel=cut.channel,
+                        note=cut.note,
+                        time=duration,
+                        velocity=0,
                     )
                 )
-            ornaments.append(
-                mido.Message("pitchwheel", channel=message.channel, pitch=0, time=0)
-            )
-        elif ornament_type == DROP:
-            pass
-        elif ornament_type == ERROR:
-            max_limit = self._config["values"]["max_pitch_error"]
-            min_limit = self._config["values"]["min_pitch_error"]
-            # generate error
-            value = random.randint(min_limit, max_limit)
 
-            # correct if diatonic errors are required
-            if self._config["values"]["diatonic_errors"]:
-                new_note = message.note + value
+                message.time = 0
+                ornaments.append(message)
+                # update offset for next message to make it shorter
+                self._offset += duration
+
+            elif ornament_type == ROLL:
+                # roll length
+                original_length = self._roll_duration
+                cut_length = self._eight_duration - self._roll_duration
+
+                # velocity
+                cut_velocity = int(
+                    self._current_velocity
+                    * self._config["values"]["roll_velocity_fraction"]
+                )
+
+                # first note
+                original_0 = copy.deepcopy(message)
+                original_0.velocity = self._current_velocity
+                or_0_off = mido.Message(
+                    "note_off",
+                    note=message.note,
+                    channel=message.channel,
+                    time=self._eight_duration,
+                    velocity=0,
+                )
+
+                # calculate cut
+                upper_pitch = self.approach_from_above(message.note, self._tune)
+                upper = mido.Message(
+                    "note_on",
+                    note=upper_pitch,
+                    channel=message.channel,
+                    time=0,
+                    velocity=cut_velocity,
+                )
+                upper_off = mido.Message(
+                    "note_off",
+                    note=upper_pitch,
+                    channel=message.channel,
+                    time=cut_length,
+                    velocity=0,
+                )
+
+                # change original note
+                original_1 = copy.deepcopy(message)
+                original_1.time = 0
+                original_1.velocity = self._current_velocity
+                or_1_off = mido.Message(
+                    "note_off",
+                    note=message.note,
+                    channel=message.channel,
+                    time=original_length,
+                    velocity=0,
+                )
+
+                # calculate cut
+                lower_pitch = self.approach_from_below(message.note, self._tune)
+                lower = mido.Message(
+                    "note_on",
+                    note=lower_pitch,
+                    channel=message.channel,
+                    time=0,
+                    velocity=cut_velocity,
+                )
+                lower_off = mido.Message(
+                    "note_off",
+                    note=lower_pitch,
+                    channel=message.channel,
+                    time=cut_length,
+                    velocity=0,
+                )
+
+                # append note on and off events
+                ornaments.append(original_0)
+                ornaments.append(or_0_off)
+                self._offset += or_0_off.time
+
+                ornaments.append(upper)
+                ornaments.append(upper_off)
+                self._offset += upper_off.time
+
+                ornaments.append(original_1)
+                ornaments.append(or_1_off)
+                self._offset += or_1_off.time
+
+                ornaments.append(lower)
+                ornaments.append(lower_off)
+                self._offset += lower_off.time
+
+                message.time = 0
+                ornaments.append(message)
+
+            elif ornament_type == SLIDE:
+                # append original note
+                original = copy.deepcopy(message)
+                # original.time = 0
+                original.velocity = self._current_velocity
+                ornaments.append(original)
+
+                # calculate pitch bend
+                diff = self.approach_from_below(message.note, self._tune) - message.note
+                bend = max(min(4096.0 * diff, 8191), -8192)
+
+                # calculate duration
+                resolution = self._config["values"]["bend_resolution"]
+                slide_time = message_length / 4
+                self._offset += slide_time
+                duration = slide_time / resolution
+
+                # append messages
+                mult = random.uniform(0.25, 0.5)
+                for i in range(resolution, -1, -1):
+                    p = i / resolution
+                    p **= mult
+                    p *= bend
+                    p = int(p)
+                    ornaments.append(
+                        mido.Message(
+                            "pitchwheel",
+                            channel=message.channel,
+                            pitch=p,
+                            time=duration,
+                        )
+                    )
+                ornaments.append(
+                    mido.Message("pitchwheel", channel=message.channel, pitch=0, time=0)
+                )
+            elif ornament_type == DROP:
+                pass
+            elif ornament_type == ERROR:
+                max_limit = self._config["values"]["max_pitch_error"]
+                min_limit = self._config["values"]["min_pitch_error"]
+                # generate error
+                value = random.randint(min_limit, max_limit)
+
+                # correct if diatonic errors are required
+                if self._config["values"]["diatonic_errors"]:
+                    new_note = message.note + value
+
+                    # get note position in scale
+                    note_index = self._tune.semitones_from_tonic(new_note)
+
+                    # if quantization needed
+                    if lu.needs_pitch_quantization[note_index]:
+                        # check both quantizing up and down
+                        opt = {
+                            abs(value - 1): -1,
+                            abs(value + 1): 1,
+                        }
+                        # if one option leaves the note unchanged, use the other
+                        if min(opt) == 0:
+                            value += opt[max(opt)]
+                        else:
+                            value -= opt[min(opt)]
+
+                # record error for that note for later note off event
+                self._pitch_errors[message.note] = value
+                # create the new message
+                new_message = copy.deepcopy(message)
+                new_message.note += value
+                ornaments.append(new_message)
+
+                perc = random.uniform(0.4, 0.9)
+                off_message = mido.Message(
+                    "note_off",
+                    note=new_message.note,
+                    velocity=0,
+                    time=message_length * perc,
+                )
+                ornaments.append(off_message)
+                self._offset += message_length * perc
+        else:
+            print(ornament_type)
+            # sample pitches
+            pitches = np.random.normal(
+                loc=self._config["ornamentation"][ornament_type]["pitches_mean"],
+                scale=self._config["ornamentation"][ornament_type]["pitches_std"],
+                size=len(self._config["ornamentation"][ornament_type]["pitches_mean"]),
+            )
+            # sample velocities
+            velocities = np.random.normal(
+                loc=self._config["ornamentation"][ornament_type]["velocities_mean"],
+                scale=self._config["ornamentation"][ornament_type]["velocities_std"],
+                size=len(pitches),
+            )
+
+            # sample durations
+            durations = np.random.normal(
+                loc=self._config["ornamentation"][ornament_type]["durations_mean"],
+                scale=self._config["ornamentation"][ornament_type]["durations_std"],
+                size=len(pitches),
+            )
+            # normalize durations
+            durations /= durations.sum()
+            durations *= self._config["ornamentation"][ornament_type]["length"]
+
+            first_note = message.note
+            for i, (p, v, d) in enumerate(zip(pitches, velocities, durations)):
+
+                # slides can be microtonal
+                new_note = message.note + p
+
+                # if not sliding, quantize
+                if not self._config["ornamentation"][ornament_type]["slide"]:
+                    new_note = int(new_note)
 
                 # get note position in scale
                 note_index = self._tune.semitones_from_tonic(new_note)
 
                 # if quantization needed
-                if lu.needs_pitch_quantization[note_index]:
+                if (
+                    not self._config["ornamentation"][ornament_type]["slide"]
+                    and self._config["ornamentation"][ornament_type]["diatonic"]
+                    and lu.needs_pitch_quantization[note_index]
+                ):
                     # check both quantizing up and down
                     opt = {
-                        abs(value - 1): -1,
-                        abs(value + 1): 1,
+                        abs(p - 1): -1,
+                        abs(p + 1): 1,
                     }
                     # if one option leaves the note unchanged, use the other
                     if min(opt) == 0:
-                        value += opt[max(opt)]
+                        p += opt[max(opt)]
                     else:
-                        value -= opt[min(opt)]
+                        p -= opt[min(opt)]
 
-            # record error for that note for later note off event
-            self._pitch_errors[message.note] = value
-            # create the new message
-            new_message = copy.deepcopy(message)
-            new_message.note += value
-            ornaments.append(new_message)
+                # if sliding, use only the base note and pitch bend that
+                if self._config["ornamentation"][ornament_type]["slide"]:
+                    new_pitch = message.note
+                # else use a normal message
+                else:
+                    new_pitch = min(127, max(0, int(message.note + p)))
 
-            perc = random.uniform(0.4, 0.9)
-            off_message = mido.Message(
-                "note_off",
-                note=new_message.note,
-                velocity=0,
-                time=message_length * perc,
+                # add a note on message if not sliding
+                # or if sliding and first message
+                if not self._config["ornamentation"][ornament_type]["slide"] or i == 0:
+                    ornaments.append(
+                        mido.Message(
+                            "note_on",
+                            note=new_pitch,
+                            velocity=min(
+                                self._config["values"]["max_velocity"],
+                                max(
+                                    self._config["values"]["min_velocity"],
+                                    int(self._current_velocity * v),
+                                ),
+                            ),
+                        )
+                    )
+
+                overall_duration = self._eight_duration * d
+
+                # add slide if necessary
+                diff = new_note - first_note
+                if diff != 0 and self._config["ornamentation"][ornament_type]["slide"]:
+                    bend = max(min(4096.0 * diff, 8191), -8192)
+
+                    # calculate duration
+                    resolution = self._config["values"]["bend_resolution"]
+                    duration = overall_duration / resolution
+
+                    # append messages
+                    mult = random.uniform(0.25, 0.5)
+                    for i in range(resolution, -1, -1):
+                        pb = i / resolution
+                        pb **= mult
+                        pb *= bend
+                        pb = int(pb)
+                        ornaments.append(
+                            mido.Message(
+                                "pitchwheel",
+                                channel=message.channel,
+                                pitch=pb,
+                                time=duration,
+                            )
+                        )
+                        overall_duration -= duration
+
+                # add a note off message if not sliding
+                # or if sliding and last message
+                if (
+                    not self._config["ornamentation"][ornament_type]["slide"]
+                    or i == len(pitches) - 1
+                ):
+                    ornaments.append(
+                        mido.Message(
+                            "note_off",
+                            note=new_pitch,
+                            time=overall_duration,
+                        )
+                    )
+
+            ornament_duration = (
+                self._eight_duration
+                * self._config["ornamentation"][ornament_type]["length"]
             )
-            ornaments.append(off_message)
-            self._offset += message_length * perc
+            self._offset += max(
+                self._contour_values["message length"], ornament_duration
+            )
+            ornaments[0].time = message.time
+            ornaments[-1].time += max(
+                0, self._contour_values["message length"] - ornament_duration
+            )
 
         return ornaments
 
@@ -1118,42 +1350,130 @@ class Groover:
         :return: the chosen ornament type.
         """
         options = []
+        options_prob = []
 
         is_beat = self._is_on_a_beat()
-        message_length = self._contour_values["message length"]
+        if self._config["values"]["use_old_ornaments"]:
+            message_length = self._contour_values["message length"]
 
-        if (
-            message_length >= 0.75 * self._eight_duration
-            and (is_beat or self._contour_values["pitch difference"] == 0)
-            and random.uniform(0, 1) < self._config["probabilities"]["cut"]
-        ):
-            options.append(CUT)
+            if message_length >= 0.75 * self._eight_duration and (
+                is_beat or self._contour_values["pitch difference"] == 0
+            ):
+                options.append(CUT)
+                options_prob.append(self._config["probabilities"]["cut"])
 
-        if (
-            random.uniform(0, 1) < self._config["probabilities"]["roll"]
             # value of a dotted quarter
-            and message_length - 3 * self._eight_duration > -0.01
-        ):
-            # return ROLL
-            options.append(ROLL)
+            if message_length - 3 * self._eight_duration > -0.01:
+                # return ROLL
+                options.append(ROLL)
+                options_prob.append(self._config["probabilities"]["roll"])
 
-        if (
-            (is_beat and message_length > self._slide_duration)
-            or self._contour_values["pitch difference"]
-            >= self._config["values"]["slide_pitch_threshold"]
-        ) and random.uniform(0, 1) < self._config["probabilities"]["slide"]:
-            options.append(SLIDE)
+            if (
+                is_beat and message_length > self._slide_duration
+            ) or self._contour_values["pitch difference"] >= self._config["values"][
+                "slide_pitch_threshold"
+            ]:
+                options.append(SLIDE)
+                options_prob.append(self._config["probabilities"]["slide"])
 
-        if not is_beat and random.uniform(0, 1) < self._config["probabilities"]["drop"]:
-            options.append(DROP)
+            if not is_beat:
+                options.append(DROP)
+                options_prob.append(self._config["probabilities"]["drop"])
 
-        if not is_beat:
-            if random.uniform(0, 1) < self._config["probabilities"]["error"]:
+            if not is_beat:
                 options.append(ERROR)
+                options_prob.append(self._config["probabilities"]["error"])
+        else:
 
-        if len(options) == 0:
+            # create pattern from source notes
+            contour_index = self._contours["message length"]._index
+            case_len = 0
+            case_i = 0
+            tune_notes = []
+            first_pitch = 0
+            # iterate until needed
+            while case_len < self._max_ornament_length:
+                index = min(
+                    contour_index + case_i,
+                    len(self._contours["message length"]) - 1,
+                )
+                # obtain pitch
+                p = self._contours["pitch contour"][index]
+
+                # save first pitch
+                if case_i == 0:
+                    first_pitch = p
+
+                # obtain duration
+                d = self._contours["message length"][index] / self._eight_duration
+
+                # update length counter
+                case_len += d
+
+                # add note
+                tune_notes.append([float(p - first_pitch), float(np.round(d * 4) / 4)])
+
+                case_i += 1
+
+            # for each ornament
+            for ornament in self._config["ornamentation"]:
+                cases = self._config["ornamentation"][ornament]["cases"]
+
+                # check elegibility for every listed case
+                for c in cases:
+                    elegible = True
+                    # on a beat
+                    if c == "beat":
+                        elegible = elegible and is_beat
+                    elif c == "not beat":
+                        elegible = elegible and not is_beat
+                    else:
+                        case_notes = c
+
+                        tune_i = 0
+                        for note in case_notes:
+
+                            # target pitch
+                            pitch = note[0]
+
+                            # target duration
+                            duration = note[1]
+
+                            # actual pitch & duration
+                            pitch_difference = tune_notes[tune_i][0]
+                            message_length = tune_notes[tune_i][1]
+                            tune_i += 1
+
+                            # check
+                            elegible = elegible and pitch_difference == pitch
+
+                            elegible = (
+                                elegible and abs(message_length - duration) <= 0.01
+                            )
+
+                            # if one fails, move on
+                            if not elegible:
+                                break
+                    # if found a case, move to next ornament
+                    if elegible:
+                        options.append(ornament)
+                        options_prob.append(
+                            self._config["ornamentation"][ornament]["probability"]
+                        )
+                        break
+                    # else check another case
+
+        prob_sum = sum(options_prob)
+        if prob_sum == 0:
             return None
-        return random.choice(options)
+        elif prob_sum < 1:
+            options.append(None)
+            options_prob.append(1 - prob_sum)
+        else:
+            options_prob = np.array(options_prob).astype(float)
+            options_prob /= options_prob.sum()
+
+        return np.random.choice(options, p=options_prob)
 
     def can_generate_ornament(self) -> bool:
         """
@@ -1197,10 +1517,8 @@ class Groover:
     @property
     def current_tempo(self) -> int:
         """
-        The current tempo given the value of the tempo contour. If the option `use_old_tempo_warp` is set to `True` the contour affects tempo in terms of percentage of the original one (e.g. 20% faster); otherwise in terms of a fixed amount of bpms (e.g. 10 bpms faster).
+        :return: the current tempo given the value of the tempo contour. If the option `use_old_tempo_warp` is set to `True` the contour affects tempo in terms of percentage of the original one (e.g. 20% faster); otherwise in terms of a fixed amount of bpms (e.g. 10 bpms faster).
         If an external tempo has been set, the calculated tempo will be interpolated with it according to the user specified percentage.
-
-        :return: the current tempo
         """
 
         calculated_tempo = None
@@ -1230,7 +1548,11 @@ class Groover:
 
             calculated_tempo = mido.bpm2tempo(int(bpm + value))
 
-        return calculated_tempo
+        if self._config["tempo_control"]["increasing"]:
+            self._tempo = min(self._tempo, calculated_tempo)
+        else:
+            self._tempo = calculated_tempo
+        return self._tempo
 
     @property
     def _current_velocity(self) -> int:
