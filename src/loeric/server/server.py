@@ -29,7 +29,7 @@ def state():
         'track': tune._filename,
         'trackList': [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
         'outputs': mido.get_output_names(),
-        'musicians': musicians,
+        #'musicians': musicians,
     }
 
 
@@ -122,7 +122,6 @@ def start_server():
             groover = Groover(tune)
             global musicians
             loeric_id = int(time.time())
-            out = mido.open_output(f"LOERIC out #{loeric_id}#", virtual=True)
-            musicians = [Musician(loeric_id, tune, groover, out, event_start, event_stop)]
+            musicians = [Musician(loeric_id, tune, groover, None, event_start, event_stop)]
 
     run(app, host='localhost', port=8080)

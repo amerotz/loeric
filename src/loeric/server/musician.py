@@ -1,7 +1,9 @@
 import faulthandler
 import threading
+from typing import Optional
 
 import mido
+from mido.ports import BaseOutput
 
 from loeric import groover as gr
 from loeric import (loeric_utils as lu)
@@ -17,7 +19,7 @@ class Musician:
             loeric_id: int,
             tune: tu.Tune,
             groover: gr.Groover,
-            out: mido.ports.BaseOutput,
+            out: Optional[str],
             event_start: threading.Semaphore,
             event_stop: threading.Event,
     ):
@@ -53,6 +55,12 @@ class Musician:
             :param sync_port_out: the MIDI port for synchronization
             :param kwargs: the performance arguments
             """
+            out: Optional[BaseOutput] = None
+            if(self.out == None):
+                out = mido.open_output(f"LOERIC out #{self.loeric_id}#", virtual=True)
+            else:
+                out = mido.open_output(self.out)
+
             # create player
             self.player = pl.Player(
                 tempo=self.groover.tempo,
@@ -101,7 +109,7 @@ class Musician:
             # play an end note
             #if not kwargs["no_end_note"]:
             self.groover.reset_contours()
-            self.groover.advance_contours()
+            self.groover.jump_to_pos(0)
             self.player.play(self.groover.get_end_notes())
 
             self.done_playing.set()
@@ -113,3 +121,5 @@ class Musician:
             print("Player thread terminated.")
             raise e
 
+    def __json__(self):
+        return {'id': self.loeric_id, 'out': self.out}
