@@ -1,7 +1,7 @@
 import threading
 import time
 from os import listdir, getcwd
-from os.path import isfile, join, splitext
+from os.path import isfile, join, splitext, split
 
 import mido
 from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
@@ -24,12 +24,12 @@ musicians = []
 def state():
     response.set_header('Access-Control-Allow-Origin', '*')
     return {
-        'time_signature': f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
-        'key_signature': tune.key_signature,
-        'track': tune._filename,
+        'time': f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
+        'key': tune.key_signature,
+        'track': split(tune.filename)[1],
         'trackList': [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
         'outputs': mido.get_output_names(),
-        #'musicians': musicians,
+        'musicians': list(map(lambda m: m.__json__(), musicians)),
     }
 
 

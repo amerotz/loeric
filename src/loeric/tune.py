@@ -2,7 +2,7 @@ import mido
 import music21 as m21
 
 from collections.abc import Callable
-from typing import Generator
+from typing import Generator, Optional
 
 from . import loeric_utils as lu
 
@@ -232,7 +232,7 @@ class Tune:
 
         return offset
 
-    def _get_original_tempo(self) -> int:
+    def _get_original_tempo(self) -> Optional[int]:
         """
         Retrieve the tempo of the tune, if there is any.
         Only the first tempo change will be retrieved.
@@ -244,7 +244,7 @@ class Tune:
             return None
         return msg[0].tempo
 
-    def _get_time_signature(self) -> m21.meter.TimeSignature:
+    def _get_time_signature(self) -> Optional[m21.meter.TimeSignature]:
         """
         Retrieve the time signature of the tune, if there is any.
         Only the first time signature will be retrieved.
@@ -261,7 +261,7 @@ class Tune:
         time_signature.denominator = msg[0].denominator
         return time_signature
 
-    def _get_key_signature(self) -> str:
+    def _get_key_signature(self) -> Optional[str]:
         """
         Retrieve the key signature of the tune, if there is any.
         Only the first key signature will be retrieved.
@@ -331,3 +331,7 @@ class Tune:
         :return: the midi message corresponding to that index.
         """
         return self._midi[idx]
+
+    @property
+    def filename(self):
+        return self._filename

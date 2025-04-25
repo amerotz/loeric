@@ -41,10 +41,14 @@
 	{#if data && data.trackList}
 		<select class="text-2xl" onchange={trackChange}>
 			{#each data.trackList as file}
-				<option value={file}>{file.replace(/\.mid$/i, '')}</option>
+				<option value={file} selected={file === data.track}>{file.replace(/\.mid$/i, '')}</option>
 			{/each}
 		</select>
-		<form action="/api/track">
+		<div>
+			<div>Key: {data.key}</div>
+			<div>Time: {data.time}</div>
+		</div>
+		<form action="/api/track" class="hidden">
 			<input type="file" accept="audio/rtp-midi"/>
 		</form>
 		<button class="material-symbols-outlined">upload</button>
@@ -52,5 +56,16 @@
 		<button class="material-symbols-outlined" onclick={play}>play_arrow</button>
 
 		<button class="material-symbols-outlined" onclick={stop}>stop</button>
+
+		<div>
+			{#each data.musicians as musician}
+				<select>
+					<option value="create_out" selected={musician.out === undefined}>Create Out</option>
+					{#each data.outputs as output}
+						<option value={output} selected={musician.out === output}>{output}</option>
+					{/each}
+				</select>
+			{/each}
+		</div>
 	{/if}
 </div>
