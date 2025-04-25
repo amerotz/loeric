@@ -1,6 +1,5 @@
 import faulthandler
 import threading
-from collections.abc import Callable
 
 import mido
 
@@ -11,8 +10,6 @@ from loeric import tune as tu
 
 faulthandler.enable()
 # bad code goes here
-received_start = threading.Semaphore(value=0)
-
 
 class Musician:
     def __init__(
@@ -20,19 +17,27 @@ class Musician:
             loeric_id: int,
             tune: tu.Tune,
             groover: gr.Groover,
-            out: mido.ports.BaseOutput
+            out: mido.ports.BaseOutput,
+            event_start: threading.Semaphore,
+            event_stop: threading.Event,
     ):
         self.loeric_id = loeric_id
         self.tune = tune
         self.groover = groover
         self.out = out
         self.done_playing = threading.Event()
-        self.stopped = threading.Event()
         self.playback_resumed = threading.Condition()
         self.groover_lock = threading.Lock()
+        self.event_start = event_start
+        self.event_stop = event_stop
+
+
+    def stop(self):
+        self.event_stop.set()
 
 
     def play(self)-> None:
+        self.event_stop.clear()
         self.player_t = threading.Thread(target=self.__play)
         self.player_t.start()
 
@@ -59,13 +64,13 @@ class Musician:
             )
 
             # wait for start
-            received_start.acquire()
+            self.event_start.acquire()
             self.player.init_playback()
 
             # repeat as specified
             # iterate over messages
             while True:
-                if stopped.is_set():
+                if self.event_stop.is_set():
                     self.player.reset()
                     with self.playback_resumed:
                         self.playback_resumed.wait()
@@ -75,7 +80,7 @@ class Musician:
                     break
 
                 if message.type == "sysex":
-                    print(f"Repetition {message.data[0] + 1}/{kwargs['repeat']}")
+                    #print(f"Repetition {message.data[0] + 1}/{kwargs['repeat']}")
                     continue
                 # perform notes
                 elif lu.is_note(message):
