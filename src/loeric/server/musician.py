@@ -1,47 +1,71 @@
 import faulthandler
 import threading
+from enum import Enum
 from typing import Optional
 
 import mido
 from mido.ports import BaseOutput
 
-from loeric import groover as gr
 from loeric import (loeric_utils as lu)
-from loeric import player as pl
-from loeric import tune as tu
+from loeric.groover import Groover
+from loeric.player import Player
+from loeric.tune import Tune
 
 faulthandler.enable()
 # bad code goes here
 
+names = ["Eoin", "Caoimhín"]
+
+class State(Enum):
+    STOPPED = 0
+    PAUSED = 1
+    PLAYING = 2
+
+_state = State.STOPPED
+_lock = threading.Lock()
+_play_event = threading.Event()
+
+def get_state() -> State:
+    return _state
+
+
+def play_all():
+    _update(State.PLAYING)
+
+
+def stop_all():
+    _update(State.STOPPED)
+
+
+def _update(state: State):
+    global _state
+    _lock.acquire()
+    _state = state
+    _lock.release()
+    if state == State.PLAYING:
+        _play_event.set()
+    else:
+        _play_event.clear()
+
+
 class Musician:
     def __init__(
             self,
+            name: str,
             loeric_id: int,
-            tune: tu.Tune,
-            groover: gr.Groover,
+            tune: Tune,
             out: Optional[str],
-            event_start: threading.Semaphore,
-            event_stop: threading.Event,
     ):
+        self.name = name
         self.loeric_id = loeric_id
         self.tune = tune
-        self.groover = groover
         self.out = out
-        self.done_playing = threading.Event()
-        self.playback_resumed = threading.Condition()
-        self.groover_lock = threading.Lock()
-        self.event_start = event_start
-        self.event_stop = event_stop
+        self.thread = threading.Thread()
 
 
-    def stop(self):
-        self.event_stop.set()
-
-
-    def play(self)-> None:
-        self.event_stop.clear()
-        self.player_t = threading.Thread(target=self.__play)
-        self.player_t.start()
+    def ready(self)-> None:
+        self.thread = threading.Thread(target=self.__play)
+        self.thread.start()
 
 
     def __play(self, )-> None:
@@ -55,35 +79,38 @@ class Musician:
             :param sync_port_out: the MIDI port for synchronization
             :param kwargs: the performance arguments
             """
+            global _play_event, _state
             out: Optional[BaseOutput] = None
-            if(self.out == None):
+            if self.out is None:
                 out = mido.open_output(f"LOERIC out #{self.loeric_id}#", virtual=True)
             else:
                 out = mido.open_output(self.out)
 
+            groover = Groover(self.tune)
             # create player
-            self.player = pl.Player(
-                tempo=self.groover.tempo,
+            player = Player(
+                tempo=groover.tempo,
                 key_signature=self.tune.key_signature,
                 time_signature=self.tune.time_signature,
                 save=False,
                 verbose=False,
-                midi_out=self.out,
+                midi_out=out,
             )
 
             # wait for start
-            self.event_start.acquire()
-            self.player.init_playback()
+            _play_event.wait()
+            player.init_playback()
 
             # repeat as specified
             # iterate over messages
             while True:
-                if self.event_stop.is_set():
-                    self.player.reset()
-                    with self.playback_resumed:
-                        self.playback_resumed.wait()
-                    self.player.init_playback()
-                message = self.groover.next_event()
+                if _state == State.PAUSED:
+                    player.reset()
+                    _play_event.wait()
+                    player.init_playback()
+                elif _state == State.STOPPED:
+                    break
+                message = groover.next_event()
                 if message is None:
                     break
 
@@ -93,7 +120,7 @@ class Musician:
                 # perform notes
                 elif lu.is_note(message):
                     # make the groover play the messages
-                    new_messages = self.groover.perform(message)
+                    new_messages = groover.perform(message)
                 # keep meta messages intact
                 else:
                     if message.type == "songpos":
@@ -104,22 +131,22 @@ class Musician:
                     else:
                         new_messages = [message]
                 # play
-                self.player.play(new_messages)
+                player.play(new_messages)
 
             # play an end note
             #if not kwargs["no_end_note"]:
-            self.groover.reset_contours()
-            self.groover.jump_to_pos(0)
-            self.player.play(self.groover.get_end_notes())
+            groover.reset_contours()
+            groover.jump_to_pos(0)
+            player.play(groover.get_end_notes())
 
-            self.done_playing.set()
+            _update(State.STOPPED)
             print("Player thread terminated.")
 
         except Exception as e:
             # stop sync thread
-            self.done_playing.set()
+            _update(State.STOPPED)
             print("Player thread terminated.")
             raise e
 
     def __json__(self):
-        return {'id': self.loeric_id, 'out': self.out}
+        return {'id': self.loeric_id, 'name': self.name, 'out': self.out}

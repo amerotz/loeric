@@ -1,23 +1,32 @@
 <script lang="ts">
 	import {onMount} from "svelte"
 
-	let data: any
+	let data: {
+		'time': string,
+		'key': string,
+		'track': string,
+		'tempo': number,
+		'state': string,
+		'trackList': string[],
+		'outputs': string[],
+		'musicians': {
+			name: string,
+			out: string
+		}[],
+	}
 	let base = "http://localhost:8080"
 
-	onMount(update)
+	let fileInput: HTMLInputElement
 
-	async function update() {
-		const response = await fetch(base + '/api/state')
-		data = await response.json()
+	onMount(refresh)
+
+	async function refresh() {
+		await apiCall('state')
+		//setTimeout(refresh, 1000)
 	}
 
-	async function play() {
-		const response = await fetch(base + "/api/play")
-		data = await response.json()
-	}
-
-	async function stop() {
-		const response = await fetch(base + "/api/stop")
+	async function apiCall(call: string) {
+		const response = await fetch(base + '/api/' + call)
 		data = await response.json()
 	}
 
@@ -29,43 +38,73 @@
 		})
 		data = await response.json()
 	}
+
+	async function upload() {
+		const formData = new FormData()
+		const file = fileInput.files?.item(0)
+		if (file) {
+			formData.append('upload', file)
+			const response = await fetch(base + "/api/track", {
+				method: 'POST',
+				body: formData
+			})
+			data = await response.json()
+		}
+	}
+
+	async function selectFile() {
+		fileInput.click()
+	}
 </script>
 
 <style>
 	button {
-		@apply transition-all cursor-pointer hover:opacity-75;
+		@apply transition-all cursor-pointer hover:opacity-50 duration-300;
 	}
 </style>
 
 <div class="container m-auto">
 	{#if data && data.trackList}
-		<select class="text-2xl" onchange={trackChange}>
-			{#each data.trackList as file}
-				<option value={file} selected={file === data.track}>{file.replace(/\.mid$/i, '')}</option>
-			{/each}
-		</select>
-		<div>
-			<div>Key: {data.key}</div>
-			<div>Time: {data.time}</div>
-		</div>
-		<form action="/api/track" class="hidden">
-			<input type="file" accept="audio/rtp-midi"/>
-		</form>
-		<button class="material-symbols-outlined">upload</button>
-
-		<button class="material-symbols-outlined" onclick={play}>play_arrow</button>
-
-		<button class="material-symbols-outlined" onclick={stop}>stop</button>
-
-		<div>
-			{#each data.musicians as musician}
-				<select>
-					<option value="create_out" selected={musician.out === undefined}>Create Out</option>
-					{#each data.outputs as output}
-						<option value={output} selected={musician.out === output}>{output}</option>
+		<div class="flex items-center py-8">
+			<div class="flex-1">
+				<select class="w-full text-3xl" onchange={trackChange}>
+					{#each data.trackList as file}
+						<option value={file} selected={file === data.track}>{file.replace(/\.mid$/i, '')}</option>
 					{/each}
 				</select>
+				<div class="px-1 flex gap-2">
+					<div>Key: {data.key}</div>
+					<div>Time: {data.time}</div>
+					<div>Tempo: {data.tempo}<span class="opacity-60">bpm</span></div>
+					<input class="hidden" type="file" accept="mid, midi, audio/rtp-midi" name="upload" onchange={upload}
+					       bind:this={fileInput}/>
+					<button class="material-symbols-outlined" onclick={selectFile}>upload</button>
+				</div>
+			</div>
+			<div>
+				{#if data.state !== 'PLAYING'}
+					<button class="material-symbols-outlined !text-5xl" onclick={() => apiCall('play')}>play_arrow
+					</button>
+				{:else}
+					<button class="material-symbols-outlined !text-5xl" onclick={() => apiCall('stop')}>stop</button>
+				{/if}
+			</div>
+		</div>
+		<div class="grid grid-cols-3 gap-4">
+			{#each data.musicians as musician}
+				<div class="p-3 border-1 rounded-2xl border-gray-500">
+					<div>{musician.name}</div>
+					<select>
+						<option value="create_out" selected={musician.out === undefined}>Create Out</option>
+						{#each data.outputs as output}
+							<option value={output} selected={musician.out === output}>{output}</option>
+						{/each}
+					</select>
+				</div>
 			{/each}
+			<div class="self-center justify-self-center">
+				<button class="material-symbols-outlined" onclick={() => apiCall('add_musician')}>add</button>
+			</div>
 		</div>
 	{/if}
 </div>

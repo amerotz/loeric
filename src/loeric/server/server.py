@@ -1,23 +1,21 @@
-import threading
 import time
-from os import listdir, getcwd
+from os import listdir, getcwd, rename, remove
 from os.path import isfile, join, splitext, split
 
 import mido
 from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
+from mido import MidiFile
 
-from loeric.groover import Groover
-from loeric.server.musician import Musician
+from loeric.server.musician import Musician, get_state, play_all, stop_all
 from loeric.tune import Tune
 
 track_dir = join(getcwd(), "static/midi")
-
-event_start = threading.Semaphore(value=0)
-event_stop = threading.Event()
+temp_dir = join(getcwd(), "static/temp")
 
 app = Bottle()
 
-musicians = []
+tune: Tune
+musicians: list[Musician] = []
 
 
 @app.get('/api/state')
@@ -26,26 +24,45 @@ def state():
     return {
         'time': f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
         'key': tune.key_signature,
+        'tempo': mido.tempo2bpm(tune.tempo, [tune.time_signature.numerator, tune.time_signature.denominator]),
         'track': split(tune.filename)[1],
         'trackList': [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
         'outputs': mido.get_output_names(),
         'musicians': list(map(lambda m: m.__json__(), musicians)),
+        'state': get_state().name
     }
+
+
+def __set_track(track: str):
+    track_list = [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid']
+    if track in track_list:
+        global tune
+        tune = Tune(join(track_dir, track), 1)
+        for musician in musicians:
+            musician.tune = tune
 
 
 @app.get('/api/play')
 def play():
     for musician in musicians:
-        musician.stop()
-        musician.play()
-    event_start.release(n=2)
+        musician.ready()
+    play_all()
     return state()
 
 
 @app.get('/api/stop')
 def stop():
-    for musician in musicians:
-        musician.stop()
+    stop_all()
+    return state()
+
+
+@app.get('/api/add_musician')
+def add_musician():
+    global musicians
+    loeric_id = int(time.time())
+    name = "Musician " + str(len(musicians) + 1)
+    musicians.append(Musician(name, loeric_id, tune, None))
+
     return state()
 
 
@@ -53,27 +70,12 @@ def stop():
 def set_track():
     global musicians
     track = request.forms.track
-    track_list = [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid']
-    if track in track_list:
-        global tune
-        tune = Tune(join(track_dir, track), 2)
-        groover = Groover(tune)
-        for musician in musicians:
-            musician.groover = groover
+    __set_track(track)
     return state()
 
 
 @app.get('/api/track')
 def get_track():
-    global musicians
-    track = request.forms.track
-    track_list = [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid']
-    if track in track_list:
-        global tune
-        tune = Tune(join(track_dir, track), 1)
-        groover = Groover(tune)
-        for musician in musicians:
-            musician.groover = groover
     return state()
 
 
@@ -91,13 +93,20 @@ def method_not_allowed(res):
 @app.post('/api/track')
 def upload_track():
     upload = request.files.get('upload')
-    name, ext = splitext(upload.filename)
-    if ext.casefold() != '.mid':
-        return abort(401, 'File extension not allowed.')
+    temp_file = join(temp_dir, upload.filename)
+    upload.save(temp_file)
 
-    # TODO Check for existing files...
+    try:
+        mido_source = MidiFile(temp_file)
+        track = mido_source.tracks[0]
+        track_file = join(track_dir, track.name + '.mid')
+        rename(temp_file, track_file)
 
-    upload.save(track_dir)  # appends upload.filename automatically
+        __set_track(track.name + '.mid')
+    except:
+        remove(temp_file)
+        return abort(401, 'Not a recognised midi file')
+
     return state()
 
 
@@ -116,12 +125,8 @@ def start_server():
     if len(track_list) > 0:
         track = track_list[0]
         if track in track_list:
-            print(join(track_dir, track))
             global tune
-            tune = Tune(join(track_dir, track), 2)
-            groover = Groover(tune)
-            global musicians
-            loeric_id = int(time.time())
-            musicians = [Musician(loeric_id, tune, groover, None, event_start, event_stop)]
+            tune = Tune(join(track_dir, track), 1)
+            add_musician()
 
     run(app, host='localhost', port=8080)
