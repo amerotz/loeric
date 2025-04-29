@@ -79,12 +79,6 @@
 	"contour_2_control": {
 	},	
 	"control_2_contour": {
-		"velocity_intensity": 77,
-		"velocity_human_impact":  78,
-		"tempo_intensity": 79,
-		"tempo_human_impact": 80,
-		"ornament_intensity": 81,
-		"ornament_human_impact": 82
 	},
 	"harmony": {
 		"chord_score" :[

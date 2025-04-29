@@ -14,7 +14,7 @@
 		"scale": false,
 		"shift": true
 	},
-    "swing": {"min": 3, "max": 2, "bind": "tempo"},
+    "swing": {"min": 2.5, "max": 1.5, "bind": "tempo"},
 	"values": {
 		"beat_velocity_increase": -16
 	},
