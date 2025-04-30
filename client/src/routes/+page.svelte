@@ -19,15 +19,19 @@
 	let fileInput: HTMLInputElement
 
 	onMount(refresh)
+	let poller = 0
 
 	async function refresh() {
 		await apiCall('state')
-		//setTimeout(refresh, 1000)
 	}
 
 	async function apiCall(call: string) {
 		const response = await fetch(base + '/api/' + call)
 		data = await response.json()
+		clearTimeout(poller)
+		if(data.state === 'PLAYING') {
+			poller = setTimeout(refresh, 500)
+		}
 	}
 
 	async function trackChange(event: Event) {
@@ -57,15 +61,11 @@
 	}
 </script>
 
-<style>
-	button {
-		@apply transition-all cursor-pointer hover:opacity-50 duration-300;
-	}
-</style>
+<svelte:head><title>Loeric</title></svelte:head>
 
-<div class="container m-auto">
+<div class="container m-auto my-8">
 	{#if data && data.trackList}
-		<div class="flex items-center py-8">
+		<div class="flex items-center bg-gray-950 py-3 px-6 rounded-xl">
 			<div class="flex-1">
 				<select class="w-full text-3xl" onchange={trackChange}>
 					{#each data.trackList as file}
@@ -90,9 +90,9 @@
 				{/if}
 			</div>
 		</div>
-		<div class="grid grid-cols-3 gap-4">
+		<div class="grid grid-cols-3 gap-4 mt-8">
 			{#each data.musicians as musician}
-				<div class="p-3 border-1 rounded-2xl border-gray-500">
+				<div class="p-3 rounded-2xl bg-gray-900">
 					<div>{musician.name}</div>
 					<select>
 						<option value="create_out" selected={musician.out === undefined}>Create Out</option>

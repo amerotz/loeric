@@ -1,6 +1,19 @@
 @import 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200';
 @import "tailwindcss";
 
+@theme {
+	--color-primary: #b74066;
+	--color-secondary: #753a88;
+}
+
 .material-symbols-outlined {
 	font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24
+}
+
+body {
+	@apply bg-gray-800 text-gray-300;
+}
+
+button {
+	@apply transition-all cursor-pointer hover:text-primary duration-300;
 }
