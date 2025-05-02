@@ -73,9 +73,9 @@
 					{/each}
 				</select>
 				<div class="px-1 flex gap-2">
-					<div>Key: {data.key}</div>
-					<div>Time: {data.time}</div>
-					<div>Tempo: {data.tempo}<span class="opacity-60">bpm</span></div>
+					<div><span class="opacity-70 font-light">Key:</span> {data.key}</div>
+					<div><span class="opacity-70 font-light">Meter:</span> {data.time}</div>
+					<div><span class="opacity-70 font-light">Tempo:</span> {data.tempo}<span class="opacity-70 font-light">bpm</span></div>
 					<input class="hidden" type="file" accept="mid, midi, audio/rtp-midi" name="upload" onchange={upload}
 					       bind:this={fileInput}/>
 					<button class="material-symbols-outlined" onclick={selectFile}>upload</button>
@@ -83,17 +83,23 @@
 			</div>
 			<div>
 				{#if data.state !== 'PLAYING'}
-					<button class="material-symbols-outlined !text-5xl" onclick={() => apiCall('play')}>play_arrow
+					<button class="material-symbols-outlined !text-5xl" onclick={() => apiCall('play')}>
+						play_arrow
 					</button>
 				{:else}
-					<button class="material-symbols-outlined !text-5xl" onclick={() => apiCall('stop')}>stop</button>
+					<button class="material-symbols-outlined !text-5xl" onclick={() => apiCall('pause')}>
+						pause
+					</button>
+					<button class="material-symbols-outlined !text-5xl" onclick={() => apiCall('stop')}>
+						stop
+					</button>
 				{/if}
 			</div>
 		</div>
 		<div class="grid grid-cols-3 gap-4 mt-8">
 			{#each data.musicians as musician}
 				<div class="p-3 rounded-2xl bg-gray-900">
-					<div>{musician.name}</div>
+					<div><span class="opacity-70 font-light">Musician</span> {musician.name}</div>
 					<select>
 						<option value="create_out" selected={musician.out === undefined}>Create Out</option>
 						{#each data.outputs as output}

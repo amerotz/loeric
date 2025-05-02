@@ -1,6 +1,7 @@
 import faulthandler
 import threading
 from enum import Enum
+from random import randint
 from typing import Optional
 
 import mido
@@ -13,8 +14,6 @@ from loeric.tune import Tune
 
 faulthandler.enable()
 # bad code goes here
-
-names = ["Eoin", "Caoimhín"]
 
 class State(Enum):
     STOPPED = 0
@@ -31,6 +30,10 @@ def get_state() -> State:
 
 def play_all():
     _update(State.PLAYING)
+
+
+def pause_all():
+    _update(State.PAUSED)
 
 
 def stop_all():
@@ -60,12 +63,16 @@ class Musician:
         self.loeric_id = loeric_id
         self.tune = tune
         self.out = out
+        self.seed = randint(0,1000000)
+        self.random_weight = 0.2
         self.thread = threading.Thread()
 
 
     def ready(self)-> None:
-        self.thread = threading.Thread(target=self.__play)
-        self.thread.start()
+        global _state
+        if _state == State.STOPPED:
+            self.thread = threading.Thread(target=self.__play)
+            self.thread.start()
 
 
     def __play(self, )-> None:
@@ -86,14 +93,17 @@ class Musician:
             else:
                 out = mido.open_output(self.out)
 
-            groover = Groover(self.tune)
+            groover = Groover(
+                self.tune,
+                random_weight=self.random_weight,
+                seed=self.seed
+            )
             # create player
             player = Player(
                 tempo=groover.tempo,
                 key_signature=self.tune.key_signature,
                 time_signature=self.tune.time_signature,
                 save=False,
-                verbose=False,
                 midi_out=out,
             )
 
@@ -132,12 +142,6 @@ class Musician:
                         new_messages = [message]
                 # play
                 player.play(new_messages)
-
-            # play an end note
-            #if not kwargs["no_end_note"]:
-            groover.reset_contours()
-            groover.jump_to_pos(0)
-            player.play(groover.get_end_notes())
 
             _update(State.STOPPED)
             print("Player thread terminated.")

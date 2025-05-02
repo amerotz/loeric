@@ -1,12 +1,13 @@
 import time
 from os import listdir, getcwd, rename, remove
 from os.path import isfile, join, splitext, split
+from random import shuffle
 
 import mido
 from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
 from mido import MidiFile
 
-from loeric.server.musician import Musician, get_state, play_all, stop_all
+from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all
 from loeric.tune import Tune
 
 track_dir = join(getcwd(), "static/midi")
@@ -16,6 +17,9 @@ app = Bottle()
 
 tune: Tune
 musicians: list[Musician] = []
+names = ["Aoife", "Caoimhe", "Saoirse", "Ciara", "Niamh", "Róisín", "Cara", "Clodagh", "Aisling", "Éabha",
+         "Conor", "Sean", "Oisín", "Patrick", "Cian", "Liam", "Darragh", "Eoin", "Caoimhín", "Cillian"]
+shuffle(names)
 
 
 @app.get('/api/state')
@@ -26,7 +30,8 @@ def state():
         'key': tune.key_signature,
         'tempo': mido.tempo2bpm(tune.tempo, [tune.time_signature.numerator, tune.time_signature.denominator]),
         'track': split(tune.filename)[1],
-        'trackList': [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
+        'trackList': [f for f in listdir(track_dir) if
+                      isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
         'outputs': mido.get_output_names(),
         'musicians': list(map(lambda m: m.__json__(), musicians)),
         'state': get_state().name
@@ -50,6 +55,12 @@ def play():
     return state()
 
 
+@app.get('/api/pause')
+def pause():
+    pause_all()
+    return state()
+
+
 @app.get('/api/stop')
 def stop():
     stop_all()
@@ -60,8 +71,9 @@ def stop():
 def add_musician():
     global musicians
     loeric_id = int(time.time())
-    name = "Musician " + str(len(musicians) + 1)
-    musicians.append(Musician(name, loeric_id, tune, None))
+    existing = map(lambda m: m.name, musicians)
+    unused = list(set(names) - set(existing))
+    musicians.append(Musician(unused[0], loeric_id, tune, None))
 
     return state()
 
