@@ -1,8 +1,8 @@
 {
-	"intensity_control_in": 46,
-	"human_impact_control_in": 50,
-	"intensity_control_out": 21,
-	"human_impact_control_out": 22,
+	"intensity_control_in": 41,
+	"human_impact_control_in": 42,
+	"intensity_control_out": 51,
+	"human_impact_control_out": 52,
 	"sync_interval": 2,
 	"switch_every": 16,
 	"tempo_policy": {

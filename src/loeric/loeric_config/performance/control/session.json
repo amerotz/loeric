@@ -1,0 +1,14 @@
+{
+	"contour_2_control": {
+		"velocity_intensity": 41,
+		"velocity_human_impact": 42
+	},	
+	"control_2_contour": {
+		"velocity_intensity": 51,
+		"tempo_intensity": 51,
+		"ornament_intensity": 51,
+		"velocity_human_impact": 52,
+		"tempo_human_impact": 52,
+		"ornament_human_impact": 52
+	}
+}

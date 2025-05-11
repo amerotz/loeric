@@ -13,10 +13,11 @@ def main():
     parser.add_argument("--instrument", default=None, type=str)
     parser.add_argument("--drone", default=None, type=str)
     parser.add_argument("--ornament", default=None, type=str)
+    parser.add_argument("--control", default=None, type=str)
     # shell args
     parser.add_argument("--shell", action="store_true")
-    parser.add_argument("--sync_interval", default=1, type=float)
-    parser.add_argument("--switch_every", default=16, type=float)
+    parser.add_argument("--sync-interval", default=1, type=float)
+    parser.add_argument("--switch-every", default=16, type=float)
     # general args
     parser.add_argument("--id", default=None, type=str)
     parser.add_argument("--output", default=None, type=str)
@@ -36,7 +37,7 @@ def main():
     if args["shell"]:
         folders = []
     else:
-        folders = ["tune_type", "instrument", "drone", "ornament"]
+        folders = ["tune_type", "instrument", "drone", "ornament", "control"]
 
     # select files
     config_name = []

@@ -171,11 +171,11 @@ def main():
         "-l", "--list", help="list input audio devices and exit.", action="store_true"
     )
     parser.add_argument(
-        "-d", "--device_index", help="the input audio device.", default=0, type=int
+        "-d", "--device-index", help="the input audio device.", default=0, type=int
     )
     parser.add_argument(
         "-n",
-        "--num_channels",
+        "--num-channels",
         help="the number of audio channels.",
         default=2,
         type=int,

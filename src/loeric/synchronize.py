@@ -108,7 +108,7 @@ def sync_intensity(inports, outports):
                     "match",
                     loeric_id,
                 )
-                #print("added")
+                # print("added")
 
             diff = now - action_dict[loeric_id][0]
             # choose new action
@@ -139,11 +139,7 @@ def sync_intensity(inports, outports):
                 group = random.sample(players, n)
 
                 action_dict[loeric_id] = (now, action, group)
-                #print(loeric_id, action, group)
-<<<<<<< HEAD
-=======
-
->>>>>>> main
+                # print(loeric_id, action, group)
                 df_action.loc[len(df_action)] = [now, loeric_id, action, group]
 
             # output port
@@ -197,21 +193,6 @@ def sync_intensity(inports, outports):
             hi_value += config["attention_policy"]["behaviors"][action][
                 "human_impact_constant"
             ]
-            """
-            # send intensity signal according to action
-            int_value = np.mean([int_dict[p] for p in group])
-            hi_value = 0.5
-            if action == "backoff":
-                int_value = np.min([int_dict[p] for p in group])
-                hi_value = 0
-                int_value *= 0.5
-            elif action == "lead":
-                int_value = np.max([int_dict[p] for p in group])
-                int_value *= 1.5
-                hi_value = 1
-            elif action == "match":
-                pass
-            """
 
             int_value *= 127
             int_value = int(int_value)
@@ -335,10 +316,6 @@ def sync_loeric(inports, outports):
 
             # print(pos_dict)
 
-<<<<<<< HEAD
-=======
-
->>>>>>> main
             # agree on which position
             algorithm = config["tempo_policy"]["position"]
             if algorithm == "max":
