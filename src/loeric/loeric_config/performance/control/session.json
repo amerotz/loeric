@@ -1,7 +1,6 @@
 {
 	"contour_2_control": {
-		"velocity_intensity": 41,
-		"velocity_human_impact": 42
+		"velocity": 41
 	},	
 	"control_2_contour": {
 		"velocity_intensity": 51,

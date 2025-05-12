@@ -231,9 +231,48 @@
             "diatonic": true,
             "slide": false
         },
+        "strike": {
+            "cases": [
+                [[0,1],[0,1]]
+            ],
+            "pitches_mean": [
+                0,
+                -1,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                0.8,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0,
+                0
+            ],
+            "durations_mean": [
+                0.8,
+                0.3,
+                0.9
+            ],
+            "durations_std": [
+                0.1,
+                0.1,
+                0.1
+            ],
+            "probability": 1,
+            "length": 2,
+            "diatonic": true,
+            "slide": false
+        },
         "slide": {
             "cases": [
-                "beat"
+                [[0,2]]
             ],
             "pitches_mean": [
                 -1,
@@ -252,8 +291,8 @@
                 0
             ],
             "durations_mean": [
-                0.2,
-                0.8
+                0.4,
+                0.6
             ],
             "durations_std": [
                 0.1,

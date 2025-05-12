@@ -105,10 +105,10 @@ def sync_intensity(inports, outports):
             if loeric_id not in action_dict:
                 action_dict[loeric_id] = (
                     now - random.random() * switch_timer,
-                    "match",
+                    random.choice(list(config["attention_policy"]["behaviors"].keys())),
                     loeric_id,
                 )
-                # print("added")
+                print("added")
 
             diff = now - action_dict[loeric_id][0]
             # choose new action
@@ -139,7 +139,7 @@ def sync_intensity(inports, outports):
                 group = random.sample(players, n)
 
                 action_dict[loeric_id] = (now, action, group)
-                # print(loeric_id, action, group)
+                print(loeric_id, action, group)
                 df_action.loc[len(df_action)] = [now, loeric_id, action, group]
 
             # output port
@@ -204,7 +204,6 @@ def sync_intensity(inports, outports):
             hi_value = min(hi_value, 127)
             hi_value = max(hi_value, 0)
 
-            # shell_print(loeric_id, int_value, out_port)
             # prepare message
             if out_port is not None:
                 msg = mido.Message(
@@ -307,7 +306,7 @@ def sync_loeric(inports, outports):
                 # only advance human position
                 else:
                     pos_dict[loeric_id] = (now, pos_dict[loeric_id][1] + 1)
-                    print(pos_dict)
+                    # print(pos_dict)
                 continue
 
             # check what position we should consider
@@ -326,9 +325,11 @@ def sync_loeric(inports, outports):
 
             # agree on what time
             timestamp = np.mean([t[0] for t in pos_dict.values() if t[1] == pos])
+            # expected timestamp
+            exp_timestamp = timestamp + (msg.pos - pos) * songpos_wait
 
             # calculate difference in timestamp
-            diff = now - timestamp
+            diff = abs(now - exp_timestamp)
 
             fix_thr = fix_sync_duration
             stop_thr = stop_sync_duration
@@ -349,7 +350,11 @@ def sync_loeric(inports, outports):
 
             # hard fix
             # stop and continue from next beat
-            if diff >= stop_thr or msg.pos != pos:
+            # print(diff, fix_thr, stop_thr)
+            # print(msg.pos, pos)
+            # if diff >= stop_thr or msg.pos != pos:
+            if diff >= stop_thr:
+                # print("hard fix")
 
                 with port_lock:
                     # tell port to wait
@@ -360,16 +365,24 @@ def sync_loeric(inports, outports):
                 # shell_print(f"{loeric_id}: SLEEP at {pos}")
 
                 sleepers.append(
-                    (loeric_id, now, songpos_wait - diff, out_port, pos + 1)
+                    # in (songpos wait - diff) the reference will be at p+1
+                    (
+                        loeric_id,
+                        now,
+                        songpos_wait - (now - timestamp),
+                        out_port,
+                        pos + 1,
+                    )
                 )
 
             # soft fix
             # send a tempo bump
             elif diff >= fix_thr:
+                # print("soft fix")
                 # calculate the new tempo
                 # so that we synchronize on the next beat
-                q0 = timestamp + songpos_wait
-                t0 = timestamp
+                q0 = exp_timestamp + songpos_wait
+                t0 = exp_timestamp
                 t1 = now
                 f0q0 = last_tempo * q0
                 f0t0 = last_tempo * t0

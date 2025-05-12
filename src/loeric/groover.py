@@ -1192,7 +1192,7 @@ class Groover:
                 ornaments.append(off_message)
                 self._offset += message_length * perc
         else:
-            print(ornament_type)
+            # print(ornament_type)
             # sample pitches
             pitches = np.random.normal(
                 loc=self._config["ornamentation"][ornament_type]["pitches_mean"],
