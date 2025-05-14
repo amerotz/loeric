@@ -449,10 +449,10 @@ class MessageLengthContour(Contour):
         :param midi: the input tune object.
         """
 
-        note_events = midi.filter(lambda x: "note" in x.type)
+        note_events = midi.filter(lambda x: lu.is_note(x))
         timings = np.array([msg.time for msg in note_events])
         note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
+        note_offs = np.array([lu.is_note_off(msg) for msg in note_events])
         self._contour = timings[note_offs] - timings[note_ons]
 
 

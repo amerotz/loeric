@@ -580,13 +580,16 @@ def main():
                         s.append("Could not start INT thread.")
 
                     # reset termination flag
-                if command != "sync" and multi_out is not None:
-                    # send message
-                    msg = mido.Message(command)
-                    multi_out.send(msg)
-                    s.append(str(msg))
-                else:
-                    s.append("Could not send command. Please connect to LOERIC first.")
+                if command != "sync":
+                    if multi_out is not None:
+                        # send message
+                        msg = mido.Message(command)
+                        multi_out.send(msg)
+                        s.append(str(msg))
+                    else:
+                        s.append(
+                            "Could not send command. Please connect to LOERIC first."
+                        )
                 s = "\n".join(s)
                 shell_print(s)
             # song position

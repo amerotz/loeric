@@ -65,7 +65,7 @@ class Player:
     def play(self, messages: list[mido.Message]) -> None:
         """
         Play the messages in input and append them to the generated performance.
-        If no midi port has been specified, the messages only be saved.
+        If no midi port has been specified, the messages will only be saved.
 
         :param messages: the midi messages to play.
         """
@@ -84,7 +84,14 @@ class Player:
                     # mido/mido/midifiles/midifiles.py:432-433
                     if duration_to_next_event > 0.0:
                         time.sleep(duration_to_next_event)
-                    self._midi_out.send(msg)
+
+                    # don't send songpos messages
+                    # but do wait if between pauses
+                    if msg.type == "songpos":
+                        pass
+                    else:
+                        self._midi_out.send(msg)
+
                     if self._verbose:
                         print("[INFO]\t", msg)
 
