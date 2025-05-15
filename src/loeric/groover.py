@@ -424,12 +424,11 @@ class Groover:
 
             intensity = self._contour_values[f"{contour_name}_intensity"]
             if self._config[contour_name]["human_impact_scale"] < 0:
-                intensity = 1 - self._contour_values[f"{contour_name}_intensity"]
+                intensity = 1 - intensity
+                hi = abs(hi)
 
             self._contour_values[contour_name] *= 1 - hi
-            self._contour_values[contour_name] += (
-                hi * self._contour_values[f"{contour_name}_intensity"]
-            )
+            self._contour_values[contour_name] += hi * intensity
 
     def set_contour_value(self, contour_name: str, value: float) -> None:
         """
@@ -741,8 +740,13 @@ class Groover:
                 delay = random.uniform(0, self._config["drone"]["delay_range"])
 
                 multiplier = self._config["drone"]["velocity_multiplier"]
+                velocity = self._current_velocity
+
                 if multiplier < 0:
-                    multiplier = 1 - multiplier
+                    velocity = 127 - velocity
+                    multiplier = abs(multiplier)
+
+                velocity = min(int(velocity * multiplier), 127)
 
                 notes.insert(
                     1 + list_offset,
@@ -750,10 +754,7 @@ class Groover:
                         type="note_on",
                         channel=self._config["drone"]["midi_channel"],
                         note=drone,
-                        velocity=min(
-                            int(self._current_velocity * multiplier),
-                            127,
-                        ),
+                        velocity=min(int(velocity * multiplier), 127),
                         time=delay,
                     ),
                 )
