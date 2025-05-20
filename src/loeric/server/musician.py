@@ -95,11 +95,10 @@ class Musician:
             if self.midi_out is None:
                 synth = tinysoundfont.Synth()
                 sfid = synth.sfload("static/sound/florestan-subset.sfo")
-                print(synth.soundfonts[sfid])
-                synth.start()
                 synth.program_select(0, sfid, 0, 12) # Marimba
+                synth.start()
 
-                midi_output = SynthOutput(synth, 0)
+                midi_output = SynthOutput(synth)
 
                 #midi_output = mido.open_output(f"LOERIC out #{self.loeric_id}#", virtual=True)
             else:
