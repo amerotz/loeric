@@ -5,12 +5,14 @@ from random import randint
 from typing import Optional
 
 import mido
-from mido.ports import BaseOutput
+from mido.ports import BaseOutput, BaseInput
 
 from loeric import (loeric_utils as lu)
 from loeric.groover import Groover
 from loeric.player import Player
+from loeric.server.synthout import SynthOutput
 from loeric.tune import Tune
+import tinysoundfont
 
 faulthandler.enable()
 # bad code goes here
@@ -55,14 +57,16 @@ class Musician:
     def __init__(
             self,
             name: str,
-            loeric_id: int,
+            loeric_id: str,
             tune: Tune,
-            out: Optional[str],
+            midi_out: Optional[str] = None,
+            midi_in: Optional[str] = None,
     ):
         self.name = name
-        self.loeric_id = loeric_id
+        self.id = loeric_id
         self.tune = tune
-        self.out = out
+        self.midi_out = midi_out
+        self.midi_in = midi_in
         self.seed = randint(0,1000000)
         self.random_weight = 0.2
         self.thread = threading.Thread()
@@ -87,24 +91,38 @@ class Musician:
             :param kwargs: the performance arguments
             """
             global _play_event, _state
-            out: Optional[BaseOutput] = None
-            if self.out is None:
-                out = mido.open_output(f"LOERIC out #{self.loeric_id}#", virtual=True)
+            midi_output: Optional[BaseOutput] = None
+            if self.midi_out is None:
+                synth = tinysoundfont.Synth()
+                sfid = synth.sfload("static/sound/florestan-subset.sfo")
+                print(synth.soundfonts[sfid])
+                synth.start()
+                synth.program_select(0, sfid, 0, 12) # Marimba
+
+                midi_output = SynthOutput(synth, 0)
+
+                #midi_output = mido.open_output(f"LOERIC out #{self.loeric_id}#", virtual=True)
             else:
-                out = mido.open_output(self.out)
+                midi_output = mido.open_output(self.midi_out)
 
             groover = Groover(
                 self.tune,
                 random_weight=self.random_weight,
                 seed=self.seed
             )
+
+            midi_input: Optional[BaseInput] = None
+            if self.midi_in is not None:
+                midi_input = mido.open_input(self.midi_in)
+                midi_input.callback = groover.check_midi_control()
+
             # create player
             player = Player(
                 tempo=groover.tempo,
                 key_signature=self.tune.key_signature,
                 time_signature=self.tune.time_signature,
                 save=False,
-                midi_out=out,
+                midi_out=midi_output,
             )
 
             # wait for start
@@ -144,6 +162,21 @@ class Musician:
                 player.play(new_messages)
 
             _update(State.STOPPED)
+
+            if midi_input is not None:
+                midi_input.close()
+                if midi_input.closed:
+                    print("Closed MIDI input.")
+
+            # make sure to turn off all notes
+            if midi_output is not None:
+                for i in range(127):
+                    midi_output.send(mido.Message("note_off", velocity=0, note=i, time=0))
+                midi_output.reset()
+                midi_output.close()
+                if midi_output.closed:
+                    print("Closed MIDI output.")
+
             print("Player thread terminated.")
 
         except Exception as e:
@@ -153,4 +186,4 @@ class Musician:
             raise e
 
     def __json__(self):
-        return {'id': self.loeric_id, 'name': self.name, 'out': self.out}
+        return {'id': self.id, 'name': self.name, 'midiOut': self.midi_out, 'midiIn': self.midi_in}

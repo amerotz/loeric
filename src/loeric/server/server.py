@@ -1,7 +1,7 @@
-import time
 from os import listdir, getcwd, rename, remove
 from os.path import isfile, join, splitext, split
 from random import shuffle
+from nanoid import generate
 
 import mido
 from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
@@ -26,14 +26,15 @@ shuffle(names)
 def state():
     response.set_header('Access-Control-Allow-Origin', '*')
     return {
+        'musicians': list(map(lambda m: m.__json__(), musicians)),
+        'trackList': [f for f in listdir(track_dir) if
+                      isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
+        'track': split(tune.filename)[1],
         'time': f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
         'key': tune.key_signature,
         'tempo': mido.tempo2bpm(tune.tempo, [tune.time_signature.numerator, tune.time_signature.denominator]),
-        'track': split(tune.filename)[1],
-        'trackList': [f for f in listdir(track_dir) if
-                      isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
+        'inputs': mido.get_input_names(),
         'outputs': mido.get_output_names(),
-        'musicians': list(map(lambda m: m.__json__(), musicians)),
         'state': get_state().name
     }
 
@@ -67,13 +68,45 @@ def stop():
     return state()
 
 
+@app.put('/api/output')
+def output_change():
+    global musicians
+    musician_id = request.forms.id
+    new_output = request.forms.output
+
+    for musician in musicians:
+        if musician.id == musician_id:
+            if new_output == 'create_output':
+                musician.midi_in = None
+            else:
+                musician.midi_in = new_output
+
+    return state()
+
+
+@app.put('/api/input')
+def input_change():
+    global musicians
+    musician_id = request.forms.id
+    new_input = request.forms.input
+
+    for musician in musicians:
+        if musician.id == musician_id:
+            if new_input == 'no_in':
+                musician.midi_in = None
+            else:
+                musician.midi_in = new_input
+
+    return state()
+
+
 @app.get('/api/add_musician')
 def add_musician():
     global musicians
-    loeric_id = int(time.time())
+    loeric_id = generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
-    musicians.append(Musician(unused[0], loeric_id, tune, None))
+    musicians.append(Musician(unused[0], loeric_id, tune))
 
     return state()
 
@@ -110,6 +143,10 @@ def upload_track():
 
     try:
         mido_source = MidiFile(temp_file)
+        for i, track in enumerate(mido_source.tracks):
+            print('Track {}: {}'.format(i, track.name))
+            for msg in track:
+                print(msg)
         track = mido_source.tracks[0]
         track_file = join(track_dir, track.name + '.mid')
         rename(temp_file, track_file)
