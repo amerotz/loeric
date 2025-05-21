@@ -20,8 +20,4 @@ class SynthOutput(BaseOutput):
         else:
             print("Unknown message type: ", msg.type)
 
-
-    def _close(self):
-        self.synth.stop()
-
     pass
