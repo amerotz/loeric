@@ -10,11 +10,15 @@
 		'trackList': string[],
 		'outputs': string[],
 		'inputs': string[],
+		'instruments': {
+			[id: string]: number
+		},
 		'musicians': {
 			id: string,
 			name: string,
 			midiIn: string,
-			midiOut: string
+			midiOut: string,
+			instrument: number
 		}[],
 	}
 	let base = "http://localhost:8080"
@@ -66,6 +70,16 @@
 		data = await response.json()
 	}
 
+	async function instrumentChange(event: Event) {
+		const select = event.target as HTMLSelectElement
+		const response = await fetch(base + "/api/instrument", {
+			method: 'PUT',
+			headers: {"Content-Type": "application/x-www-form-urlencoded"},
+			body: new URLSearchParams({id: select.name, instrument: select.value}),
+		})
+		data = await response.json()
+	}
+
 	async function upload() {
 		const formData = new FormData()
 		const file = fileInput.files?.item(0)
@@ -81,10 +95,6 @@
 
 	async function selectFile() {
 		fileInput.click()
-	}
-
-	async function change() {
-		fetch(base+ '/api/sdfsd')
 	}
 </script>
 
@@ -169,6 +179,11 @@
 						<div class="flex-1">{musician.name}</div>
 						<div class="opacity-70 font-light">Musician</div>
 					</div>
+					<select name={musician.id} onchange={instrumentChange}>
+						{#each Object.keys(data.instruments) as instrument}
+							<option value={data.instruments[instrument]} selected={musician.instrument === data.instruments[instrument]}>{instrument}</option>
+						{/each}
+					</select>
 					<select name={musician.id} onchange={inputChange}>
 						<option value="no_in" selected={musician.midiIn === undefined}>No Midi Input</option>
 						{#each data.inputs as input}

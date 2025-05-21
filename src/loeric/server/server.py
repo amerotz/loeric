@@ -1,6 +1,9 @@
 from os import listdir, getcwd, rename, remove
 from os.path import isfile, join, splitext, split
 from random import shuffle
+
+import tinysoundfont
+from mido.ports import BaseOutput
 from nanoid import generate
 
 import mido
@@ -8,6 +11,7 @@ from bottle import Bottle, run, static_file, request, response, HTTPResponse, ab
 from mido import MidiFile
 
 from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all
+from loeric.server.synthout import SynthOutput
 from loeric.tune import Tune
 
 track_dir = join(getcwd(), "static/midi")
@@ -19,7 +23,11 @@ tune: Tune
 musicians: list[Musician] = []
 names = ["Aoife", "Caoimhe", "Saoirse", "Ciara", "Niamh", "Róisín", "Cara", "Clodagh", "Aisling", "Éabha",
          "Conor", "Sean", "Oisín", "Patrick", "Cian", "Liam", "Darragh", "Eoin", "Caoimhín", "Cillian"]
+instruments = {"Piano": 2, "Guitar": 24, "Harp": 46 }
 shuffle(names)
+
+synth = tinysoundfont.Synth()
+soundfont_id = 0
 
 
 @app.get('/api/state')
@@ -35,7 +43,8 @@ def state():
         'tempo': mido.tempo2bpm(tune.tempo, [tune.time_signature.numerator, tune.time_signature.denominator]),
         'inputs': mido.get_input_names(),
         'outputs': mido.get_output_names(),
-        'state': get_state().name
+        'state': get_state().name,
+        'instruments': instruments,
     }
 
 
@@ -50,8 +59,12 @@ def __set_track(track: str):
 
 @app.get('/api/play')
 def play():
-    for musician in musicians:
+    for index, musician in enumerate(musicians):
+        if musician.midi_out is None or isinstance(musician.midi_out, BaseOutput):
+            synth.program_select(index, soundfont_id, 0, musician.instrument)
+            musician.midi_out = SynthOutput(synth, index)
         musician.ready()
+    synth.start()
     play_all()
     return state()
 
@@ -61,10 +74,23 @@ def pause():
     pause_all()
     return state()
 
-
 @app.get('/api/stop')
 def stop():
     stop_all()
+    synth.stop()
+    return state()
+
+
+@app.put('/api/instrument')
+def instrument_change():
+    global musicians
+    musician_id = request.forms.id
+    new_instrument = int(request.forms.instrument)
+
+    for musician in musicians:
+        if musician.id == musician_id:
+            musician.instrument = new_instrument
+
     return state()
 
 
@@ -106,7 +132,7 @@ def add_musician():
     loeric_id = generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
-    musicians.append(Musician(unused[0], loeric_id, tune))
+    musicians.append(Musician(unused[0], loeric_id, tune, 12))
 
     return state()
 
@@ -170,6 +196,8 @@ def get_static(filepath):
 
 
 def start_server():
+    global soundfont_id
+    soundfont_id = synth.sfload("static/sound/FluidR3_GM.sf2")
     track_list = [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid']
     if len(track_list) > 0:
         track = track_list[0]

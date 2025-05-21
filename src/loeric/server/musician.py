@@ -10,9 +10,7 @@ from mido.ports import BaseOutput, BaseInput
 from loeric import (loeric_utils as lu)
 from loeric.groover import Groover
 from loeric.player import Player
-from loeric.server.synthout import SynthOutput
 from loeric.tune import Tune
-import tinysoundfont
 
 faulthandler.enable()
 # bad code goes here
@@ -59,12 +57,14 @@ class Musician:
             name: str,
             loeric_id: str,
             tune: Tune,
-            midi_out: Optional[str] = None,
-            midi_in: Optional[str] = None,
+            instrument: int,
+            midi_out: str | BaseOutput | None = None,
+            midi_in: str | None = None,
     ):
         self.name = name
         self.id = loeric_id
         self.tune = tune
+        self.instrument = instrument
         self.midi_out = midi_out
         self.midi_in = midi_in
         self.seed = randint(0,1000000)
@@ -93,14 +93,10 @@ class Musician:
             global _play_event, _state
             midi_output: Optional[BaseOutput] = None
             if self.midi_out is None:
-                synth = tinysoundfont.Synth()
-                sfid = synth.sfload("static/sound/florestan-subset.sfo")
-                synth.program_select(0, sfid, 0, 12) # Marimba
-                synth.start()
-
-                midi_output = SynthOutput(synth)
-
-                #midi_output = mido.open_output(f"LOERIC out #{self.loeric_id}#", virtual=True)
+                midi_output = mido.open_output(f"LOERIC out #{self.id}#", virtual=True)
+            elif isinstance(self.midi_out, BaseOutput):
+                midi_output = self.midi_out
+                midi_output.reset()
             else:
                 midi_output = mido.open_output(self.midi_out)
 
@@ -185,4 +181,7 @@ class Musician:
             raise e
 
     def __json__(self):
-        return {'id': self.id, 'name': self.name, 'midiOut': self.midi_out, 'midiIn': self.midi_in}
+        out = self.midi_out
+        if isinstance(self.midi_out, BaseOutput):
+            out = self.midi_out.name
+        return {'id': self.id, 'name': self.name, 'midiOut': out, 'midiIn': self.midi_in, 'instrument': self.instrument}
