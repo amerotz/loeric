@@ -13,8 +13,12 @@ class SynthOutput(BaseOutput):
             self.synth.noteon(self.channel, msg.note, msg.velocity)
         elif msg.type == "note_off":
             self.synth.noteoff(self.channel, msg.note)
-        #elif msg.type == "pitchwheel":
-            #self.synth.pitchbend(msg.channel, msg.pitch)
+        elif msg.type == "pitchwheel":
+            self.synth.pitchbend(self.channel, msg.pitch + 8192)
+        elif msg.type == "control_change":
+            self.synth.control_change(self.channel, msg.control, msg.value)
+        else:
+            print("Unknown message type: ", msg.type)
 
 
     def _close(self):

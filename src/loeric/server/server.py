@@ -2,13 +2,12 @@ from os import listdir, getcwd, rename, remove
 from os.path import isfile, join, splitext, split
 from random import shuffle
 
-import tinysoundfont
-from mido.ports import BaseOutput
-from nanoid import generate
-
 import mido
+import tinysoundfont
 from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
 from mido import MidiFile
+from mido.ports import BaseOutput
+from nanoid import generate
 
 from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all
 from loeric.server.synthout import SynthOutput
@@ -23,8 +22,9 @@ tune: Tune
 musicians: list[Musician] = []
 names = ["Aoife", "Caoimhe", "Saoirse", "Ciara", "Niamh", "Róisín", "Cara", "Clodagh", "Aisling", "Éabha",
          "Conor", "Sean", "Oisín", "Patrick", "Cian", "Liam", "Darragh", "Eoin", "Caoimhín", "Cillian"]
-instruments = {"Piano": 2, "Guitar": 24, "Harp": 46 }
 shuffle(names)
+
+instruments = {"Piano": 2, "Guitar": 24, "Harp": 46}
 
 synth = tinysoundfont.Synth()
 soundfont_id = 0
@@ -73,6 +73,7 @@ def play():
 def pause():
     pause_all()
     return state()
+
 
 @app.get('/api/stop')
 def stop():
@@ -132,7 +133,7 @@ def add_musician():
     loeric_id = generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
-    musicians.append(Musician(unused[0], loeric_id, tune, 12))
+    musicians.append(Musician(unused[0], loeric_id, tune, next(iter(list(instruments.values())))))
 
     return state()
 
@@ -207,3 +208,4 @@ def start_server():
             add_musician()
 
     run(app, host='localhost', port=8080)
+    synth.stop()

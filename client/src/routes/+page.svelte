@@ -21,6 +21,7 @@
 			instrument: number
 		}[],
 	}
+
 	let base = "http://localhost:8080"
 
 	let fileInput: HTMLInputElement
@@ -181,7 +182,8 @@
 					</div>
 					<select name={musician.id} onchange={instrumentChange}>
 						{#each Object.keys(data.instruments) as instrument}
-							<option value={data.instruments[instrument]} selected={musician.instrument === data.instruments[instrument]}>{instrument}</option>
+							<option value={data.instruments[instrument]}
+							        selected={musician.instrument === data.instruments[instrument]}>{instrument}</option>
 						{/each}
 					</select>
 					<select name={musician.id} onchange={inputChange}>
