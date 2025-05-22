@@ -1,4 +1,5 @@
 import argparse
+import re
 import jsonmerge
 import json
 import os
@@ -47,7 +48,7 @@ def main():
         else:
             for option in args[a].split("-"):
                 name = f"{dir_path}/{a}/{option}.json"
-                print(name)
+                print("Using", f"{a}/{option}.json")
                 config_name.append(args[a])
                 with open(name, "r") as f:
                     selected = json.load(f)
@@ -69,5 +70,9 @@ def main():
         config_name = args["output"]
 
     with open(config_name, "w") as f:
-        print(config_name)
-        json.dump(base, f, ensure_ascii=True, indent=4)
+        print("Saving to", config_name)
+        s = json.dumps(base, ensure_ascii=True, indent=4)
+        s = re.sub(r"\n +([0-9-\]])", r" \1", s)
+        s = re.sub(r"\],\n( +)\[ (?=-*[0-9]+)", r"], [ ", s)
+        s = re.sub(r"\[\n( +)\[ (?=-*[0-9]+)", r"[ [ ", s)
+        f.write(s)

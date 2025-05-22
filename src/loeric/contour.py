@@ -197,7 +197,7 @@ class HarmonicContour(Contour):
             root = np.random.choice(np.argwhere(root_chord == root_chord.max())[0])
 
             # check if the selected chord should be major according to the mode
-            chord_quality = np.roll(lu.chord_quality, midi.root)[root]
+            chord_quality = np.roll(lu.chord_quality, midi.major_root)[root]
 
             harmony_value = root
 

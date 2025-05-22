@@ -868,7 +868,7 @@ class Groover:
         pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
 
         # sample weighted by distance
-        w = abs(pitches - last_note)
+        w = abs(pitches - last_note).astype(float)
         w /= max(w)
         w = 1 - w
         end_pitch = random.choices(pitches, weights=w, k=1)[0]

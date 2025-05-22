@@ -80,7 +80,7 @@ class Tune:
         print("Sync every", quarters_per_bar / self._time_signature.beatCount)
 
         # obtain alla events
-        all_events = [m for m in self._orig_midi]
+        all_events = [m.copy() for m in self._orig_midi]
 
         # convert to cumulative time
         cumulative_time = 0
@@ -146,6 +146,13 @@ class Tune:
         :return: the tune's key signature root in pitch space.
         """
         return self._root
+
+    @property
+    def major_root(self) -> int:
+        """
+        :return: the root of the relative major of the tune's key signature in pitch space.
+        """
+        return (self._root + lu.mode_offset[self._key_signature.mode]) % 12
 
     @property
     def ambitus(self) -> tuple[int]:
