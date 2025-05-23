@@ -10,7 +10,7 @@ from . import loeric_utils as lu
 class Tune:
     """A wrapper for a midi file."""
 
-    def __init__(self, filename: str, repeats: int):
+    def __init__(self, filename: str, repeats: int, type: str = ""):
         """
         Initialize the class. A number of properties is computed:
 
@@ -25,6 +25,7 @@ class Tune:
         mido_source = mido.MidiFile(filename)
 
         self._filename = filename
+        self.type = type
 
         # load midi notes and repeat them
         self._midi = []

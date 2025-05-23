@@ -10,15 +10,13 @@
 		'trackList': string[],
 		'outputs': string[],
 		'inputs': string[],
-		'instruments': {
-			[id: string]: number
-		},
+		'instruments': string[],
 		'musicians': {
 			id: string,
 			name: string,
 			midiIn: string,
 			midiOut: string,
-			instrument: number
+			instrument: string
 		}[],
 	}
 
@@ -181,9 +179,9 @@
 						<div class="opacity-70 font-light">Musician</div>
 					</div>
 					<select name={musician.id} onchange={instrumentChange}>
-						{#each Object.keys(data.instruments) as instrument}
-							<option value={data.instruments[instrument]}
-							        selected={musician.instrument === data.instruments[instrument]}>{instrument}</option>
+						{#each data.instruments as instrument}
+							<option value={instrument}
+							        selected={musician.instrument === instrument}>{instrument}</option>
 						{/each}
 					</select>
 					<select name={musician.id} onchange={inputChange}>

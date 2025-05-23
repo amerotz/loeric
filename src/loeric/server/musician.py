@@ -1,6 +1,8 @@
 import faulthandler
+import os
 import threading
 from enum import Enum
+from os.path import split
 from random import randint
 from typing import Optional
 
@@ -13,6 +15,8 @@ from loeric.player import Player
 from loeric.tune import Tune
 
 faulthandler.enable()
+
+
 # bad code goes here
 
 class State(Enum):
@@ -20,9 +24,11 @@ class State(Enum):
     PAUSED = 1
     PLAYING = 2
 
+
 _state = State.STOPPED
 _lock = threading.Lock()
 _play_event = threading.Event()
+
 
 def get_state() -> State:
     return _state
@@ -57,7 +63,7 @@ class Musician:
             name: str,
             loeric_id: str,
             tune: Tune,
-            instrument: int,
+            instrument: str,
             midi_out: str | BaseOutput | None = None,
             midi_in: str | None = None,
     ):
@@ -67,19 +73,17 @@ class Musician:
         self.instrument = instrument
         self.midi_out = midi_out
         self.midi_in = midi_in
-        self.seed = randint(0,1000000)
+        self.seed = randint(0, 1000000)
         self.random_weight = 0.2
         self.thread = threading.Thread()
 
-
-    def ready(self)-> None:
+    def ready(self) -> None:
         global _state
         if _state == State.STOPPED:
             self.thread = threading.Thread(target=self.__play)
             self.thread.start()
 
-
-    def __play(self, )-> None:
+    def __play(self, ) -> None:
         try:
             """
             Play the given tune with the given groover.
@@ -105,6 +109,12 @@ class Musician:
                 random_weight=self.random_weight,
                 seed=self.seed
             )
+
+            dir_path = os.getcwd() + "/src/loeric/loeric_config/performance"
+            groover.merge_config(f"{dir_path}/musician/{self.name.lower()}.mid",
+                                 f"{dir_path}/instrument/{self.instrument.lower()}.json",
+                                 f"{dir_path}/tune_type/{self.tune.type.lower()}.json",
+                                 f"{dir_path}/tune/{split(self.tune.filename)[1].lower()}.json")
 
             midi_input: Optional[BaseInput] = None
             if self.midi_in is not None:
@@ -138,7 +148,7 @@ class Musician:
                     break
 
                 if message.type == "sysex":
-                    #print(f"Repetition {message.data[0] + 1}/{kwargs['repeat']}")
+                    # print(f"Repetition {message.data[0] + 1}/{kwargs['repeat']}")
                     continue
                 # perform notes
                 elif lu.is_note(message):
@@ -147,9 +157,9 @@ class Musician:
                 # keep meta messages intact
                 else:
                     if message.type == "songpos":
-                        #if sync_port_out is not None:
-                            #sync_port_out.send(message)
-                            # print(f"{loeric_id} SENT {message.pos} ({time.time()})")
+                        # if sync_port_out is not None:
+                        # sync_port_out.send(message)
+                        # print(f"{loeric_id} SENT {message.pos} ({time.time()})")
                         new_messages = []
                     else:
                         new_messages = [message]

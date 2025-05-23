@@ -24,7 +24,7 @@ names = ["Aoife", "Caoimhe", "Saoirse", "Ciara", "Niamh", "Róisín", "Cara", "C
          "Conor", "Sean", "Oisín", "Patrick", "Cian", "Liam", "Darragh", "Eoin", "Caoimhín", "Cillian"]
 shuffle(names)
 
-instruments = {"Piano": 2, "Guitar": 24, "Harp": 46}
+instruments = {"Accordion": 21, "Guitar": 24, "Harp": 46, "Flute": 73, "Violin": 40}
 
 synth = tinysoundfont.Synth()
 soundfont_id = 0
@@ -44,7 +44,7 @@ def state():
         'inputs': mido.get_input_names(),
         'outputs': mido.get_output_names(),
         'state': get_state().name,
-        'instruments': instruments,
+        'instruments': list(instruments.keys()),
     }
 
 
@@ -52,7 +52,7 @@ def __set_track(track: str):
     track_list = [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid']
     if track in track_list:
         global tune
-        tune = Tune(join(track_dir, track), 1)
+        tune = Tune(join(track_dir, track), 1, "reel")
         for musician in musicians:
             musician.tune = tune
 
@@ -61,7 +61,7 @@ def __set_track(track: str):
 def play():
     for index, musician in enumerate(musicians):
         if musician.midi_out is None or isinstance(musician.midi_out, BaseOutput):
-            synth.program_select(index, soundfont_id, 0, musician.instrument)
+            synth.program_select(index, soundfont_id, 0, instruments[musician.instrument])
             musician.midi_out = SynthOutput(synth, index)
         musician.ready()
     synth.start()
@@ -86,7 +86,7 @@ def stop():
 def instrument_change():
     global musicians
     musician_id = request.forms.id
-    new_instrument = int(request.forms.instrument)
+    new_instrument = request.forms.instrument
 
     for musician in musicians:
         if musician.id == musician_id:
@@ -133,7 +133,7 @@ def add_musician():
     loeric_id = generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
-    musicians.append(Musician(unused[0], loeric_id, tune, next(iter(list(instruments.values())))))
+    musicians.append(Musician(unused[0], loeric_id, tune, next(iter(instruments))))
 
     return state()
 

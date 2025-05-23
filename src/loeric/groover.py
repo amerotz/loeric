@@ -1,22 +1,20 @@
-import mido
-import os
-import jsonmerge
 import copy
-import random
 import json
-import numpy as np
-import music21 as m21
+import os
+import random
 import threading
 import time
-
 from collections import defaultdict
 from collections.abc import Callable
 
+import jsonmerge
+import mido
+import music21 as m21
+import numpy as np
 
-from . import tune as tu
 from . import contour as cnt
 from . import loeric_utils as lu
-
+from . import tune as tu
 
 CUT = "cut"
 DROP = "drop"
@@ -35,19 +33,19 @@ class Groover:
     """The class responsible for playback, ornamentation and human interaction."""
 
     def __init__(
-        self,
-        tune: tu.Tune,
-        bpm: int = None,
-        midi_channel: int = 0,
-        transpose: int = 0,
-        diatonic_errors: bool = True,
-        random_weight: float = 0,
-        human_impact: float = 0,
-        seed: int = 42,
-        config_file: str = None,
-        intensity_control: int = 1,
-        human_impact_control: int = 11,
-        syncing: bool = False,
+            self,
+            tune: tu.Tune,
+            bpm: int = None,
+            midi_channel: int = 0,
+            transpose: int = 0,
+            diatonic_errors: bool = True,
+            random_weight: float = 0,
+            human_impact: float = 0,
+            seed: int = 42,
+            config_file: str = None,
+            intensity_control: int = 1,
+            human_impact_control: int = 11,
+            syncing: bool = False,
     ):
         """
         Initialize the groover class by setting user-defined parameters and creating the contours.
@@ -124,27 +122,29 @@ class Groover:
             },
         }
 
+        self._initial_human_impact = human_impact
+        self._did_swing = False
+        self._syncing = syncing
+
         # merge base configuration with command line values
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        with open(f"{dir_path}/loeric_config/performance/base.json", "r") as f:
-            base_config = json.load(f)
-            self._config = jsonmerge.merge(base_config, self._config)
+        self.merge_config(f"{dir_path}/loeric_config/performance/tune.json",
+                          config_file)
 
         # use external configuration if specified
         # the configuration file overwrites any defaults
         # specified by command line
         if config_file is not None:
-            with open(config_file, "r") as f:
-                config_file = json.load(f)
-            self._config = jsonmerge.merge(self._config, config_file)
-            config_hash = int(hash(str(config_file))) % 2**31
+            config_hash = int(hash(str(config_file))) % 2 ** 31
             self._config["values"]["seed"] = config_hash + seed
 
-        self._initial_human_impact = human_impact
-        self._did_swing = False
-        self._syncing = syncing
+    def merge_config(self, *args: str):
+        for file in args:
+            if os.path.isfile(file):
+                with open(file, "r") as f:
+                    config = json.load(f)
+                    self._config = jsonmerge.merge(config, self._config)
 
-        # generate all parameter settings and contours
         self._instantiate()
 
     def _instantiate(self):
@@ -169,7 +169,7 @@ class Groover:
 
         # legato
         self._legato_amount = (
-            self._config["values"]["legato_max"] - self._config["values"]["legato_min"]
+                self._config["values"]["legato_max"] - self._config["values"]["legato_min"]
         )
 
         # droning
@@ -348,13 +348,13 @@ class Groover:
         for contour_name in ["velocity", "tempo", "ornament"]:
             #
             hi = (
-                self._contour_values[f"{contour_name}_human_impact"]
-                * self._config[contour_name]["human_impact_scale"]
+                    self._contour_values[f"{contour_name}_human_impact"]
+                    * self._config[contour_name]["human_impact_scale"]
             )
 
             self._contour_values[contour_name] *= 1 - hi
             self._contour_values[contour_name] += (
-                hi * self._contour_values[f"{contour_name}_intensity"]
+                    hi * self._contour_values[f"{contour_name}_intensity"]
             )
 
     def set_contour_value(self, contour_name: str, value: float) -> None:
@@ -485,7 +485,7 @@ class Groover:
             # randomize end time and legato
             mult = np.random.normal(
                 loc=self._config["values"]["legato_min"]
-                + self._legato_amount * self._contour_values["phrasing"],
+                    + self._legato_amount * self._contour_values["phrasing"],
                 scale=0.05,
             )
             # self._delay_max = mult
@@ -623,7 +623,7 @@ class Groover:
         return t
 
     def _add_drone(
-        self, notes: np.array, drones: np.array, is_note_on: bool
+            self, notes: np.array, drones: np.array, is_note_on: bool
     ) -> np.array:
         """
         Add drones to each note in input.
@@ -834,8 +834,8 @@ class Groover:
 
         tempo_impact = self._contour_values["tempo"]
         calculated = tempo_impact * (
-            self._config["values"]["roll_eight_fraction_max"]
-            - self._config["values"]["roll_eight_fraction_min"]
+                self._config["values"]["roll_eight_fraction_max"]
+                - self._config["values"]["roll_eight_fraction_min"]
         )
         calculated += self._config["values"]["roll_eight_fraction_min"]
 
@@ -898,7 +898,7 @@ class Groover:
             return lu.below_approach_scale[index] + note_number
 
     def generate_ornament(
-        self, message: mido.Message, ornament_type: str
+            self, message: mido.Message, ornament_type: str
     ) -> list[mido.Message]:
         """
         Generate the sequence of notes corresponding to the chosen ornament.
@@ -1123,24 +1123,24 @@ class Groover:
         message_length = self._contour_values["message length"]
 
         if (
-            message_length >= 0.75 * self._eight_duration
-            and (is_beat or self._contour_values["pitch difference"] == 0)
-            and random.uniform(0, 1) < self._config["probabilities"]["cut"]
+                message_length >= 0.75 * self._eight_duration
+                and (is_beat or self._contour_values["pitch difference"] == 0)
+                and random.uniform(0, 1) < self._config["probabilities"]["cut"]
         ):
             options.append(CUT)
 
         if (
-            random.uniform(0, 1) < self._config["probabilities"]["roll"]
-            # value of a dotted quarter
-            and message_length - 3 * self._eight_duration > -0.01
+                random.uniform(0, 1) < self._config["probabilities"]["roll"]
+                # value of a dotted quarter
+                and message_length - 3 * self._eight_duration > -0.01
         ):
             # return ROLL
             options.append(ROLL)
 
         if (
-            (is_beat and message_length > self._slide_duration)
-            or self._contour_values["pitch difference"]
-            >= self._config["values"]["slide_pitch_threshold"]
+                (is_beat and message_length > self._slide_duration)
+                or self._contour_values["pitch difference"]
+                >= self._config["values"]["slide_pitch_threshold"]
         ) and random.uniform(0, 1) < self._config["probabilities"]["slide"]:
             options.append(SLIDE)
 
@@ -1188,8 +1188,8 @@ class Groover:
         :return: True if we are on a beat.
         """
         beat_position = (
-            self._performance_time % self._tune._bar_duration
-        ) / self._tune._beat_duration
+                                self._performance_time % self._tune._bar_duration
+                        ) / self._tune._beat_duration
         diff = abs(beat_position - round(beat_position))
 
         return diff <= lu.TRIGGER_DELTA
@@ -1223,9 +1223,9 @@ class Groover:
         else:
             bpm = max(mido.tempo2bpm(base_tempo), 1)
             value = (
-                2
-                * self._config["tempo_control"]["tempo_warp_bpms"]
-                * (self._contour_values["tempo"] - 0.5)
+                    2
+                    * self._config["tempo_control"]["tempo_warp_bpms"]
+                    * (self._contour_values["tempo"] - 0.5)
             )
 
             calculated_tempo = mido.bpm2tempo(int(bpm + value))
