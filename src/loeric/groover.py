@@ -417,16 +417,18 @@ class Groover:
 
         # add the human part
         for contour_name in ["velocity", "tempo", "ornament"]:
-            #
             hi = (
                 self._contour_values[f"{contour_name}_human_impact"]
                 * self._config[contour_name]["human_impact_scale"]
             )
 
+            intensity = self._contour_values[f"{contour_name}_intensity"]
+            if self._config[contour_name]["human_impact_scale"] < 0:
+                intensity = 1 - intensity
+                hi = abs(hi)
+
             self._contour_values[contour_name] *= 1 - hi
-            self._contour_values[contour_name] += (
-                hi * self._contour_values[f"{contour_name}_intensity"]
-            )
+            self._contour_values[contour_name] += hi * intensity
 
     def set_contour_value(self, contour_name: str, value: float) -> None:
         """
@@ -549,7 +551,6 @@ class Groover:
         self._offset -= removable_offset
 
         if should_skip:
-            # print(self._tmp_sum)
             return []
 
         # warp note duration according to contour
@@ -557,7 +558,8 @@ class Groover:
         new_message.time *= self._contour_values["tempo_pattern"]
 
         # change midi channel
-        new_message.channel = self._midi_channel
+        if lu.is_note(new_message):
+            new_message.channel = self._midi_channel
 
         if lu.is_note_off(new_message):
             # randomize end time and legato
@@ -653,7 +655,7 @@ class Groover:
         notes = new_notes
 
         # add drone
-        if self._config["drone"]["active"]:
+        if lu.is_note(new_message) and self._config["drone"]["active"]:
             drone = []
             if self._contour_values[self._drone_bound_contour] >= self._drone_threshold:
                 drone = self._get_drone(new_message.note)
@@ -736,16 +738,23 @@ class Groover:
                     drone += self._transpose_semitones
 
                 delay = random.uniform(0, self._config["drone"]["delay_range"])
+
+                multiplier = self._config["drone"]["velocity_multiplier"]
+                velocity = self._current_velocity
+
+                if multiplier < 0:
+                    velocity = 127 - velocity
+                    multiplier = abs(multiplier)
+
+                velocity = min(int(velocity * multiplier), 127)
+
                 notes.insert(
                     1 + list_offset,
                     mido.Message(
                         type="note_on",
                         channel=self._config["drone"]["midi_channel"],
                         note=drone,
-                        velocity=int(
-                            self._current_velocity
-                            * self._config["drone"]["velocity_multiplier"]
-                        ),
+                        velocity=min(int(velocity * multiplier), 127),
                         time=delay,
                     ),
                 )
@@ -849,15 +858,20 @@ class Groover:
         # get last note of tune
         last_note = self._tune.filter(lu.is_note_on)[-1].note
 
+        """
         # filter pitches that are too far away
         # reachable within a fifth
         pitches = pitches[abs(pitches - last_note) <= 7]
+        """
 
         # select suitable pitches (e.g. any root, third, fifth within range)
         pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
 
-        # sample
-        end_pitch = random.choice(pitches)
+        # sample weighted by distance
+        w = abs(pitches - last_note).astype(float)
+        w /= max(w)
+        w = 1 - w
+        end_pitch = random.choices(pitches, weights=w, k=1)[0]
         end_pitch += self._transpose_semitones
 
         # get duration (quarter note)
@@ -988,6 +1002,7 @@ class Groover:
         :return: the list of midi events corresponding to the chosen ornament.
         """
 
+        print(ornament_type)
         ornaments = []
         if self._config["values"]["use_old_ornaments"]:
             message_length = self._contour_values["message length"]
@@ -1192,7 +1207,7 @@ class Groover:
                 ornaments.append(off_message)
                 self._offset += message_length * perc
         else:
-            print(ornament_type)
+            # print(ornament_type)
             # sample pitches
             pitches = np.random.normal(
                 loc=self._config["ornamentation"][ornament_type]["pitches_mean"],

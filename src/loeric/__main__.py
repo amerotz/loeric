@@ -83,10 +83,8 @@ def play(
                 if message.type == "songpos":
                     if sync_port_out is not None:
                         sync_port_out.send(message)
-                        # print(f"{loeric_id} SENT {message.pos} ({time.time()})")
-                    new_messages = []
-                else:
-                    new_messages = [message]
+                        print(f"{loeric_id} SENT {message.pos} ({time.time()})")
+                new_messages = groover.perform(message)
             # play
             player.play(new_messages)
 

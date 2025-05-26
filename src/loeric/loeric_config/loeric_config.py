@@ -1,4 +1,5 @@
 import argparse
+import re
 import jsonmerge
 import json
 import os
@@ -13,10 +14,11 @@ def main():
     parser.add_argument("--instrument", default=None, type=str)
     parser.add_argument("--drone", default=None, type=str)
     parser.add_argument("--ornament", default=None, type=str)
+    parser.add_argument("--control", default=None, type=str)
     # shell args
     parser.add_argument("--shell", action="store_true")
-    parser.add_argument("--sync_interval", default=1, type=float)
-    parser.add_argument("--switch_every", default=16, type=float)
+    parser.add_argument("--sync-interval", default=1, type=float)
+    parser.add_argument("--switch-every", default=16, type=float)
     # general args
     parser.add_argument("--id", default=None, type=str)
     parser.add_argument("--output", default=None, type=str)
@@ -36,7 +38,7 @@ def main():
     if args["shell"]:
         folders = []
     else:
-        folders = ["tune_type", "instrument", "drone", "ornament"]
+        folders = ["tune_type", "instrument", "drone", "ornament", "control"]
 
     # select files
     config_name = []
@@ -46,7 +48,7 @@ def main():
         else:
             for option in args[a].split("-"):
                 name = f"{dir_path}/{a}/{option}.json"
-                print(name)
+                print("Using", f"{a}/{option}.json")
                 config_name.append(args[a])
                 with open(name, "r") as f:
                     selected = json.load(f)
@@ -68,5 +70,9 @@ def main():
         config_name = args["output"]
 
     with open(config_name, "w") as f:
-        print(config_name)
-        json.dump(base, f, ensure_ascii=True, indent=4)
+        print("Saving to", config_name)
+        s = json.dumps(base, ensure_ascii=True, indent=4)
+        s = re.sub(r"\n +([0-9-\]])", r" \1", s)
+        s = re.sub(r"\],\n( +)\[ (?=-*[0-9]+)", r"], [ ", s)
+        s = re.sub(r"\[\n( +)\[ (?=-*[0-9]+)", r"[ [ ", s)
+        f.write(s)

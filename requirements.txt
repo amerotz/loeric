@@ -1,3 +1,6 @@
+flit_core
+setuptools
+muspy
 attrs==24.2.0
 build==1.2.2.post1
 certifi==2024.8.30

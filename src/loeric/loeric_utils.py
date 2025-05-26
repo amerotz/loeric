@@ -247,3 +247,18 @@ def get_ports(
         outport = mido.get_output_names()[out_index]
 
     return inport, outport
+
+
+def is_aligned_with(time: float, interval: float, threshold: float) -> bool:
+    """
+    Checks whether a given time position in the tune aligns with some subdivision using a given threshold.
+
+    :param time: the time position to check.
+    :param interval: the time interval to check alignement for.
+    :param threshold: the time threshold to consider the position aligned with the interval.
+
+    :return: whether the time interval is aligned or not.
+    """
+
+    half_i = interval * 0.5
+    return abs(((time - half_i) % interval) - half_i) <= threshold
