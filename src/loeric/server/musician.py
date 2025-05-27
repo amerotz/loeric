@@ -7,6 +7,7 @@ from random import randint
 from typing import Optional
 
 import mido
+from mido import Message
 from mido.ports import BaseOutput, BaseInput
 
 from loeric import (loeric_utils as lu)
@@ -64,7 +65,7 @@ class Musician:
             loeric_id: str,
             tune: Tune,
             instrument: str,
-            midi_out: str | BaseOutput | None = None,
+            midi_out: BaseOutput | None = None,
             midi_in: str | None = None,
     ):
         self.name = name
@@ -73,6 +74,7 @@ class Musician:
         self.instrument = instrument
         self.midi_out = midi_out
         self.midi_in = midi_in
+        self.volume = 127
         self.seed = randint(0, 1000000)
         self.random_weight = 0.2
         self.thread = threading.Thread()
@@ -83,12 +85,25 @@ class Musician:
             self.thread = threading.Thread(target=self.__play)
             self.thread.start()
 
+
+    def set_volume(self, volume):
+        self.volume = volume
+        self.midi_out.send(
+            Message(
+                "control_change",
+                channel=0,
+                control=7,
+                value=volume,
+            )
+        )
+
+
     def __play(self, ) -> None:
         try:
             """
             Play the given tune with the given groover.
     
-            :param loeric_id: the id of the current LOERIC istance
+            :param loeric_id: the id of the current LOERIC instance
             :param groover: the groover object
             :param tune: the tune object
             :param sync_port_out: the MIDI port for synchronization
@@ -98,11 +113,9 @@ class Musician:
             midi_output: Optional[BaseOutput] = None
             if self.midi_out is None:
                 midi_output = mido.open_output(f"LOERIC out #{self.id}#", virtual=True)
-            elif isinstance(self.midi_out, BaseOutput):
+            else:
                 midi_output = self.midi_out
                 midi_output.reset()
-            else:
-                midi_output = mido.open_output(self.midi_out)
 
             groover = Groover(
                 self.tune,
@@ -194,4 +207,4 @@ class Musician:
         out = self.midi_out
         if isinstance(self.midi_out, BaseOutput):
             out = self.midi_out.name
-        return {'id': self.id, 'name': self.name, 'midiOut': out, 'midiIn': self.midi_in, 'instrument': self.instrument}
+        return {'id': self.id, 'name': self.name, 'midiOut': out, 'volume': self.volume, 'midiIn': self.midi_in, 'instrument': self.instrument}

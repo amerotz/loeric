@@ -2,20 +2,25 @@
 	import {onMount} from "svelte"
 
 	let data: {
-		'time': string,
-		'key': string,
-		'track': string,
-		'tempo': number,
+		'track': {
+			'name': string,
+			'time': string,
+			'key': string,
+			'tempo': number,
+		},
 		'state': string,
-		'trackList': string[],
-		'outputs': string[],
-		'inputs': string[],
-		'instruments': string[],
+		'options': {
+			'trackList': string[],
+			'outputs': string[],
+			'inputs': string[],
+			'instruments': string[],
+		}
 		'musicians': {
 			id: string,
 			name: string,
 			midiIn: string,
 			midiOut: string,
+			volume: number,
 			instrument: string
 		}[],
 	}
@@ -28,55 +33,50 @@
 	let poller = 0
 
 	async function refresh() {
-		await apiCall('state')
+		await apiGet('state')
 	}
 
-	async function apiCall(call: string) {
+	async function trackChange(event: Event) {
+		const select = event.target as HTMLSelectElement
+		await apiPut("instrument", {track: select.value})
+	}
+
+	async function inputChange(event: Event) {
+		const select = event.target as HTMLSelectElement
+		await apiPut("input", {id: select.name, input: select.value})
+	}
+
+	async function outputChange(event: Event) {
+		const select = event.target as HTMLSelectElement
+		await apiPut("output", {id: select.name, output: select.value})
+	}
+
+	async function instrumentChange(event: Event) {
+		const select = event.target as HTMLSelectElement
+		await apiPut("instrument", {id: select.name, instrument: select.value})
+	}
+
+	async function volumeChange(event: Event) {
+		const select = event.target as HTMLSelectElement
+		await apiPut("volume", {id: select.name, volume: select.value})
+	}
+
+	async function apiPut(call: string, data: any) {
+		const response = await fetch(base + "/api/" + call, {
+			method: 'PUT',
+			headers: {"Content-Type": "application/x-www-form-urlencoded"},
+			body: new URLSearchParams(data),
+		})
+		data = await response.json()
+	}
+
+	async function apiGet(call: string) {
 		const response = await fetch(base + '/api/' + call)
 		data = await response.json()
 		clearTimeout(poller)
 		if (data.state === 'PLAYING') {
 			poller = setTimeout(refresh, 500)
 		}
-	}
-
-	async function trackChange(event: Event) {
-		const response = await fetch(base + "/api/track", {
-			method: 'PUT',
-			headers: {"Content-Type": "application/x-www-form-urlencoded"},
-			body: new URLSearchParams({track: (event.target as HTMLSelectElement).value}),
-		})
-		data = await response.json()
-	}
-
-	async function inputChange(event: Event) {
-		const select = event.target as HTMLSelectElement
-		const response = await fetch(base + "/api/input", {
-			method: 'PUT',
-			headers: {"Content-Type": "application/x-www-form-urlencoded"},
-			body: new URLSearchParams({id: select.name, input: select.value}),
-		})
-		data = await response.json()
-	}
-
-	async function outputChange(event: Event) {
-		const select = event.target as HTMLSelectElement
-		const response = await fetch(base + "/api/output", {
-			method: 'PUT',
-			headers: {"Content-Type": "application/x-www-form-urlencoded"},
-			body: new URLSearchParams({id: select.name, output: select.value}),
-		})
-		data = await response.json()
-	}
-
-	async function instrumentChange(event: Event) {
-		const select = event.target as HTMLSelectElement
-		const response = await fetch(base + "/api/instrument", {
-			method: 'PUT',
-			headers: {"Content-Type": "application/x-www-form-urlencoded"},
-			body: new URLSearchParams({id: select.name, instrument: select.value}),
-		})
-		data = await response.json()
 	}
 
 	async function upload() {
@@ -106,13 +106,8 @@
 		background: transparent;
 		width: 60px;
 		height: 400px;
+		direction: rtl;
 		writing-mode: vertical-lr;
-	}
-
-	datalist {
-		writing-mode: vertical-lr;
-		width: 10px;
-		height: 400px;
 	}
 
 	input[type="range"]::-webkit-slider-runnable-track {
@@ -138,18 +133,18 @@
 </style>
 
 <div class="container m-auto my-8">
-	{#if data && data.trackList}
+	{#if data && data.options.trackList}
 		<div class="flex items-center bg-gray-950 py-3 px-6 rounded-xl">
 			<div class="flex-1">
 				<select class="w-full text-3xl" onchange={trackChange}>
-					{#each data.trackList as file}
-						<option value={file} selected={file === data.track}>{file.replace(/\.mid$/i, '')}</option>
+					{#each data.options.trackList as file}
+						<option value={file} selected={file === data.track.name}>{file.replace(/\.mid$/i, '')}</option>
 					{/each}
 				</select>
 				<div class="px-1 flex gap-2">
-					<div><span class="opacity-70 font-light">Key:</span> {data.key}</div>
-					<div><span class="opacity-70 font-light">Meter:</span> {data.time}</div>
-					<div><span class="opacity-70 font-light">Tempo:</span> {data.tempo}<span
+					<div><span class="opacity-70 font-light">Key:</span> {data.track.key}</div>
+					<div><span class="opacity-70 font-light">Meter:</span> {data.track.time}</div>
+					<div><span class="opacity-70 font-light">Tempo:</span> {data.track.tempo}<span
 							class="opacity-70 font-light">bpm</span></div>
 					<input class="hidden" type="file" accept="mid, midi, audio/rtp-midi" name="upload" onchange={upload}
 					       bind:this={fileInput}/>
@@ -158,14 +153,14 @@
 			</div>
 			<div>
 				{#if data.state !== 'PLAYING'}
-					<button class="material-symbols-outlined !text-5xl" onclick={() => apiCall('play')}>
+					<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('play')}>
 						play_arrow
 					</button>
 				{:else}
-					<button class="material-symbols-outlined !text-5xl" onclick={() => apiCall('pause')}>
+					<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('pause')}>
 						pause
 					</button>
-					<button class="material-symbols-outlined !text-5xl" onclick={() => apiCall('stop')}>
+					<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('stop')}>
 						stop
 					</button>
 				{/if}
@@ -175,43 +170,56 @@
 			{#each data.musicians as musician}
 				<div class="p-3 rounded-2xl bg-gray-800 flex flex-col gap-2">
 					<div class="flex px-1">
-						<div class="flex-1">{musician.name}</div>
-						<div class="opacity-70 font-light">Musician</div>
+						<div class="flex-1 font-semibold">{musician.name}</div>
+						<div class="opacity-60 font-light">Musician</div>
 					</div>
-					<select name={musician.id} onchange={instrumentChange}>
-						{#each data.instruments as instrument}
-							<option value={instrument}
-							        selected={musician.instrument === instrument}>{instrument}</option>
-						{/each}
-					</select>
-					<select name={musician.id} onchange={inputChange}>
-						<option value="no_in" selected={musician.midiIn === undefined}>No Midi Input</option>
-						{#each data.inputs as input}
-							<option value={input} selected={musician.midiIn === input}>{input}</option>
-						{/each}
-					</select>
-					<select name={musician.id} onchange={outputChange}>
-						<option value="create_out" selected={musician.midiOut === undefined}>Create Midi Output</option>
-						{#each data.outputs as output}
-							<option value={output} selected={musician.midiOut === output}>{output}</option>
-						{/each}
-					</select>
+					<label class="flex flex-col">
+						<span class="text-xs px-1 opacity-60">Instrument</span>
+						<select name={musician.id} onchange={instrumentChange}>
+							{#each data.options.instruments as instrument}
+								<option value={instrument}
+								        selected={musician.instrument === instrument}>{instrument}</option>
+							{/each}
+						</select>
+					</label>
+					<label class="flex flex-col">
+						<span class="text-xs px-1 opacity-60">Output</span>
+						<select name={musician.id} onchange={outputChange}>
+							<option value="synth" selected={musician.midiOut?.startsWith("Loeric Synth ")}>Loeric
+								Synth
+							</option>
+							<option value="create_out" selected={musician.midiOut?.startsWith("Loeric Out ")}>Midi
+								Output
+							</option>
+							{#each data.options.outputs as output}
+								<option value={output} selected={musician.midiOut === output}>{output}</option>
+							{/each}
+						</select>
+					</label>
+					<label class="flex flex-col">
+						<span class="text-xs px-1 opacity-60">Input</span>
+						<select name={musician.id} onchange={inputChange}>
+							<option value="no_in" selected={musician.midiIn === undefined}>None</option>
+							{#each data.options.inputs as input}
+								<option value={input} selected={musician.midiIn === input}>{input}</option>
+							{/each}
+						</select>
+					</label>
 					<div class="flex py-2">
-						<input type="range" max="50" min="0" value="25" list="values"/>
-						<datalist id="values">
-							<option value="0" label="0"></option>
-							<option value="25" label="25"></option>
-							<option value="50" label="50"></option>
-							<option value="75" label="75"></option>
-							<option value="100" label="100"></option>
-						</datalist>
-						<input type="range" max="50" min="0" value="25"/>
-						<input type="range" max="50" min="0" value="25"/>
+						<div class="flex flex-col items-center">
+							<input type="range" max="127" min="0" value={musician.volume} onchange={volumeChange}/>
+							<div class="text-xs text-center">Vol</div>
+						</div>
+						<div class="flex flex-col items-center">
+							<input type="range" max="127" min="0" value="64"/>
+							<div class="text-xs text-center">Int</div>
+						</div>
+						<input type="range" max="127" min="0" value="64"/>
 					</div>
 				</div>
 			{/each}
 			<div class="self-center justify-self-center">
-				<button class="material-symbols-outlined" onclick={() => apiCall('add_musician')}>add</button>
+				<button class="material-symbols-outlined" onclick={() => apiGet('add_musician')}>add</button>
 			</div>
 		</div>
 	{/if}

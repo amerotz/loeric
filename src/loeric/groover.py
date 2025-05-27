@@ -128,7 +128,7 @@ class Groover:
 
         # merge base configuration with command line values
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.merge_config(f"{dir_path}/loeric_config/performance/tune.json",
+        self.merge_config(f"{dir_path}/loeric_config/performance/base.json",
                           config_file)
 
         # use external configuration if specified
@@ -140,8 +140,9 @@ class Groover:
 
     def merge_config(self, *args: str):
         for file in args:
-            if os.path.isfile(file):
+            if file is not None and os.path.isfile(file):
                 with open(file, "r") as f:
+                    print(f"Loading config from {file}")
                     config = json.load(f)
                     self._config = jsonmerge.merge(config, self._config)
 

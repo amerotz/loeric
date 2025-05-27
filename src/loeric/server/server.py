@@ -6,7 +6,6 @@ import mido
 import tinysoundfont
 from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
 from mido import MidiFile
-from mido.ports import BaseOutput
 from nanoid import generate
 
 from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all
@@ -35,16 +34,20 @@ def state():
     response.set_header('Access-Control-Allow-Origin', '*')
     return {
         'musicians': list(map(lambda m: m.__json__(), musicians)),
-        'trackList': [f for f in listdir(track_dir) if
-                      isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
-        'track': split(tune.filename)[1],
-        'time': f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
-        'key': tune.key_signature,
-        'tempo': mido.tempo2bpm(tune.tempo, [tune.time_signature.numerator, tune.time_signature.denominator]),
-        'inputs': mido.get_input_names(),
-        'outputs': mido.get_output_names(),
         'state': get_state().name,
-        'instruments': list(instruments.keys()),
+        'track': {
+            'name': split(tune.filename)[1],
+            'time': f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
+            'key': tune.key_signature,
+            'tempo': mido.tempo2bpm(tune.tempo, [tune.time_signature.numerator, tune.time_signature.denominator]),
+        },
+        'options': {
+            'inputs': mido.get_input_names(),
+            'outputs': mido.get_output_names(),
+            'instruments': list(instruments.keys()),
+            'trackList': [f for f in listdir(track_dir) if
+                          isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
+        },
     }
 
 
@@ -60,9 +63,12 @@ def __set_track(track: str):
 @app.get('/api/play')
 def play():
     for index, musician in enumerate(musicians):
-        if musician.midi_out is None or isinstance(musician.midi_out, BaseOutput):
+        if musician.midi_out is None or isinstance(musician.midi_out, SynthOutput):
             synth.program_select(index, soundfont_id, 0, instruments[musician.instrument])
-            musician.midi_out = SynthOutput(synth, index)
+            if musician.midi_out is None:
+                musician.midi_out = SynthOutput(f"Loeric Synth #{musician.id}", synth, index)
+            else:
+                musician.midi_out.channel = index
         musician.ready()
     synth.start()
     play_all()
@@ -95,18 +101,34 @@ def instrument_change():
     return state()
 
 
+@app.put('/api/volume')
+def volume_change():
+    global musicians
+    musician_id = request.forms.id
+    new_volume = int(request.forms.volume)
+
+    for musician in musicians:
+        if musician.id == musician_id:
+            if musician.midi_out is not None:
+                musician.set_volume(new_volume)
+
+    return state()
+
+
 @app.put('/api/output')
 def output_change():
     global musicians
     musician_id = request.forms.id
     new_output = request.forms.output
 
-    for musician in musicians:
+    for index, musician in enumerate(musicians):
         if musician.id == musician_id:
             if new_output == 'create_output':
-                musician.midi_in = None
+                musician.midi_in = mido.open_output(f"Loeric Out #{musician.id}", virtual=True)
+            elif new_output == 'synth':
+                musician.midi_in = SynthOutput(f"Loeric Synth #{musician.id}", synth, index)
             else:
-                musician.midi_in = new_output
+                musician.midi_in = mido.open_output(new_output)
 
     return state()
 

@@ -3,10 +3,10 @@ from mido.ports import BaseOutput
 
 
 class SynthOutput(BaseOutput):
-    def __init__(self, synth: tinysoundfont.Synth, channel: int, **kwargs):
+    def __init__(self, name: str, synth: tinysoundfont.Synth, channel: int, **kwargs):
         self.synth = synth
         self.channel = channel
-        BaseOutput.__init__(self, **kwargs)
+        BaseOutput.__init__(self, name=name, **kwargs)
 
     def _send(self, msg):
         if msg.type == "note_on":
