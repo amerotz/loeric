@@ -2,9 +2,9 @@ import faulthandler
 import os
 import threading
 from enum import Enum
-from os.path import split
+from os.path import basename, splitext
 from random import randint
-from typing import Optional
+from typing import Optional, List
 
 import mido
 from mido import Message
@@ -58,6 +58,16 @@ def _update(state: State):
         _play_event.clear()
 
 
+class Control:
+    def __init__(self, name: str, control: int, value: int):
+        self.name = name
+        self.control = control
+        self.value = value
+
+    def __json__(self):
+       return {'name': self.name, 'control': self.control, 'value': self.value}
+
+
 class Musician:
     def __init__(
             self,
@@ -65,6 +75,7 @@ class Musician:
             loeric_id: str,
             tune: Tune,
             instrument: str,
+            controls: List[Control],
             midi_out: BaseOutput | None = None,
             midi_in: str | None = None,
     ):
@@ -74,7 +85,7 @@ class Musician:
         self.instrument = instrument
         self.midi_out = midi_out
         self.midi_in = midi_in
-        self.volume = 127
+        self.controls = controls
         self.seed = randint(0, 1000000)
         self.random_weight = 0.2
         self.thread = threading.Thread()
@@ -85,18 +96,9 @@ class Musician:
             self.thread = threading.Thread(target=self.__play)
             self.thread.start()
 
-
-    def set_volume(self, volume):
-        self.volume = volume
-        self.midi_out.send(
-            Message(
-                "control_change",
-                channel=0,
-                control=7,
-                value=volume,
-            )
-        )
-
+    def set_control(self, control, value):
+        # self.volume = volume
+        self.midi_out.send(Message("control_change", channel=0, control=control, value=value))
 
     def __play(self, ) -> None:
         try:
@@ -115,7 +117,10 @@ class Musician:
                 midi_output = mido.open_output(f"LOERIC out #{self.id}#", virtual=True)
             else:
                 midi_output = self.midi_out
-                midi_output.reset()
+
+            midi_output.reset()
+            for control in self.controls:
+                midi_output.send(Message("control_change", channel=0, control=control, value=control.value))
 
             groover = Groover(
                 self.tune,
@@ -124,10 +129,10 @@ class Musician:
             )
 
             dir_path = os.getcwd() + "/src/loeric/loeric_config/performance"
-            groover.merge_config(f"{dir_path}/musician/{self.name.lower()}.mid",
+            groover.merge_config(f"{dir_path}/musician/{self.name.lower()}.json",
                                  f"{dir_path}/instrument/{self.instrument.lower()}.json",
                                  f"{dir_path}/tune_type/{self.tune.type.lower()}.json",
-                                 f"{dir_path}/tune/{split(self.tune.filename)[1].lower()}.json")
+                                 f"{dir_path}/tune/{splitext(basename(self.tune.filename))[0].lower()}.json")
 
             midi_input: Optional[BaseInput] = None
             if self.midi_in is not None:
@@ -191,7 +196,7 @@ class Musician:
                 for i in range(127):
                     midi_output.send(mido.Message("note_off", velocity=0, note=i, time=0))
                 midi_output.reset()
-                midi_output.close()
+                # midi_output.close()
                 if midi_output.closed:
                     print("Closed MIDI output.")
 
@@ -203,8 +208,45 @@ class Musician:
             print("Player thread terminated.")
             raise e
 
+    def __sync_thread(self, groover: Groover, sync_port_in: mido.ports.BaseInput) -> None:
+        """
+        Handle MIDI start, stop, songpos and tempo messages.
+        """
+        global _state
+        while not _state != State.STOPPED:
+            msg = sync_port_in.receive(block=True)
+            if msg.type == "sysex" and msg.data[0] == 69:
+                tempo = sum(msg.data[1:])
+                groover.set_tempo(tempo)
+                print(f"Received SET TEMPO {tempo}.")
+            elif msg.type == "reset":
+                groover.reset_clock()
+                print(f"Received RESET.")
+            elif msg.type == "clock":
+                groover.set_clock()
+                print(f"Received CLOCK.")
+            elif msg.type == "songpos":
+                print(f"Received JUMP {msg.pos}.")
+                if _state != State.PLAYING:
+                    groover.jump_to_pos(msg.pos)
+                else:
+                    print(f"Ignoring JUMP because playback is active.")
+            elif msg.type == "start":
+                _update(State.PLAYING)
+                print("Received START.")
+            elif msg.type == "stop":
+                _update(State.STOPPED)
+                print("Received STOP.")
+            elif msg.type == "continue":
+                if _state != State.PLAYING:
+                    _update(State.PLAYING)
+                print("Received CONTINUE.")
+
+        print("Sync thread terminated.")
+
     def __json__(self):
         out = self.midi_out
         if isinstance(self.midi_out, BaseOutput):
             out = self.midi_out.name
-        return {'id': self.id, 'name': self.name, 'midiOut': out, 'volume': self.volume, 'midiIn': self.midi_in, 'instrument': self.instrument}
+        return {'id': self.id, 'name': self.name, 'midiOut': out, 'midiIn': self.midi_in,
+                'instrument': self.instrument, 'controls': list(map(lambda m: m.__json__(), self.controls))}

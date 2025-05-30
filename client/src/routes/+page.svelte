@@ -14,14 +14,19 @@
 			'outputs': string[],
 			'inputs': string[],
 			'instruments': string[],
+			'audio': {[id: string]: number}
 		}
 		'musicians': {
 			id: string,
 			name: string,
 			midiIn: string,
 			midiOut: string,
-			volume: number,
-			instrument: string
+			instrument: string,
+			controls: {
+				name: string,
+				control: number,
+				value: number
+			}[]
 		}[],
 	}
 
@@ -56,9 +61,9 @@
 		await apiPut("instrument", {id: select.name, instrument: select.value})
 	}
 
-	async function volumeChange(event: Event) {
+	async function controlChange(event: Event) {
 		const select = event.target as HTMLSelectElement
-		await apiPut("volume", {id: select.name, volume: select.value})
+		await apiPut("control", {id: select.name, control: select.getAttribute("data-control"), volume: select.value})
 	}
 
 	async function apiPut(call: string, data: any) {
@@ -144,7 +149,7 @@
 				<div class="px-1 flex gap-2">
 					<div><span class="opacity-70 font-light">Key:</span> {data.track.key}</div>
 					<div><span class="opacity-70 font-light">Meter:</span> {data.track.time}</div>
-					<div><span class="opacity-70 font-light">Tempo:</span> {data.track.tempo}<span
+					<div><span class="opacity-70 font-light">Tempo:</span> <input type="number" value={data.track.tempo} min="60" max="480"/><span
 							class="opacity-70 font-light">bpm</span></div>
 					<input class="hidden" type="file" accept="mid, midi, audio/rtp-midi" name="upload" onchange={upload}
 					       bind:this={fileInput}/>
@@ -200,21 +205,21 @@
 						<span class="text-xs px-1 opacity-60">Input</span>
 						<select name={musician.id} onchange={inputChange}>
 							<option value="no_in" selected={musician.midiIn === undefined}>None</option>
+							{#each Object.keys(data.options.audio) as input}
+								<option value={"audioIn:" + data.options.audio[input]} selected={musician.midiIn === input}>{input}</option>
+							{/each}
 							{#each data.options.inputs as input}
 								<option value={input} selected={musician.midiIn === input}>{input}</option>
 							{/each}
 						</select>
 					</label>
-					<div class="flex py-2">
-						<div class="flex flex-col items-center">
-							<input type="range" max="127" min="0" value={musician.volume} onchange={volumeChange}/>
-							<div class="text-xs text-center">Vol</div>
-						</div>
-						<div class="flex flex-col items-center">
-							<input type="range" max="127" min="0" value="64"/>
-							<div class="text-xs text-center">Int</div>
-						</div>
-						<input type="range" max="127" min="0" value="64"/>
+					<div class="flex py-2 self-center">
+						{#each musician.controls as control}
+							<label class="flex flex-col items-center gap-1">
+								<span class="text-xs text-center">{control.name}</span>
+								<input type="range" max="127" min="0" name={musician.id} data-control={control.control} value={control.value} onchange={controlChange}/>
+							</label>
+						{/each}
 					</div>
 				</div>
 			{/each}

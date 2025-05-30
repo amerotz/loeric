@@ -12,6 +12,7 @@ import json
 import argparse
 from collections import defaultdict
 
+from mido.ports import IOPort
 
 songpos_wait = 0
 last_tempo = 0
@@ -261,6 +262,7 @@ def sync_intensity(inports, outports):
 
 
 def sync_loeric(inports, outports):
+    IOPort
     global songpos_wait, last_tempo, switch_timer, fix_sync_duration, stop_sync_duration, exiting, all_dead, config
     all_dead.acquire()
     shell_print("Sync ON.")
@@ -353,7 +355,7 @@ def sync_loeric(inports, outports):
             # output port
             out_port = None
             for p in outports:
-                if loeric_id == re.search("#.*#", p.name)[0]:
+                if p.name == f"Loeric Virtual Out {loeric_id}":
                     out_port = p
                     break
 

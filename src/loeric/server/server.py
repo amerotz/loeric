@@ -7,8 +7,9 @@ import tinysoundfont
 from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
 from mido import MidiFile
 from nanoid import generate
+from pyaudio import PyAudio
 
-from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all
+from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all, Control
 from loeric.server.synthout import SynthOutput
 from loeric.tune import Tune
 
@@ -29,6 +30,21 @@ synth = tinysoundfont.Synth()
 soundfont_id = 0
 
 
+def list_audio():
+    audio = PyAudio()
+    info = audio.get_host_api_info_by_index(0)
+    device_count = info.get("deviceCount")
+
+    list = {}
+
+    for i in range(0, device_count):
+        if (audio.get_device_info_by_host_api_device_index(0, i).get("maxInputChannels")) > 0:
+            name = audio.get_device_info_by_host_api_device_index(0, i).get("name")
+            list[name] = i
+
+    return list
+
+
 @app.get('/api/state')
 def state():
     response.set_header('Access-Control-Allow-Origin', '*')
@@ -47,6 +63,7 @@ def state():
             'instruments': list(instruments.keys()),
             'trackList': [f for f in listdir(track_dir) if
                           isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
+            'audio': list_audio()
         },
     }
 
@@ -101,16 +118,17 @@ def instrument_change():
     return state()
 
 
-@app.put('/api/volume')
-def volume_change():
+@app.put('/api/control')
+def control_change():
     global musicians
     musician_id = request.forms.id
-    new_volume = int(request.forms.volume)
+    control = int(request.forms.control)
+    new_value = int(request.forms.value)
 
     for musician in musicians:
         if musician.id == musician_id:
             if musician.midi_out is not None:
-                musician.set_volume(new_volume)
+                musician.set_control(control, new_value)
 
     return state()
 
@@ -124,9 +142,9 @@ def output_change():
     for index, musician in enumerate(musicians):
         if musician.id == musician_id:
             if new_output == 'create_output':
-                musician.midi_in = mido.open_output(f"Loeric Out #{musician.id}", virtual=True)
+                musician.midi_in = mido.open_output(f"Loeric Virtual Out {musician.id}", virtual=True)
             elif new_output == 'synth':
-                musician.midi_in = SynthOutput(f"Loeric Synth #{musician.id}", synth, index)
+                musician.midi_in = SynthOutput(f"Loeric Synth {musician.id}", synth, index)
             else:
                 musician.midi_in = mido.open_output(new_output)
 
@@ -155,7 +173,7 @@ def add_musician():
     loeric_id = generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
-    musicians.append(Musician(unused[0], loeric_id, tune, next(iter(instruments))))
+    musicians.append(Musician(unused[0], loeric_id, tune, next(iter(instruments)), [Control("Volume", 7, 127), Control("Intensity", 21, 127)]))
 
     return state()
 
