@@ -116,9 +116,11 @@ class Groover:
                 "velocity_intensity": intensity_control,
                 "tempo_intensity": intensity_control,
                 "ornament_intensity": intensity_control,
+                "legato_intensity": intensity_control,
                 "velocity_human_impact": human_impact_control,
                 "tempo_human_impact": human_impact_control,
                 "ornament_human_impact": human_impact_control,
+                "legato_human_impact": human_impact_control,
             },
             "harmony": {
                 "chords_per_bar": self._tune.beat_count,
