@@ -122,7 +122,7 @@ def instrument_change():
 def control_change():
     global musicians
     musician_id = request.forms.id
-    control = int(request.forms.control)
+    control = int(request.forms.control_out)
     new_value = int(request.forms.value)
 
     for musician in musicians:

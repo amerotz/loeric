@@ -1,4 +1,3 @@
-import loeric.loeric_utils as lu
 import threading
 import time
 import mido
@@ -56,7 +55,7 @@ def main() -> None:
     def listen_to_port(port, control):
         with mido.open_input(port) as inport:
             for message in inport:
-                if message.is_cc() and message.control == control:
+                if message.is_cc() and message.control_out == control:
                     values[port] = message.value
                 if done_listening:
                     break

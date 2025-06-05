@@ -206,7 +206,7 @@
 						<select name={musician.id} onchange={inputChange}>
 							<option value="no_in" selected={musician.midiIn === undefined}>None</option>
 							{#each Object.keys(data.options.audio) as input}
-								<option value={"audioIn:" + data.options.audio[input]} selected={musician.midiIn === input}>{input}</option>
+								<option value={"audioIn:" + data.options.audio[input]} selected={musician.midiIn === "audioIn:" + data.options.audio[input]}>{input}</option>
 							{/each}
 							{#each data.options.inputs as input}
 								<option value={input} selected={musician.midiIn === input}>{input}</option>

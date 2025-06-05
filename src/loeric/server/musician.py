@@ -13,6 +13,7 @@ from mido.ports import BaseOutput, BaseInput
 from loeric import (loeric_utils as lu)
 from loeric.groover import Groover
 from loeric.player import Player
+from loeric.server.listener import ListenerThread
 from loeric.tune import Tune
 
 faulthandler.enable()
@@ -65,7 +66,7 @@ class Control:
         self.value = value
 
     def __json__(self):
-       return {'name': self.name, 'control': self.control, 'value': self.value}
+        return {'name': self.name, 'control': self.control, 'value': self.value}
 
 
 class Musician:
@@ -85,6 +86,7 @@ class Musician:
         self.instrument = instrument
         self.midi_out = midi_out
         self.midi_in = midi_in
+        self.control_out = ControlOutput(f"Loeric Control #{loeric_id}", None)
         self.controls = controls
         self.seed = randint(0, 1000000)
         self.random_weight = 0.2
@@ -119,14 +121,16 @@ class Musician:
                 midi_output = self.midi_out
 
             midi_output.reset()
-            for control in self.controls:
-                midi_output.send(Message("control_change", channel=0, control=control, value=control.value))
-
             groover = Groover(
                 self.tune,
                 random_weight=self.random_weight,
                 seed=self.seed
             )
+
+            self.control_out.groover = groover
+            for control in self.controls:
+                self.control_out.send(
+                    Message("control_change", channel=0, control=control.control, value=control.value))
 
             dir_path = os.getcwd() + "/src/loeric/loeric_config/performance"
             groover.merge_config(f"{dir_path}/musician/{self.name.lower()}.json",
@@ -135,9 +139,15 @@ class Musician:
                                  f"{dir_path}/tune/{splitext(basename(self.tune.filename))[0].lower()}.json")
 
             midi_input: Optional[BaseInput] = None
+            listener: ListenerThread | None = None
             if self.midi_in is not None:
-                midi_input = mido.open_input(self.midi_in)
-                midi_input.callback = groover.check_midi_control()
+                if self.midi_in.startswith("audioIn:"):
+                    device = int(self.midi_in.split(":")[1])
+                    listener = ListenerThread(device, self.control_out, 22)
+                    listener.start()
+                else:
+                    midi_input = mido.open_input(self.midi_in)
+                    midi_input.callback = groover.check_midi_control()
 
             # create player
             player = Player(
@@ -185,6 +195,8 @@ class Musician:
                 player.play(new_messages)
 
             _update(State.STOPPED)
+            if listener is not None:
+                listener.stop = True
 
             if midi_input is not None:
                 midi_input.close()
@@ -208,45 +220,51 @@ class Musician:
             print("Player thread terminated.")
             raise e
 
-    def __sync_thread(self, groover: Groover, sync_port_in: mido.ports.BaseInput) -> None:
-        """
-        Handle MIDI start, stop, songpos and tempo messages.
-        """
-        global _state
-        while not _state != State.STOPPED:
-            msg = sync_port_in.receive(block=True)
-            if msg.type == "sysex" and msg.data[0] == 69:
-                tempo = sum(msg.data[1:])
-                groover.set_tempo(tempo)
-                print(f"Received SET TEMPO {tempo}.")
-            elif msg.type == "reset":
-                groover.reset_clock()
-                print(f"Received RESET.")
-            elif msg.type == "clock":
-                groover.set_clock()
-                print(f"Received CLOCK.")
-            elif msg.type == "songpos":
-                print(f"Received JUMP {msg.pos}.")
-                if _state != State.PLAYING:
-                    groover.jump_to_pos(msg.pos)
-                else:
-                    print(f"Ignoring JUMP because playback is active.")
-            elif msg.type == "start":
-                _update(State.PLAYING)
-                print("Received START.")
-            elif msg.type == "stop":
-                _update(State.STOPPED)
-                print("Received STOP.")
-            elif msg.type == "continue":
-                if _state != State.PLAYING:
-                    _update(State.PLAYING)
-                print("Received CONTINUE.")
-
-        print("Sync thread terminated.")
-
     def __json__(self):
         out = self.midi_out
         if isinstance(self.midi_out, BaseOutput):
             out = self.midi_out.name
         return {'id': self.id, 'name': self.name, 'midiOut': out, 'midiIn': self.midi_in,
                 'instrument': self.instrument, 'controls': list(map(lambda m: m.__json__(), self.controls))}
+
+
+class ControlOutput(BaseOutput):
+    def __init__(self, name: str, groover: Groover | None, **kwargs):
+        self.groover = groover
+        BaseOutput.__init__(self, name=name, **kwargs)
+
+    def _send(self, msg):
+        if msg.type == "sysex" and msg.data[0] == 69:
+            tempo = sum(msg.data[1:])
+            self.groover.set_tempo(tempo)
+            print(f"Received SET TEMPO {tempo}.")
+        elif msg.type == "reset":
+            self.groover.reset_clock()
+            print(f"Received RESET.")
+        elif msg.type == "clock":
+            self.groover.set_clock()
+            print(f"Received CLOCK.")
+        elif msg.type == "songpos":
+            print(f"Received JUMP {msg.pos}.")
+            # if stopped.is_set():
+            self.groover.jump_to_pos(msg.pos)
+            # else:
+            #    print(f"Ignoring JUMP because playback is active.")
+        elif msg.type == "start":
+            _update(State.PLAYING)
+            print("Received START.")
+        elif msg.type == "stop":
+            _update(State.STOPPED)
+            print("Received STOP.")
+        elif msg.type == "continue":
+            _update(State.PLAYING)
+            print("Received CONTINUE.")
+        elif msg.type == "control_change":
+            for contour_name, event_number in self.groover._config["control_2_contour"].items():
+                if msg.is_cc(int(event_number)):
+                    value = msg.value / 127
+                    self.groover.set_contour_value(contour_name, value)
+                    # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
+                    print(f"{contour_name}:\t{round(value, 2)}")
+
+    pass
