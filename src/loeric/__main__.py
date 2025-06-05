@@ -89,7 +89,7 @@ def play(
             player.play(new_messages)
 
         # play an end note
-        if not kwargs["no_end_note"]:
+        if kwargs["do_end_note"]:
             groover.reset_contours()
             groover.advance_contours()
             player.play(groover.get_end_notes())
@@ -276,9 +276,15 @@ def main():
         action="store_true",
     )
     parser.add_argument(
-        "--no-end-note",
-        help="removes the generation of a final note at the end of all repetitions",
-        action="store_true",
+        "--do-end-note",
+        help="plays a final note at the end of all repetitions",
+        action="store_false",
+    )
+    parser.add_argument(
+        "--force-key",
+        help="overrides any key information in the tune.",
+        type=str,
+        default=None,
     )
 
     input_args = parser.add_mutually_exclusive_group()
@@ -416,7 +422,7 @@ def main():
     # start the player thread
     try:
         # load a tune
-        tune = tu.Tune(args["source"], args["repeat"])
+        tune = tu.Tune(args["source"], args["repeat"], key=args["force_key"])
 
         # check seed
         if args["seed"] is None:

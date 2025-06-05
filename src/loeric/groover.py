@@ -79,24 +79,23 @@ class Groover:
         self._note_index_lock = threading.Lock()
         self._performance_time = -tune.offset
 
-        # delay to randomize message length
+        # delay to randomize message_length
         self._delay = 0
         self._delay_max = 0
 
         # only define command line values
         # rest is part of loeric_config/base.json
         self._config = {
-            "velocity": {
-                "random": random_weight,
-                "human_impact_scale": human_impact,
-            },
-            "tempo": {
-                "random": random_weight,
-                "human_impact_scale": human_impact,
-            },
-            "ornament": {
-                "random": random_weight,
-                "human_impact_scale": human_impact,
+            "contours": {
+                "velocity": {
+                    "human_impact_scale": human_impact,
+                },
+                "tempo": {
+                    "human_impact_scale": human_impact,
+                },
+                "ornament": {
+                    "human_impact_scale": human_impact,
+                },
             },
             "values": {
                 "midi_channel": midi_channel,
@@ -188,6 +187,10 @@ class Groover:
         self._drone_bound_contour = self._config["drone"]["bind"]
         self._last_played_drones = []
 
+        # intonation
+        self._last_recorded_intonation = 0
+        self._intonation = np.zeros(127)
+
         # tempo sync
         self._external_tempo = None
         self._tempo_lock = threading.Lock()
@@ -196,167 +199,30 @@ class Groover:
         # create contours
         self._contours = {}
 
-        # velocity contour
-        velocity_intensity_contour = cnt.IntensityContour()
-        velocity_intensity_contour.calculate(
-            self._tune,
-            weights=np.array(self._config["velocity"]["weights"]),
-            random_weight=self._config["velocity"]["random"],
-            savgol=self._config["velocity"]["savgol"],
-            scale=self._config["velocity"]["scale"],
-            shift=self._config["velocity"]["shift"],
-        )
-
-        # pattern contour
-        self._contours["velocity_pattern"] = cnt.PatternContour()
-        self._contours["velocity_pattern"].calculate(
-            self._tune,
-            mean=np.array(self._config["velocity"]["pattern_means"]),
-            std=np.array(self._config["velocity"]["pattern_stds"]),
-            period=self._config["velocity"]["period"],
-        )
-
-        velocity_pitch_contour = cnt.PitchContour()
-        velocity_pitch_contour.calculate(
-            self._tune, savgol=True, shift=True, scale=True
-        )
-
-        velocity_phrasing_contour = cnt.PhraseContour()
-        velocity_phrasing_contour.calculate(
-            self._tune,
-            phrase_levels=self._config["values"]["phrase_levels"],
-            phrase_exp=self._config["velocity"]["phrase_exp"],
-        )
-
-        velocity_phrasing_contour = cnt.PhraseContour()
-        velocity_phrasing_contour.calculate(self._tune)
-
-        self._contours["velocity"] = cnt.weighted_sum(
-            [
-                velocity_intensity_contour,
-                velocity_pitch_contour,
-                velocity_phrasing_contour,
-            ],
-            np.array(
-                [
-                    1
-                    - self._config["velocity"]["high_loud_weight"]
-                    - self._config["velocity"]["phrase_weight"],
-                    self._config["velocity"]["high_loud_weight"],
-                    self._config["velocity"]["phrase_weight"],
-                ]
-            ),
-        )
-
-        # tempo contour
-        tempo_intensity_contour = cnt.IntensityContour()
-        tempo_intensity_contour.calculate(
-            self._tune,
-            weights=np.array(self._config["tempo"]["weights"]),
-            random_weight=self._config["tempo"]["random"],
-            savgol=self._config["tempo"]["savgol"],
-            scale=self._config["tempo"]["scale"],
-            shift=self._config["tempo"]["shift"],
-        )
-        tempo_phrasing_contour = cnt.PhraseContour()
-        tempo_phrasing_contour.calculate(
-            self._tune,
-            phrase_levels=self._config["values"]["phrase_levels"],
-            phrase_exp=self._config["tempo"]["phrase_exp"],
-        )
-
-        self._contours["tempo"] = cnt.weighted_sum(
-            [tempo_intensity_contour, tempo_phrasing_contour],
-            np.array(
-                [
-                    1 - self._config["tempo"]["phrase_weight"],
-                    self._config["tempo"]["phrase_weight"],
-                ]
-            ),
-        )
-
-        self._contours["phrasing"] = cnt.PhraseContour()
-        self._contours["phrasing"].calculate(
-            self._tune,
-            phrase_levels=self._config["values"]["phrase_levels"],
-            phrase_exp=self._config["values"]["legato_phrase_exp"],
-        )
-
-        self._contours["phrasing"] = cnt.PhraseContour()
-        self._contours["phrasing"].calculate(self._tune)
-
-        self._contours["tempo"] = cnt.weighted_sum(
-            [tempo_intensity_contour, self._contours["phrasing"]],
-            np.array(
-                [
-                    1 - self._config["tempo"]["phrase_weight"],
-                    self._config["tempo"]["phrase_weight"],
-                ]
-            ),
-        )
+        for c in self._config["contours"]:
+            print(c)
+            self._contours[c] = cnt.create_contour(
+                self._tune, self._config["contours"][c]["recipe"]
+            )
 
         """
         import matplotlib.pyplot as plt
 
-        plt.plot(self._contours["tempo"]._contour)
+        plt.plot(self._contours["legato"]._contour)
         plt.show()
         """
 
-        self._contours["tempo_pattern"] = cnt.PatternContour()
-        self._contours["tempo_pattern"].calculate(
-            self._tune,
-            mean=np.array(self._config["tempo"]["pattern_means"]),
-            std=np.array(self._config["tempo"]["pattern_stds"]),
-            std_scale=self._config["tempo"]["std_scale"],
-            period=self._config["tempo"]["period"],
-            normalize=True,
-        )
-
-        # ornament contour
-        ornament_intensity_contour = cnt.IntensityContour()
-        ornament_intensity_contour.calculate(
-            self._tune,
-            weights=np.array(self._config["ornament"]["weights"]),
-            random_weight=self._config["ornament"]["random"],
-            savgol=self._config["ornament"]["savgol"],
-            scale=self._config["ornament"]["scale"],
-            shift=self._config["ornament"]["shift"],
-        )
-
-        ornament_phrasing_contour = cnt.PhraseContour()
-        ornament_phrasing_contour.calculate(
-            self._tune,
-            phrase_levels=self._config["values"]["phrase_levels"],
-            phrase_exp=self._config["ornament"]["phrase_exp"],
-        )
-
-        self._contours["ornament"] = cnt.weighted_sum(
-            [ornament_intensity_contour, ornament_phrasing_contour],
-            np.array(
-                [
-                    1 - self._config["ornament"]["phrase_weight"],
-                    self._config["ornament"]["phrase_weight"],
-                ]
-            ),
-        )
-        """
-        import matplotlib.pyplot as plt
-
-        plt.plot(self._contours["ornament"]._contour)
-        plt.show()
-        """
-
-        # message length contour
-        self._contours["message length"] = cnt.MessageLengthContour()
-        self._contours["message length"].calculate(self._tune)
+        # message_length contour
+        self._contours["message_length"] = cnt.MessageLengthContour()
+        self._contours["message_length"].calculate(self._tune)
 
         # pich difference
-        self._contours["pitch difference"] = cnt.PitchDifferenceContour()
-        self._contours["pitch difference"].calculate(self._tune)
+        self._contours["pitch_difference"] = cnt.PitchDifferenceContour()
+        self._contours["pitch_difference"].calculate(self._tune)
 
         # pich contour
-        self._contours["pitch contour"] = cnt.PitchContour()
-        self._contours["pitch contour"].calculate(
+        self._contours["pitch_contour"] = cnt.PitchContour()
+        self._contours["pitch_contour"].calculate(
             self._tune, savgol=False, shift=False, scale=False
         )
 
@@ -379,11 +245,12 @@ class Groover:
         # init all contours
         for contour_name in self._contours:
             # init the human contours
+            if contour_name in ["velocity", "tempo", "ornament"]:
+                self._contour_values[f"{contour_name}_intensity"] = 0.5
+                self._contour_values[f"{contour_name}_human_impact"] = (
+                    self._initial_human_impact
+                )
             self._contour_values[contour_name] = 0.5
-            self._contour_values[f"{contour_name}_intensity"] = 0.5
-            self._contour_values[f"{contour_name}_human_impact"] = (
-                self._initial_human_impact
-            )
 
     def check_midi_control(self) -> Callable[[], None]:
         """
@@ -394,8 +261,15 @@ class Groover:
         """
 
         def callback(msg):
+            # intonation
             if lu.is_note(msg):
+                self._intonation[msg.note] = self._last_recorded_intonation
+            elif msg.type == "pitchwheel":
+                self._last_recorded_intonation = msg.pitch
+            else:
                 pass
+
+            # traditional control
             for contour_name, event_number in self._config["control_2_contour"].items():
                 if msg.is_cc(event_number):
                     value = msg.value / 127
@@ -419,11 +293,11 @@ class Groover:
         for contour_name in ["velocity", "tempo", "ornament"]:
             hi = (
                 self._contour_values[f"{contour_name}_human_impact"]
-                * self._config[contour_name]["human_impact_scale"]
+                * self._config["contours"][contour_name]["human_impact_scale"]
             )
 
             intensity = self._contour_values[f"{contour_name}_intensity"]
-            if self._config[contour_name]["human_impact_scale"] < 0:
+            if self._config["contours"][contour_name]["human_impact_scale"] < 0:
                 intensity = 1 - intensity
                 hi = abs(hi)
 
@@ -565,7 +439,7 @@ class Groover:
             # randomize end time and legato
             mult = np.random.normal(
                 loc=self._config["values"]["legato_min"]
-                + self._legato_amount * self._contour_values["phrasing"],
+                + self._legato_amount * self._contour_values["legato"],
                 scale=0.0,
             )
             # self._delay_max = mult
@@ -642,11 +516,13 @@ class Groover:
             # add pitchbend
             if lu.is_note_on(note):
                 bend = int(
-                    self._config["values"]["pitch_deviation_cents"]
+                    self._intonation[note.note]
+                    + self._config["values"]["pitch_deviation_cents"]
                     * 0.01
                     * np.random.normal(loc=0, scale=0.33)
                     * 8192
                 )
+                bend = max(min(bend, 8191), -8192)
                 new_notes.append(
                     mido.Message("pitchwheel", channel=note.channel, pitch=bend)
                 )
@@ -672,7 +548,7 @@ class Groover:
         :return: the computed offset for the next note
         """
 
-        duration = self._contour_values["message length"]
+        duration = self._contour_values["message_length"]
 
         x = 0.25 * self._performance_time / self._tune.quarter_duration
         # duration normalized so that quarter note = 0.25
@@ -1005,7 +881,7 @@ class Groover:
         print(ornament_type)
         ornaments = []
         if self._config["values"]["use_old_ornaments"]:
-            message_length = self._contour_values["message length"]
+            message_length = self._contour_values["message_length"]
             if ornament_type == CUT:
                 # generate a cut
                 cut_note = self.approach_from_above(message.note, self._tune)
@@ -1332,11 +1208,11 @@ class Groover:
                 * self._config["ornamentation"][ornament_type]["length"]
             )
             self._offset += max(
-                self._contour_values["message length"], ornament_duration
+                self._contour_values["message_length"], ornament_duration
             )
             ornaments[0].time = message.time
             ornaments[-1].time += max(
-                0, self._contour_values["message length"] - ornament_duration
+                0, self._contour_values["message_length"] - ornament_duration
             )
 
         return ornaments
@@ -1354,10 +1230,10 @@ class Groover:
 
         is_beat = self._is_on_a_beat()
         if self._config["values"]["use_old_ornaments"]:
-            message_length = self._contour_values["message length"]
+            message_length = self._contour_values["message_length"]
 
             if message_length >= 0.75 * self._eight_duration and (
-                is_beat or self._contour_values["pitch difference"] == 0
+                is_beat or self._contour_values["pitch_difference"] == 0
             ):
                 options.append(CUT)
                 options_prob.append(self._config["probabilities"]["cut"])
@@ -1370,7 +1246,7 @@ class Groover:
 
             if (
                 is_beat and message_length > self._slide_duration
-            ) or self._contour_values["pitch difference"] >= self._config["values"][
+            ) or self._contour_values["pitch_difference"] >= self._config["values"][
                 "slide_pitch_threshold"
             ]:
                 options.append(SLIDE)
@@ -1386,7 +1262,7 @@ class Groover:
         else:
 
             # create pattern from source notes
-            contour_index = self._contours["message length"]._index
+            contour_index = self._contours["message_length"]._index
             case_len = 0
             case_i = 0
             tune_notes = []
@@ -1395,17 +1271,17 @@ class Groover:
             while case_len < self._max_ornament_length:
                 index = min(
                     contour_index + case_i,
-                    len(self._contours["message length"]) - 1,
+                    len(self._contours["message_length"]) - 1,
                 )
                 # obtain pitch
-                p = self._contours["pitch contour"][index]
+                p = self._contours["pitch_contour"][index]
 
                 # save first pitch
                 if case_i == 0:
                     first_pitch = p
 
                 # obtain duration
-                d = self._contours["message length"][index] / self._eight_duration
+                d = self._contours["message_length"][index] / self._eight_duration
 
                 # update length counter
                 case_len += d

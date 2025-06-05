@@ -12,6 +12,12 @@ class UncomputedContourError(Exception):
     pass
 
 
+class InvalidRecipeError(Exception):
+    """Raised if the contour recipe is invalid."""
+
+    pass
+
+
 class InvalidIndexError(Exception):
     """Raised if the index of the current value is below 0 or exceeds the length of the contour."""
 
@@ -235,7 +241,7 @@ class RandomContour(Contour):
     def __init__(self):
         super().__init__()
 
-    def calculate(self, midi: tune.Tune, extremes: tuple[float, float] = None) -> None:
+    def calculate(self, midi: tune.Tune, min: float = 0, max: float = 1) -> None:
         """
         Compute a random contour following a uniform distribution in the specified range, by default between 0 and 1.
 
@@ -244,9 +250,9 @@ class RandomContour(Contour):
         """
         note_events = midi.filter(lambda x: lu.is_note_on(x))
         size = len(note_events)
-        if extremes is None:
-            extremes = (0, 1)
-        self._contour = np.random.uniform(*extremes, size=size)
+        r_min = min
+        r_max = max
+        self._contour = np.random.uniform(r_min, r_max, size=size)
 
 
 class PhraseContour(Contour):
@@ -294,8 +300,7 @@ class IntensityContour(Contour):
     def calculate(
         self,
         midi: tune.Tune,
-        weights: np.array = None,
-        random_weight: float = 0,
+        weights: list = None,
         savgol: bool = True,
         shift: bool = False,
         scale: bool = False,
@@ -306,12 +311,11 @@ class IntensityContour(Contour):
 
         :param midi: the input tune.
         :param weights: the weights for the components, respectively frequency score, beat score, ambitus score, leap score and length score.
-        :param random_weight: the weight of the random component over the sum of the weighted O'Canainn scores. If None, the components will be averaged together.
         :param savgol: whether or not to apply a final savgol filtering step (recommended).
         :param shift: whether or not to apply a final shifting step to bring the mean of the array close to 0.5.
         """
 
-        weights = weights.astype(float)
+        weights = np.array(weights).astype(float)
 
         # calculate the components
         components = self.ocanainn_scores(midi)
@@ -324,20 +328,19 @@ class IntensityContour(Contour):
         else:
             if weights.shape != (size, 1):
                 weights = weights.reshape(size, 1)
+            indexes = np.argwhere(weights < 0)
+            weights = abs(weights)
             weights /= weights.sum()
 
         # weight them
+        stacked_components[indexes] *= -1
+        stacked_components[indexes] += 1
         stacked_components = np.multiply(stacked_components, weights)
         # sum them
         stacked_components = stacked_components.sum(axis=0)
 
         # add the random contour
         self._contour = stacked_components
-        if random_weight != 0:
-            self._contour *= 1 - random_weight
-            random_contour = RandomContour()
-            random_contour.calculate(midi, extremes=(0, 1))
-            self._contour += random_contour._contour * random_weight
 
         # savgol filtering
         self._contour = self.scale_and_savgol(
@@ -507,8 +510,8 @@ class PatternContour(Contour):
     def calculate(
         self,
         midi: tune.Tune,
-        mean: np.array = np.array([1]),
-        std: np.array = np.array([0]),
+        mean: list = [1],
+        std: list = [0],
         std_scale: float = 1,
         normalize: bool = False,
         period: float = 0.5,
@@ -522,6 +525,9 @@ class PatternContour(Contour):
         :param period: the length of the pattern, in bars.
         """
         assert len(mean) == len(std)
+
+        mean = np.array(mean).astype(float)
+        std = np.array(std).astype(float)
 
         # retrieve pitch and time info
         note_events = midi.filter(lambda x: "note" in x.type)
@@ -571,7 +577,7 @@ class PatternContour(Contour):
         self._contour = pattern
 
 
-def multiply(contours: list[Contour]):
+def multiply(contours: list[Contour] = []) -> Contour:
     """
     Returns a new contour that holds the product of the input contours.
 
@@ -588,7 +594,7 @@ def multiply(contours: list[Contour]):
     return new_contour
 
 
-def weighted_sum(contours: list[Contour], weights: np.ndarray):
+def weighted_sum(contours: list[Contour] = [], weights: list = []) -> Contour:
     """
     Returns a new contour that holds the weighted sum of the input contours.
 
@@ -598,6 +604,7 @@ def weighted_sum(contours: list[Contour], weights: np.ndarray):
     :return: a new contour holding the weighted sum of the input contours.
     """
     result = np.zeros(len(contours[0]))
+    weights = np.array(weights).astype(float)
     weights /= np.sum(weights)
     for c, w in zip(contours, weights):
         result += c._contour * w
@@ -606,3 +613,94 @@ def weighted_sum(contours: list[Contour], weights: np.ndarray):
     new_contour._contour = result
 
     return new_contour
+
+
+def linear_transform(contours: Contour = None, a: float = 1, b: float = 0) -> Contour:
+    """
+    Apply a linear transformation of the input contour f(x)= ax + b.
+
+    :param contour: the input contour.
+    :param a: the slope.
+    :param b: the intercept.
+
+    :return: the linear transformation of the input contour.
+    """
+    assert len(contours) == 1
+    new_contour = Contour()
+    new_contour._contour = a * contours[0]._contour + b
+    return new_contour
+
+
+def shift(contours: Contour = None, offset: int = -1) -> Contour:
+    """
+    Shift the contour by offset.
+
+    :param contour: the input contour.
+    :param offset: the offset of the contour, in note indexes.
+
+    :return: the shifted input contour.
+    """
+    assert len(contours) == 1
+    new_contour = Contour()
+    new_contour._contour = np.roll(contours[0]._contour, offset)
+    return new_contour
+
+
+def create_contour(tune: tune.Tune, contour_program: dict, key=None) -> Contour:
+    """
+    Programmatically create a contour given its definition.
+
+    :param tune: the input tune for the contour.
+    :param contour_program: the dictionary containing the contour definition.
+
+    :return: the final assembled contour.
+    """
+
+    eval_dict = {
+        "o_canainn": IntensityContour,
+        "pitch": PitchContour,
+        "phrasing": PhraseContour,
+        "random": RandomContour,
+        "pattern": PatternContour,
+    }
+
+    operation_dict = {
+        "weighted_sum": weighted_sum,
+        "multiply": multiply,
+        "linear": linear_transform,
+        "shift": shift,
+    }
+
+    # check
+    if key is None:
+        c = list(contour_program.keys())
+        if len(c) != 1:
+            raise InvalidRecipeError(
+                f"Only one contour can be provided. Make sure that 'recipe' only has one item in the configuration file."
+            )
+        c = c[0]
+        return create_contour(tune, contour_program[c], key=c)
+
+    # create the contour, leaf
+    elif key in eval_dict:
+        contour = eval_dict[key]()
+        contour.calculate(tune, **contour_program)
+        return contour
+
+    # aggregate calculated contours
+    elif key in operation_dict:
+
+        all_contours = []
+
+        for c in contour_program["contours"]:
+            all_contours.append(
+                create_contour(tune, contour_program["contours"][c], key=c)
+            )
+
+        contour_program["contours"] = all_contours
+        return operation_dict[key](**contour_program)
+
+    else:
+        raise InvalidRecipeError(
+            f"Recipe argument {key} is invalid. Check your configuration file."
+        )

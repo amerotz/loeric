@@ -1,20 +1,46 @@
 {
-    "velocity": {
-		"weights": [25, -100, 75, 35, 25],
-		"high_loud_weight": 0.3,
-		"random": 0.0,
-		"savgol": true,
-		"scale": true,
-		"shift": true 
+	"contours": {
+		"velocity": {
+			"recipe":{
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [25, -100, 75, 35, 25],
+							"savgol": true,
+							"scale": true,
+							"shift": true
+						},
+						"pitch": {
+							"savgol": true,
+							"scale": true,
+							"shift": true
+						}
+					},
+					"weights":[0.7, 0.3]
+				}
+			}
+		},
+		"tempo": {
+			"recipe":{
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [0, 1, 0, 0, 0],
+							"savgol": true,
+							"scale": false,
+							"shift": true
+						},
+						"random": {
+							"min": 0.0,
+							"max": 1.0
+						}
+					},
+					"weights":[0.95, 0.05]
+				}
+			}
+		}
 	},
-	"tempo": {
-		"weights": [0, 1, 0, 0, 0],
-		"random": 0.05,
-		"savgol": true,
-		"scale": false,
-		"shift": true
-	},
-    "swing": {"min": 2.5, "max": 1.5, "bind": "tempo"},
+    "swing": {"min": 2.5, "max": 1, "bind": "tempo"},
 	"values": {
 		"beat_velocity_increase": -16
 	},

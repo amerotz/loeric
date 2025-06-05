@@ -23,7 +23,7 @@ mode_offset = {
     "dorian": 10,
     "mixolydian": 5,
 }
-'''
+"""
 number_of_fifths = {
     "Cb": -7,
     "Abm": -7,
@@ -56,6 +56,7 @@ number_of_fifths = {
     "C#": 7,
     "A#m": 7,
 }
+"""
 
 
 def get_root(key_signature: str) -> int:
@@ -78,7 +79,6 @@ def get_root(key_signature: str) -> int:
 
     return base
 
-'''
 
 # 0 = major
 # 1 = minor

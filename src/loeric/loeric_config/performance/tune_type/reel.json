@@ -1,15 +1,29 @@
 {
-	"velocity": {
-		"pattern_means": [0.998, 0.994, 1.012, 1.012, 0.999, 0.999, 1.005, 0.983],
-		"pattern_stds": [0.14, 0.09, 0.09, 0.087, 0.094, 0.089, 0.085, 0.185],
-		"period": 1,
-		"std_scale": 1
-	},
-	"tempo": {
-		"pattern_means": [0.133, 0.127, 0.126, 0.126, 0.124, 0.125, 0.125, 0.124],
-		"pattern_stds": [0.05, 0.049, 0.049, 0.045, 0.052, 0.045, 0.045, 0.042],
-		"period": 1,
-		"std_scale": 0.1
+	"contours": {
+		"velocity_pattern": {
+			"recipe":{
+				"pattern": {
+					"mean":  [0.998, 0.994, 1.012, 1.012, 0.999, 0.999, 1.005, 0.983],
+					"std":[0.14, 0.09, 0.09, 0.087, 0.094, 0.089, 0.085, 0.185], 
+					"std_scale": 1,
+					"normalize": false,
+					"period": 1
+				}
+			},
+			"human_impact_scale": null
+		},
+		"tempo_pattern": {
+			"recipe":{
+				"pattern": {
+					"mean":[0.133, 0.127, 0.126, 0.126, 0.124, 0.125, 0.125, 0.124],
+					"std":[0.05, 0.049, 0.049, 0.045, 0.052, 0.045, 0.045, 0.042],
+					"std_scale": 0.1,
+					"normalize": true,
+					"period": 1
+				}
+			},
+			"human_impact_scale": null
+		}
 	},
 	"values": {
 		"beat_velocity_increase": 0

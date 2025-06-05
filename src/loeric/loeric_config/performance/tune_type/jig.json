@@ -1,15 +1,27 @@
 {
-	"velocity": {
-		"pattern_means": [0.999, 0.999, 1.012, 0.997, 1.003, 0.99],
-		"pattern_stds": [0.14, 0.092, 0.096, 0.097, 0.092, 0.161],
-		"std_scale": 1,
-		"period": 1
-	},
-	"tempo": {
-		"pattern_means": [0.171, 0.167, 0.169, 0.167, 0.168, 0.165],
-		"pattern_stds": [0.06, 0.061, 0.06, 0.058, 0.062, 0.061],
-		"period": 1,
-		"std_scale": 0.1
+	"contours":{
+		"velocity_pattern": {
+			"recipe": {
+				"pattern": {
+					"mean": [0.999, 0.999, 1.012, 0.997, 1.003, 0.99],
+					"std": [0.14, 0.092, 0.096, 0.097, 0.092, 0.161],
+					"std_scale": 1,
+					"normalize": false,
+					"period": 1
+				}
+			}
+		},
+		"tempo_pattern": {
+			"recipe": {
+				"pattern": {
+					"mean":[0.171, 0.167, 0.169, 0.167, 0.168, 0.165], 
+					"std": [0.06, 0.061, 0.06, 0.058, 0.062, 0.061],
+					"std_scale": 0.1,
+					"normalize": true,
+					"period": 1
+				}
+			}
+		}
 	},
 	"swing": {
 		"min": 1,

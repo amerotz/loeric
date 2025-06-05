@@ -12,7 +12,7 @@ from . import loeric_utils as lu
 class Tune:
     """A wrapper for a midi file."""
 
-    def __init__(self, filename: str, repeats: int):
+    def __init__(self, filename: str, repeats: int, key=None):
         """
         Initialize the class. A number of properties is computed:
 
@@ -31,7 +31,15 @@ class Tune:
             mido_source = mp.read_abc(filename)
 
         # key signature
-        self._key_signature = mido_source.key_signatures[0]
+        if key is not None:
+            root, mode = tuple(key.split(" "))
+            self._key_signature = mp.KeySignature(
+                time=0, root=lu.get_root(root), mode=mode
+            )
+        else:
+            self._key_signature = mido_source.key_signatures[0]
+        print(self._key_signature)
+
         self._root = self._key_signature.root
         self._fifths = lu.number_of_fifths[
             (self._root + lu.mode_offset[self._key_signature.mode]) % 12
@@ -112,12 +120,18 @@ class Tune:
 
         self.index_map = {}
         contour_index = 0
+        cumulative_duration = 0
+        self.duration_map = {}
         for i, msg in enumerate(all_events):
-            if msg.type == "songpos":
+
+            cumulative_duration += msg.time
+
+            if lu.is_note_on(msg):
+                contour_index += 1
+            elif msg.type == "songpos":
                 # map songpos to next note and contour index
                 self.index_map[msg.pos] = (i, contour_index)
-            elif lu.is_note_on(msg):
-                contour_index += 1
+                self.duration_map[msg.pos] = cumulative_duration - self._offset
 
         self._midi = all_events
         self._max_songpos = max(self.index_map.keys())
@@ -259,11 +273,11 @@ class Tune:
         Retrieve the tempo of the tune, if there is any.
         Only the first tempo change will be retrieved.
 
-        :return: the first tempo change if there is any, else None.
+        :return: the first tempo change if there is any, else 120 bpm.
         """
         msg = self.filter(lambda x: x.type == "set_tempo")
         if len(msg) == 0:
-            return None
+            return mido.bpm2tempo(120)
         return msg[0].tempo
 
     def _get_time_signature(self) -> m21.meter.TimeSignature:
