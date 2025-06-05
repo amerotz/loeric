@@ -7,6 +7,8 @@
 		"ornament_intensity": 79,
 		"velocity_human_impact": 80,
 		"tempo_human_impact": 81,
-		"ornament_human_impact": 82
+		"ornament_human_impact": 82,
+		"legato_intensity": 83,
+		"legato_human_impact": 84
 	}
 }

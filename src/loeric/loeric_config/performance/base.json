@@ -33,8 +33,7 @@
 					"normalize": false,
 					"period": 1
 				}
-			},
-			"human_impact_scale": null
+			}
 		},
 		"tempo": {
 			"recipe": {
@@ -64,8 +63,7 @@
 					"normalize": true,
 					"period": 1
 				}
-			},
-			"human_impact_scale": null
+			}
 		},
 		"ornament": {
 			"recipe": {

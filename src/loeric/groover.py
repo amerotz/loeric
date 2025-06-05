@@ -96,6 +96,9 @@ class Groover:
                 "ornament": {
                     "human_impact_scale": human_impact,
                 },
+                "legato": {
+                    "human_impact_scale": human_impact,
+                },
             },
             "values": {
                 "midi_channel": midi_channel,
@@ -200,10 +203,14 @@ class Groover:
         self._contours = {}
 
         for c in self._config["contours"]:
-            print(c)
             self._contours[c] = cnt.create_contour(
                 self._tune, self._config["contours"][c]["recipe"]
             )
+            if (
+                not "human_impact_scale" in self._config["contours"][c]
+                or self._config["contours"][c]["human_impact_scale"] is None
+            ):
+                self._config["contours"][c]["human_impact_scale"] = 0
 
         """
         import matplotlib.pyplot as plt
@@ -243,13 +250,12 @@ class Groover:
             self._contour_values[contour_name] = 0.5
 
         # init all contours
-        for contour_name in self._contours:
+        for contour_name in self._config["contours"]:
             # init the human contours
-            if contour_name in ["velocity", "tempo", "ornament"]:
-                self._contour_values[f"{contour_name}_intensity"] = 0.5
-                self._contour_values[f"{contour_name}_human_impact"] = (
-                    self._initial_human_impact
-                )
+            self._contour_values[f"{contour_name}_intensity"] = 0.5
+            self._contour_values[f"{contour_name}_human_impact"] = (
+                self._initial_human_impact
+            )
             self._contour_values[contour_name] = 0.5
 
     def check_midi_control(self) -> Callable[[], None]:
@@ -290,7 +296,7 @@ class Groover:
                 self._contour_values[contour_name] = self._contours[contour_name].next()
 
         # add the human part
-        for contour_name in ["velocity", "tempo", "ornament"]:
+        for contour_name in self._config["contours"]:
             hi = (
                 self._contour_values[f"{contour_name}_human_impact"]
                 * self._config["contours"][contour_name]["human_impact_scale"]
