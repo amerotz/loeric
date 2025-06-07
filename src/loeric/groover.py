@@ -141,9 +141,12 @@ class Groover:
         # the configuration file overwrites any defaults
         # specified by command line
         if config_file is not None:
+
             with open(config_file, "r") as f:
                 config_file = json.load(f)
+
             self._config = jsonmerge.merge(self._config, config_file)
+
             config_hash = int(hash(str(config_file))) % 2**31
             self._config["values"]["seed"] = config_hash + seed
 
@@ -182,7 +185,7 @@ class Groover:
 
         # legato
         self._legato_amount = (
-            self._config["values"]["legato_max"] - self._config["values"]["legato_min"]
+            self._config["legato"]["max"] - self._config["legato"]["min"]
         )
 
         # droning
@@ -205,6 +208,7 @@ class Groover:
         self._contours = {}
 
         for c in self._config["contours"]:
+            print(f"Creating {c} contour.")
             self._contours[c] = cnt.create_contour(
                 self._tune, self._config["contours"][c]["recipe"]
             )
@@ -446,8 +450,9 @@ class Groover:
         if lu.is_note_off(new_message):
             # randomize end time and legato
             mult = np.random.normal(
-                loc=self._config["values"]["legato_min"]
-                + self._legato_amount * self._contour_values["legato"],
+                loc=self._config["legato"]["min"]
+                + self._legato_amount
+                * self._contour_values[self._config["legato"]["bind"]],
                 scale=0.0,
             )
             # self._delay_max = mult
@@ -1118,21 +1123,31 @@ class Groover:
             first_note = message.note
             for i, (p, v, d) in enumerate(zip(pitches, velocities, durations)):
 
-                # slides can be microtonal
-                new_note = message.note + p
+                # if a step and diatonic
+                if (
+                    abs(p) == 1
+                    and self._config["ornamentation"][ornament_type]["diatonic"]
+                ):
+                    if p < 0:
+                        new_note = self.approach_from_below(message.note, self._tune)
+                    else:
+                        new_note = self.approach_from_above(message.note, self._tune)
+                else:
+                    new_note = message.note + p
 
                 # if not sliding, quantize
+                # slides can be microtonal
                 if not self._config["ornamentation"][ornament_type]["slide"]:
                     new_note = int(new_note)
 
                 # get note position in scale
-                note_index = self._tune.semitones_from_tonic(new_note)
+                note_index = int(self._tune.semitones_from_tonic(new_note))
 
                 # if quantization needed
                 if (
-                    not self._config["ornamentation"][ornament_type]["slide"]
+                    lu.needs_pitch_quantization[note_index]
+                    and not self._config["ornamentation"][ornament_type]["slide"]
                     and self._config["ornamentation"][ornament_type]["diatonic"]
-                    and lu.needs_pitch_quantization[note_index]
                 ):
                     # check both quantizing up and down
                     opt = {
@@ -1182,8 +1197,8 @@ class Groover:
 
                     # append messages
                     mult = random.uniform(0.25, 0.5)
-                    for i in range(resolution, -1, -1):
-                        pb = i / resolution
+                    for j in range(resolution, -1, -1):
+                        pb = j / resolution
                         pb **= mult
                         pb *= bend
                         pb = int(pb)
@@ -1207,6 +1222,15 @@ class Groover:
                         mido.Message(
                             "note_off",
                             note=new_pitch,
+                            time=overall_duration,
+                        )
+                    )
+                else:
+                    ornaments.append(
+                        mido.Message(
+                            "pitchwheel",
+                            channel=message.channel,
+                            pitch=0,
                             time=overall_duration,
                         )
                     )

@@ -278,7 +278,7 @@ def main():
     parser.add_argument(
         "--do-end-note",
         help="plays a final note at the end of all repetitions",
-        action="store_false",
+        action="store_true",
     )
     parser.add_argument(
         "--force-key",

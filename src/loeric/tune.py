@@ -1,4 +1,5 @@
 import mido
+import os
 import numpy as np
 import muspy as mp
 import music21 as m21
@@ -38,7 +39,6 @@ class Tune:
             )
         else:
             self._key_signature = mido_source.key_signatures[0]
-        print(self._key_signature)
 
         self._root = self._key_signature.root
         self._fifths = lu.number_of_fifths[
@@ -136,8 +136,10 @@ class Tune:
         self._midi = all_events
         self._max_songpos = max(self.index_map.keys())
 
-        print(f"Playing:\t{filename}")
-        print(f"Meter:\t{self._time_signature}")
+        print(f"Playing:\t{os.path.basename(filename)}")
+        print(
+            f"Meter:\t{self._time_signature.numerator}/{self._time_signature.denominator}"
+        )
         print(f"Key:\t{self._key_signature}")
 
     @property

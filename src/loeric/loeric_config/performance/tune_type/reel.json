@@ -2,15 +2,19 @@
 	"contours": {
 		"velocity_pattern": {
 			"recipe":{
-				"pattern": {
-					"mean":  [0.998, 0.994, 1.012, 1.012, 0.999, 0.999, 1.005, 0.983],
-					"std":[0.14, 0.09, 0.09, 0.087, 0.094, 0.089, 0.085, 0.185], 
-					"std_scale": 1,
-					"normalize": false,
-					"period": 1
+				"weighted_sum": {
+					"contours": {
+						"pattern": {
+							"mean":  [0.998, 0.994, 1.012, 1.012, 0.999, 0.999, 1.005, 0.983],
+							"std":[0.14, 0.09, 0.09, 0.087, 0.094, 0.089, 0.085, 0.185], 
+							"std_scale": 1,
+							"normalize": false,
+							"period": 1
+						}
+					},
+					"weights":[1.0]
 				}
-			},
-			"human_impact_scale": null
+			}
 		},
 		"tempo_pattern": {
 			"recipe":{
@@ -21,8 +25,7 @@
 					"normalize": true,
 					"period": 1
 				}
-			},
-			"human_impact_scale": null
+			}
 		}
 	},
 	"values": {
@@ -32,5 +35,8 @@
 		"min": 1,
 		"max": 1,
 		"bind": "tempo"
+	},
+	"drone": {
+        "notes_per_bar": 8
 	}
 }
