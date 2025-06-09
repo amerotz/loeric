@@ -1,8 +1,10 @@
 import mido
+import numpy as np
+import muspy as mp
 import music21 as m21
 
 from collections.abc import Callable
-from typing import Generator, Optional
+from typing import Generator
 
 from . import loeric_utils as lu
 
@@ -10,7 +12,7 @@ from . import loeric_utils as lu
 class Tune:
     """A wrapper for a midi file."""
 
-    def __init__(self, filename: str, repeats: int, type: str = ""):
+    def __init__(self, filename: str, repeats: int):
         """
         Initialize the class. A number of properties is computed:
 
@@ -22,30 +24,34 @@ class Tune:
         :param repeats: how many times the tune should be repeated.
 
         """
-        mido_source = mido.MidiFile(filename)
-
         self._filename = filename
-        self.type = type
+        if filename.endswith(".mid"):
+            mido_source = mp.read_midi(filename)
+        elif filename.endswith(".abc"):
+            mido_source = mp.read_abc(filename)
+
+        # key signature
+        self._key_signature = mido_source.key_signatures[0]
+        self._root = self._key_signature.root
+        self._fifths = lu.number_of_fifths[
+            (self._root + lu.mode_offset[self._key_signature.mode]) % 12
+        ]
+        mido_source = mido_source.to_mido(use_note_off_message=True)
 
         # load midi notes and repeat them
-        self._midi = []
+        self._orig_midi = []
         for i in range(repeats):
             # should find another way to handle repetitions
-            self._midi.append(mido.Message("sysex", data=[i]))
-            self._midi.extend(list(mido_source))
+            self._orig_midi.append(mido.Message("sysex", data=[i]))
+            self._orig_midi.extend(list(mido_source))
 
         # some stats about midi
         self._lowest_pitch = min(
-            [msg.note for msg in self._midi if msg.type in ["note_on", "note_off"]]
+            [msg.note for msg in self._orig_midi if msg.type in ["note_on", "note_off"]]
         )
         self._highest_pitch = max(
-            [msg.note for msg in self._midi if msg.type in ["note_on", "note_off"]]
+            [msg.note for msg in self._orig_midi if msg.type in ["note_on", "note_off"]]
         )
-
-        # key signature
-        self._key_signature = self._get_key_signature()
-        self._root = lu.get_root(self._key_signature)
-        self._fifths = lu.number_of_fifths[self._key_signature]
 
         # time signature
         self._time_signature = self._get_time_signature()
@@ -67,45 +73,53 @@ class Tune:
         # to keep track of the performance
         self._performance_time = -self._offset
 
-        # intertwine songpos messages every n notes
-        new_midi = []
+        # intertwine songpos messages every given interval
         # 16383 is the max value for songpos
         # every_n = max(6, round(len(self._midi) / 16383))
-        every_duration = self.beat_duration
+        every_duration = self._beat_duration
         print("Sync every", quarters_per_bar / self._time_signature.beatCount)
-        note_index = 0
-        songpos = 0
 
-        # go through tune
-        self.duration_map = {}
-        cumulative_duration = 0
-        for msg in self._midi:
-            if not lu.is_note(msg):
-                continue
-            # add songpos
-            if abs(
-                ((cumulative_duration - every_duration * 0.5) % every_duration)
-                - every_duration * 0.5
-            ) <= self._quarter_duration * 0.0625 and lu.is_note_on(msg):
-                new_midi.append(mido.Message("songpos", pos=songpos))
-                self.duration_map[songpos] = cumulative_duration - self._offset
-                songpos += 1
-            # advance the notes
-            if lu.is_note(msg):
-                note_index += 1
-                cumulative_duration += msg.time
-                new_midi.append(msg)
+        # obtain alla events
+        all_events = [m.copy() for m in self._orig_midi]
+
+        # convert to cumulative time
+        cumulative_time = 0
+        for i, m in enumerate(all_events):
+            cumulative_time += m.time
+            all_events[i].time = cumulative_time
+
+        # arange songpos messages independently
+        songpos_timestamps = np.arange(
+            start=0, stop=cumulative_time, step=every_duration
+        )
+        all_events.extend(
+            [
+                mido.Message("songpos", pos=p, time=t)
+                for p, t in enumerate(songpos_timestamps)
+            ]
+        )
+
+        # sort everything by cumulative time
+        all_events = sorted(all_events, key=lambda x: x.time)
+
+        # convert to time delta representation
+        all_timestamps = [m.time for m in all_events]
+        all_timestamps = np.diff(
+            [m.time for m in all_events], prepend=all_timestamps[0]
+        )
+        for i in range(len(all_events)):
+            all_events[i].time = float(all_timestamps[i])
 
         self.index_map = {}
         contour_index = 0
-        for i, msg in enumerate(new_midi):
+        for i, msg in enumerate(all_events):
             if msg.type == "songpos":
                 # map songpos to next note and contour index
                 self.index_map[msg.pos] = (i, contour_index)
             elif lu.is_note_on(msg):
                 contour_index += 1
 
-        self._midi = new_midi
+        self._midi = all_events
         self._max_songpos = max(self.index_map.keys())
 
         print(f"Playing:\t{filename}")
@@ -132,6 +146,13 @@ class Tune:
         :return: the tune's key signature root in pitch space.
         """
         return self._root
+
+    @property
+    def major_root(self) -> int:
+        """
+        :return: the root of the relative major of the tune's key signature in pitch space.
+        """
+        return (self._root + lu.mode_offset[self._key_signature.mode]) % 12
 
     @property
     def ambitus(self) -> tuple[int]:
@@ -233,7 +254,7 @@ class Tune:
 
         return offset
 
-    def _get_original_tempo(self) -> Optional[int]:
+    def _get_original_tempo(self) -> int:
         """
         Retrieve the tempo of the tune, if there is any.
         Only the first tempo change will be retrieved.
@@ -245,7 +266,7 @@ class Tune:
             return None
         return msg[0].tempo
 
-    def _get_time_signature(self) -> Optional[m21.meter.TimeSignature]:
+    def _get_time_signature(self) -> m21.meter.TimeSignature:
         """
         Retrieve the time signature of the tune, if there is any.
         Only the first time signature will be retrieved.
@@ -262,7 +283,7 @@ class Tune:
         time_signature.denominator = msg[0].denominator
         return time_signature
 
-    def _get_key_signature(self) -> Optional[str]:
+    def _get_key_signature(self) -> str:
         """
         Retrieve the key signature of the tune, if there is any.
         Only the first key signature will be retrieved.
@@ -281,12 +302,13 @@ class Tune:
     ) -> list[mido.Message]:
         """
         Retrieve the midi events that fullfill the given filtering function.
+        This function acts on the raw representation of the input tune without any songpos/meta/sysex messages, but with explicit repetitions.
 
         :param filtering_function: the function filtering the midi events.
 
         :return: a list of midi events fullfilling the filtering function.
         """
-        return [msg for msg in self._midi if filtering_function(msg)]
+        return [msg for msg in self._orig_midi if filtering_function(msg)]
 
     def events(self) -> Generator[mido.Message, None, None]:
         """
@@ -332,7 +354,3 @@ class Tune:
         :return: the midi message corresponding to that index.
         """
         return self._midi[idx]
-
-    @property
-    def filename(self):
-        return self._filename

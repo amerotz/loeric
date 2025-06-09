@@ -9,6 +9,13 @@
 	},
 	"tempo": {
 		"weights": [25, 0, 75, 25, 0],
+<<<<<<<< HEAD:src/configs/loeric_A.json
+========
+		"pattern_means": [1.0],
+		"pattern_stds": [0],
+		"std_scale": 1,
+		"period": 1,
+>>>>>>>> main:src/loeric/loeric_config/performance/config.json
 		"random": 0.2,
 		"savgol": true,
 		"scale": false,
@@ -41,6 +48,7 @@
 		"roll_eight_fraction": 0.8,
 		"slide_eight_fraction": 0.2,
 		"slide_pitch_threshold": 6,
+<<<<<<<< HEAD:src/configs/loeric_A.json
 		"beat_velocity_increase": -16,
 		"min_velocity": 1,
 		"max_velocity": 127,
@@ -50,6 +58,16 @@
 	},
 	"tempo_control": {
 		"tempo_warp_bpms": 1,
+========
+		"beat_velocity_increase": 0,
+		"min_velocity": 1,
+		"max_velocity": 127,
+		"max_pitch_error": 2,
+		"min_pitch_error": -2
+	},
+	"tempo_control": {
+		"tempo_warp_bpms": 0,
+>>>>>>>> main:src/loeric/loeric_config/performance/config.json
 		"use_old_tempo_warp": false,
 		"old_tempo_warp": 0.1
 	},

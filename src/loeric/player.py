@@ -1,6 +1,7 @@
 import time
 import mido
 import music21 as m21
+import muspy as mp
 
 
 class Player:
@@ -9,7 +10,7 @@ class Player:
     def __init__(
         self,
         tempo: int,
-        key_signature: str,
+        key_signature: mp.KeySignature,
         time_signature: m21.meter.TimeSignature,
         save: bool,
         midi_out,
@@ -37,9 +38,11 @@ class Player:
             self._midi_performance.ticks_per_beat = 32767
             self._midi_performance.tracks.append(self._midi_track)
             self._midi_track.append(mido.MetaMessage("set_tempo", tempo=self._tempo))
+            """
             self._midi_track.append(
-                mido.MetaMessage("key_signature", key=key_signature)
+                mido.MetaMessage("key_signature", key=key_signature.root_str)
             )
+            """
             self._midi_track.append(
                 mido.MetaMessage(
                     "time_signature",
@@ -62,7 +65,7 @@ class Player:
     def play(self, messages: list[mido.Message]) -> None:
         """
         Play the messages in input and append them to the generated performance.
-        If no midi port has been specified, the messages only be saved.
+        If no midi port has been specified, the messages will only be saved.
 
         :param messages: the midi messages to play.
         """
@@ -81,9 +84,16 @@ class Player:
                     # mido/mido/midifiles/midifiles.py:432-433
                     if duration_to_next_event > 0.0:
                         time.sleep(duration_to_next_event)
-                    self._midi_out.send(msg)
+
+                    # don't send songpos messages
+                    # but do wait if between pauses
+                    if msg.type == "songpos":
+                        pass
+                    else:
+                        self._midi_out.send(msg)
+
                     if self._verbose:
-                        print(msg)
+                        print("[INFO]\t", msg)
 
             if self._saving:
                 self._midi_track.append(msg)

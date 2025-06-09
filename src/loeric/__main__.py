@@ -83,10 +83,8 @@ def play(
                 if message.type == "songpos":
                     if sync_port_out is not None:
                         sync_port_out.send(message)
-                        # print(f"{loeric_id} SENT {message.pos} ({time.time()})")
-                    new_messages = []
-                else:
-                    new_messages = [message]
+                        print(f"{loeric_id} SENT {message.pos} ({time.time()})")
+                new_messages = groover.perform(message)
             # play
             player.play(new_messages)
 
@@ -114,10 +112,11 @@ def play(
         print("Player thread terminated.")
 
     except Exception as e:
+        raise e
+    finally:
         # stop sync thread
         done_playing.set()
         print("Player thread terminated.")
-        raise e
 
 
 def sync_thread(
@@ -170,7 +169,7 @@ def main():
         action="store_true",
     )
     parser.add_argument(
-        "--list_ports",
+        "--list-ports",
         help="list available input and output MIDI ports and exit.",
         action="store_true",
     )
@@ -184,21 +183,21 @@ def main():
     )
     parser.add_argument(
         "-ic",
-        "--intensity_control",
+        "--intensity-control",
         help="the MIDI control signal number to use as intensity control.",
         type=int,
         default=10,
     )
     parser.add_argument(
         "-hic",
-        "--human_impact_control",
+        "--human-impact-control",
         help="the MIDI control signal number to use as human impact control.",
         type=int,
         default=11,
     )
     parser.add_argument(
         "-hi",
-        "--human_impact",
+        "--human-impact",
         help="the initial percentage of human impact over the performance (0: only generated, 1: only human).",
         type=float,
         default=0,
@@ -289,7 +288,7 @@ def main():
 
     input_args = parser.add_mutually_exclusive_group()
     input_args.add_argument(
-        "--create_in",
+        "--create-in",
         help="whether to create a new MIDI input port or not",
         action="store_true",
     )
@@ -303,7 +302,7 @@ def main():
 
     output_args = parser.add_mutually_exclusive_group()
     output_args.add_argument(
-        "--create_out",
+        "--create-out",
         help="whether to create a new MIDI output port or not",
         action="store_true",
     )
@@ -317,21 +316,21 @@ def main():
 
     sync_args = parser.add_mutually_exclusive_group()
     sync_args.add_argument(
-        "--create_sync",
+        "--create-sync",
         help="whether to create a new MIDI sync port or not",
         action="store_true",
     )
     sync_ports = sync_args.add_argument_group("sync ports")
     sync_ports.add_argument(
         "-si",
-        "--sync_in",
+        "--sync-in",
         help="the sync input MIDI port for the performance.",
         type=int,
         default=None,
     )
     sync_ports.add_argument(
         "-so",
-        "--sync_out",
+        "--sync-out",
         help="the sync output MIDI port for the performance.",
         type=int,
         default=None,
@@ -361,22 +360,31 @@ def main():
             sync_port_in = mido.open_input(f"LOERIC SYNC #{loeric_id}#", virtual=True)
             sync_port_out = mido.open_output(f"LOERIC SYNC #{loeric_id}#", virtual=True)
 
+    input_defined = args["input"] is not None or args["create_in"]
+    output_defined = args["output"] is not None or args["create_out"]
+    saving_defined = args["save"]
     inport, outport = lu.get_ports(
         input_number=args["input"],
         output_number=args["output"],
         list_ports=args["list_ports"],
         create_in=args["create_in"],
         create_out=args["create_out"],
+        prompt_in=not input_defined and not output_defined and not saving_defined,
+        prompt_out=not output_defined and (input_defined or not saving_defined),
     )
 
     sync_inport, sync_outport = None, None
-    if args["sync"]:
+    if args["sync"] and output_defined:
+        sync_input_defined = args["sync_in"] is not None or args["create_sync"]
+        sync_output_defined = args["sync_out"] is not None or args["create_sync"]
         sync_inport, sync_outport = lu.get_ports(
             input_number=args["sync_in"],
             output_number=args["sync_out"],
             list_ports=False,
             create_in=args["create_sync"],
             create_out=args["create_sync"],
+            prompt_in=not sync_input_defined,
+            prompt_out=not sync_output_defined,
         )
 
     if args["list_ports"]:
@@ -470,11 +478,10 @@ def main():
     except KeyboardInterrupt:
         print("\nPlayback stopped by user.")
 
-    # print("Closing midi ports...")
-
     # close midi input
     if port is not None:
         port.close()
+        print("Closing midi ports...")
         if port.closed:
             print("Closed MIDI input.")
 

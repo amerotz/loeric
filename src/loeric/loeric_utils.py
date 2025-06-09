@@ -1,4 +1,5 @@
 import mido
+import muspy as mp
 import numpy as np
 import music21 as m21
 
@@ -15,6 +16,14 @@ MAX_TEMPO = 2**24 - 1
 
 
 # key signatures
+number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
+mode_offset = {
+    "major": 0,
+    "minor": 3,
+    "dorian": 10,
+    "mixolydian": 5,
+}
+'''
 number_of_fifths = {
     "Cb": -7,
     "Abm": -7,
@@ -69,6 +78,7 @@ def get_root(key_signature: str) -> int:
 
     return base
 
+'''
 
 # 0 = major
 # 1 = minor
@@ -98,6 +108,7 @@ needs_pitch_quantization = [
 def get_chord_pitches(harmony: int) -> np.array:
     """
     Return the pitches of a major or minor chord in semitones from the root.
+
     :param harmony: the chord. Values 0-11 indicate a major chord. Values 12-23 indicate a minor chord. Values 24-35 indicate a diminished chord. Values 36-48 indicate an augmented chord.
 
     :return: the pitches that are part of the input chord.
@@ -171,6 +182,8 @@ def get_ports(
     list_ports: bool = False,
     create_in: bool = False,
     create_out: bool = False,
+    prompt_in: bool = False,
+    prompt_out: bool = False,
 ):
     """
     Return the port names associated to the given indexes.
@@ -200,7 +213,7 @@ def get_ports(
         return inport, outport
 
     # if no input is defined
-    if input_number is None and not create_in:
+    if prompt_in:
         names = mido.get_input_names()
         if len(names) == 0:
             print("No input port available.")
@@ -215,7 +228,7 @@ def get_ports(
         in_index = input_number
 
     # if no output is defined
-    if output_number is None and not create_out:
+    if prompt_out:
         names = mido.get_output_names()
         if len(names) == 0:
             print("No output port available.")
@@ -234,3 +247,18 @@ def get_ports(
         outport = mido.get_output_names()[out_index]
 
     return inport, outport
+
+
+def is_aligned_with(time: float, interval: float, threshold: float) -> bool:
+    """
+    Checks whether a given time position in the tune aligns with some subdivision using a given threshold.
+
+    :param time: the time position to check.
+    :param interval: the time interval to check alignement for.
+    :param threshold: the time threshold to consider the position aligned with the interval.
+
+    :return: whether the time interval is aligned or not.
+    """
+
+    half_i = interval * 0.5
+    return abs(((time - half_i) % interval) - half_i) <= threshold

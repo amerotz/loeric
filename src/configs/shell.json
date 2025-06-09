@@ -1,13 +1,13 @@
 {
-    "intensity_control_in": 46,
-    "human_impact_control_in": 50,
-    "intensity_control_out": 21,
-    "human_impact_control_out": 22,
+    "intensity_control_in": 41,
+    "human_impact_control_in": 42,
+    "intensity_control_out": 51,
+    "human_impact_control_out": 52,
     "sync_interval": 2.0,
-    "switch_every": 32.0,
+    "switch_every": 16,
     "tempo_policy": {
-        "fix_sync_multiplier": 0.00625,
-        "stop_sync_multiplier": 0.25,
+        "fix_sync_multiplier": 0.0625,
+        "stop_sync_multiplier": 0.5,
         "position": "max"
     },
     "attention_policy": {
@@ -19,7 +19,7 @@
                 "intensity_constant": 0.0,
                 "intensity_aggregator": "min",
                 "human_impact_multiplier": 0.0,
-                "human_impact_constant": 0.8,
+                "human_impact_constant": 0.75,
                 "human_impact_aggregator": "min"
             },
             "match": {
@@ -27,7 +27,7 @@
                 "intensity_constant": 0.0,
                 "intensity_aggregator": "mean",
                 "human_impact_multiplier": 0.0,
-                "human_impact_constant": 0.65,
+                "human_impact_constant": 0.5,
                 "human_impact_aggregator": "min"
             },
             "lead": {
@@ -35,7 +35,7 @@
                 "intensity_constant": 0.0,
                 "intensity_aggregator": "max",
                 "human_impact_multiplier": 0.0,
-                "human_impact_constant": 0.5,
+                "human_impact_constant": 0.25,
                 "human_impact_aggregator": "min"
             }
         }
