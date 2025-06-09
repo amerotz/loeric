@@ -2,7 +2,7 @@ import faulthandler
 import os
 import threading
 from enum import Enum
-from os.path import basename, splitext
+from os.path import splitext
 from random import randint
 from typing import Optional, List
 
@@ -98,10 +98,6 @@ class Musician:
             self.thread = threading.Thread(target=self.__play)
             self.thread.start()
 
-    def set_control(self, control, value):
-        # self.volume = volume
-        self.midi_out.send(Message("control_change", channel=0, control=control, value=value))
-
     def __play(self, ) -> None:
         try:
             """
@@ -135,8 +131,8 @@ class Musician:
             dir_path = os.getcwd() + "/src/loeric/loeric_config/performance"
             groover.merge_config(f"{dir_path}/musician/{self.name.lower()}.json",
                                  f"{dir_path}/instrument/{self.instrument.lower()}.json",
-                                 f"{dir_path}/tune_type/{self.tune.type.lower()}.json",
-                                 f"{dir_path}/tune/{splitext(basename(self.tune.filename))[0].lower()}.json")
+                                 #f"{dir_path}/tune_type/{self.tune.type.lower()}.json",
+                                 f"{dir_path}/tune/{splitext(self.tune.name.lower())[0]}.json")
 
             midi_input: Optional[BaseInput] = None
             listener: ListenerThread | None = None

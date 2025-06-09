@@ -43,7 +43,7 @@
 
 	async function trackChange(event: Event) {
 		const select = event.target as HTMLSelectElement
-		await apiPut("instrument", {track: select.value})
+		await apiPut("track", {track: select.value})
 	}
 
 	async function inputChange(event: Event) {

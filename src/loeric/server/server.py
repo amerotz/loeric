@@ -1,11 +1,14 @@
 from os import listdir, getcwd, rename, remove
-from os.path import isfile, join, splitext, split
+from os.path import isfile, join, splitext
 from random import shuffle
+from typing import List
 
 import mido
 import tinysoundfont
 from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
 from mido import MidiFile
+from muspy import KeySignature
+from muspy.outputs.midi import PITCH_NAMES
 from nanoid import generate
 from pyaudio import PyAudio
 
@@ -29,20 +32,40 @@ instruments = {"Accordion": 21, "Guitar": 24, "Harp": 46, "Flute": 73, "Violin":
 synth = tinysoundfont.Synth()
 soundfont_id = 0
 
+filetypes = [".mid", ".abc"]
+
 
 def list_audio():
     audio = PyAudio()
     info = audio.get_host_api_info_by_index(0)
     device_count = info.get("deviceCount")
 
-    list = {}
+    audio_list = {}
 
     for i in range(0, device_count):
         if (audio.get_device_info_by_host_api_device_index(0, i).get("maxInputChannels")) > 0:
             name = audio.get_device_info_by_host_api_device_index(0, i).get("name")
-            list[name] = i
+            audio_list[name] = i
 
-    return list
+    return audio_list
+
+
+def key_to_str(key: KeySignature) -> str:
+    if key.root is None:
+        return ""
+    if key.mode not in ("major", "minor"):
+        return ""
+    suffix = " Minor" if key.mode == "minor" else ""
+    return f"{PITCH_NAMES[key.root]}{suffix}"
+
+
+def trim_ext(file: str) -> str:
+    return splitext(file)[0]
+
+
+def list_tracks() -> List[str]:
+    return [f for f in listdir(track_dir) if
+            isfile(join(track_dir, f)) and splitext(f)[1].casefold() in filetypes]
 
 
 @app.get('/api/state')
@@ -52,27 +75,26 @@ def state():
         'musicians': list(map(lambda m: m.__json__(), musicians)),
         'state': get_state().name,
         'track': {
-            'name': split(tune.filename)[1],
+            'name': tune.name,
             'time': f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
-            'key': tune.key_signature,
+            'key': key_to_str(tune.key_signature),
             'tempo': mido.tempo2bpm(tune.tempo, [tune.time_signature.numerator, tune.time_signature.denominator]),
         },
         'options': {
             'inputs': mido.get_input_names(),
             'outputs': mido.get_output_names(),
             'instruments': list(instruments.keys()),
-            'trackList': [f for f in listdir(track_dir) if
-                          isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid'],
+            'trackList': list_tracks(),
             'audio': list_audio()
         },
     }
 
 
 def __set_track(track: str):
-    track_list = [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid']
+    track_list = list_tracks()
     if track in track_list:
         global tune
-        tune = Tune(join(track_dir, track), 1, "reel")
+        tune = Tune(join(track_dir, track), 1)
         for musician in musicians:
             musician.tune = tune
 
@@ -128,7 +150,7 @@ def control_change():
     for musician in musicians:
         if musician.id == musician_id:
             if musician.midi_out is not None:
-                musician.set_control(control, new_value)
+                musician.control_out.send(Message("control_change", channel=0, control=control, value=new_value))
 
     return state()
 
@@ -173,7 +195,8 @@ def add_musician():
     loeric_id = generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
-    musicians.append(Musician(unused[0], loeric_id, tune, next(iter(instruments)), [Control("Volume", 7, 127), Control("Intensity", 21, 127)]))
+    musicians.append(Musician(unused[0], loeric_id, tune, next(iter(instruments)),
+                              [Control("Volume", 7, 127), Control("Intensity", 21, 127)]))
 
     return state()
 

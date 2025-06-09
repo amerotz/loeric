@@ -1,10 +1,12 @@
-import mido
-import numpy as np
-import muspy as mp
-import music21 as m21
-
 from collections.abc import Callable
+from os.path import basename, splitext
 from typing import Generator
+
+import mido
+import music21 as m21
+import muspy as mp
+import numpy as np
+from muspy import KeySignature
 
 from . import loeric_utils as lu
 
@@ -35,7 +37,7 @@ class Tune:
         self._root = self._key_signature.root
         self._fifths = lu.number_of_fifths[
             (self._root + lu.mode_offset[self._key_signature.mode]) % 12
-        ]
+            ]
         mido_source = mido_source.to_mido(use_note_off_message=True)
 
         # load midi notes and repeat them
@@ -61,7 +63,7 @@ class Tune:
 
         # number of quarter notes per bar
         quarters_per_bar = (
-            4 * self._time_signature.numerator / self._time_signature.denominator
+                4 * self._time_signature.numerator / self._time_signature.denominator
         )
         # bar and beat duration in seconds
         self._bar_duration = quarters_per_bar * self._quarter_duration
@@ -162,7 +164,11 @@ class Tune:
         return (self._lowest_pitch, self._highest_pitch)
 
     @property
-    def key_signature(self) -> str:
+    def name(self) -> str:
+        return basename(self._filename)
+
+    @property
+    def key_signature(self) -> KeySignature:
         """
         :return: the tune's key signature.
         """
@@ -298,7 +304,7 @@ class Tune:
         return msg[0].key
 
     def filter(
-        self, filtering_function: Callable[[mido.Message], bool]
+            self, filtering_function: Callable[[mido.Message], bool]
     ) -> list[mido.Message]:
         """
         Retrieve the midi events that fullfill the given filtering function.
@@ -331,8 +337,8 @@ class Tune:
         :return: True if we are on a beat.
         """
         beat_position = (
-            self._performance_time % self._bar_duration
-        ) / self._beat_duration
+                                self._performance_time % self._bar_duration
+                        ) / self._beat_duration
         diff = abs(beat_position - round(beat_position))
 
         return diff <= lu.TRIGGER_DELTA
