@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from os.path import basename, splitext
+from os.path import basename
 from typing import Generator
 
 import mido
