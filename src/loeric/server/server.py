@@ -1,6 +1,7 @@
 from os import listdir, getcwd, rename, remove
 from os.path import isfile, join, splitext
 from random import shuffle
+from threading import Thread
 from typing import List
 
 import mido
@@ -12,8 +13,9 @@ from muspy.outputs.midi import PITCH_NAMES
 from nanoid import generate
 from pyaudio import PyAudio
 
-from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all, Control
+from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all
 from loeric.server.synthout import SynthOutput
+from loeric.synchronize import sync_loeric, exiting as sync_stop
 from loeric.tune import Tune
 
 track_dir = join(getcwd(), "static/midi")
@@ -110,6 +112,13 @@ def play():
                 musician.midi_out.channel = index
         musician.ready()
     synth.start()
+    sync_ports_in = list(map(lambda m: m.sync, musicians))
+    sync_ports_out = list(map(lambda m: m.control_out, musicians))
+    sync_stop.clear()
+    _sync_thread = Thread(
+        target=sync_loeric, args=([sync_ports_in, sync_ports_out])
+    )
+    _sync_thread.start()
     play_all()
     return state()
 
@@ -122,6 +131,7 @@ def pause():
 
 @app.get('/api/stop')
 def stop():
+    sync_stop.set()
     stop_all()
     synth.stop()
     return state()
@@ -195,8 +205,7 @@ def add_musician():
     loeric_id = generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
-    musicians.append(Musician(unused[0], loeric_id, tune, next(iter(instruments)),
-                              [Control("Volume", 7, 127), Control("Intensity", 21, 127)]))
+    musicians.append(Musician(unused[0], loeric_id, tune, next(iter(instruments))))
 
     return state()
 

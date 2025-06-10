@@ -4,12 +4,9 @@ import os
 import random
 import threading
 import time
-import numpy as np
-import music21 as m21
-import threading
-import time
 from collections import defaultdict
 from collections.abc import Callable
+from typing import List
 
 import jsonmerge
 import mido
@@ -46,7 +43,7 @@ class Groover:
             random_weight: float = 0,
             human_impact: float = 0,
             seed: int = 42,
-            config_file: str = None,
+            config_files: List[str] =None,
             intensity_control: int = 1,
             human_impact_control: int = 11,
             syncing: bool = False,
@@ -133,18 +130,11 @@ class Groover:
 
         # merge base configuration with command line values
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.merge_config(f"{dir_path}/loeric_config/performance/base.json",
-                          config_file)
-
-        # use external configuration if specified
-        # the configuration file overwrites any defaults
-        # specified by command line
-        if config_file is not None:
-            config_hash = int(hash(str(config_file))) % 2 ** 31
-            self._config["values"]["seed"] = config_hash + seed
-
-    def merge_config(self, *args: str):
-        for file in args:
+        if config_files is None:
+            config_files = [f"{dir_path}/loeric_config/performance/base.json"]
+        else:
+            config_files = [f"{dir_path}/loeric_config/performance/base.json"] + config_files
+        for file in config_files:
             if file is not None and os.path.isfile(file):
                 with open(file, "r") as f:
                     print(f"Loading config from {file}")
@@ -152,6 +142,7 @@ class Groover:
                     self._config = jsonmerge.merge(config, self._config)
 
         self._instantiate()
+
 
     def _instantiate(self):
         """

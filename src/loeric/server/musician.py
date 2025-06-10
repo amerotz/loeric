@@ -1,14 +1,15 @@
 import faulthandler
 import os
 import threading
+from collections import defaultdict
 from enum import Enum
 from os.path import splitext
 from random import randint
-from typing import Optional, List
+from typing import Optional
 
 import mido
 from mido import Message
-from mido.ports import BaseOutput, BaseInput
+from mido.ports import BaseOutput, BaseInput, EchoPort
 
 from loeric import (loeric_utils as lu)
 from loeric.groover import Groover
@@ -76,7 +77,6 @@ class Musician:
             loeric_id: str,
             tune: Tune,
             instrument: str,
-            controls: List[Control],
             midi_out: BaseOutput | None = None,
             midi_in: str | None = None,
     ):
@@ -87,7 +87,7 @@ class Musician:
         self.midi_out = midi_out
         self.midi_in = midi_in
         self.control_out = ControlOutput(f"Loeric Control #{loeric_id}", None)
-        self.controls = controls
+        self.sync = EchoPort(f"Loeric Sync #{loeric_id}")
         self.seed = randint(0, 1000000)
         self.random_weight = 0.2
         self.thread = threading.Thread()
@@ -117,22 +117,21 @@ class Musician:
                 midi_output = self.midi_out
 
             midi_output.reset()
+            dir_path = os.getcwd() + "/src/loeric/loeric_config/performance"
             groover = Groover(
                 self.tune,
                 random_weight=self.random_weight,
-                seed=self.seed
+                seed=self.seed,
+                config_files=[f"{dir_path}/musician/{self.name.lower()}.json",
+                              f"{dir_path}/instrument/{self.instrument.lower()}.json",
+                              #f"{dir_path}/tune_type/{self.tune.type.lower()}.json",
+                              f"{dir_path}/tune/{splitext(self.tune.name.lower())[0]}.json"]
             )
 
-            self.control_out.groover = groover
-            for control in self.controls:
+            self.control_out.set_groover(groover)
+            for control in self.control_out.controls:
                 self.control_out.send(
                     Message("control_change", channel=0, control=control.control, value=control.value))
-
-            dir_path = os.getcwd() + "/src/loeric/loeric_config/performance"
-            groover.merge_config(f"{dir_path}/musician/{self.name.lower()}.json",
-                                 f"{dir_path}/instrument/{self.instrument.lower()}.json",
-                                 #f"{dir_path}/tune_type/{self.tune.type.lower()}.json",
-                                 f"{dir_path}/tune/{splitext(self.tune.name.lower())[0]}.json")
 
             midi_input: Optional[BaseInput] = None
             listener: ListenerThread | None = None
@@ -181,9 +180,7 @@ class Musician:
                 # keep meta messages intact
                 else:
                     if message.type == "songpos":
-                        # if sync_port_out is not None:
-                        # sync_port_out.send(message)
-                        # print(f"{loeric_id} SENT {message.pos} ({time.time()})")
+                        self.sync.send(message)
                         new_messages = []
                     else:
                         new_messages = [message]
@@ -221,13 +218,33 @@ class Musician:
         if isinstance(self.midi_out, BaseOutput):
             out = self.midi_out.name
         return {'id': self.id, 'name': self.name, 'midiOut': out, 'midiIn': self.midi_in,
-                'instrument': self.instrument, 'controls': list(map(lambda m: m.__json__(), self.controls))}
+                'instrument': self.instrument, 'controls': list(map(lambda m: m.__json__(), self.control_out.controls))}
 
 
 class ControlOutput(BaseOutput):
     def __init__(self, name: str, groover: Groover | None, **kwargs):
         self.groover = groover
+        self.controls = [Control("Volume", 7, 127), Control("Intensity", 21, 127)]
         BaseOutput.__init__(self, name=name, **kwargs)
+
+    def set_groover(self, groover: Groover | None):
+        self.groover = groover
+        if groover is not None:
+            contours = self.groover._config.get("control_2_contour")
+            grouped = defaultdict(list)
+            for key, val in sorted(contours.items()):
+                grouped[val].append(key)
+
+            self.controls = [self.controls[0]]
+            for control, values in grouped.items():
+                name = values[0]
+                value = int(self.groover._contour_values[name] * 127)
+                if len(values) > 1:
+                    if all("_human_impact" in x for x in values):
+                        name = "Human Impact"
+                    else:
+                        name = "Intensity"
+                self.controls.append(Control(name, control, value))
 
     def _send(self, msg):
         if msg.type == "sysex" and msg.data[0] == 69:
@@ -256,6 +273,10 @@ class ControlOutput(BaseOutput):
             _update(State.PLAYING)
             print("Received CONTINUE.")
         elif msg.type == "control_change":
+            for control in self.controls:
+                if msg.control == control.control:
+                    control.value = msg.value
+
             for contour_name, event_number in self.groover._config["control_2_contour"].items():
                 if msg.is_cc(int(event_number)):
                     value = msg.value / 127
