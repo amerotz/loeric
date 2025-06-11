@@ -1,8 +1,6 @@
-import json
 from os import listdir, getcwd, rename, remove
 from os.path import isfile, join, splitext
 from random import shuffle
-from threading import Thread
 from typing import List
 
 import mido
@@ -16,7 +14,6 @@ from pyaudio import PyAudio
 
 from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all
 from loeric.server.synthout import SynthOutput
-from loeric.synchronize import sync_loeric, exiting as sync_stop, load_sync_config
 from loeric.tune import Tune
 
 track_dir = join(getcwd(), "static/midi")
@@ -108,7 +105,7 @@ def play():
         if musician.midi_out is None or isinstance(musician.midi_out, SynthOutput):
             synth.program_select(index, soundfont_id, 0, instruments[musician.instrument])
             if musician.midi_out is None:
-                musician.midi_out = SynthOutput(f"Loeric Synth #{musician.id}", synth, index)
+                musician.midi_out = SynthOutput(f"Loeric Synth #{musician.id}#", synth, index)
             else:
                 musician.midi_out.channel = index
         musician.ready()
@@ -135,7 +132,7 @@ def pause():
 
 @app.get('/api/stop')
 def stop():
-    sync_stop.set()
+    #sync_stop.set()
     stop_all()
     synth.stop()
     return state()
