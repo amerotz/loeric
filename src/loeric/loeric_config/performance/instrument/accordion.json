@@ -127,6 +127,10 @@
             "slide": false
         }
     },
+    "legato": {
+        "min": 0.1,
+        "max": 0.95
+    },
 	"probabilities": {
 		"roll": 1, "slide": 0, "cut": 1
 	},

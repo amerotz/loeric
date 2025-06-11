@@ -106,6 +106,7 @@ def play(
             filename = kwargs["filename"]
             if filename is None:
                 filename = f"generated_{name}_{kwargs['seed']}_{loeric_id}.mid"
+            print(f"Saving to {dirname}/{filename}.")
             player.save(f"{dirname}/{filename}")
 
         done_playing.set()
@@ -359,21 +360,23 @@ def main():
 
     input_defined = args["input"] is not None or args["create_in"]
     output_defined = args["output"] is not None or args["create_out"]
+
     saving_defined = args["save"]
+
     inport, outport = lu.get_ports(
         input_number=args["input"],
         output_number=args["output"],
         list_ports=args["list_ports"],
         create_in=args["create_in"],
         create_out=args["create_out"],
-        prompt_in=not input_defined and not output_defined and not saving_defined,
-        prompt_out=not output_defined and (input_defined or not saving_defined),
+        prompt_in=(not input_defined) and (not output_defined) and (not saving_defined),
+        prompt_out=(not output_defined) and (input_defined or not saving_defined),
     )
 
     sync_inport, sync_outport = None, None
     if args["sync"] and output_defined:
-        sync_input_defined = args["sync_in"] is not None or args["create_sync"]
-        sync_output_defined = args["sync_out"] is not None or args["create_sync"]
+        sync_input_defined = (args["sync_in"] is not None) or args["create_sync"]
+        sync_output_defined = (args["sync_out"] is not None) or args["create_sync"]
         sync_inport, sync_outport = lu.get_ports(
             input_number=args["sync_in"],
             output_number=args["sync_out"],

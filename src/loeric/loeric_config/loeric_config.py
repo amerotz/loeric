@@ -54,6 +54,12 @@ def main():
                     selected = json.load(f)
                     base = jsonmerge.merge(base, selected)
 
+                    if "contours" in selected:
+                        for c in selected["contours"]:
+                            base["contours"][c]["recipe"] = selected["contours"][c][
+                                "recipe"
+                            ]
+
     # specific values for shell
     if args["shell"]:
         for name in ["switch_every", "sync_interval"]:

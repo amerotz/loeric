@@ -192,7 +192,7 @@
 		"C5": "B4"
 	},
 	"drone": {
-		"active": true,
+		"active": false,
 		"threshold": 0.5,
 		"bind": "drone",
 		"midi_channel": 2,

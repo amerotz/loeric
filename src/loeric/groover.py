@@ -147,6 +147,12 @@ class Groover:
 
             self._config = jsonmerge.merge(self._config, config_file)
 
+            if "contours" in config_file:
+                for c in config_file["contours"]:
+                    self._config["contours"][c]["recipe"] = config_file["contours"][c][
+                        "recipe"
+                    ]
+
             config_hash = int(hash(str(config_file))) % 2**31
             self._config["values"]["seed"] = config_hash + seed
 
@@ -221,7 +227,15 @@ class Groover:
         """
         import matplotlib.pyplot as plt
 
-        plt.plot(self._contours["legato"]._contour)
+        fig, ax = plt.subplots(len(self._contours), sharex=True, figsize=(10, 15))
+        for i, c in enumerate(self._contours):
+            ax[i].step(
+                range(len(self._contours[c]._contour)),
+                self._contours[c]._contour,
+                linewidth=0.5,
+            )
+            ax[i].set_title(c)
+        plt.tight_layout()
         plt.show()
         """
 
@@ -229,7 +243,6 @@ class Groover:
         self._contours["message_length"] = cnt.MessageLengthContour()
         self._contours["message_length"].calculate(self._tune)
 
-        # pich difference
         self._contours["pitch_difference"] = cnt.PitchDifferenceContour()
         self._contours["pitch_difference"].calculate(self._tune)
 

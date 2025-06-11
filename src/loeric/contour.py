@@ -339,7 +339,6 @@ class IntensityContour(Contour):
         # sum them
         stacked_components = stacked_components.sum(axis=0)
 
-        # add the random contour
         self._contour = stacked_components
 
         # savgol filtering
@@ -603,11 +602,31 @@ def weighted_sum(contours: list[Contour] = [], weights: list = []) -> Contour:
 
     :return: a new contour holding the weighted sum of the input contours.
     """
+    assert len(contours) == len(weights)
+
     result = np.zeros(len(contours[0]))
-    weights = np.array(weights).astype(float)
-    weights /= np.sum(weights)
-    for c, w in zip(contours, weights):
-        result += c._contour * w
+    size = len(contours)
+    weights = np.array(weights)
+
+    if weights is None:
+        weights = np.ones((size, 1)) / size
+    else:
+        if weights.shape != (size, 1):
+            weights = weights.reshape(size, 1)
+        indexes = np.argwhere(weights < 0)
+        weights = abs(weights)
+        weights /= weights.sum()
+
+    stacked_components = np.stack([c._contour for c in contours])
+
+    # invert negative ones
+    stacked_components[indexes] *= -1
+    stacked_components[indexes] += 1
+
+    # weight them
+    stacked_components = np.multiply(stacked_components, weights)
+    # sum them
+    result = stacked_components.sum(axis=0)
 
     new_contour = Contour()
     new_contour._contour = result
