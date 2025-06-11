@@ -1,3 +1,4 @@
+import json
 from os import listdir, getcwd, rename, remove
 from os.path import isfile, join, splitext
 from random import shuffle
@@ -7,7 +8,7 @@ from typing import List
 import mido
 import tinysoundfont
 from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
-from mido import MidiFile
+from mido import MidiFile, Message
 from muspy import KeySignature
 from muspy.outputs.midi import PITCH_NAMES
 from nanoid import generate
@@ -15,7 +16,7 @@ from pyaudio import PyAudio
 
 from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all
 from loeric.server.synthout import SynthOutput
-from loeric.synchronize import sync_loeric, exiting as sync_stop
+from loeric.synchronize import sync_loeric, exiting as sync_stop, load_sync_config
 from loeric.tune import Tune
 
 track_dir = join(getcwd(), "static/midi")
@@ -112,13 +113,16 @@ def play():
                 musician.midi_out.channel = index
         musician.ready()
     synth.start()
-    sync_ports_in = list(map(lambda m: m.sync, musicians))
-    sync_ports_out = list(map(lambda m: m.control_out, musicians))
-    sync_stop.clear()
-    _sync_thread = Thread(
-        target=sync_loeric, args=([sync_ports_in, sync_ports_out])
-    )
-    _sync_thread.start()
+    # sync_ports_in = list(map(lambda m: m.sync, musicians))
+    # sync_ports_out = list(map(lambda m: m.control_out, musicians))
+    #
+    # dir_path = getcwd() + "/src/loeric/loeric_config/shell"
+    # load_sync_config(f"{dir_path}/config.json")
+    # sync_stop.clear()
+    # _sync_thread = Thread(
+    #     target=sync_loeric, args=([sync_ports_in, sync_ports_out])
+    # )
+    # _sync_thread.start()
     play_all()
     return state()
 
@@ -153,8 +157,9 @@ def instrument_change():
 @app.put('/api/control')
 def control_change():
     global musicians
+    print(request.forms)
     musician_id = request.forms.id
-    control = int(request.forms.control_out)
+    control = int(request.forms.control)
     new_value = int(request.forms.value)
 
     for musician in musicians:

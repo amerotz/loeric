@@ -86,8 +86,8 @@ class Musician:
         self.instrument = instrument
         self.midi_out = midi_out
         self.midi_in = midi_in
-        self.control_out = ControlOutput(f"Loeric Control #{loeric_id}", None)
-        self.sync = EchoPort(f"Loeric Sync #{loeric_id}")
+        self.control_out = ControlOutput(f"Loeric Control #{loeric_id}#", None)
+        self.sync = EchoPort(f"Loeric Sync #{loeric_id}#")
         self.seed = randint(0, 1000000)
         self.random_weight = 0.2
         self.thread = threading.Thread()
@@ -138,7 +138,7 @@ class Musician:
             if self.midi_in is not None:
                 if self.midi_in.startswith("audioIn:"):
                     device = int(self.midi_in.split(":")[1])
-                    listener = ListenerThread(device, self.control_out, 22)
+                    listener = ListenerThread(device, self.control_out, 1)
                     listener.start()
                 else:
                     midi_input = mido.open_input(self.midi_in)

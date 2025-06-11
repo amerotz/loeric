@@ -63,7 +63,7 @@
 
 	async function controlChange(event: Event) {
 		const select = event.target as HTMLSelectElement
-		await apiPut("control", {id: select.name, control: select.getAttribute("data-control"), volume: select.value})
+		await apiPut("control", {id: select.name, control: select.getAttribute("data-control"), value: select.value})
 	}
 
 	async function apiPut(call: string, data: any) {

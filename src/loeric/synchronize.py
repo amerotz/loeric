@@ -3,7 +3,6 @@ import os
 import pandas as pd
 import numpy as np
 import re
-import math
 import threading
 import random
 import time
@@ -339,7 +338,7 @@ def sync_loeric(inports, outports):
             # output port
             out_port = None
             for p in outports:
-                if p.name == f"Loeric Virtual Out {loeric_id}":
+                if loeric_id == re.search("#.*#", p.name)[0]:
                     out_port = p
                     break
 
@@ -430,6 +429,12 @@ def check_args(command, num_args=0, values=[], optional=True):
     return True
 
 
+def load_sync_config(path: str):
+    global config
+    with open(path, "r") as f:
+        config = json.load(f)
+
+
 def main():
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -444,8 +449,7 @@ def main():
     global config, sync_thread, intensity_thread
 
     # load base config
-    with open(args["config"], "r") as f:
-        config = json.load(f)
+    load_sync_config(args["config"])
 
     update_tempo(120)
     sync_thread = threading.Thread()
