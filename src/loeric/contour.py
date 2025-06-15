@@ -500,6 +500,66 @@ class PitchContour(Contour):
             )
 
 
+class EnergyContour(Contour):
+    """A contour holding the energy spent to play notes in the tune. When energy falls to zero, it goes back up to the maximum level. Useful to model breathing, fraggin and pulling, bow motion etc."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(
+        self,
+        midi: tune.Tune,
+        mask: list,
+        capacity: float,
+    ) -> None:
+
+        pitches = midi.filter(lambda x: lu.is_note_on(x))
+        note_events = midi.filter(lambda x: lu.is_note(x))
+
+        timings = np.array([msg.time for msg in note_events])
+        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
+        note_offs = np.array([lu.is_note_off(msg) for msg in note_events])
+        lengths = timings[note_offs] - timings[note_ons]
+        lengths /= midi.quarter_duration * 0.5
+
+        energy = np.ones(len(pitches))
+        energy = np.multiply(energy, lengths)
+
+        indexes = np.argwhere([msg.note in mask for msg in pitches])
+
+        push_e = capacity
+        pull_e = 0
+        push_tot = []
+        pull_tot = []
+        for i, e in enumerate(energy):
+
+            if i in indexes:
+                if e >= pull_e:
+                    pull_e += capacity
+                    push_e -= capacity
+                pull_e -= e
+                push_e += e
+            else:
+                if e >= push_e:
+                    push_e += capacity
+                    pull_e -= capacity
+                push_e -= e
+                pull_e += e
+
+            push_tot.append(push_e)
+            pull_tot.append(pull_e)
+
+        pull_tot = np.array(pull_tot).reshape(-1)
+        push_tot = np.array(push_tot).reshape(-1)
+
+        energy = push_tot
+        energy[indexes] = pull_tot[indexes]
+        energy -= min(energy)
+        energy /= max(energy)
+
+        self._contour = energy
+
+
 class PatternContour(Contour):
     """A contour made of a repeating pattern."""
 
@@ -647,6 +707,7 @@ def linear_transform(contours: Contour = None, a: float = 1, b: float = 0) -> Co
     assert len(contours) == 1
     new_contour = Contour()
     new_contour._contour = a * contours[0]._contour + b
+
     return new_contour
 
 
@@ -681,6 +742,7 @@ def create_contour(tune: tune.Tune, contour_program: dict, key=None) -> Contour:
         "phrasing": PhraseContour,
         "random": RandomContour,
         "pattern": PatternContour,
+        "energy": EnergyContour,
     }
 
     operation_dict = {
@@ -690,12 +752,15 @@ def create_contour(tune: tune.Tune, contour_program: dict, key=None) -> Contour:
         "shift": shift,
     }
 
+    if key is not None:
+        key = key.split("#")[0]
+
     # check
     if key is None:
         c = list(contour_program.keys())
         if len(c) != 1:
             raise InvalidRecipeError(
-                f"Only one contour can be provided. Make sure that 'recipe' only has one item in the configuration file."
+                f"Only one contour can be provided. Make sure that 'recipe' in contour {c} only has one item in the configuration file."
             )
         c = c[0]
         return create_contour(tune, contour_program[c], key=c)

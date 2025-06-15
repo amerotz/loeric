@@ -227,15 +227,7 @@ class Groover:
         """
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(len(self._contours), sharex=True, figsize=(10, 15))
-        for i, c in enumerate(self._contours):
-            ax[i].step(
-                range(len(self._contours[c]._contour)),
-                self._contours[c]._contour,
-                linewidth=0.5,
-            )
-            ax[i].set_title(c)
-        plt.tight_layout()
+        plt.plot(self._contours["tempo"]._contour)
         plt.show()
         """
 

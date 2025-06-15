@@ -2,31 +2,48 @@
 	"contours":{
         "tempo": {
 			"recipe": {
-				"weighted_sum": {
+                "weighted_sum": {
                     "contours": {
                         "weighted_sum": {
                             "contours": {
                                 "o_canainn": {
-                                    "weights": [1, 1, 1, 1, 1],
+                                    "weights": [ 1, 1, 1, 1, 1 ],
                                     "savgol": true,
                                     "scale": false,
-                                    "shift": true 
+                                    "shift": true
                                 },
-                                "phrasing": {
-                                    "phrase_exp": 10,
-                                    "phrase_levels": -1.0
+                                "linear#1": {
+                                    "contours": {
+                                        "phrasing": {
+                                            "phrase_exp": 10,
+                                            "phrase_levels": -1.0
+                                        }
+                                    },
+                                    "a": 0.5,
+                                    "b": 0
+                                },
+                                "linear#2": {
+                                    "contours": {
+                                        "energy": {
+                                            "mask": [],
+                                            "capacity": 8 
+                                        }
+                                    },
+                                    "a":-1,
+                                    "b":1
                                 }
                             },
-                            "weights": [0.5, -0.5]
+                            "weights": [0.3, -0.4, 0.3]
                         },
                         "phrasing": {
                             "phrase_exp": 10,
                             "phrase_levels": 0.0
                         }
                     },
-                    "weights": [0.5, 0.5]
-                
+                    "weights": [ 0.5, 0.5 ]
                 }
+            }
+
 			}
 		},
         "ornament": {
@@ -50,26 +67,35 @@
 		},
         "legato": {
 			"recipe": {
-				"shift": {
-					"contours":{
-						"weighted_sum": {
-							"contours": {
-								"o_canainn": {
-									"weights": [0, 0, -1, -1, -1],
-									"savgol": false,
-									"scale": true,
-									"shift":false 
-								},
-								"phrasing": {
-									"phrase_exp": 10000,
-									"phrase_levels": 1.0
-								}
-							},
-							"weights": [0.3, 0.7]
-						}
-					},
-					"offset": -1
-				}
+                "weighted_sum": {
+                    "contours": {
+                        "shift": {
+                            "contours": {
+                                "weighted_sum": {
+                                    "contours": {
+                                        "o_canainn": {
+                                            "weights": [ 0, 0, -1, -1, -1 ],
+                                            "savgol": false,
+                                            "scale": true,
+                                            "shift": false
+                                        },
+                                        "phrasing": {
+                                            "phrase_exp": 10000,
+                                            "phrase_levels": 1.0
+                                        }
+                                    },
+                                    "weights": [ 0.5, 0.5]
+                                }
+                            },
+                            "offset": -1
+                        },
+                        "energy": {
+                            "mask": [],
+                            "capacity": 8
+                        }
+                    },
+                    "weights": [0.8, 0.2]
+                }
 			}
 		}
     },
@@ -217,7 +243,8 @@
 		"cut_velocity_fraction": 0.1,
         "roll_velocity_fraction": 0.1,
         "roll_eight_fraction_max": 0.1,
-        "roll_eight_fraction_min": 0.1
+        "roll_eight_fraction_min": 0.1,
+        "pitch_deviation_cents": 20
 	},
 	"approach_from_above": {
 		"E4": "F#4",
