@@ -53,7 +53,7 @@ def main() -> None:
                 Y = np.array(velocities)
                 Y = np.diff(Y, prepend=velocities[0])
 
-                x = np.linspace(0, max(X), 1000)
+                x = np.arange(0, max(X), 0.05)
                 y = np.interp(x, X, Y)
 
                 # 2. Compute FFT
@@ -63,39 +63,49 @@ def main() -> None:
                 # 3. Get magnitude spectrum and ignore DC (index 0)
                 magnitude = np.abs(fft_result)
                 magnitude[0] = 0  # ignore DC
+                magnitude /= max(magnitude)
 
                 # 4. Find dominant frequency
-                dominant_index = np.argmax(magnitude)
-                dominant_frequency = abs(frequencies[dominant_index])
-                estimated_period = 1 / dominant_frequency
+                dominant_index = np.argsort(magnitude[magnitude > 0.75])
 
-                # Output estimated period
-                print(f"Estimated period (from FFT): {estimated_period:.4f}")
-
-                # 5. Plot signal and estimated period grid
-                plt.figure(figsize=(10, 4))
-                plt.plot(x, y, label="Original Signal")
-                # plt.step(times, pitches, label="Notes")
-                plt.title("Signal with Estimated Period Grid (from FFT)")
-                plt.xlabel("x")
-                plt.ylabel("Amplitude")
-                plt.grid(True)
-
-                # Add vertical lines at multiples of the estimated period
-                period_positions = np.arange(x[0], x[-1], estimated_period)
-                for px in period_positions:
-                    plt.axvline(
-                        px,
-                        color="red",
-                        linestyle="--",
-                        alpha=0.5,
-                        label="Estimated Period" if px == period_positions[0] else "",
-                    )
-
-                plt.legend()
-                plt.tight_layout()
+                plt.plot(1 / frequencies[1:], magnitude[1:])
                 plt.show()
-                return
+
+                """
+                for i in dominant_index:
+                    dominant_frequency = abs(frequencies[i])
+                    estimated_period = 1 / dominant_frequency
+
+                    # Output estimated period
+                    print(f"Estimated period (from FFT): {estimated_period:.4f}")
+                    print(f"BPM: {60/estimated_period:.4f}")
+
+                    # 5. Plot signal and estimated period grid
+                    plt.figure(figsize=(10, 4))
+                    plt.plot(x, y, label="Original Signal")
+                    # plt.step(times, pitches, label="Notes")
+                    plt.title("Signal with Estimated Period Grid (from FFT)")
+                    plt.xlabel("x")
+                    plt.ylabel("Amplitude")
+                    plt.grid(True)
+
+                    # Add vertical lines at multiples of the estimated period
+                    period_positions = np.arange(x[0], x[-1], estimated_period)
+                    for px in period_positions:
+                        plt.axvline(
+                            px,
+                            color="red",
+                            linestyle="--",
+                            alpha=0.5,
+                            label=(
+                                "Estimated Period" if px == period_positions[0] else ""
+                            ),
+                        )
+
+                    plt.legend()
+                    plt.tight_layout()
+                    plt.show()
+                """
 
 
 main()
