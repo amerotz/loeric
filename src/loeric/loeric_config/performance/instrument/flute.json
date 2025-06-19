@@ -43,8 +43,6 @@
                     "weights": [ 0.5, 0.5 ]
                 }
             }
-
-			}
 		},
         "ornament": {
 			"recipe": {
@@ -99,7 +97,7 @@
 			}
 		}
     },
-	"ornamentation": {
+    "ornamentation": {
         "vibrato": {
             "cases": [
                 [[0, 2]]

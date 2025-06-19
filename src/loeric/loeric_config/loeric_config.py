@@ -10,18 +10,58 @@ def main():
 
     parser = argparse.ArgumentParser()
     # loeric args
-    parser.add_argument("--tune_type", default=None, type=str)
-    parser.add_argument("--instrument", default=None, type=str)
-    parser.add_argument("--drone", default=None, type=str)
-    parser.add_argument("--ornament", default=None, type=str)
-    parser.add_argument("--control", default=None, type=str)
+    parser.add_argument(
+        "--tune-type",
+        help="load the configuration to play specific tune types.",
+        default=None,
+        type=str,
+    )
+    parser.add_argument(
+        "--instrument",
+        help="apply a specific instrument model. This includes phrasing, ornamentation, droning configuration etc.",
+        default=None,
+        type=str,
+    )
+    parser.add_argument(
+        "--drone", help="apply a specific droning model.", default=None, type=str
+    )
+    parser.add_argument(
+        "--ornament",
+        help="apply a specific ornamentation model.",
+        default=None,
+        type=str,
+    )
+    parser.add_argument(
+        "--control",
+        help="load a preset for controlling contours and autonomy values.",
+        default=None,
+        type=str,
+    )
     # shell args
-    parser.add_argument("--shell", action="store_true")
-    parser.add_argument("--sync-interval", default=1, type=float)
-    parser.add_argument("--switch-every", default=16, type=float)
+    parser.add_argument(
+        "--shell",
+        help="create a configuration file for the Virtual Session shell.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--sync-interval",
+        help="the synchronization inteval in the Virtual Session, in eight notes. Default is 1 eight.",
+        default=1,
+        type=float,
+    )
+    parser.add_argument(
+        "--switch-every",
+        help="how often behaviours should change in the Virtual Session, in multiples of the synchronization interval.",
+        default=16,
+        type=float,
+    )
     # general args
-    parser.add_argument("--id", default=None, type=str)
-    parser.add_argument("--output", default=None, type=str)
+    parser.add_argument(
+        "--output",
+        help="the output file for this configurations. Defaults to LOERIC's internal storage. If a path is specified, the configuration will be saved, but not loaded in LOERIC.",
+        default=None,
+        type=str,
+    )
     args = vars(parser.parse_args())
 
     # if configuring the shell
@@ -64,9 +104,6 @@ def main():
     if args["shell"]:
         for name in ["switch_every", "sync_interval"]:
             base[name] = args[name]
-
-    if args["id"] is not None:
-        config_name.append(args[a])
 
     config_name = "_".join(config_name) + ".json"
 
