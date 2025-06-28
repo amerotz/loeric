@@ -123,8 +123,7 @@
 	},
 	"ornamentation": {
 	},
-	"values": {
-		"bend_resolution": 32,
+	"old_ornaments": {
 		"cut_eight_fraction": 0.1,
 		"cut_velocity_fraction": 0.4,
 		"roll_velocity_fraction": 0.4,
@@ -132,13 +131,16 @@
 		"roll_eight_fraction_min": 0.3,
 		"slide_eight_fraction": 0.2,
 		"slide_pitch_threshold": 6,
+		"max_pitch_error": 2,
+		"min_pitch_error": -2,
+		"use_old_ornaments": false
+	},
+	"values": {
+		"bend_resolution": 32,
 		"beat_velocity_increase": 0,
 		"min_velocity": 1,
 		"max_velocity": 127,
-		"max_pitch_error": 2,
-		"min_pitch_error": -2,
-		"pitch_deviation_cents": 1,
-		"use_old_ornaments": false
+		"pitch_deviation_cents": 1
 	},
 	"tempo_control": {
 		"increasing": false,

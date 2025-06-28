@@ -527,33 +527,23 @@ class EnergyContour(Contour):
 
         indexes = np.argwhere([msg.note in mask for msg in pitches])
 
-        push_e = capacity
-        pull_e = 0
-        push_tot = []
-        pull_tot = []
+        current_energy = capacity
+        registered_energy = []
         for i, e in enumerate(energy):
 
+            if current_energy <= 0:
+                current_energy = capacity
+
+            registered_energy.append(current_energy)
+
             if i in indexes:
-                if e >= pull_e:
-                    pull_e += capacity
-                    push_e -= capacity
-                pull_e -= e
-                push_e += e
+                current_energy += e
             else:
-                if e >= push_e:
-                    push_e += capacity
-                    pull_e -= capacity
-                push_e -= e
-                pull_e += e
+                current_energy -= e
 
-            push_tot.append(push_e)
-            pull_tot.append(pull_e)
+            current_energy = max(current_energy, 0)
 
-        pull_tot = np.array(pull_tot).reshape(-1)
-        push_tot = np.array(push_tot).reshape(-1)
-
-        energy = push_tot
-        energy[indexes] = pull_tot[indexes]
+        energy = np.array(registered_energy)
         energy -= min(energy)
         energy /= max(energy)
 
@@ -666,7 +656,7 @@ def weighted_sum(contours: list[Contour] = [], weights: list = []) -> Contour:
 
     result = np.zeros(len(contours[0]))
     size = len(contours)
-    weights = np.array(weights)
+    weights = np.array(weights).astype(float)
 
     if weights is None:
         weights = np.ones((size, 1)) / size
@@ -711,7 +701,7 @@ def linear_transform(contours: Contour = None, a: float = 1, b: float = 0) -> Co
     return new_contour
 
 
-def shift(contours: Contour = None, offset: int = -1) -> Contour:
+def shift(contours: list[Contour] = None, offset: int = -1) -> Contour:
     """
     Shift the contour by offset.
 
@@ -723,6 +713,37 @@ def shift(contours: Contour = None, offset: int = -1) -> Contour:
     assert len(contours) == 1
     new_contour = Contour()
     new_contour._contour = np.roll(contours[0]._contour, offset)
+    return new_contour
+
+
+def to_mean(contours: list[Contour] = None, mean: float = 0.5) -> Contour:
+    """
+    Shift the contour so that it has a specific mean.
+
+    :param contour: the input contour.
+    :param mean: the desired mean.
+
+    :return: the shifted input contour.
+    """
+    assert len(contours) == 1
+    new_contour = Contour()
+    cnt_mean = contours[0]._contour.mean()
+    new_contour._contour = contours[0]._contour - cnt_mean + mean
+    return new_contour
+
+
+def power(contours: list[Contour] = None, exp: float = 1) -> Contour:
+    """
+    Elevate the contour to the specified power.
+
+    :param contour: the input contour.
+    :param exp: the exponent.
+
+    :return: the modified input contour.
+    """
+    assert len(contours) == 1
+    new_contour = Contour()
+    new_contour._contour = contours[0]._contour ** exp
     return new_contour
 
 
@@ -750,6 +771,8 @@ def create_contour(tune: tune.Tune, contour_program: dict, key=None) -> Contour:
         "multiply": multiply,
         "linear": linear_transform,
         "shift": shift,
+        "to_mean": to_mean,
+        "power": power,
     }
 
     if key is not None:

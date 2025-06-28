@@ -4,7 +4,7 @@
 		"slide": 0,
 		"cut": 1
 	},
-	"values": {
+	"old_ornaments": {
 		"cut_velocity_fraction": 0.9,
 		"roll_velocity_fraction": 0.9
 	},
