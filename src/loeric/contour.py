@@ -701,6 +701,23 @@ def linear_transform(contours: Contour = None, a: float = 1, b: float = 0) -> Co
     return new_contour
 
 
+def clamp(contours: Contour = None, low: float = 0, high: float = 1) -> Contour:
+    """
+    Clamp the contour in the given range.
+
+    :param contour: the input contour.
+    :param low: the lower limit.
+    :param high: the higher limit.
+
+    :return: the clamped input contour.
+    """
+    assert len(contours) == 1
+    new_contour = Contour()
+    new_contour._contour = np.clip(contours[0]._contour, a_min=low, a_max=high)
+
+    return new_contour
+
+
 def shift(contours: list[Contour] = None, offset: int = -1) -> Contour:
     """
     Shift the contour by offset.
@@ -773,6 +790,7 @@ def create_contour(tune: tune.Tune, contour_program: dict, key=None) -> Contour:
         "shift": shift,
         "to_mean": to_mean,
         "power": power,
+        "clamp": clamp,
     }
 
     if key is not None:

@@ -1,15 +1,6 @@
 {
     "contours":{
-		"drone": {
-			"recipe": {
-                "o_canainn": {
-                    "weights": [1, 1, 1, 1, 1],
-                    "savgol": false,
-                    "scale": true,
-                    "shift": true
-                }
-			}
-        }
+		
     },
 	"ornamentation": {
         "vibrato": {
@@ -80,7 +71,8 @@
         },
         "cut_1": {
             "cases": [
-                [[0,1],[0,1]]
+                [[0,1],[0,1]],
+                [[0,2]]
             ],
             "pitches_mean": [ 0, 1, 0 ],
             "pitches_std": [ 0, 0, 0 ],

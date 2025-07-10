@@ -68,11 +68,11 @@ class Tune:
         self._tempo = self._get_original_tempo()
 
         # number of quarter notes per bar
-        quarters_per_bar = (
+        self._quarters_per_bar = (
             4 * self._time_signature.numerator / self._time_signature.denominator
         )
         # bar and beat duration in seconds
-        self._bar_duration = quarters_per_bar * self._quarter_duration
+        self._bar_duration = self._quarters_per_bar * self._quarter_duration
         self._beat_duration = self._bar_duration / self._time_signature.beatCount
 
         # pickup bar
@@ -85,7 +85,7 @@ class Tune:
         # 16383 is the max value for songpos
         # every_n = max(6, round(len(self._midi) / 16383))
         every_duration = self._beat_duration
-        print("Sync every", quarters_per_bar / self._time_signature.beatCount)
+        print("Sync every", self._quarters_per_bar / self._time_signature.beatCount)
 
         # obtain alla events
         all_events = [m.copy() for m in self._orig_midi]

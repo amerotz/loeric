@@ -1,5 +1,15 @@
 {
 	"contours":{
+		"drone": {
+			"recipe": {
+                "o_canainn": {
+                    "weights": [1, 1, 1, 1, 1],
+                    "savgol": false,
+                    "scale": true,
+                    "shift": true
+                }
+			}
+        },
 		"velocity": {
 			"recipe": {
 				"weighted_sum": {
@@ -8,14 +18,61 @@
 							"weights": [1, 1, 1, 1, 1],
 							"savgol": false,
 							"scale": true,
-							"shift": true 
+							"shift": false
 						},
-						"phrasing": {
-							"phrase_exp": 10,
-							"phrase_levels": 1.0
+						"linear#1": {
+							"contours": {
+								"phrasing": {
+									"phrase_exp": 10,
+									"phrase_levels": -1.0
+								}
+							},
+							"a": 0.5,
+							"b": 0.5
+						},
+						"linear#2": {
+							"contours": {
+								"weighted_sum": {
+									"contours": {
+										"clamp#1": {
+											"contours": {
+												"linear": {
+													"contours": {
+														"pitch": {
+															"scale": true,
+															"shift": true
+														}
+													},
+													"a": -1,
+													"b": 0.5
+												}
+											},
+											"low": 0
+										},
+										"clamp#2": {
+											"contours": {
+												"linear": {
+													"contours": {
+														"pitch": {
+															"scale": true,
+															"shift": true
+														}
+													},
+													"a": 1,
+													"b": -0.5
+												}
+											},
+											"low": 0
+										}
+									},
+									"weights": [1,1]
+								}
+							},
+							"a": 1,
+							"b": 0.5
 						}
 					},
-					"weights": [0.8, 0.2]
+					"weights": [0.6, 0.2, 0.2]
 				}
 			}
 		},
@@ -107,7 +164,8 @@
 	"swing": {
 		"min": 1,
 		"max": 1,
-		"bind": "tempo"
+		"bind": "tempo",
+		"locations": [0]
 	},
 	"legato": {
 		"min": 0.5,

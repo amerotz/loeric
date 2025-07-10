@@ -254,7 +254,7 @@ class Groover:
         import matplotlib.pyplot as plt
 
         x = np.cumsum(self._contours["message_length"]._contour)
-        plt.step(x, self._contours["ornament"]._contour)
+        plt.step(x, self._contours["drone"]._contour)
         plt.step(x, self._contours["pitch_contour"]._contour / 127)
         plt.show()
         """
@@ -286,6 +286,7 @@ class Groover:
             # intonation
             if lu.is_note(msg):
                 self._intonation[msg.note] = self._last_recorded_intonation
+                print(f"intonation:\t\t{msg.note}")
             elif msg.type == "pitchwheel":
                 self._last_recorded_intonation = msg.pitch
             else:
@@ -583,18 +584,24 @@ class Groover:
         u = 0.125
 
         right_duration = d - u > -0.012
-        right_time = abs((x % (2 * u)) - u) < 0.012
-        swing_it = right_time and right_duration
+        # right_time = abs((x % (2 * u)) - u) < 0.012
+        right_location = (
+            np.round(2 * self._performance_time / self._tune.quarter_duration, 2)
+            % (2 * self._tune._quarters_per_bar)
+            in self._config["swing"]["locations"]
+        )
+        # swing_it = right_time and right_duration and right_location
+        swing_it = right_duration and right_location
 
         t = 0
         # on  on  on  on
         # on   on on   on
-        if swing_it:
-            t = 2 * u * ((p / (p + 1)) - 0.5)
-            self._did_swing = True
-        elif self._did_swing:
-            t = -2 * u * ((p / (p + 1)) - 0.5)
+        if self._did_swing:
+            t += -2 * u * ((p / (p + 1)) - 0.5)
             self._did_swing = False
+        if swing_it:
+            t += 2 * u * ((p / (p + 1)) - 0.5)
+            self._did_swing = True
 
         # scale back t to tune tempo
         t = 4 * t * self._tune.quarter_duration
@@ -907,7 +914,7 @@ class Groover:
 
         print(ornament_type)
         ornaments = []
-        if self._config["values"]["use_old_ornaments"]:
+        if self._config["old_ornaments"]["use_old_ornaments"]:
             message_length = self._contour_values["message_length"]
             if ornament_type == CUT:
                 # generate a cut
