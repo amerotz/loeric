@@ -46,12 +46,24 @@ class Tune:
         ]
         mido_source = mido_source.to_mido(use_note_off_message=True)
 
+        # fix timing so that every note on has time=0 and every note off has its duration
+        notes = [msg for msg in mido_source]
+        first = True
+        for i in range(len(notes) - 1):
+
+            if lu.is_note_off(notes[i]) and lu.is_note_on(notes[i + 1]):
+                notes[i].time += notes[i + 1].time
+                notes[i + 1].time = 0
+
+            if not lu.is_note_off(notes[i]):
+                notes[i].time = 0
+
         # load midi notes and repeat them
         self._orig_midi = []
         for i in range(repeats):
             # should find another way to handle repetitions
-            self._orig_midi.append(mido.Message("sysex", data=[i]))
-            self._orig_midi.extend(list(mido_source))
+            self._orig_midi.append(mido.Message("sysex", data=[i], time=0))
+            self._orig_midi.extend(list(notes))
 
         # some stats about midi
         self._lowest_pitch = min(

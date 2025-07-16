@@ -6,7 +6,6 @@ import os
 import faulthandler
 
 
-from . import contour as cnt
 from . import tune as tu
 from . import groover as gr
 from . import player as pl
@@ -73,6 +72,8 @@ def play(
 
             if message.type == "sysex":
                 print(f"Repetition {message.data[0]+1}/{kwargs['repeat']}")
+                groover._offset = 0
+                groover._swing_offset = 0
                 continue
             # perform notes
             elif lu.is_note(message):
@@ -89,7 +90,7 @@ def play(
             player.play(new_messages)
 
         # play an end note
-        if kwargs["do_end_note"]:
+        if groover.do_end_note:
             groover.reset_contours()
             groover.advance_contours()
             player.play(groover.get_end_notes())
@@ -213,12 +214,6 @@ def main():
         default=0,
     )
     parser.add_argument(
-        "-d",
-        "--diatonic",
-        help="whether or not error generation should be quantized to the tune's mode",
-        action="store_true",
-    )
-    parser.add_argument(
         "-r",
         "--repeat",
         help="how many times the tune should be repeated",
@@ -282,8 +277,25 @@ def main():
         action="store_true",
     )
     parser.add_argument(
+        "--slow-start",
+        help="starts the performance at a slower tempo and gradually increases it.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--slow-end",
+        help="ends the performance at a slower tempo.",
+        action="store_true",
+    )
+
+    parser.add_argument(
         "--force-key",
         help="overrides any key information in the tune.",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "--plot",
+        help="plots the specified contour before playback.",
         type=str,
         default=None,
     )
@@ -437,14 +449,16 @@ def main():
             bpm=args["bpm"],
             midi_channel=args["midi_channel"],
             transpose=args["transpose"],
-            diatonic_errors=args["diatonic"],
-            random_weight=0.2,
             human_impact=args["human_impact"],
             seed=args["seed"],
             config_file=args["config"],
             intensity_control=args["intensity_control"],
             human_impact_control=args["human_impact_control"],
             syncing=args["sync"],
+            plot=args["plot"],
+            slow_start=args["slow_start"],
+            slow_end=args["slow_end"],
+            do_end_note=args["do_end_note"],
         )
 
         # set input callback

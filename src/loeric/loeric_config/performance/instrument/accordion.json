@@ -8,11 +8,12 @@
             "pitches_std": [ 0, 0 ],
             "velocities_mean": [ 1, 1 ],
             "velocities_std": [ 0, 0 ],
-            "durations_mean": [ 1, 1 ],
+            "durations_mean": [ "var_divide_note_1_duration", "var_divide_note_2_duration" ],
             "durations_std": [ 0.01, 0.01 ],
             "probability": 1,
             "length": 2,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "roll_1": {
@@ -33,6 +34,7 @@
             "probability": 1,
             "length": 3,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "roll_2": {
@@ -44,11 +46,12 @@
             "pitches_std": [ 0, 0, 0, 0, 0 ],
             "velocities_mean": [ 1, 0.9, 1, 0.9, 1 ],
             "velocities_std": [ 0, 0, 0, 0, 0 ],
-            "durations_mean": [ 1, 0.2, 0.2, 0.2, 1 ],
+            "durations_mean": [ 1, 0.33, 0.33, 0.33, 1 ],
             "durations_std": [ 0, 0.1, 0.1, 0.1, 0 ],
-            "probability": 1,
+            "probability": "var_roll_2_prob",
             "length": 3,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "roll_3": {
@@ -64,6 +67,7 @@
             "probability": 1,
             "length": 3,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "cut_1": {
@@ -79,6 +83,7 @@
             "probability": 1,
             "length": 2,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "cut_2": {
@@ -94,6 +99,7 @@
             "probability": 1,
             "length": 1,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "error": {
@@ -109,6 +115,7 @@
             "probability": 0.01,
             "length": 1,
             "diatonic": false,
+            "threshold": 0,
             "slide": false 
         },
         "drop": {
@@ -124,6 +131,7 @@
             "probability": 0.01,
             "length": 1,
             "diatonic": false,
+            "threshold": 0,
             "slide": false
         }
     },

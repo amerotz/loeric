@@ -1,32 +1,35 @@
 {
+	"variables": {
+		"var_roll_2_prob": 0,
+		"var_divide_note_1_duration": 1,
+		"var_divide_note_2_duration": 1,
+		"var_energy_capacity": 8
+	},
 	"contours": {
 		"drone": {
 			"recipe": {
 				"weighted_sum": {
 					"contours": {
 						"o_canainn": {
-							"weights": [0, 1, 1, 1, -1],
-							"savgol": false,
+							"weights": [1, 1, 1, 1, 1],
+							"savgol": true,
 							"scale": true,
 							"shift": true
 						},
-						"phrasing#1": {
-							"phrase_exp": 10,
-							"phrase_levels": 1.0
+						"pattern": {
+							"mean": [1, 0, 0, 1, 0, 0, 0, 1],
+							"std": [0.1, 0.5, 0.2, 0.1, 0.5, 0.5, 0.2, 0.1],
+							"std_scale": 1,
+							"normalize": false,
+							"period": 1
 						},
 						"phrasing#2": {
 							"phrase_exp": 1000,
 							"phrase_levels": -1.0
-						},
-						"pattern": {
-							"mean": [1, 0, 1, 0, 0, 0, 1, 0],
-							"std": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
-							"std_scale": 1,
-							"normalize": false,
-							"period": 1
 						}
+
 					},
-					"weights": [ -0.28, -0.07, -0.3, 0.35]
+					"weights": [ 1,1,-0.5]
 				}
 			}
         },
@@ -144,11 +147,11 @@
 	"swing": {
 		"min": 1.5,
 		"max": 1,
-		"bind": "tempo",
+		"bind": "swing",
 		"locations": [1,3,5,7]
 
 	},
 	"drone": {
-        "notes_per_bar": 8
+        "notes_per_bar": 16
 	}
 }

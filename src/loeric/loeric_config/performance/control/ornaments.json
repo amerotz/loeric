@@ -1,0 +1,32 @@
+{
+    "contour_2_control": {},
+    "control_2_contour": {
+        "orn_divide": 13,
+        "orn_vibrato": 13,
+        "orn_roll_1": 13,
+        "orn_roll_2": 13,
+        "orn_roll_3": 13,
+        "orn_cut_1": 13,
+        "orn_cut_2": 13,
+        "orn_strike": 13,
+        "orn_slide": 13,
+        "orn_error": 13,
+        "orn_drop": 13,
+        "orn_triplet_1": 13,
+        "orn_triplet_2": 13,
+        "orn_divide_prob": 14,
+        "orn_vibrato_prob": 14,
+        "orn_roll_1_prob": 14,
+        "orn_roll_2_prob": 14,
+        "orn_roll_3_prob": 14,
+        "orn_cut_1_prob": 14,
+        "orn_cut_2_prob": 14,
+        "orn_strike_prob": 14,
+        "orn_slide_prob": 14,
+        "orn_error_prob": 15,
+        "orn_drop_prob": 15,
+        "orn_triplet_1_prob": 14,
+        "orn_triplet_2_prob": 14
+
+    }
+}

@@ -9,6 +9,13 @@ def main():
     parser.add_argument(
         "-o", "--output", help="the output MIDI port.", type=int, default=None
     )
+    parser.add_argument(
+        "-c",
+        "--control",
+        help="the control change number to monitor.",
+        type=int,
+        default=66,
+    )
 
     parser.add_argument(
         "-p",
@@ -28,7 +35,7 @@ def main():
             print("Awaiting message...")
             while True:
                 msg = in_.receive()
-                if msg.control != 66:
+                if msg.control != args.control:
                     continue
                 if msg.value == 127:
                     continue

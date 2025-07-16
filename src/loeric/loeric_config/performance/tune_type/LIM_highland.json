@@ -1,4 +1,10 @@
 {
+	"variables": {
+		"var_roll_2_prob": 0,
+		"var_divide_note_1_duration": 1.38,
+		"var_divide_note_2_duration": 0.62,
+		"var_energy_capacity": 8
+	},
 	"contours": {
 		"velocity": {
 			"recipe":{
@@ -38,6 +44,25 @@
 				}
 			}
 		},
+		"swing": {
+			"recipe":{
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [0, 1, 0, 0, 0],
+							"savgol": true,
+							"scale": true,
+							"shift": true
+						},
+						"random": {
+							"min": 0.0,
+							"max": 1.0
+						}
+					},
+					"weights":[0.95, 0.05]
+				}
+			}
+		},
 		"legato": {
 			"recipe":{
 				"pattern": {
@@ -50,8 +75,8 @@
 			}
 		}
 	},
-    "legato": {"min": 1, "max": 1, "bind": "tempo"},
-    "swing": {"min": 3, "max": 1.5, "bind": "tempo"},
+    "legato": {"min": 1, "max": 1, "bind": "legato"},
+    "swing": {"min": 3, "max": 1.5, "bind": "swing"},
     "values": {
 		"beat_velocity_increase": 16
 	},

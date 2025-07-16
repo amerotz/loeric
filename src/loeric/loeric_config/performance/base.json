@@ -106,6 +106,25 @@
 				}
 			}
 		},
+		"swing": {
+			"recipe": {
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [1, 1, 1, 1, 1],
+							"savgol": false,
+							"scale": true,
+							"shift": true 
+						},
+						"phrasing": {
+							"phrase_exp": 10,
+							"phrase_levels": 1.0
+						}
+					},
+					"weights": [ 0.7, 0.3]
+				}
+			}
+		},
 		"tempo_pattern": {
 			"recipe":{
 				"pattern": {
@@ -164,11 +183,11 @@
 	"swing": {
 		"min": 1,
 		"max": 1,
-		"bind": "tempo",
+		"bind": "swing",
 		"locations": [0]
 	},
 	"legato": {
-		"min": 0.5,
+		"min": 0.4,
 		"max": 1.0,
 		"bind": "legato"
 	},
@@ -189,6 +208,7 @@
 		"roll_eight_fraction_min": 0.3,
 		"slide_eight_fraction": 0.2,
 		"slide_pitch_threshold": 6,
+		"diatonic_errors": true,
 		"max_pitch_error": 2,
 		"min_pitch_error": -2,
 		"use_old_ornaments": false
@@ -196,13 +216,13 @@
 	"values": {
 		"bend_resolution": 32,
 		"beat_velocity_increase": 0,
-		"min_velocity": 1,
+		"min_velocity": 64,
 		"max_velocity": 127,
 		"pitch_deviation_cents": 1
 	},
 	"tempo_control": {
 		"increasing": false,
-		"tempo_warp_bpms": 3,
+		"tempo_warp_bpms": 1,
 		"use_old_tempo_warp": false,
 		"old_tempo_warp": 0.1
 	},
@@ -218,7 +238,7 @@
 		"active": false,
 		"threshold": 0.5,
 		"bind": "velocity",
-		"velocity_multiplier": 0.6, 
+		"velocity_multiplier": 0.9, 
 		"strings": [55, 62, 69, 76],
 		"strings_at_once": 1,
 		"free_strings": [43, 38, 50, 57, 54, 59, 48],

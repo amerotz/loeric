@@ -527,7 +527,7 @@ class EnergyContour(Contour):
 
         indexes = np.argwhere([msg.note in mask for msg in pitches])
 
-        current_energy = capacity
+        current_energy = capacity - 1
         registered_energy = []
         for i, e in enumerate(energy):
 

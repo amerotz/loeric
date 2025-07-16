@@ -10,10 +10,10 @@ class Player:
     def __init__(
         self,
         tempo: int,
-        key_signature: mp.KeySignature,
-        time_signature: m21.meter.TimeSignature,
-        save: bool,
-        midi_out,
+        key_signature: mp.KeySignature = None,
+        time_signature: m21.meter.TimeSignature = None,
+        save: bool = False,
+        midi_out=None,
         verbose: bool = False,
     ):
         """
@@ -43,13 +43,14 @@ class Player:
                 mido.MetaMessage("key_signature", key=key_signature.root_str)
             )
             """
-            self._midi_track.append(
-                mido.MetaMessage(
-                    "time_signature",
-                    numerator=time_signature.numerator,
-                    denominator=time_signature.denominator,
+            if self._time_signature is not None:
+                self._midi_track.append(
+                    mido.MetaMessage(
+                        "time_signature",
+                        numerator=time_signature.numerator,
+                        denominator=time_signature.denominator,
+                    )
                 )
-            )
 
     def init_playback(self) -> None:
         """

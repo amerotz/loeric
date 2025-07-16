@@ -78,7 +78,7 @@ def main():
     if args["shell"]:
         folders = []
     else:
-        folders = ["instrument", "tune_type", "drone", "ornament", "control"]
+        folders = ["ornament", "instrument", "tune_type", "drone", "control"]
 
     # select files
     config_name = []

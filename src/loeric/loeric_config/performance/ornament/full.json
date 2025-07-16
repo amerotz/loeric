@@ -1,4 +1,10 @@
 {
+    "variables": {
+		"var_roll_2_prob": 1,
+		"var_divide_note_1_duration": 1.40,
+		"var_divide_note_2_duration": 0.6,
+		"var_energy_capacity": 8
+	},
     "ornamentation": {
         "divide": {
             "cases": [
@@ -13,6 +19,7 @@
             "probability": 1,
             "length": 2,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "vibrato": {
@@ -28,6 +35,7 @@
             "probability": 1,
             "length": 2,
             "diatonic": true,
+            "threshold": 0,
             "slide": true
         },
         "roll_1": {
@@ -48,6 +56,7 @@
             "probability": 1,
             "length": 3,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "roll_2": {
@@ -59,11 +68,12 @@
             "pitches_std": [ 0, 0, 0, 0, 0 ],
             "velocities_mean": [ 1, 0.8, 1, 0.8, 1 ],
             "velocities_std": [ 0, 0, 0, 0, 0 ],
-            "durations_mean": [ 1, 0.2, 0.2, 0.2, 1 ],
+            "durations_mean": [ 1, 0.33, 0.33, 0.33, 1 ],
             "durations_std": [ 0, 0.1, 0.1, 0.1, 0 ],
             "probability": 1,
             "length": 3,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "roll_3": {
@@ -79,6 +89,7 @@
             "probability": 1,
             "length": 3,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "cut_1": {
@@ -94,6 +105,7 @@
             "probability": 1,
             "length": 2,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "cut_2": {
@@ -109,6 +121,7 @@
             "probability": 1,
             "length": 1,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "strike": {
@@ -124,6 +137,7 @@
             "probability": 1,
             "length": 2,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "slide": {
@@ -139,6 +153,7 @@
             "probability": 1,
             "length": 1,
             "diatonic": true,
+            "threshold": 0,
             "slide": true
         },
         "error": {
@@ -154,6 +169,7 @@
             "probability": 0.01,
             "length": 1,
             "diatonic": false,
+            "threshold": 0,
             "slide": true
         },
         "drop": {
@@ -169,6 +185,7 @@
             "probability": 0.01,
             "length": 1,
             "diatonic": false,
+            "threshold": 0,
             "slide": false
         },
         "triplet_1": {
@@ -187,6 +204,7 @@
             "probability": 1,
             "length": 3,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         },
         "triplet_2": {
@@ -203,6 +221,7 @@
             "probability": 1,
             "length": 2,
             "diatonic": true,
+            "threshold": 0,
             "slide": false
         }
     }

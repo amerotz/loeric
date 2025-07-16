@@ -1,4 +1,10 @@
 {
+	"variables": {
+		"var_roll_2_prob": 0,
+		"var_divide_note_1_duration": 1,
+		"var_divide_note_2_duration": 1,
+		"var_energy_capacity": 9
+	},
     "contours": {
         "legato": {
 			"recipe":{
@@ -12,8 +18,8 @@
 			}
 		}
     },
-    "swing": {"min": 1, "max": 1, "bind": "tempo"},
-    "legato": {"min": 1, "max": 1, "bind": "tempo"},
+    "swing": {"min": 1, "max": 1, "bind": "swing"},
+    "legato": {"min": 1, "max": 1, "bind": "legato"},
     "values": {
 		"beat_velocity_increase": 16
 	},

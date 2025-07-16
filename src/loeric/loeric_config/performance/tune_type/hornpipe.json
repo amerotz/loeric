@@ -1,32 +1,133 @@
 {
+	"variables": {
+		"var_roll_2_prob": 1,
+		"var_divide_note_1_duration": 1.40,
+		"var_divide_note_2_duration": 0.6,
+		"var_energy_capacity": 8
+	},
 	"contours": {
+		"velocity": {
+			"recipe": {
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [0, -1, 0, 1, 0],
+							"savgol": false,
+							"scale": true,
+							"shift": false
+						},
+						"linear#1": {
+							"contours": {
+								"phrasing": {
+									"phrase_exp": 10,
+									"phrase_levels": -1.0
+								}
+							},
+							"a": 0.5,
+							"b": 0.5
+						},
+						"linear#2": {
+							"contours": {
+								"weighted_sum": {
+									"contours": {
+										"clamp#1": {
+											"contours": {
+												"linear": {
+													"contours": {
+														"pitch": {
+															"scale": true,
+															"shift": true
+														}
+													},
+													"a": -1,
+													"b": 0.5
+												}
+											},
+											"low": 0
+										},
+										"clamp#2": {
+											"contours": {
+												"linear": {
+													"contours": {
+														"pitch": {
+															"scale": true,
+															"shift": true
+														}
+													},
+													"a": 1,
+													"b": -0.5
+												}
+											},
+											"low": 0
+										}
+									},
+									"weights": [1,1]
+								}
+							},
+							"a": 1,
+							"b": 0.5
+						}
+					},
+					"weights": [0.3, 0.3, 0.4]
+				}
+			}
+		},
 		"velocity_pattern": {
 			"recipe":{
 				"pattern": {
-					"mean": [0.955, 0.996, 1.004, 0.999, 0.988, 1.032, 1.029, 0.996],
-					"std": [0.222, 0.099, 0.115, 0.123, 0.115, 0.104, 0.106, 0.148],
+					"mean": [0.968, 0.997, 1.007, 1.004, 0.996, 1.027, 1.021, 0.98],
+					"std": [0.2, 0.11, 0.12, 0.132, 0.121, 0.108, 0.093, 0.175],
+
 					"std_scale": 0.1,
 					"normalize": false,
 					"period": 1
 				}
 			}
 		},
-		"tempo_pattern": {
+		"tempo": {
 			"recipe":{
-				"pattern": {
-					"mean": [0.135, 0.133, 0.128, 0.127, 0.119, 0.122, 0.124, 0.118],
-					"std": [0.092, 0.092, 0.091, 0.1, 0.089, 0.081, 0.086, 0.088],
-
-					"std_scale": 0.1,
-					"normalize": true,
-					"period": 1
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [0, 1, 0, 0, 0],
+							"savgol": true,
+							"scale": false,
+							"shift": true
+						},
+						"random": {
+							"min": 0.0,
+							"max": 1.0
+						}
+					},
+					"weights":[0.95, 0.05]
+				}
+			}
+		},
+		"swing": {
+			"recipe":{
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [0, 1, 0, 0, 0],
+							"savgol": true,
+							"scale": false,
+							"shift": true
+						},
+						"random": {
+							"min": 0.0,
+							"max": 1.0
+						}
+					},
+					"weights":[0.95, 0.05]
 				}
 			}
 		}
 	},
 	"values": {
-		"beat_velocity_increase": 0
+		"beat_velocity_increase": -8
 	},
-    "swing": {"min": 1, "max": 1, "bind": "tempo", "locations": [1,3,5,7]
-}
+    "swing": {"min": 3, "max": 1.5, "bind": "swing", "locations": [1,3,5,7] },
+	"drone": {
+		"notes_per_bar": 8
+	}
 }
