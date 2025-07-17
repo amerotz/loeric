@@ -135,7 +135,6 @@ def main():
         repeats = piece["REPEAT"]
         config = piece["CONFIG"]
         key = piece["KEY"]
-        bpm = piece["BPM"]
         end_note = piece["DO END NOTE"]
         slow_start = piece["SLOW START"]
         slow_end = piece["SLOW END"]
@@ -158,7 +157,7 @@ def main():
         received_start.wait()
 
     # create player
-    player = pl.Player(tempo=50000, midi_out=out)
+    player = pl.Player(tempo=groovers[0].current_tempo, midi_out=out)
     player.init_playback()
 
     player_t = threading.Thread(

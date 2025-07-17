@@ -291,7 +291,9 @@ class Tune:
         """
         msg = self.filter(lambda x: x.type == "set_tempo")
         if len(msg) == 0:
+            print("Setting default tempo to 120 BPM")
             return mido.bpm2tempo(120)
+        print(f"File tempo is {mido.tempo2bpm(msg[0].tempo)} BPM")
         return msg[0].tempo
 
     def _get_time_signature(self) -> m21.meter.TimeSignature:
