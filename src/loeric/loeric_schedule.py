@@ -246,8 +246,13 @@ def play_tunes(player, tunes, groovers, port):
                 continue
 
             # perform notes
-            else:
+            elif lu.is_note(message):
                 # make the groover play the messages
+                new_messages = groover.perform(message)
+            # keep meta messages intact
+            else:
+                if message.type == "songpos":
+                    pass
                 new_messages = groover.perform(message)
             # play
             player.play(new_messages)

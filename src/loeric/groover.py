@@ -1631,4 +1631,6 @@ class Groover:
         value *= self._contour_values["velocity_pattern"]
         # clamp velocity
         value = max(min(value, max_velocity), min_velocity)
+        if np.isnan(value):
+            return min_velocity
         return int(value)
