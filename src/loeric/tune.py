@@ -55,8 +55,13 @@ class Tune:
                 notes[i].time += notes[i + 1].time
                 notes[i + 1].time = 0
 
-            if not lu.is_note_off(notes[i]):
+            '''
+            if not first and not lu.is_note_off(notes[i]):
                 notes[i].time = 0
+
+            if first:
+                first = False
+            '''
 
         # load midi notes and repeat them
         self._orig_midi = []

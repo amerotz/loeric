@@ -408,6 +408,7 @@ class Groover:
 
             self._contour_values[contour_name] *= 1 - hi
             self._contour_values[contour_name] += hi * intensity
+            self._contour_values[contour_name] = np.nan_to_num(self._contour_values[contour_name], nan=0.5)
 
     def set_contour_value(self, contour_name: str, value: float) -> None:
         """
