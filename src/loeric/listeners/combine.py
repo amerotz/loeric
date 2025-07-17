@@ -94,14 +94,14 @@ def main() -> None:
             v2 = values[input_2]
             if args.mode == "through":
                 message = mido.Message(
-                    "control_change", channel=0, control=args.control, value=v1
+                    "control_change", channel=0, control=int(args.input_1_control), value=int(v1)
                 )
                 out.send(message)
                 message = mido.Message(
-                    "control_change", channel=0, control=args.control, value=v2
+                    "control_change", channel=0, control=int(args.input_2_control), value=int(v2)
                 )
                 out.send(message)
-                print(v1, v2 sep="\t")
+                print(v1, v2, sep="\t")
 
             else:
                 value = aggregators[args.mode](v1, v2)
