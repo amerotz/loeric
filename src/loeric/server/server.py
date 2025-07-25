@@ -1,5 +1,5 @@
-from os import listdir, getcwd, rename, remove
-from os.path import isfile, join, splitext
+from os import listdir, getcwd, rename, remove, makedirs
+from os.path import isfile, join, splitext, dirname
 from random import shuffle
 from typing import List
 
@@ -12,6 +12,7 @@ from muspy.outputs.midi import PITCH_NAMES
 from nanoid import generate
 from pyaudio import PyAudio
 
+from loeric.loeric_config.loeric_config import load_config, config_path
 from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all
 from loeric.server.synthout import SynthOutput
 from loeric.tune import Tune
@@ -77,6 +78,7 @@ def state():
         'track': {
             'name': tune.name,
             'time': f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
+            'config': tune.config,
             'key': key_to_str(tune.key_signature),
             'tempo': mido.tempo2bpm(tune.tempo, [tune.time_signature.numerator, tune.time_signature.denominator]),
         },
@@ -91,10 +93,11 @@ def state():
 
 
 def __set_track(track: str):
+    global tune, track_config
     track_list = list_tracks()
     if track in track_list:
-        global tune
         tune = Tune(join(track_dir, track), 1)
+        tune.config = load_config(f"tune/{splitext(tune.name.lower())[0]}")
         for musician in musicians:
             musician.tune = tune
 
@@ -132,7 +135,7 @@ def pause():
 
 @app.get('/api/stop')
 def stop():
-    #sync_stop.set()
+    # sync_stop.set()
     stop_all()
     synth.stop()
     return state()
@@ -207,7 +210,9 @@ def add_musician():
     loeric_id = generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
-    musicians.append(Musician(unused[0], loeric_id, tune, next(iter(instruments))))
+    musician = Musician(unused[0], loeric_id, tune, next(iter(instruments)))
+    musician.config = load_config(f"musician/{unused[0]}")
+    musicians.append(musician)
 
     return state()
 
@@ -234,6 +239,37 @@ def method_not_allowed(res):
         return new_res
     res.headers['Allow'] += ', OPTIONS'
     return request.app.default_error_handler(res)
+
+
+@app.post('/api/musician/config')
+def upload_musician_config():
+    global musicians
+    musician_id = request.forms.id
+    for index, musician in enumerate(musicians):
+        if musician.id == musician_id:
+            upload = request.files.get('upload')
+            filename = f"musician/{musician.name}"
+            path = config_path(filename)
+            makedirs(dirname(path), exist_ok=True)
+            upload.save(path, overwrite=True)
+
+            musician.config = load_config(filename)
+
+    return state()
+
+
+@app.post('/api/track/config')
+def upload_track_config():
+    global tune
+    upload = request.files.get('upload')
+    filename = f"tune/{splitext(tune.name.lower())[0]}"
+    path = config_path(filename)
+    makedirs(dirname(path), exist_ok=True)
+    upload.save(path, overwrite=True)
+
+    tune.config = load_config(filename)
+
+    return state()
 
 
 @app.post('/api/track')
@@ -276,10 +312,8 @@ def start_server():
     track_list = [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid']
     if len(track_list) > 0:
         track = track_list[0]
-        if track in track_list:
-            global tune
-            tune = Tune(join(track_dir, track), 1)
-            add_musician()
+        __set_track(track)
+        add_musician()
 
     run(app, host='localhost', port=8080)
     synth.stop()

@@ -217,7 +217,7 @@ class Musician:
         out = self.midi_out
         if isinstance(self.midi_out, BaseOutput):
             out = self.midi_out.name
-        return {'id': self.id, 'name': self.name, 'midiOut': out, 'midiIn': self.midi_in,
+        return {'id': self.id, 'name': self.name, 'midiOut': out, 'midiIn': self.midi_in, 'config': self.config,
                 'instrument': self.instrument, 'controls': list(map(lambda m: m.__json__(), self.control_out.controls))}
 
 
