@@ -26,15 +26,15 @@
    inkscape:pageopacity="0.0"
    inkscape:pagecheckerboard="0"
    inkscape:deskcolor="#d1d1d1"
-   inkscape:zoom="64"
-   inkscape:cx="22.148437"
-   inkscape:cy="9.1171875"
+   inkscape:zoom="8"
+   inkscape:cx="31.25"
+   inkscape:cy="22.5625"
    inkscape:window-width="1392"
    inkscape:window-height="916"
    inkscape:window-x="1743"
    inkscape:window-y="25"
    inkscape:window-maximized="0"
-   inkscape:current-layer="plug" />
+   inkscape:current-layer="svg5" />
 	<title
    id="title1">Loeric Logo</title>
 	<defs
@@ -143,12 +143,44 @@
    y1="32.641171"
    x2="25.275631"
    y2="32.641171"
-   gradientUnits="userSpaceOnUse" /></defs>
+   gradientUnits="userSpaceOnUse" /><filter
+   style="color-interpolation-filters:sRGB;"
+   inkscape:label="Drop Shadow"
+   id="filter16"
+   x="-0.062858498"
+   y="-0.04"
+   width="1.1401221"
+   height="1.0891667"><feFlood
+     result="flood"
+     in="SourceGraphic"
+     flood-opacity="0.498039"
+     flood-color="rgb(0,0,0)"
+     id="feFlood15" /><feGaussianBlur
+     result="blur"
+     in="SourceGraphic"
+     stdDeviation="1.000000"
+     id="feGaussianBlur15" /><feOffset
+     result="offset"
+     in="blur"
+     dx="0.300000"
+     dy="0.300000"
+     id="feOffset15" /><feComposite
+     result="comp1"
+     operator="in"
+     in="flood"
+     in2="offset"
+     id="feComposite15" /><feComposite
+     result="comp2"
+     operator="over"
+     in="SourceGraphic"
+     in2="comp1"
+     id="feComposite16" /></filter></defs>
 	
 	
 	<g
    id="logo"
-   transform="translate(15.271493,3.2239819)">
+   transform="translate(15.271493,3.2239819)"
+   style="filter:url(#filter16)">
 		<g
    id="plug">
 			<g
