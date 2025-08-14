@@ -154,33 +154,55 @@ class HarmonicContour(Contour):
     ) -> None:
         # retrieve pitch and time info
         # note_events = [msg for msg in midi if "note" in msg.type]
-        note_events = midi.filter(lambda x: "note" in x.type)
+        note_events = midi.filter(
+            lambda x: "note" in x.type or "key_signature" in x.type
+        )
         timings = np.array([msg.time for msg in note_events])
         pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
 
         # cumulative time
         note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
+        note_offs = np.array([lu.is_note_off(msg) for msg in note_events])
         summed_timings = np.cumsum(timings)
         summed_timings -= midi.offset
-        summed_timings = summed_timings[note_ons]
 
+        key_changes = [
+            (summed_timings[i], n.key)
+            for i, n in enumerate(note_events)
+            if "key" in n.type
+        ]
+
+        summed_timings = summed_timings[note_ons]
         notes = pitches % 12
 
         # message length
         lengths = timings[note_offs] - timings[note_ons]
-        lengths /= midi.bar_duration
-        lengths = np.interp(lengths, (0, lengths.max()), (0, 1))
+        lengths /= midi.quarter_duration * 0.5
 
         # estimate chord for each bar
         harmony = np.zeros(len(note_events))
 
         t = summed_timings.min()
+
+        if midi.forced_key:
+            current_key = midi.root
+            current_mode = midi._key_signature.mode
+        else:
+            current_key = lu.get_root(key_changes[0][1])
+            current_mode = "minor" if key_changes[0][1][-1] == "m" else "major"
+            key_changes = key_changes[1:]
+
         while t < summed_timings.max():
             start = t
             stop = t + midi.bar_duration / chords_per_bar
             if t < 0:
                 stop = 0
+
+            if len(key_changes) != 0 and not midi.forced_key:
+                if t >= key_changes[0][0]:
+                    current_key = lu.get_root(key_changes[0][1])
+                    current_mode = "minor" if key_changes[0][1][-1] == "m" else "major"
+                    key_changes = key_changes[1:]
 
             # select bar range
             indexes = np.where((summed_timings >= start) & (summed_timings < stop))
@@ -189,37 +211,46 @@ class HarmonicContour(Contour):
 
             # init counts
             chords = np.zeros(12)
+            note_count = np.zeros(12)
 
             # add chord score for each note
             for i, n in enumerate(bar_notes):
-                chords += np.roll(chord_score, n)  # * bar_lengths[i]
+                chords += np.roll(chord_score, n) * bar_lengths[i]
+                note_count[n % 12] += 1
 
             # filter out chords that are not allowed
-            root_chord = np.multiply(
+            chords_filtered = np.multiply(
                 chords,
-                np.roll(allowed_chords, midi.root),
+                np.roll(allowed_chords, current_key),
             )
+
             # choose the chord with the highest score
-            root = np.random.choice(np.argwhere(root_chord == root_chord.max())[0])
+            root = np.random.choice(
+                np.argwhere(chords_filtered == chords_filtered.max())[0]
+            )
+            previous_chord = root
 
             # check if the selected chord should be major according to the mode
-            chord_quality = np.roll(lu.chord_quality, midi.major_root)[root]
+            chord_quality = np.roll(
+                lu.chord_quality, lu.major_root(current_key, current_mode)
+            )[root]
 
             harmony_value = root
 
             # check if the note score suggests minor chord
             # (e.g. minor IV etc, minor V, etc)
-            if chords[(root + 3) % 12] > chords[(root + 4) % 12]:
-                # if not diminished already
-                if chord_quality != 2:
-                    # make it minor
-                    chord_quality = 1
+            if note_count[(root + 3) % 12] > note_count[(root + 4) % 12]:
+                # make it minor
+                chord_quality = 1
+            elif note_count[(root + 4) % 12] > note_count[(root + 3) % 12]:
+                chord_quality = 0
+            """
 
             # check if the note score suggests diminished chord
             if chords[(root + 6) % 12] > chords[(root + 7) % 12]:
                 chord_quality = 2
+                print(chords)
 
-            """
             # check if the note score suggests augmented chord
             if chords[(root + 8) % 12] > chords[(root + 7) % 12]:
                 chord_quality = 3
@@ -527,8 +558,9 @@ class EnergyContour(Contour):
 
         indexes = np.argwhere([msg.note in mask for msg in pitches])
 
-        current_energy = capacity - 1
+        current_energy = capacity
         registered_energy = []
+        was_masked = False
         for i, e in enumerate(energy):
 
             if current_energy <= 0:
@@ -536,12 +568,26 @@ class EnergyContour(Contour):
 
             registered_energy.append(current_energy)
 
-            if i in indexes:
-                current_energy += e
+            """
+                if not was_masked:
+                    current_energy = capacity
+                    was_masked = True
             else:
-                current_energy -= e
+                if was_masked:
+                    current_energy = capacity
+                    was_masked = False
+            """
 
-            current_energy = max(current_energy, 0)
+            current_energy -= e
+
+            if i in indexes:
+                if not was_masked:
+                    current_energy = capacity - current_energy
+                    was_masked = True
+            else:
+                if was_masked:
+                    current_energy = capacity - current_energy
+                    was_masked = False
 
         energy = np.array(registered_energy)
         energy -= min(energy)
@@ -563,7 +609,7 @@ class PatternContour(Contour):
         std: list = [0],
         std_scale: float = 1,
         normalize: bool = False,
-        period: float = 0.5,
+        period: float = 1,
     ) -> None:
         """
         Create the contour by repeating the input weights over the specified period.
@@ -590,10 +636,11 @@ class PatternContour(Contour):
         summed_timings -= midi.offset
         summed_timings = summed_timings[note_ons]
 
-        bar_position = summed_timings / midi.bar_duration
+        time_period = midi.bar_duration * period
+        bar_position = summed_timings / time_period
 
         pattern_indexes = np.round(
-            len(mean) * (summed_timings % midi.bar_duration) / midi.bar_duration
+            len(mean) * (summed_timings % time_period) / time_period
         ).astype(int) % len(mean)
         diff = np.diff(pattern_indexes)
         index_diff = np.argwhere(diff > 1)
@@ -612,7 +659,7 @@ class PatternContour(Contour):
         )
 
         if normalize:
-            bars = summed_timings // midi.bar_duration
+            bars = summed_timings // time_period
 
             for i in np.unique(bars):
 

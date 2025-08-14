@@ -3,7 +3,8 @@
 		"var_roll_2_prob": 0,
 		"var_divide_note_1_duration": 1,
 		"var_divide_note_2_duration": 1,
-		"var_energy_capacity": 12
+		"var_energy_capacity": 12,
+        "var_velocity_weight": [0,1,0,0,0]
 	},
     "contours": {
 		"tempo": {
@@ -69,7 +70,7 @@
         "chords_per_bar": 4
     },
     "drone": {
-        "notes_per_bar": 12
+        "notes_per_bar": [12,4,2,1]
     }
 }
 

@@ -37,6 +37,12 @@ def main():
         default=None,
         type=str,
     )
+    parser.add_argument(
+        "--keyswitch",
+        help="load a keyswitches preset.",
+        default=None,
+        type=str,
+    )
     # shell args
     parser.add_argument(
         "--shell",
@@ -78,7 +84,14 @@ def main():
     if args["shell"]:
         folders = []
     else:
-        folders = ["ornament", "instrument", "tune_type", "drone", "control"]
+        folders = [
+            "ornament",
+            "instrument",
+            "tune_type",
+            "drone",
+            "control",
+            "keyswitch",
+        ]
 
     # select files
     config_name = []

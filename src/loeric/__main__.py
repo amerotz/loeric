@@ -85,6 +85,9 @@ def play(
                     if sync_port_out is not None:
                         sync_port_out.send(message)
                         print(f"{loeric_id} SENT {message.pos} ({time.time()})")
+                elif message.type == "key_signature" and kwargs["force_key"] is None:
+                    print(f"Changing key. {message}")
+                    groover._tune.set_key_signature(message)
                 new_messages = groover.perform(message)
             # play
             player.play(new_messages)
@@ -109,9 +112,6 @@ def play(
                 filename = f"generated_{name}_{kwargs['seed']}_{loeric_id}.mid"
             print(f"Saving to {dirname}/{filename}.")
             player.save(f"{dirname}/{filename}")
-
-        done_playing.set()
-        print("Player thread terminated.")
 
     except Exception as e:
         raise e
@@ -433,6 +433,7 @@ def main():
 
     if not args["sync"] and not args["no_prompt"]:
         input("Press any key to start playback:")
+        print()
 
     # start the player thread
     try:

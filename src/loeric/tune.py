@@ -32,18 +32,20 @@ class Tune:
             mido_source = mp.read_abc(filename)
 
         # key signature
+        self.forced_key = False
         if key is not None:
             root, mode = tuple(key.split(" "))
-            self._key_signature = mp.KeySignature(
-                time=0, root=lu.get_root(root), mode=mode
-            )
+            key_signature = mp.KeySignature(time=0, root=lu.get_root(root), mode=mode)
+            self.forced_key = True
         else:
-            self._key_signature = mido_source.key_signatures[0]
+            key_signature = mido_source.key_signatures[0]
 
+        self._key_signature = key_signature
         self._root = self._key_signature.root
         self._fifths = lu.number_of_fifths[
             (self._root + lu.mode_offset[self._key_signature.mode]) % 12
         ]
+
         mido_source = mido_source.to_mido(use_note_off_message=True)
 
         # fix timing so that every note on has time=0 and every note off has its duration
@@ -54,14 +56,6 @@ class Tune:
             if lu.is_note_off(notes[i]) and lu.is_note_on(notes[i + 1]):
                 notes[i].time += notes[i + 1].time
                 notes[i + 1].time = 0
-
-            '''
-            if not first and not lu.is_note_off(notes[i]):
-                notes[i].time = 0
-
-            if first:
-                first = False
-            '''
 
         # load midi notes and repeat them
         self._orig_midi = []
@@ -181,13 +175,6 @@ class Tune:
         return self._root
 
     @property
-    def major_root(self) -> int:
-        """
-        :return: the root of the relative major of the tune's key signature in pitch space.
-        """
-        return (self._root + lu.mode_offset[self._key_signature.mode]) % 12
-
-    @property
     def ambitus(self) -> tuple[int]:
         """
         :return: the tune's lowest and highest pitches in a tuple (low, high)
@@ -235,6 +222,21 @@ class Tune:
         :return: the tune's performance offset (i.e. the length of the pickup bar) in seconds.
         """
         return self._offset
+
+    def set_key_signature(self, key_signature):
+        """
+        Set the tune's key signature.
+
+        :param key_signature: the key signature.
+        """
+        self._key_signature = mp.KeySignature(
+            time=0, root=key_signature.key, mode="major"
+        )
+        self._root = lu.get_root(key_signature.key)
+        print(self._root)
+        self._fifths = lu.number_of_fifths[
+            (self._root + lu.mode_offset[self._key_signature.mode]) % 12
+        ]
 
     def reset_performance_time(self) -> None:
         """

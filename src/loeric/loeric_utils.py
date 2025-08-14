@@ -80,6 +80,13 @@ def get_root(key_signature: str) -> int:
     return base
 
 
+def major_root(root, mode) -> int:
+    """
+    :return: the root of the relative major of the key signature in pitch space.
+    """
+    return (root + mode_offset[mode]) % 12
+
+
 # 0 = major
 # 1 = minor
 # 2 = diminished

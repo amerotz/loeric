@@ -1,77 +1,32 @@
 {
-    "variables": {
-        "var_velocity_weight": [1,1,1,1,1],
-        "major_allowed_chords": [
-            2,
-            0,
-            0.5,
-            0,
-            0.25,
-            2,
-            0,
-            2,
-            0,
-            1,
-            0,
-            0
-        ],
-        "minor_allowed_chords": [
-            2,
-            0,
-            0.5,
-            0.25,
-            0,
-            2,
-            0,
-            2,
-            1,
-            0,
-            1,
-            0.5
-        ],
-        "dorian_allowed_chords": [
-            2,
-            0,
-            0.5,
-            2,
-            0,
-            0.5,
-            0,
-            1,
-            0,
-            1,
-            2,
-            0
-        ],
-        "mixolydian_allowed_chords": [
-            2,
-            0,
-            0.5,
-            0,
-            0.5,
-            1,
-            0,
-            0.5,
-            0,
-            0.5,
-            1,
-            0
-        ]
-    },
     "contours": {
         "drone": {
             "recipe": {
-                "o_canainn": {
-                    "weights": [
-                        1,
-                        1,
-                        1,
-                        1,
-                        1
-                    ],
-                    "savgol": false,
-                    "scale": true,
-                    "shift": true
+                "weighted_sum": {
+                    "contours": {
+                        "o_canainn": {
+                            "weights": [ 0, 1, 1, 1, -1 ],
+                            "savgol": false,
+                            "scale": true,
+                            "shift": true
+                        },
+                        "phrasing#1": {
+                            "phrase_exp": 10,
+                            "phrase_levels": 1.0
+                        },
+                        "phrasing#2": {
+                            "phrase_exp": 1000,
+                            "phrase_levels": -1.0
+                        },
+                        "pattern": {
+                            "mean": [ 1, 0, 0 ],
+                            "std": [ 0.5, 0.5, 0.5],
+                            "std_scale": 1,
+                            "normalize": false,
+                            "period": 1
+                        }
+                    },
+                    "weights": [ -0.28, -0.07, -0.3, 0.35 ]
                 }
             }
         },
@@ -80,13 +35,7 @@
                 "weighted_sum": {
                     "contours": {
                         "o_canainn": {
-                            "weights": [
-                                1,
-                                1,
-                                1,
-                                1,
-                                1
-                            ],
+                            "weights": [ 0, 1, 0, 1, 0 ],
                             "savgol": false,
                             "scale": true,
                             "shift": false
@@ -136,33 +85,22 @@
                                             "low": 0
                                         }
                                     },
-                                    "weights": [
-                                        1,
-                                        1
-                                    ]
+                                    "weights": [ 1, 1 ]
                                 }
                             },
                             "a": 1,
                             "b": 0.5
                         }
                     },
-                    "weights": [
-                        0.6,
-                        0.2,
-                        0.2
-                    ]
+                    "weights": [ 0.3, 0.3, 0.4 ]
                 }
             }
         },
         "velocity_pattern": {
             "recipe": {
                 "pattern": {
-                    "mean": [
-                        1.0
-                    ],
-                    "std": [
-                        0.0
-                    ],
+                    "mean": [1.2, 1, 1, 1, 1.05, 1],
+                    "std": [ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                     "std_scale": 1,
                     "normalize": false,
                     "period": 1
@@ -173,60 +111,56 @@
             "recipe": {
                 "to_mean": {
                     "contours": {
-                        "clamp": {
+                        "weighted_sum": {
                             "contours": {
-                                "phrasing": {
-                                    "phrase_exp": 10,
-                                    "phrase_levels": 1.0
+                                "o_canainn": {
+                                    "weights": [ 1, -1, 1, 1, 1 ],
+                                    "savgol": false,
+                                    "scale": true,
+                                    "shift": true
+                                },
+                                "phrasing#1": {
+                                    "phrase_exp": 80,
+                                    "phrase_levels": -1.0
                                 }
                             },
-                            "low": 0.0,
-                            "high": 1.0
+                            "weights": [ 0.5, 0.5 ]
                         }
                     },
                     "mean": 0.5
                 }
-            },
-            "human_impact_scale": 0
+            }
         },
         "swing": {
             "recipe": {
-                "weighted_sum": {
+                "to_mean": {
                     "contours": {
-                        "o_canainn": {
-                            "weights": [
-                                1,
-                                1,
-                                1,
-                                1,
-                                1
-                            ],
-                            "savgol": false,
-                            "scale": true,
-                            "shift": true
-                        },
-                        "phrasing": {
-                            "phrase_exp": 10,
-                            "phrase_levels": 1.0
+                        "weighted_sum": {
+                            "contours": {
+                                "o_canainn": {
+                                    "weights": [ 1, -1, 1, 1, 1 ],
+                                    "savgol": false,
+                                    "scale": true,
+                                    "shift": true
+                                },
+                                "phrasing#1": {
+                                    "phrase_exp": 80,
+                                    "phrase_levels": -1.0
+                                }
+                            },
+                            "weights": [ 0.5, 0.5 ]
                         }
                     },
-                    "weights": [
-                        0.7,
-                        0.3
-                    ]
+                    "mean": 0.5
                 }
             }
         },
         "tempo_pattern": {
             "recipe": {
                 "pattern": {
-                    "mean": [
-                        1.0
-                    ],
-                    "std": [
-                        0.0
-                    ],
-                    "std_scale": 1,
+                    "mean": [ 1.05, 1, 1, 1, 1, 1],
+                    "std": [ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                    "std_scale": 0.1,
                     "normalize": true,
                     "period": 1
                 }
@@ -237,13 +171,7 @@
                 "weighted_sum": {
                     "contours": {
                         "o_canainn": {
-                            "weights": [
-                                1,
-                                1,
-                                1,
-                                1,
-                                1
-                            ],
+                            "weights": [ 1, 1, 1, 1, 1 ],
                             "savgol": false,
                             "scale": true,
                             "shift": false
@@ -253,10 +181,7 @@
                             "phrase_levels": 1.0
                         }
                     },
-                    "weights": [
-                        0.8,
-                        0.2
-                    ]
+                    "weights": [ 0.8, 0.2 ]
                 }
             }
         },
@@ -267,26 +192,17 @@
                         "weighted_sum": {
                             "contours": {
                                 "o_canainn": {
-                                    "weights": [
-                                        0,
-                                        0,
-                                        -1,
-                                        -1,
-                                        -1
-                                    ],
+                                    "weights": [ 0, 0, -1, -1, -1 ],
                                     "savgol": false,
                                     "scale": true,
                                     "shift": false
                                 },
                                 "phrasing": {
-                                    "phrase_exp": 10000,
-                                    "phrase_levels": 0.0
+                                    "phrase_exp": 80,
+                                    "phrase_levels": -1.0
                                 }
                             },
-                            "weights": [
-                                0.2,
-                                0.8
-                            ]
+                            "weights": [ 0.0, 0.8 ]
                         }
                     },
                     "offset": -1
@@ -295,19 +211,16 @@
         }
     },
     "swing": {
-        "min": 1,
+        "min": 2,
         "max": 1,
         "bind": "swing",
-        "locations": [
-            0
-        ]
+        "locations": [ 1, 3, 5 ]
     },
     "legato": {
         "min": 0.4,
         "max": 1.0,
         "bind": "legato"
     },
-    "keyswitches": {},
     "probabilities": {
         "drop": 0.005,
         "roll": 0.33,
@@ -331,7 +244,7 @@
     },
     "values": {
         "bend_resolution": 32,
-        "beat_velocity_increase": 0,
+        "beat_velocity_increase": 16,
         "min_velocity": 64,
         "max_velocity": 127,
         "pitch_deviation_cents": 1
@@ -347,49 +260,30 @@
     "contour_2_control": {},
     "control_2_contour": {},
     "harmony": {
-        "chord_score": [
-            2,
-            -1,
-            0,
-            0,
-            0,
-            1,
-            -1,
-            0,
-            1,
-            1,
-            0,
-            -1
-        ]
+        "chord_score": [ 2, 0, 0, 0, 0, 1, -1, 0, 1, 1, 0, 0 ],
+        "allowed_chords": [ 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0 ],
+        "chords_per_bar": 2
     },
     "drone": {
         "active": false,
         "threshold": 0.5,
-        "bind": "drone",
+        "bind": "velocity",
         "velocity_multiplier": 0.9,
-        "strings": [
-            55,
-            62,
-            69,
-            76
-        ],
+        "strings": [ 55, 62, 69, 76 ],
         "strings_at_once": 1,
-        "free_strings": [
-            43,
-            38,
-            50,
-            57,
-            54,
-            59,
-            48
-        ],
+        "free_strings": [ 43, 38, 50, 57, 54, 59, 48 ],
         "free_strings_at_once": 0,
-        "break_ornaments": false,
         "transpose": false,
         "allow_root": false,
         "delay_range": 0.001,
-        "notes_per_bar_bind": "velocity"
+        "notes_per_bar": 6
     },
     "approach_from_above": {},
-    "approach_from_below": {}
+    "approach_from_below": {},
+    "variables": {
+        "var_roll_2_prob": 0,
+        "var_divide_note_1_duration": 1,
+        "var_divide_note_2_duration": 1,
+        "var_energy_capacity": 6
+    }
 }

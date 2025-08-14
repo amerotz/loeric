@@ -21,9 +21,13 @@ for msg in midi:
         velocities.append(msg.velocity)
 
 times = np.array(onsets)
+new_times = np.arange()
+"""
 times -= min(times)
-# durations = np.diff(times)
+durations = np.diff(times)
+"""
 
+"""
 durations = np.round(
     np.random.normal(
         loc=[1.1, 0.9, 1.2, 0.8, 1.1, 0.9, 2, 1],
@@ -33,11 +37,12 @@ durations = np.round(
     2,
 ).flatten()
 print(durations.shape)
+"""
 
 results = []
 means = []
 stds = []
-wraps = [2, 3, 4, 6, 8, 9, 12, 16, 18, 24, 32, 36]
+wraps = [2, 3, 4, 6, 8, 9, 12, 16]  # , 18, 24 , 32, 36]
 for i in wraps:
     if i >= len(durations):
         continue
@@ -66,9 +71,9 @@ print(means[index])
 print(stds[index])
 
 """
-X = times
-Y = np.array(velocities)
-# Y = np.diff(Y, prepend=velocities[0])
+X = times[:-1]
+Y = np.array(durations)
+# Y = np.diff(Y, prepend=1)
 
 x = np.arange(0, max(X), 0.05)
 y = np.interp(x, X, Y)
@@ -79,12 +84,12 @@ frequencies = np.fft.rfftfreq(len(x), d=(x[1] - x[0]))  # frequency bins
 
 # 3. Get magnitude spectrum and ignore DC (index 0)
 magnitude = np.abs(fft_result)
-# magnitude[0] = 0  # ignore DC
+magnitude[0] = 0  # ignore DC
 magnitude /= max(magnitude)
 
 plt.plot(60 * frequencies[1:], magnitude[1:])
 
-indexes = np.argsort(magnitude)[-10:]
+indexes = np.argsort(magnitude)[-20:]
 plt.scatter(60 * frequencies[indexes], magnitude[indexes], color="red")
 print(60 * frequencies[indexes])
 # plt.xscale("log")

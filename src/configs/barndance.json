@@ -1,6 +1,5 @@
 {
     "variables": {
-        "var_velocity_weight": [1,1,1,1,1],
         "major_allowed_chords": [
             2,
             0,
@@ -56,26 +55,22 @@
             0.5,
             1,
             0
-        ]
+        ],
+        "var_roll_2_prob": 0,
+        "var_divide_note_1_duration": 1,
+        "var_divide_note_2_duration": 1,
+        "var_energy_capacity": 8,
+        "var_barndance_pattern": {
+            "mean": [ 1.2, 0.8, 1.2, 0.8, 1.2, 0.8, 1, 1,
+                    1.4, 0.6, 1.4, 0.6, 1.4, 0.6, 1, 1 ],
+            "std": [ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 ],
+            "std_scale": 1,
+            "normalize": false,
+            "period": 2
+        }
     },
     "contours": {
         "drone": {
-            "recipe": {
-                "o_canainn": {
-                    "weights": [
-                        1,
-                        1,
-                        1,
-                        1,
-                        1
-                    ],
-                    "savgol": false,
-                    "scale": true,
-                    "shift": true
-                }
-            }
-        },
-        "velocity": {
             "recipe": {
                 "weighted_sum": {
                     "contours": {
@@ -85,7 +80,37 @@
                                 1,
                                 1,
                                 1,
-                                1
+                                2
+                            ],
+                            "savgol": true,
+                            "scale": true,
+                            "shift": true
+                        },
+                        "pattern": "var_barndance_pattern",
+                        "phrasing#2": {
+                            "phrase_exp": 1000,
+                            "phrase_levels": -1.0
+                        }
+                    },
+                    "weights": [
+                        1,
+                        1,
+                        -0.5
+                    ]
+                }
+            }
+        },
+        "velocity": {
+            "recipe": {
+                "weighted_sum": {
+                    "contours": {
+                        "o_canainn": {
+                            "weights": [
+                                0,
+                                1,
+                                0,
+                                1,
+                                0
                             ],
                             "savgol": false,
                             "scale": true,
@@ -147,60 +172,48 @@
                         }
                     },
                     "weights": [
-                        0.6,
-                        0.2,
-                        0.2
+                        0.3,
+                        0.3,
+                        0.4
                     ]
                 }
             }
         },
         "velocity_pattern": {
             "recipe": {
-                "pattern": {
-                    "mean": [
-                        1.0
-                    ],
-                    "std": [
-                        0.0
-                    ],
-                    "std_scale": 1,
-                    "normalize": false,
-                    "period": 1
-                }
+                "pattern": "var_barndance_pattern"
             }
         },
         "tempo": {
             "recipe": {
                 "to_mean": {
                     "contours": {
-                        "clamp": {
+                        "weighted_sum": {
                             "contours": {
+                                "o_canainn": {
+                                    "weights": [ 1, 1, 1, 1, 1 ],
+                                    "savgol": false,
+                                    "scale": true,
+                                    "shift": true
+                                },
                                 "phrasing": {
                                     "phrase_exp": 10,
                                     "phrase_levels": 1.0
                                 }
                             },
-                            "low": 0.0,
-                            "high": 1.0
+                            "weights": [ 0.7, 0.3 ]
                         }
                     },
                     "mean": 0.5
                 }
-            },
-            "human_impact_scale": 0
+            }
         },
         "swing": {
             "recipe": {
                 "weighted_sum": {
                     "contours": {
                         "o_canainn": {
-                            "weights": [
-                                1,
-                                1,
-                                1,
-                                1,
-                                1
-                            ],
+                            "weights": [ 1, 1, 1, 1, 1 ],
                             "savgol": false,
                             "scale": true,
                             "shift": true
@@ -210,10 +223,7 @@
                             "phrase_levels": 1.0
                         }
                     },
-                    "weights": [
-                        0.7,
-                        0.3
-                    ]
+                    "weights": [ 0.7, 0.3 ]
                 }
             }
         },
@@ -221,12 +231,12 @@
             "recipe": {
                 "pattern": {
                     "mean": [
-                        1.0
+                        1.05, 0.95, 1.05, 0.95, 1, 1, 1, 1
                     ],
                     "std": [
-                        0.0
+                        0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01
                     ],
-                    "std_scale": 1,
+                    "std_scale": 0.1,
                     "normalize": true,
                     "period": 1
                 }
@@ -238,7 +248,7 @@
                     "contours": {
                         "o_canainn": {
                             "weights": [
-                                1,
+                                0,
                                 1,
                                 1,
                                 1,
@@ -246,7 +256,7 @@
                             ],
                             "savgol": false,
                             "scale": true,
-                            "shift": false
+                            "shift": true
                         },
                         "phrasing": {
                             "phrase_exp": 10,
@@ -268,7 +278,7 @@
                             "contours": {
                                 "o_canainn": {
                                     "weights": [
-                                        0,
+                                        1,
                                         0,
                                         -1,
                                         -1,
@@ -279,8 +289,8 @@
                                     "shift": false
                                 },
                                 "phrasing": {
-                                    "phrase_exp": 10000,
-                                    "phrase_levels": 0.0
+                                    "phrase_exp": 100,
+                                    "phrase_levels": 0
                                 }
                             },
                             "weights": [
@@ -295,19 +305,21 @@
         }
     },
     "swing": {
-        "min": 1,
-        "max": 1,
+        "min": 2.5,
+        "max": 1.5,
         "bind": "swing",
         "locations": [
-            0
+            1,
+            3,
+            5,
+            7
         ]
     },
     "legato": {
-        "min": 0.4,
+        "min": 0.1,
         "max": 1.0,
         "bind": "legato"
     },
-    "keyswitches": {},
     "probabilities": {
         "drop": 0.005,
         "roll": 0.33,
@@ -331,7 +343,7 @@
     },
     "values": {
         "bend_resolution": 32,
-        "beat_velocity_increase": 0,
+        "beat_velocity_increase": 16,
         "min_velocity": 64,
         "max_velocity": 127,
         "pitch_deviation_cents": 1
@@ -388,7 +400,13 @@
         "transpose": false,
         "allow_root": false,
         "delay_range": 0.001,
-        "notes_per_bar_bind": "velocity"
+        "notes_per_bar_bind": "velocity",
+        "notes_per_bar": [
+            8,
+            4,
+            2,
+            1
+        ]
     },
     "approach_from_above": {},
     "approach_from_below": {}

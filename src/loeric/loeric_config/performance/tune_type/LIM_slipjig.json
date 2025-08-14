@@ -3,7 +3,8 @@
 		"var_roll_2_prob": 0,
 		"var_divide_note_1_duration": 1,
 		"var_divide_note_2_duration": 1,
-		"var_energy_capacity": 9
+		"var_energy_capacity": 9,
+        "var_velocity_weight": [0,1,1,1,1]
 	},
     "contours": {
         "legato": {
@@ -31,7 +32,7 @@
         "chords_per_bar": 3
     },
     "drone": {
-        "notes_per_bar": 9
+        "notes_per_bar": [9,3,1]
     }
 }
 
