@@ -1,0 +1,16 @@
+{
+    "keyswitches": {
+        "legato": {
+            "bind": "legato",
+            "min": 0.7,
+            "max": 1,
+            "key": 34
+        },
+        "short": {
+            "bind": "legato",
+            "min": 0.0,
+            "max": 0.7,
+            "key": 24
+        }
+    }
+}

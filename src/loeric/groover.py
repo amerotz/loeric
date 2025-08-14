@@ -913,7 +913,7 @@ class Groover:
                 (
                     drone,
                     free_drone_notes[
-                        free_index[: self._config["drone"]["free_strings_at_once"]]
+                        free_index[:np.round(self._contour_values[self._config["drone"]["bind"]]*self._config["drone"]["free_strings_at_once"]).astype(int)]
                     ].astype(int),
                 )
             )
