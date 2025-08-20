@@ -593,15 +593,16 @@ class Groover:
         # add contour information as MIDI CC
         for contour_name in self._config["contour_2_control"]:
             value = max(0, min(127, round(self._contour_values[contour_name] * 127)))
-            notes.append(
-                mido.Message(
-                    "control_change",
-                    channel=self._config["values"]["midi_channel"],
-                    control=self._config["contour_2_control"][contour_name],
-                    time=0,
-                    value=value,
+            for control_num in self._config["contour_2_control"][contour_name]:
+                notes.append(
+                    mido.Message(
+                        "control_change",
+                        channel=self._config["values"]["midi_channel"],
+                        control=control_num,
+                        time=0,
+                        value=value,
+                    )
                 )
-            )
 
         if not self._syncing:
             # add explicit tempo information
@@ -893,28 +894,38 @@ class Groover:
         ]
 
         drone = np.array([-1]).astype(int)
+        drone_perc = self._contour_values[self._config["drone"]["bind"]]
+        drone_perc = (drone_perc - self._drone_threshold) / (1 - self._drone_threshold)
 
         if len(index) != 0:
             drone_notes = self._drone_notes[index]
             index = np.argsort(abs(drone_notes - reference))
+            drone_num = np.round(
+                self._config["drone"]["strings_min"] * (1 - drone_perc)
+                + drone_perc * self._config["drone"]["strings_max"],
+            ).astype(int)
             drone = np.concatenate(
                 (
                     drone,
-                    drone_notes[
-                        index[: self._config["drone"]["strings_at_once"]]
-                    ].astype(int),
+                    drone_notes[index[:drone_num]].astype(int),
                 )
             )
 
         if len(free_index) != 0:
             free_drone_notes = self._free_drone_notes[free_index]
-            free_index = np.argsort((7 * (free_drone_notes - harmony)) % 12)
+            free_index = np.argsort(
+                0.1 * np.arange(len(free_drone_notes))
+                + (7 * (free_drone_notes - harmony)) % 12,
+            )
+            # number of strings changes with intensity of signal
+            drone_num = np.round(
+                self._config["drone"]["free_strings_min"] * (1 - drone_perc)
+                + drone_perc * self._config["drone"]["free_strings_max"],
+            ).astype(int)
             drone = np.concatenate(
                 (
                     drone,
-                    free_drone_notes[
-                        free_index[:np.round(self._contour_values[self._config["drone"]["bind"]]*self._config["drone"]["free_strings_at_once"]).astype(int)]
-                    ].astype(int),
+                    free_drone_notes[free_index[:drone_num]].astype(int),
                 )
             )
 

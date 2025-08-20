@@ -487,7 +487,8 @@
             69,
             76
         ],
-        "strings_at_once": 0,
+        "strings_min": 0,
+        "strings_max": 0,
         "free_strings": [
             55,
             50,
@@ -502,11 +503,12 @@
             56,
             58
         ],
-        "free_strings_at_once": 1,
+        "free_strings_min": 1,
+        "free_strings_max": 1,
         "transpose": false,
         "allow_root": false,
         "delay_range": 0.001,
-        "notes_per_bar": 12
+        "notes_per_bar": [12]
     },
     "approach_from_above": {
         "D4": "E4",

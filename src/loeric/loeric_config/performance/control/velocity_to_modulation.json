@@ -1,5 +1,5 @@
 {
 	"contour_2_control": {
-		"velocity": 1
+		"velocity": [1]
 	}
 }

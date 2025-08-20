@@ -512,8 +512,10 @@
     },
     "drone": {
         "active": false,
-        "strings_at_once": 0,
-        "free_strings_at_once": 1,
+        "strings_min": 0,
+        "strings_max": 0,
+        "free_strings_min": 1,
+        "free_strings_max": 2,
         "free_strings": [
             55,
             50,

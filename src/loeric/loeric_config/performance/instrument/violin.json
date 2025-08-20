@@ -823,8 +823,10 @@
             69,
             76
         ],
-        "strings_at_once": 1,
-        "free_strings_at_once": 0,
+        "strings_min": 1,
+        "strings_max": 2,
+        "free_strings_min": 0,
+        "free_strings_max": 0,
         "break_ornaments": true
     }
 }

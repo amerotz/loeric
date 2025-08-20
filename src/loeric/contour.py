@@ -192,7 +192,7 @@ class HarmonicContour(Contour):
             current_mode = "minor" if key_changes[0][1][-1] == "m" else "major"
             key_changes = key_changes[1:]
 
-        while t < summed_timings.max():
+        while t <= summed_timings.max():
             start = t
             stop = t + midi.bar_duration / chords_per_bar
             if t < 0:
