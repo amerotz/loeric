@@ -1669,7 +1669,7 @@ class Groover:
         :return: the new duration of the input time value in seconds.
         """
         tempo_ratio = self.current_tempo / self._tune.tempo
-        return max(0, min(tempo_ratio * time, lu.MAX_TEMPO))
+        return max(0, min(tempo_ratio * time, lu.MAX_TEMPO-1))
 
     def reset_contours(self) -> None:
         """
