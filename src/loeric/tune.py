@@ -13,7 +13,7 @@ from . import loeric_utils as lu
 class Tune:
     """A wrapper for a midi file."""
 
-    def __init__(self, filename: str, repeats: int, key=None):
+    def __init__(self, filename: str, repeats: int, key=None, time=None):
         """
         Initialize the class. A number of properties is computed:
 
@@ -36,6 +36,8 @@ class Tune:
         if key is not None:
             root, mode = tuple(key.split(" "))
             key_signature = mp.KeySignature(time=0, root=lu.get_root(root), mode=mode)
+            # reset key signatures
+            mido_source.key_signatures = []
             self.forced_key = True
         else:
             key_signature = mido_source.key_signatures[0]
@@ -73,7 +75,18 @@ class Tune:
         )
 
         # time signature
-        self._time_signature = self._get_time_signature()
+        self.forced_time = False
+        if time is not None:
+            num, den = tuple(time.split("/"))
+            self._time_signature = m21.meter.TimeSignature(
+                numerator=int(num), denominator=int(den)
+            )
+            # reset key signatures
+            mido_source.time_signatures = []
+            self.forced_time = True
+        else:
+            # time signature
+            self._time_signature = self._get_time_signature()
 
         # tempo in microseconds per quarter
         self._tempo = self._get_original_tempo()

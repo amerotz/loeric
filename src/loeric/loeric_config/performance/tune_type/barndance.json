@@ -11,7 +11,6 @@
 		"var_roll_2_prob": 0,
 		"var_divide_note_1_duration": 1.33,
 		"var_divide_note_2_duration": 0.66,
-		"var_energy_capacity": 8,
         "var_velocity_weight": [0,1,1,1,1]
     },
     "contours": {

@@ -38,8 +38,8 @@ def main():
         type=str,
     )
     parser.add_argument(
-        "--keyswitch",
-        help="load a keyswitches preset.",
+        "--synth",
+        help="load a synth preset.",
         default=None,
         type=str,
     )
@@ -90,7 +90,7 @@ def main():
             "tune_type",
             "drone",
             "control",
-            "keyswitch",
+            "synth",
         ]
 
     # select files

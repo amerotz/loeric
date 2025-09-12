@@ -294,6 +294,12 @@ def main():
         default=None,
     )
     parser.add_argument(
+        "--force-time",
+        help="overrides any time signature information in the tune.",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
         "--plot",
         help="plots the specified contour before playback.",
         type=str,
@@ -438,7 +444,12 @@ def main():
     # start the player thread
     try:
         # load a tune
-        tune = tu.Tune(args["source"], args["repeat"], key=args["force_key"])
+        tune = tu.Tune(
+            args["source"],
+            args["repeat"],
+            key=args["force_key"],
+            time=args["force_time"],
+        )
 
         # check seed
         if args["seed"] is None:

@@ -80,13 +80,7 @@
                 "weighted_sum": {
                     "contours": {
                         "o_canainn": {
-                            "weights": [
-                                1,
-                                1,
-                                1,
-                                1,
-                                1
-                            ],
+                            "weights": "var_velocity_weight",
                             "savgol": false,
                             "scale": true,
                             "shift": false
@@ -268,11 +262,11 @@
                             "contours": {
                                 "o_canainn": {
                                     "weights": [
-                                        0,
+                                        1,
+                                        1,
                                         0,
                                         -1,
-                                        -1,
-                                        -1
+                                        -0.25
                                     ],
                                     "savgol": false,
                                     "scale": true,
@@ -284,8 +278,8 @@
                                 }
                             },
                             "weights": [
-                                0.2,
-                                0.8
+                                0.3,
+                                0.7
                             ]
                         }
                     },

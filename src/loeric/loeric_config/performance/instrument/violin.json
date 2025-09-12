@@ -6,16 +6,6 @@
                     "contours": {
                         "weighted_sum": {
                             "contours": {
-                                "linear": {
-                                    "contours": {
-                                        "energy": {
-                                            "capacity": "var_energy_capacity",
-                                            "mask": []
-                                        }
-                                    },
-                                    "a": 0.5,
-                                    "b": 0.5
-                                },
                                 "o_canainn": {
                                     "weights": "var_velocity_weight",
                                     "savgol": true,
@@ -37,9 +27,8 @@
                                 }
                             },
                             "weights": [
-                                0.2,
                                 0.5,
-                                0.1,
+                                0.2,
                                 0.3
                             ]
                         }

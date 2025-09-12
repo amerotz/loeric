@@ -144,7 +144,6 @@
     "variables": {
         "var_roll_2_prob": 0,
         "var_divide_note_1_duration": 1.33,
-        "var_divide_note_2_duration": 0.66,
-        "var_energy_capacity": 12
+        "var_divide_note_2_duration": 0.66
     }
 }

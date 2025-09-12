@@ -531,71 +531,6 @@ class PitchContour(Contour):
             )
 
 
-class EnergyContour(Contour):
-    """A contour holding the energy spent to play notes in the tune. When energy falls to zero, it goes back up to the maximum level. Useful to model breathing, fraggin and pulling, bow motion etc."""
-
-    def __init__(self):
-        super().__init__()
-
-    def calculate(
-        self,
-        midi: tune.Tune,
-        mask: list,
-        capacity: float,
-    ) -> None:
-
-        pitches = midi.filter(lambda x: lu.is_note_on(x))
-        note_events = midi.filter(lambda x: lu.is_note(x))
-
-        timings = np.array([msg.time for msg in note_events])
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([lu.is_note_off(msg) for msg in note_events])
-        lengths = timings[note_offs] - timings[note_ons]
-        lengths /= midi.quarter_duration * 0.5
-
-        energy = np.ones(len(pitches))
-        energy = np.multiply(energy, lengths)
-
-        indexes = np.argwhere([msg.note in mask for msg in pitches])
-
-        current_energy = capacity
-        registered_energy = []
-        was_masked = False
-        for i, e in enumerate(energy):
-
-            if current_energy <= 0:
-                current_energy = capacity
-
-            registered_energy.append(current_energy)
-
-            """
-                if not was_masked:
-                    current_energy = capacity
-                    was_masked = True
-            else:
-                if was_masked:
-                    current_energy = capacity
-                    was_masked = False
-            """
-
-            current_energy -= e
-
-            if i in indexes:
-                if not was_masked:
-                    current_energy = capacity - current_energy
-                    was_masked = True
-            else:
-                if was_masked:
-                    current_energy = capacity - current_energy
-                    was_masked = False
-
-        energy = np.array(registered_energy)
-        energy -= min(energy)
-        energy /= max(energy)
-
-        self._contour = energy
-
-
 class PatternContour(Contour):
     """A contour made of a repeating pattern."""
 
@@ -827,7 +762,6 @@ def create_contour(tune: tune.Tune, contour_program: dict, key=None) -> Contour:
         "phrasing": PhraseContour,
         "random": RandomContour,
         "pattern": PatternContour,
-        "energy": EnergyContour,
     }
 
     operation_dict = {

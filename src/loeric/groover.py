@@ -219,6 +219,9 @@ class Groover:
                 self._max_ornament_length, self._config["ornamentation"][o]["length"]
             )
 
+        # active notes
+        self._active_notes = np.zeros(127)
+
         # legato
         self._legato_amount = (
             self._config["legato"]["max"] - self._config["legato"]["min"]
@@ -556,6 +559,10 @@ class Groover:
             new_message.channel = self._midi_channel
 
         if lu.is_note_off(new_message):
+
+            # keep track of active notes
+            self._active_notes[new_message.note] = 0
+
             # randomize end time and legato
             mult = np.random.normal(
                 loc=self._config["legato"]["min"]
@@ -579,6 +586,10 @@ class Groover:
 
         # change attributes
         if is_note_on:
+
+            # keep track of active notes
+            self._active_notes[new_message.note] = 1
+
             # change loudness
             new_message.velocity = self._current_velocity
 
@@ -592,17 +603,22 @@ class Groover:
 
         # add contour information as MIDI CC
         for contour_name in self._config["contour_2_control"]:
-            value = max(0, min(127, round(self._contour_values[contour_name] * 127)))
-            for control_num in self._config["contour_2_control"][contour_name]:
-                notes.append(
-                    mido.Message(
-                        "control_change",
-                        channel=self._config["values"]["midi_channel"],
-                        control=control_num,
-                        time=0,
-                        value=value,
-                    )
+
+            contour = contour_name.split("#")[0]
+            control = self._config["contour_2_control"][contour_name]["control"]
+            value = self._contour_values[contour]
+            min_value = self._config["contour_2_control"][contour_name]["min"]
+            max_value = self._config["contour_2_control"][contour_name]["max"]
+            value = max(0, min(127, round(min_value + value * (max_value - min_value))))
+            notes.append(
+                mido.Message(
+                    "control_change",
+                    channel=self._config["values"]["midi_channel"],
+                    control=control,
+                    time=0,
+                    value=value,
                 )
+            )
 
         if not self._syncing:
             # add explicit tempo information
@@ -611,8 +627,9 @@ class Groover:
             )
 
         notes_to_add = [new_message]
-        # modify the note
-        if is_note_on:
+
+        # ornament note only if all other notes have stopped playing
+        if is_note_on and self._active_notes.sum() == 1:
             # create ornaments
             if self.can_generate_ornament():
                 # choose which ornament
