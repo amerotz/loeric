@@ -370,7 +370,7 @@ class Groover:
             # init the human contours
             self._contour_values[f"{contour_name}_intensity"] = 0.5
             self._contour_values[f"{contour_name}_human_impact"] = (
-                self._initial_human_impact
+                self._config["contours"][contour_name]["human_impact_scale"]
             )
             self._contour_values[contour_name] = 0.5
 
