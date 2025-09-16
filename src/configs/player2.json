@@ -416,7 +416,7 @@
         "chords_per_bar": 2
     },
     "drone": {
-        "active": false,
+        "active": true,
         "threshold": 0.5,
         "bind": "drone",
         "velocity_multiplier": 0.8,

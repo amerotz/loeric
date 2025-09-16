@@ -6,16 +6,7 @@ import mido
 import aubio
 import numpy as np
 
-sample_rate = 44100
-win_size = 512
-hop_size = 256
-
-block_size = hop_size  # sample_rate // 10
-
-pitch_o = aubio.pitch("yin", win_size, hop_size, sample_rate)
-pitch_o.set_unit("midi")
-pitch_o.set_silence(-70)
-
+hop_size = None
 onsets = []
 pitches = []
 
@@ -133,16 +124,26 @@ def loudness_analysis(samples, responsiveness=1, control=11, invert=False):
 loudness_analysis.last_sent = 0
 
 
-def callback(indata, frames, ctime, status):
-    global port, old_index, intonation, loudness_responsiveness, loudness_control, loudness_invert, intonation_responsiveness, messages_per_second
+buffer = []
 
-    samples = np.float32(np.mean(indata, axis=1))
+
+def callback(indata, frames, ctime, status):
+    global buffer, port, old_index, intonation, loudness_responsiveness, loudness_control, loudness_invert, intonation_responsiveness, messages_per_second, hop_size
+
+    buffer.append(np.float32(np.mean(indata, axis=1)))
+    if len(buffer) == messages_per_second:
+        buffer = buffer[1:]
+
+    samples = np.concatenate(buffer)
+
     cc_value = None
     int_note = None
 
     # check intonation
     if intonation_responsiveness != 0:
-        int_note = pitch_analysis(samples, responsiveness=intonation_responsiveness)
+        int_note = pitch_analysis(
+            samples[-hop_size:], responsiveness=intonation_responsiveness
+        )
         if int_note is not None and not int_note in callback.intonation_queue:
             callback.intonation_queue.append(int_note)
 
@@ -194,7 +195,7 @@ callback.intonation_queue = []
 
 
 def main():
-    global port, transpose_octaves, loudness_responsiveness, loudness_control, loudness_invert, intonation_responsiveness, pitch_o, pitch_confidence, messages_per_second, min_levels, max_levels, levels
+    global port, transpose_octaves, loudness_responsiveness, loudness_control, loudness_invert, intonation_responsiveness, pitch_o, pitch_confidence, messages_per_second, min_levels, max_levels, levels, hop_size
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output", help="the output MIDI port.", type=int)
     parser.add_argument(
@@ -240,6 +241,13 @@ def main():
         default=4,
         type=int,
     )
+    parser.add_argument(
+        "-d",
+        "--device-index",
+        help="the index of the audio device",
+        default=None,
+        type=int,
+    )
 
     args = parser.parse_args()
 
@@ -256,7 +264,26 @@ def main():
     loudness_invert = args.invert
     messages_per_second = args.messages_per_second
 
+    sample_rate = 44100
+    win_size = sample_rate // messages_per_second
+    hop_size = 512
+
+    block_size = hop_size
+
+    pitch_o = aubio.pitch(
+        method="yin", buf_size=win_size, hop_size=hop_size, samplerate=sample_rate
+    )
+    pitch_o.set_unit("midi")
+    pitch_o.set_silence(-70)
+
     pitch_confidence = args.pitch_confidence
+
+    if args.device_index is None:
+        print(
+            "No audio device selected. Invoke again adding '--device-index INDEX using the devices below."
+        )
+        print(sd.query_devices())
+        exit()
 
     with sd.InputStream(
         callback=callback, channels=1, samplerate=sample_rate, blocksize=block_size

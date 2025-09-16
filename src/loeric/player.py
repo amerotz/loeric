@@ -14,7 +14,7 @@ class Player:
         time_signature: m21.meter.TimeSignature = None,
         save: bool = False,
         midi_out=None,
-        verbose: bool = False,
+        verbose: int = 0,
     ):
         """
         Initialize the class.
@@ -93,8 +93,8 @@ class Player:
                     else:
                         self._midi_out.send(msg)
 
-                    if self._verbose:
-                        print("[INFO]\t", msg)
+                    if self._verbose == 5:
+                        print("[MIDI]\t", msg)
 
             if self._saving:
                 self._midi_track.append(msg)

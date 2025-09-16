@@ -1,6 +1,13 @@
 {
     "variables": {
         "var_velocity_weight": [1,1,1,1,1],
+        "var_legato_pattern": {
+			"mean": [1],
+			"std": [0],
+			"std_scale": 1,
+			"period": 1,
+			"normalize": false
+		},
         "major_allowed_chords": [
             2,
             0,
@@ -275,11 +282,13 @@
                                 "phrasing": {
                                     "phrase_exp": 10000,
                                     "phrase_levels": 0.0
-                                }
+                                },
+                                "pattern": "var_legato_pattern"
                             },
                             "weights": [
-                                0.3,
-                                0.7
+                                0.2,
+                                0.6,
+                                0.2
                             ]
                         }
                     },

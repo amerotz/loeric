@@ -86,7 +86,7 @@
 		"use_old_tempo_warp": false
 	},
 	"harmony": {
-        "chords_per_bar": 4
+        "chords_per_bar": 2
     },
     "drone": {
         "notes_per_bar": [4,2,1]

@@ -156,14 +156,46 @@
             "threshold": 0,
             "slide": true
         },
-        "error": {
+        "error_chromatic": {
             "cases": [
                 "not beat"
             ],
             "pitches_mean": [ 0 ],
             "pitches_std": [ 4 ],
             "velocities_mean": [ 1 ],
-            "velocities_std": [ 0.5 ],
+            "velocities_std": [ 0.25 ],
+            "durations_mean": [ 1 ],
+            "durations_std": [ 0.5 ],
+            "probability": 0.01,
+            "length": 1,
+            "diatonic": false,
+            "threshold": 0,
+            "slide": false 
+        },
+        "error_diatonic": {
+            "cases": [
+                "not beat"
+            ],
+            "pitches_mean": [ 0 ],
+            "pitches_std": [ 4 ],
+            "velocities_mean": [ 1 ],
+            "velocities_std": [ 0.25 ],
+            "durations_mean": [ 1 ],
+            "durations_std": [ 0.5 ],
+            "probability": 0.01,
+            "length": 1,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false 
+        },
+        "error_slide": {
+            "cases": [
+                "not beat"
+            ],
+            "pitches_mean": [ 0 ],
+            "pitches_std": [ 4 ],
+            "velocities_mean": [ 1 ],
+            "velocities_std": [ 0.25 ],
             "durations_mean": [ 1 ],
             "durations_std": [ 0.5 ],
             "probability": 0.01,

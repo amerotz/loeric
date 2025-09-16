@@ -2,7 +2,7 @@
     "contour_2_control": {
 		"velocity": {
 			"control": 1,
-			"min": 70,
+			"min": 90,
 			"max": 127
 		}
 	},

@@ -22,7 +22,7 @@ def main():
     parser.add_argument(
         "-c",
         "--control",
-        help="the control change number to monitor.",
+        help="the control change number to monitor to advance the schedule.",
         type=int,
         default=66,
     )
@@ -124,7 +124,6 @@ def main():
         scheduler_port = mido.open_input(mido.get_input_names()[args["sync"]])
 
     scheduler_port.callback = get_callback(args["control"])
-    print("Awaiting message...")
 
     schedule = pd.read_csv(args["source"])
 
@@ -135,16 +134,18 @@ def main():
         repeats = piece["REPEAT"]
         config = piece["CONFIG"]
         key = piece["KEY"]
+        meter = piece["METER"]
         end_note = piece["DO END NOTE"]
         slow_start = piece["SLOW START"]
         slow_end = piece["SLOW END"]
         bpm = piece["BPM"]
 
-        tune = tu.Tune(filename, repeats, key=key)
+        tune = tu.Tune(filename, repeats, key=key, meter=meter)
         groover = gr.Groover(
             tune,
             bpm=bpm,
             config_file=config,
+            do_end_note=end_note,
             slow_start=slow_start,
             slow_end=slow_end,
             human_impact=1,
@@ -153,6 +154,7 @@ def main():
         tunes.append(tune)
         groovers.append(groover)
 
+    print("Awaiting message...")
     with received_start:
         received_start.wait()
 

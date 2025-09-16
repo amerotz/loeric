@@ -11,7 +11,14 @@
 		"var_roll_2_prob": 0,
 		"var_divide_note_1_duration": 1.33,
 		"var_divide_note_2_duration": 0.66,
-        "var_velocity_weight": [0,1,1,1,1]
+        "var_velocity_weight": [0,1,1,1,1],
+        "var_legato_pattern": {
+			"mean": [1,1,0.0,1],
+			"std": [0,0,0.1,0],
+			"std_scale": 1,
+			"period": 0.5,
+			"normalize": false
+		}
     },
     "contours": {
         "drone": {
@@ -22,7 +29,7 @@
                             "weights": [
                                 1,
                                 1,
-                                1,
+                                2,
                                 1,
                                 2
                             ],
@@ -30,7 +37,13 @@
                             "scale": true,
                             "shift": true
                         },
-                        "pattern": "var_barndance_pattern",
+                        "pattern": {
+                            "mean": [ 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0 ],
+                            "std":  [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+							"std_scale": 1,
+							"normalize": false,
+							"period": 2
+						},
                         "phrasing#2": {
                             "phrase_exp": 1000,
                             "phrase_levels": -1.0

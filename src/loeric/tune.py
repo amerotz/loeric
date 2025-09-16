@@ -13,7 +13,15 @@ from . import loeric_utils as lu
 class Tune:
     """A wrapper for a midi file."""
 
-    def __init__(self, filename: str, repeats: int, key=None, time=None):
+    def __init__(
+        self,
+        filename: str,
+        repeats: int,
+        key=None,
+        meter=None,
+        verbose: int = 0,
+        sync_interval: float = None,
+    ):
         """
         Initialize the class. A number of properties is computed:
 
@@ -30,6 +38,8 @@ class Tune:
             mido_source = mp.read_midi(filename)
         elif filename.endswith(".abc"):
             mido_source = mp.read_abc(filename)
+
+        self._verbose = verbose
 
         # key signature
         self.forced_key = False
@@ -75,15 +85,12 @@ class Tune:
         )
 
         # time signature
-        self.forced_time = False
-        if time is not None:
-            num, den = tuple(time.split("/"))
-            self._time_signature = m21.meter.TimeSignature(
-                numerator=int(num), denominator=int(den)
-            )
+        self.forced_meter = False
+        if meter is not None:
+            self._time_signature = m21.meter.TimeSignature(meter)
             # reset key signatures
             mido_source.time_signatures = []
-            self.forced_time = True
+            self.forced_meter = True
         else:
             # time signature
             self._time_signature = self._get_time_signature()
@@ -108,8 +115,16 @@ class Tune:
         # intertwine songpos messages every given interval
         # 16383 is the max value for songpos
         # every_n = max(6, round(len(self._midi) / 16383))
-        every_duration = self._beat_duration
-        print("Sync every", self._quarters_per_bar / self._time_signature.beatCount)
+        self._sync_interval = sync_interval
+        if self._sync_interval is None:
+            every_duration = self._quarters_per_bar / self._time_signature.beatCount
+        else:
+            every_duration = self._sync_interval
+
+        if self._verbose > 0:
+            print(
+                f"[INFO]\tSynchronizing every:\t{every_duration} quarters.",
+            )
 
         # obtain alla events
         all_events = [m.copy() for m in self._orig_midi]
@@ -160,11 +175,14 @@ class Tune:
         self._midi = all_events
         self._max_songpos = max(self.index_map.keys())
 
-        print(f"Playing:\t{os.path.basename(filename)}")
-        print(
-            f"Meter:\t{self._time_signature.numerator}/{self._time_signature.denominator}"
-        )
-        print(f"Key:\t{self._key_signature}")
+        if self._verbose > 0:
+            print(f"[INFO]\tPlaying:\t\t{os.path.basename(filename)}")
+            print(
+                f"[INFO]\tMeter:\t\t\t{self._time_signature.numerator}/{self._time_signature.denominator}"
+            )
+            print(
+                f"[INFO]\tKey:\t\t\t{self._key_signature.root} {self._key_signature.mode}"
+            )
 
     @property
     def beat_count(self) -> int:
@@ -246,7 +264,6 @@ class Tune:
             time=0, root=key_signature.key, mode="major"
         )
         self._root = lu.get_root(key_signature.key)
-        print(self._root)
         self._fifths = lu.number_of_fifths[
             (self._root + lu.mode_offset[self._key_signature.mode]) % 12
         ]
@@ -311,9 +328,11 @@ class Tune:
         """
         msg = self.filter(lambda x: x.type == "set_tempo")
         if len(msg) == 0:
-            print("Setting default tempo to 120 BPM")
+            if self._verbose > 0:
+                print("[INFO]\tSetting default tempo to 120 BPM")
             return mido.bpm2tempo(120)
-        print(f"File tempo is {mido.tempo2bpm(msg[0].tempo)} BPM")
+        if self._verbose > 0:
+            print(f"[INFO]\tFile tempo is {mido.tempo2bpm(msg[0].tempo)} BPM")
         return msg[0].tempo
 
     def _get_time_signature(self) -> m21.meter.TimeSignature:
