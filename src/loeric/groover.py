@@ -1162,7 +1162,7 @@ class Groover:
         :return: the list of midi events corresponding to the chosen ornament.
         """
 
-        if self._verbose == 2:
+        if self._verbose >= 2:
             print(f"[ORNT]\t{ornament_type}")
         ornaments = []
         if self._config["old_ornaments"]["use_old_ornaments"]:
