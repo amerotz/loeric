@@ -179,9 +179,8 @@ class Groover:
 
             if "contours" in config_file:
                 for c in config_file["contours"]:
-                    self._config["contours"][c]["recipe"] = config_file["contours"][c][
-                        "recipe"
-                    ]
+                    if "recipe" in config_file["contours"][c]:
+                        self._config["contours"][c]["recipe"] = config_file["contours"][c]["recipe"]
 
             config_hash = int(hash(str(config_file))) % 2**31
             self._config["values"]["seed"] = config_hash + seed
