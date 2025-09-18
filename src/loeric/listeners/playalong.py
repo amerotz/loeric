@@ -145,7 +145,7 @@ class ListenerThread:
         while not self.stop:
             # get audio data
             data = self.stream.read(self.CHUNK)
-            data = np.frombuffer(data, np.int16).reshape(self.CHANNELS, -1).astype(np.int64)
+            data = np.frombuffer(data, np.int16).reshape(-1, self.CHANNELS).astype(np.int64)
             data = data[self.selected_channels]
 
             buffer.append(data)
