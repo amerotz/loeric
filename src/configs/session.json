@@ -1,9 +1,11 @@
 {
-    "mapping": {
-    },
+	"intensity_control_in": 41,
+	"human_impact_control_in": 42,
+	"intensity_control_out": 51,
+	"human_impact_control_out": 52,
     "tempo_policy": {
-        "fix_sync_quarters": 0.0,
-        "stop_sync_quarters": 0.5,
+        "fix_sync_quarters": 0.0625,
+        "stop_sync_quarters": 1.5,
         "position": "max",
         "sync_interval_quarters": 1.5
     },
