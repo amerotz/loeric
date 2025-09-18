@@ -4,6 +4,7 @@ import mido
 import pyaudio
 import math
 import time
+
 import numpy as np
 
 
@@ -116,7 +117,9 @@ class ListenerThread:
     FORMAT = pyaudio.paInt16
     stop = False
 
-    def __init__(self, sample_rate, chunk_per_sec, device_index, num_channels, selected_channels):
+    def __init__(
+        self, sample_rate, chunk_per_sec, device_index, num_channels, selected_channels
+    ):
         self.RATE = sample_rate
         self.CHUNK = sample_rate // chunk_per_sec
         self.chunk_per_sec = chunk_per_sec
@@ -145,7 +148,11 @@ class ListenerThread:
         while not self.stop:
             # get audio data
             data = self.stream.read(self.CHUNK)
-            data = np.frombuffer(data, np.int16).reshape(-1, self.CHANNELS).astype(np.int64)
+            data = (
+                np.frombuffer(data, np.int16)
+                .reshape(-1, self.CHANNELS)
+                .astype(np.int64)
+            )
             data = data[self.selected_channels]
 
             buffer.append(data)
@@ -185,9 +192,9 @@ def main():
     parser.add_argument(
         "-s",
         "--selected-channels",
-        help="the number of audio channels.",
+        help="the audio channels to consider.",
+        nargs="+",
         type=int,
-        nargs="+"
     )
     parser.add_argument(
         "-o", "--output", help="the output MIDI port.", default=None, type=int
@@ -237,7 +244,11 @@ def main():
 
     # create listening thread
     listener = ListenerThread(
-        48000, args.chunks_per_second, args.device_index, args.num_channels, args.selected_channels
+        48000,
+        args.chunks_per_second,
+        args.device_index,
+        args.num_channels,
+        args.selected_channels,
     )
     listener.open_stream()
 

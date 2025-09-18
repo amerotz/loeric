@@ -225,6 +225,7 @@ class Groover:
             self._user_tempo = mido.bpm2tempo(self._config["tempo_control"]["bpm"])
 
         self._midi_channel = self._config["values"]["midi_channel"]
+        self._drone_midi_channel = self._config["drone"]["midi_channel"]
         self._transpose_semitones = self._config["values"]["transpose"]
         # table for pitch errors
         self._pitch_errors = defaultdict(int)
@@ -397,6 +398,30 @@ class Groover:
             ][contour_name]["human_impact_scale"]
             self._contour_values[contour_name] = 0.5
 
+    def get_control_value(self, control_num):
+        """
+        Read the value associated with a given control number.
+        """
+        if control_num in self._contour_values:
+            return self._contour_values[control_num]
+        else:
+            return 0.5
+
+    def set_control_value(self, control_num, value):
+        """
+        Set a given control number to a value.
+        """
+
+        # store the raw control
+        self._contour_values[control_num] = value
+        # traditional control
+        for contour_name, event_number in self._config["control_2_contour"].items():
+            if control_num == event_number:
+                self.set_contour_value(contour_name, value)
+                # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
+                if self._verbose == 3:
+                    print(f"{contour_name}:\t{round(value, 2)}")
+
     def check_midi_control(self) -> Callable[[], None]:
         """
         Returns a function that associates a contour name (values) for every MIDI control number in the dictionary (keys) and updates the groover accordingly.
@@ -416,14 +441,8 @@ class Groover:
             else:
                 pass
 
-            # traditional control
-            for contour_name, event_number in self._config["control_2_contour"].items():
-                if msg.is_cc(event_number):
-                    value = msg.value / 127
-                    self.set_contour_value(contour_name, value)
-                    # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
-                    if self._verbose == 3:
-                        print(f"{contour_name}:\t{round(value, 2)}")
+            if msg.is_cc():
+                self.set_control_value(msg.control, msg.value / 127)
 
         return callback
 
@@ -1462,6 +1481,7 @@ class Groover:
                             "note_on",
                             note=new_pitch,
                             velocity=vel,
+                            channel=message.channel,
                         )
                     )
 
@@ -1505,6 +1525,7 @@ class Groover:
                             "note_off",
                             note=new_pitch,
                             time=overall_duration,
+                            channel=message.channel,
                         )
                     )
                 else:

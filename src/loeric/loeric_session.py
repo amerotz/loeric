@@ -1,4 +1,5 @@
 import argparse
+import random
 import os
 import threading
 import time
@@ -22,11 +23,12 @@ from loeric import loeric_utils as lu
 # parallel stuff
 received_start = threading.Condition()
 must_die = threading.Event()
+program_start = 0
 
 
 class Session:
 
-    def __init__(self, config):
+    def __init__(self, config, out):
 
         with open(config, "r") as f:
             self._config = json.load(f)
@@ -38,6 +40,11 @@ class Session:
         self._sleepers = []
         self._sleepers_lock = threading.Lock()
         self._position_lock = threading.Lock()
+        self._out = out
+
+        self._intensity_dict = defaultdict(int)
+        self._human_impact_dict = defaultdict(int)
+        self._action_dict = {}
 
     @property
     def sync_interval(self):
@@ -51,14 +58,6 @@ class Session:
         self._stop_sync_duration = (
             self._config["tempo_policy"]["stop_sync_quarters"] * 60 / self._last_tempo
         )
-        """
-        self._syncing_wait = (
-            self._config["tempo_policy"]["sync_every_n_intervals"]
-            * self._config["tempo_policy"]["sync_interval_quarters"]
-            * 60
-            / self._last_tempo
-        )
-        """
 
         self._songpos_wait = (
             self._config["tempo_policy"]["sync_interval_quarters"]
@@ -74,7 +73,7 @@ class Session:
 
     def session_loop(self):
 
-        global all_dead
+        global all_dead, program_start
 
         all_dead.acquire()
         print("[LOOP] Session loop thread started.")
@@ -95,24 +94,23 @@ class Session:
                     current_time = time.time()
                     if current_time - start_time >= wait_time:
                         # wakey wakey!
+
+                        # unflag stopped
                         with groover.lock:
-                            # unflag stopped
                             groover.stopped.clear()
-                        """
                         with self._position_lock:
                             # update  position
                             self._loeric_positions[groover.loeric_id] = (
                                 current_time,
                                 sleeper_position,
                             )
-                        """
 
                         # awake thread
                         with groover.playback_resumed:
                             groover.playback_resumed.notify_all()
 
                             print(
-                                f"[LOOP] {groover.loeric_id} AWKN at {sleeper_position}"
+                                f"[LOOP] {groover.loeric_id} AWKN at {sleeper_position} ({current_time - program_start})"
                             )
                     else:
                         # nevermind, keep sleeping
@@ -126,6 +124,7 @@ class Session:
         all_dead.release()
 
     def handle_human_pos(self, human_id, position):
+        global program_start
         # don't sync the human
         # but record positions
         now = time.time()
@@ -156,38 +155,47 @@ class Session:
                 )
 
         print(
-            f"[SYNC] {human_id} SENT {self._loeric_positions[human_id][1] (self._loeric_positions[human_id][0])}"
+            f"[SYNC] {human_id} SENT {self._loeric_positions[human_id][1] (self._loeric_positions[human_id][0] - program_start)}"
         )
 
-    def _calculate_position(self):
+    def _calculate_position(self, loeric_id):
 
         with self._position_lock:
-            # agree on which position
-            algorithm = self._config["tempo_policy"]["position"]
-            if algorithm == "max":
-                calculated_position = max(
-                    [t[1] for t in self._loeric_positions.values()]
-                )
-            elif algorithm == "min":
-                calculated_position = min(
-                    [t[1] for t in self._loeric_positions.values()]
-                )
-            elif algorithm == "mode":
-                vals, counts = np.unique(
-                    [t[1] for t in self._loeric_positions.values()],
-                    return_counts=True,
-                )
-                calculated_position = vals[np.argmax(counts)]
-            # agree on what time
-            timestamp = np.mean(
+            positions = np.array(
                 [
-                    t[0]
-                    for t in self._loeric_positions.values()
-                    if t[1] == calculated_position
+                    self._loeric_positions[t][1]
+                    for t in self._loeric_positions
+                    # if t != loeric_id
+                ]
+            )
+            times = np.array(
+                [
+                    self._loeric_positions[t][0]
+                    for t in self._loeric_positions
+                    # if t != loeric_id
                 ]
             )
 
-        return calculated_position, timestamp
+            if len(positions) == 0:
+                return self._loeric_positions[loeric_id]
+
+        # agree on which position
+        algorithm = self._config["tempo_policy"]["position"]
+        if algorithm == "max":
+            calculated_position = max(positions)
+            timestamp = np.max(times[positions == calculated_position])
+        elif algorithm == "min":
+            calculated_position = min(positions)
+            timestamp = np.min(times[positions == calculated_position])
+        elif algorithm == "mode":
+            vals, counts = np.unique(
+                positions,
+                return_counts=True,
+            )
+            calculated_position = vals[np.argmax(counts)]
+            timestamp = np.mean(times[positions == calculated_position])
+
+        return timestamp, calculated_position
 
     def _put_to_sleep(self, groover, start_time, wait_time, position):
         with self._sleepers_lock:
@@ -201,6 +209,18 @@ class Session:
         with groover.lock:
             # tell groover to wait
             groover.stopped.set()
+
+            for i in range(127):
+                self._out.send(
+                    mido.Message(
+                        "note_off", time=0, channel=groover._midi_channel, note=i
+                    )
+                )
+                self._out.send(
+                    mido.Message(
+                        "note_off", time=0, channel=groover._drone_midi_channel, note=i
+                    )
+                )
 
             # tell groover to start at next songpos
             groover.jump_to_pos(position)
@@ -220,6 +240,7 @@ class Session:
         return w
 
     def handle_loeric_pos(self, groover: gr.Groover, position: int):
+        global program_start
         # obtain timestamp
         now = time.time()
 
@@ -231,18 +252,13 @@ class Session:
             self._loeric_positions[loeric_id] = (now, position)
 
         # obtain sync position
-        calculated_position, timestamp = self._calculate_position()
+        timestamp, calculated_position = self._calculate_position(loeric_id)
 
-        # print(f"[SYNC] {loeric_id} SENT {position} ({now})")
+        print(f"[SYNC] {loeric_id} SENT {position} ({now-program_start})")
 
         # expected timestamp
-        """
-        expected_syncing_timestamp = (
-            timestamp - (calculated_position - position) * self._syncing_wait
-        )
-        """
         expected_songpos_timestamp = (
-            timestamp - (calculated_position - position) * self._songpos_wait
+            timestamp + (position - calculated_position) * self._songpos_wait
         )
 
         # calculate difference in timestamp
@@ -261,20 +277,32 @@ class Session:
         # stop and continue from next beat
         if diff > stop_thr:
 
-            # tell groover to start at next songpos
-            self._hard_fix(groover, calculated_position + 1)
-
             # add it to the sleepers queue
             # to be awaken at next position
-            current_time = time.time()
+            wake_position = calculated_position + 1
+            if position > calculated_position:
+                wake_position = position
+
+            # tell groover to start at next songpos
+            self._hard_fix(groover, wake_position)
+
             self._put_to_sleep(
                 groover=groover,
-                start_time=current_time,
-                wait_time=self._songpos_wait - (current_time - timestamp),
-                position=calculated_position + 1,
+                start_time=now,
+                wait_time=self._songpos_wait - (now - timestamp),
+                position=wake_position,
             )
 
-            print(f"[SYNC] {loeric_id} SLEP at {calculated_position}")
+            print(
+                f"[SYNC] {loeric_id} SLEP at {calculated_position}",
+                self._songpos_wait + timestamp - program_start,
+            )
+
+            with self._position_lock:
+                self._loeric_positions[loeric_id] = (
+                    expected_songpos_timestamp,
+                    position,
+                )
 
         # soft fix
         # send a tempo bump
@@ -283,19 +311,152 @@ class Session:
             # calculate the new tempo
             # so that we synchronize on the next beat
             new_tempo = self._calculate_new_tempo(now, expected_songpos_timestamp)
-            print(new_tempo)
+            if new_tempo > 200:
+                print(new_tempo, calculated_position, position)
 
             with groover.lock:
                 groover.set_tempo(new_tempo)
             self._was_updated[loeric_id] = True
 
+            with self._position_lock:
+                self._loeric_positions[loeric_id] = (
+                    expected_songpos_timestamp,
+                    position,
+                )
+
+    def handle_human_intensity(self, human_id, intensity, human_impact):
+
+        # who sent this?
+        loeric_id = re.search("#.*#", port.name)[0]
+
+        # keep track of intensity
+        self._intensity_dict[human_id] = intensity
+
+        # keep track of human_impact
+        self._human_impact_dict[human_id] = human_impact
+
+    def handle_loeric_intensity(self, groover: gr.Groover):
+
+        now = time.time()
+
+        # who sent this?
+        loeric_id = groover.loeric_id
+
+        # keep track of intensity
+        self._intensity_dict[loeric_id] = groover.get_control_value(
+            self._config["intensity_control_in"]
+        )
+
+        # keep track of human_impact
+        self._human_impact_dict[loeric_id] = groover.get_control_value(
+            self._config["human_impact_control_in"]
+        )
+
+        if loeric_id not in self._action_dict:
+            self._action_dict[loeric_id] = (
+                now - random.random() * self._switch_timer,
+                random.choice(
+                    list(self._config["attention_policy"]["behaviors"].keys())
+                ),
+                loeric_id,
+            )
+
+        diff = now - self._action_dict[loeric_id][0]
+        # choose new action
+        if diff >= self._switch_timer:
+
+            players = [p for p in self._intensity_dict.keys() if str(p) != loeric_id]
+            # backoff or
+            # match
+            # any group of players
+            # action = random.choice(["backoff", "match", "lead"])
+            action = random.choice(
+                list(self._config["attention_policy"]["behaviors"].keys())
+            )
+            n = 1
+            if len(players) < 1:
+                return
+            elif len(players) > 1:
+                n = random.randint(
+                    min(
+                        self._config["attention_policy"]["attention_group_min_size"],
+                        len(players),
+                    ),
+                    min(
+                        self._config["attention_policy"]["attention_group_max_size"],
+                        len(players),
+                    ),
+                )
+            group = random.sample(players, n)
+
+            self._action_dict[loeric_id] = (now, action, group)
+            print(loeric_id, action, group)
+
+        _, action, group = self._action_dict[loeric_id]
+        if type(group) is not list:
+            group = [group]
+
+        # intensity
+        int_value = 0
+        algorithm = self._config["attention_policy"]["behaviors"][action][
+            "intensity_aggregator"
+        ]
+        if algorithm == "mean":
+            int_value = np.mean([self._intensity_dict[p] for p in group])
+        elif algorithm == "min":
+            int_value = np.min([self._intensity_dict[p] for p in group])
+        elif algorithm == "max":
+            int_value = np.max([self._intensity_dict[p] for p in group])
+        elif algorithm == "constant":
+            pass
+
+        int_value *= self._config["attention_policy"]["behaviors"][action][
+            "intensity_multiplier"
+        ]
+        int_value += self._config["attention_policy"]["behaviors"][action][
+            "intensity_constant"
+        ]
+
+        hi_value = 0
+        algorithm = self._config["attention_policy"]["behaviors"][action][
+            "human_impact_aggregator"
+        ]
+        if algorithm == "mean":
+            hi_value = np.mean([self._human_impact_dict[p] for p in group])
+        elif algorithm == "min":
+            hi_value = np.min([self._human_impact_dict[p] for p in group])
+        elif algorithm == "max":
+            hi_value = np.max([self._human_impact_dict[p] for p in group])
+        elif algorithm == "constant":
+            pass
+
+        hi_value *= self._config["attention_policy"]["behaviors"][action][
+            "human_impact_multiplier"
+        ]
+        hi_value += self._config["attention_policy"]["behaviors"][action][
+            "human_impact_constant"
+        ]
+
+        int_value *= 127
+        int_value = int(int_value)
+        int_value = min(int_value, 127)
+        int_value = max(int_value, 0)
+
+        hi_value *= 127
+        hi_value = int(hi_value)
+        hi_value = min(hi_value, 127)
+        hi_value = max(hi_value, 0)
+
+        groover.set_control_value(self._config["intensity_control_out"], int_value)
+        groover.set_control_value(self._config["human_impact_control_out"], hi_value)
+
     def sync_intensity(self, inports, outports):
         global must_die, all_dead
         all_dead.acquire()
 
-        int_dict = defaultdict(int)
-        hi_dict = defaultdict(int)
-        action_dict = {}
+        self._intensity_dict = defaultdict(int)
+        self._human_impact_dict = defaultdict(int)
+        self._action_dict = {}
 
         while not must_die.is_set():
             # receive message and port
@@ -318,18 +479,18 @@ class Session:
             now = time.time()
             # keep track of intensity
             if msg.control == self._config["intensity_control_in"]:
-                int_dict[loeric_id] = msg.value / 127
+                self._intensity_dict[loeric_id] = msg.value / 127
 
             # keep track of human_impact
             elif msg.control == self._config["human_impact_control_in"]:
-                hi_dict[loeric_id] = msg.value / 127
+                self._human_impact_dict[loeric_id] = msg.value / 127
 
             # don't consider human for actions
             if "HUMAN" in port.name:
                 continue
 
-            if loeric_id not in action_dict:
-                action_dict[loeric_id] = (
+            if loeric_id not in self._action_dict:
+                self._action_dict[loeric_id] = (
                     now - random.random() * self._switch_timer,
                     random.choice(
                         list(self._config["attention_policy"]["behaviors"].keys())
@@ -338,11 +499,13 @@ class Session:
                 )
                 print("added")
 
-            diff = now - action_dict[loeric_id][0]
+            diff = now - self._action_dict[loeric_id][0]
             # choose new action
             if diff >= self._switch_timer:
 
-                players = [p for p in int_dict.keys() if str(p) != loeric_id]
+                players = [
+                    p for p in self._intensity_dict.keys() if str(p) != loeric_id
+                ]
                 # backoff or
                 # match
                 # any group of players
@@ -370,7 +533,7 @@ class Session:
                     )
                 group = random.sample(players, n)
 
-                action_dict[loeric_id] = (now, action, group)
+                self._action_dict[loeric_id] = (now, action, group)
                 print(loeric_id, action, group)
 
             # output port
@@ -380,7 +543,7 @@ class Session:
                     out_port = p
                     break
 
-            _, action, group = action_dict[loeric_id]
+            _, action, group = self._action_dict[loeric_id]
             if type(group) is not list:
                 group = [group]
 
@@ -390,11 +553,11 @@ class Session:
                 "intensity_aggregator"
             ]
             if algorithm == "mean":
-                int_value = np.mean([int_dict[p] for p in group])
+                int_value = np.mean([self._intensity_dict[p] for p in group])
             elif algorithm == "min":
-                int_value = np.min([int_dict[p] for p in group])
+                int_value = np.min([self._intensity_dict[p] for p in group])
             elif algorithm == "max":
-                int_value = np.max([int_dict[p] for p in group])
+                int_value = np.max([self._intensity_dict[p] for p in group])
             elif algorithm == "constant":
                 pass
 
@@ -410,11 +573,11 @@ class Session:
                 "human_impact_aggregator"
             ]
             if algorithm == "mean":
-                hi_value = np.mean([hi_dict[p] for p in group])
+                hi_value = np.mean([self._human_impact_dict[p] for p in group])
             elif algorithm == "min":
-                hi_value = np.min([hi_dict[p] for p in group])
+                hi_value = np.min([self._human_impact_dict[p] for p in group])
             elif algorithm == "max":
-                hi_value = np.max([hi_dict[p] for p in group])
+                hi_value = np.max([self._human_impact_dict[p] for p in group])
             elif algorithm == "constant":
                 pass
 
@@ -475,7 +638,7 @@ def get_callback(control):
 
 
 def main():
-    global all_dead
+    global all_dead, program_start
     parser = argparse.ArgumentParser()
     parser.add_argument("source", help="the midi file to play.", nargs="?", default="")
     parser.add_argument(
@@ -591,7 +754,7 @@ def main():
         port = mido.open_input(f"LOERIC SESSION in #{loeric_id}#", virtual=True)
 
     if args["create_out"]:
-        out = mido.open_output(f"LOERIC SESSION out #{loeric_id}#", virtual=True)
+        out = mido.open_output(f"LOERIC SESSION out", virtual=True)
 
     if args["create_sync"]:
         scheduler_port = mido.open_input(
@@ -636,7 +799,7 @@ def main():
         scheduler_port = mido.open_input(mido.get_input_names()[args["sync"]])
 
     # create Session object
-    session = Session(args["config"])
+    session = Session(args["config"], out)
 
     # set session tempo
     session.set_tempo(args["bpm"])
@@ -699,6 +862,7 @@ def main():
             with received_start:
                 received_start.wait()
 
+        program_start = time.time()
         # start session
         session_t.start()
 
@@ -777,6 +941,7 @@ def play_tune(player, tunes, groover, port, session):
         elif lu.is_note(message):
             # make the groover play the messages
             new_messages = groover.perform(message)
+            session.handle_loeric_intensity(groover)
         # keep meta messages intact
         else:
             if message.type == "songpos":
