@@ -1010,18 +1010,6 @@
         "max": 1.0,
         "bind": "legato"
     },
-    "probabilities": {
-        "roll": 1,
-        "slide": 0,
-        "cut": 0
-    },
-    "old_ornaments": {
-        "cut_eight_fraction": 0.2,
-        "cut_velocity_fraction": 0.1,
-        "roll_velocity_fraction": 1,
-        "roll_eight_fraction_max": 0.4,
-        "roll_eight_fraction_min": 0.1
-    },
     "values": {
         "pitch_deviation_cents": 15,
         "min_velocity": 1,

@@ -4,7 +4,6 @@ import mido
 import pyaudio
 import math
 import time
-
 import numpy as np
 
 

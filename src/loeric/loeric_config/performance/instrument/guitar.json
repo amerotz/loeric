@@ -355,11 +355,6 @@
             "slide": false
         }
     },
-    "probabilities": {
-        "roll": 1,
-        "slide": 1,
-        "cut": 1
-    },
     "drone": {
         "active": false,
         "threshold": 0.5,

@@ -461,17 +461,6 @@
         "min": 0.1,
         "max": 0.95
     },
-    "probabilities": {
-        "roll": 1,
-        "slide": 0,
-        "cut": 1
-    },
-    "old_ornaments": {
-        "cut_eight_fraction": 0.2,
-        "cut_velocity_fraction": 0.8,
-        "roll_velocity_fraction": 0.8
-    },
-    "values": {},
     "approach_from_above": {
         "D4": "E4",
         "D5": "E5",

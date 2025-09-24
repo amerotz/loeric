@@ -1,17 +1,4 @@
 {
-	"probabilities": {
-		"roll": 1,
-		"slide": 0,
-		"cut": 1
-	},
-	"old_ornaments": {
-		"cut_velocity_fraction": 0.9,
-		"roll_velocity_fraction": 0.9
-	},
-	"approach_from_above": {
-	},
-	"approach_from_below": {
-	},
 	"drone": {
 		"active": false,
 		"threshold": 0.5,

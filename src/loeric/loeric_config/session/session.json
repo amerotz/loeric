@@ -1,16 +1,18 @@
 {
-    "mapping": {
-    },
+	"intensity_control_in": 41,
+	"human_impact_control_in": 42,
+	"intensity_control_out": 51,
+	"human_impact_control_out": 52,
     "tempo_policy": {
-        "fix_sync_multiplier": 0.0625,
-        "stop_sync_multiplier": 0.5,
+        "fix_sync_quarters": 0.0625,
+        "stop_sync_quarters": 1.5,
         "position": "max",
-        "sync_interval": 1.5
+        "sync_interval_quarters": 1.5
     },
     "attention_policy": {
         "attention_group_min_size": 1000,
         "attention_group_max_size": 1000,
-        "switch_every": 16,
+        "switch_every_quarters": 16,
         "behaviors": {
             "backoff": {
                 "intensity_multiplier": 0.8,

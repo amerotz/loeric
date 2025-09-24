@@ -9,16 +9,17 @@ import numpy as np
 
 from collections import defaultdict
 
-"""
 from . import tune as tu
 from . import groover as gr
 from . import player as pl
 from . import loeric_utils as lu
+
 """
 from loeric import tune as tu
 from loeric import groover as gr
 from loeric import player as pl
 from loeric import loeric_utils as lu
+"""
 
 # parallel stuff
 received_start = threading.Condition()
@@ -450,171 +451,6 @@ class Session:
         groover.set_control_value(self._config["intensity_control_out"], int_value)
         groover.set_control_value(self._config["human_impact_control_out"], hi_value)
 
-    def sync_intensity(self, inports, outports):
-        global must_die, all_dead
-        all_dead.acquire()
-
-        self._intensity_dict = defaultdict(int)
-        self._human_impact_dict = defaultdict(int)
-        self._action_dict = {}
-
-        while not must_die.is_set():
-            # receive message and port
-            bundle = list(
-                mido.ports.multi_receive(inports, yield_ports=True, block=False)
-            )
-            now = time.time()
-            if len(bundle) == 0:
-                continue
-            port, msg = bundle[0]
-            if msg.type != "control_change" or (
-                msg.control != self._config["human_impact_control_in"]
-                and msg.control != self._config["intensity_control_in"]
-            ):
-                continue
-
-            # who sent this?
-            loeric_id = re.search("#.*#", port.name)[0]
-
-            now = time.time()
-            # keep track of intensity
-            if msg.control == self._config["intensity_control_in"]:
-                self._intensity_dict[loeric_id] = msg.value / 127
-
-            # keep track of human_impact
-            elif msg.control == self._config["human_impact_control_in"]:
-                self._human_impact_dict[loeric_id] = msg.value / 127
-
-            # don't consider human for actions
-            if "HUMAN" in port.name:
-                continue
-
-            if loeric_id not in self._action_dict:
-                self._action_dict[loeric_id] = (
-                    now - random.random() * self._switch_timer,
-                    random.choice(
-                        list(self._config["attention_policy"]["behaviors"].keys())
-                    ),
-                    loeric_id,
-                )
-                print("added")
-
-            diff = now - self._action_dict[loeric_id][0]
-            # choose new action
-            if diff >= self._switch_timer:
-
-                players = [
-                    p for p in self._intensity_dict.keys() if str(p) != loeric_id
-                ]
-                # backoff or
-                # match
-                # any group of players
-                # action = random.choice(["backoff", "match", "lead"])
-                action = random.choice(
-                    list(self._config["attention_policy"]["behaviors"].keys())
-                )
-                n = 1
-                if len(players) < 1:
-                    continue
-                elif len(players) > 1:
-                    n = random.randint(
-                        min(
-                            self._config["attention_policy"][
-                                "attention_group_min_size"
-                            ],
-                            len(players),
-                        ),
-                        min(
-                            self._config["attention_policy"][
-                                "attention_group_max_size"
-                            ],
-                            len(players),
-                        ),
-                    )
-                group = random.sample(players, n)
-
-                self._action_dict[loeric_id] = (now, action, group)
-                print(loeric_id, action, group)
-
-            # output port
-            out_port = None
-            for p in outports:
-                if loeric_id == re.search("#.*#", p.name)[0]:
-                    out_port = p
-                    break
-
-            _, action, group = self._action_dict[loeric_id]
-            if type(group) is not list:
-                group = [group]
-
-            # intensity
-            int_value = 0
-            algorithm = self._config["attention_policy"]["behaviors"][action][
-                "intensity_aggregator"
-            ]
-            if algorithm == "mean":
-                int_value = np.mean([self._intensity_dict[p] for p in group])
-            elif algorithm == "min":
-                int_value = np.min([self._intensity_dict[p] for p in group])
-            elif algorithm == "max":
-                int_value = np.max([self._intensity_dict[p] for p in group])
-            elif algorithm == "constant":
-                pass
-
-            int_value *= self._config["attention_policy"]["behaviors"][action][
-                "intensity_multiplier"
-            ]
-            int_value += self._config["attention_policy"]["behaviors"][action][
-                "intensity_constant"
-            ]
-
-            hi_value = 0
-            algorithm = self._config["attention_policy"]["behaviors"][action][
-                "human_impact_aggregator"
-            ]
-            if algorithm == "mean":
-                hi_value = np.mean([self._human_impact_dict[p] for p in group])
-            elif algorithm == "min":
-                hi_value = np.min([self._human_impact_dict[p] for p in group])
-            elif algorithm == "max":
-                hi_value = np.max([self._human_impact_dict[p] for p in group])
-            elif algorithm == "constant":
-                pass
-
-            hi_value *= self._config["attention_policy"]["behaviors"][action][
-                "human_impact_multiplier"
-            ]
-            hi_value += self._config["attention_policy"]["behaviors"][action][
-                "human_impact_constant"
-            ]
-
-            int_value *= 127
-            int_value = int(int_value)
-            int_value = min(int_value, 127)
-            int_value = max(int_value, 0)
-
-            hi_value *= 127
-            hi_value = int(hi_value)
-            hi_value = min(hi_value, 127)
-            hi_value = max(hi_value, 0)
-
-            # prepare message
-            if out_port is not None:
-                msg = mido.Message(
-                    "control_change",
-                    value=int_value,
-                    control=self._config["intensity_control_out"],
-                )
-                out_port.send(msg)
-                msg = mido.Message(
-                    "control_change",
-                    value=hi_value,
-                    control=self._config["human_impact_control_out"],
-                )
-                out_port.send(msg)
-
-        all_dead.release()
-
 
 def get_callback(control):
 
@@ -958,6 +794,3 @@ def play_tune(player, tunes, groover, port, session):
 
     print(f"[GRVR] Terminated {groover.loeric_id}")
     all_dead.release()
-
-
-main()
