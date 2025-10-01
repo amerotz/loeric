@@ -24,13 +24,17 @@
 	},
 	"contour_2_control": {
 	},	
+	"legato":{
+		"min": 0.1,
+		"max": 1
+	},
 	"control_2_contour": {
 		"ornament_intensity": 77,
 		"drone_intensity": 78,
 		"legato_intensity": 79,
 		"swing_intensity": 81,
 		"velocity_intensity": 82,
-		"tempo_intensity": 82,
+		"tempo_intensity": 83,
 
 		"orn_error_diatonic": 80,
         "orn_error_diatonic_prob": 80,

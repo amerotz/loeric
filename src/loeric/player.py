@@ -1,7 +1,11 @@
 import time
+import threading
+import queue
 import mido
 import music21 as m21
 import muspy as mp
+
+from . import tune as tu
 
 
 class Player:
@@ -10,8 +14,8 @@ class Player:
     def __init__(
         self,
         tempo: int,
-        key_signature: mp.KeySignature = None,
-        time_signature: m21.meter.TimeSignature = None,
+        key_signature=None,
+        time_signature=None,
         save: bool = False,
         midi_out=None,
         verbose: int = 0,
@@ -31,6 +35,9 @@ class Player:
         self._midi_out = midi_out
         self._tempo = tempo
         self._verbose = verbose
+        self._message_queue = queue.PriorityQueue()
+        self.playback_done = threading.Condition()
+        self._tempo_scale = 1
 
         if self._saving:
             self._midi_performance = mido.MidiFile(type=0)
@@ -62,8 +69,26 @@ class Player:
         # to minimize drifting
         self._start_time = time.time()
         self._input_time = 0.0
+        self._song_time = 0
+        self._notify_song_time = 10000000
 
-    def play(self, messages: list[mido.Message]) -> None:
+    def set_tempo_scale(self, tempo_scale):
+        self._tempo_scale = tempo_scale
+
+    def add_notes(self, notes):
+        midi_messages = tu.note_list_to_midi(notes)
+
+        self.add_midi(midi_messages)
+
+    def add_midi(self, messages):
+
+        for midi in messages:
+            self._message_queue.put((midi.time, time.time(), midi))
+
+    def wake_me_up_at(self, time):
+        self._notify_song_time = time
+
+    def play_next(self) -> None:
         """
         Play the messages in input and append them to the generated performance.
         If no midi port has been specified, the messages will only be saved.
@@ -71,33 +96,47 @@ class Player:
         :param messages: the midi messages to play.
         """
 
-        for msg in messages:
+        if self._message_queue.empty():
+            return
 
-            # obtained from
-            # mido/mido/midifiles/midifiles.py:427-430
-            self._input_time += msg.time
-            playback_time = time.time() - self._start_time
-            duration_to_next_event = self._input_time - playback_time
+        _, _, msg = self._message_queue.get()
 
-            if self._midi_out is not None:
-                if not msg.is_meta:
-                    # obtained from
-                    # mido/mido/midifiles/midifiles.py:432-433
-                    if duration_to_next_event > 0.0:
-                        time.sleep(duration_to_next_event)
+        msg_time = msg.time
+        msg.time -= self._song_time
+        self._song_time = msg_time
 
-                    # don't send songpos messages
-                    # but do wait if between pauses
-                    if msg.type == "songpos":
-                        pass
-                    else:
-                        self._midi_out.send(msg)
+        # bring to tempo
+        msg.time *= self._tempo_scale
 
-                    if self._verbose == 5:
-                        print("[MIDI]\t", msg)
+        # obtained from
+        # mido/mido/midifiles/midifiles.py:427-430
+        self._input_time += msg.time
+        playback_time = time.time() - self._start_time
+        duration_to_next_event = self._input_time - playback_time
+
+        if self._midi_out is not None:
+            if not msg.is_meta:
+                # obtained from
+                # mido/mido/midifiles/midifiles.py:432-433
+                if duration_to_next_event > 0.0:
+                    time.sleep(duration_to_next_event)
+
+                # don't send songpos messages
+                # but do wait if between pauses
+                if msg.type == "songpos":
+                    pass
+                else:
+                    self._midi_out.send(msg)
+
+                if self._verbose == 5:
+                    print("[MIDI]\t", msg)
 
             if self._saving:
                 self._midi_track.append(msg)
+
+        if self._song_time >= self._notify_song_time:
+            with self.playback_done:
+                self.playback_done.notifyAll()
 
     def reset(self) -> None:
         """

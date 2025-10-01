@@ -286,16 +286,11 @@
                                     "scale": true,
                                     "shift": false
                                 },
-                                "phrasing": {
-                                    "phrase_exp": 10000,
-                                    "phrase_levels": 0.0
-                                },
                                 "pattern": "var_legato_pattern"
                             },
                             "weights": [
-                                0.2,
-                                0.6,
-                                0.2
+                                0.5,
+                                0.5
                             ]
                         }
                     },
@@ -315,18 +310,11 @@
         ]
     },
     "legato": {
-        "min": 0.4,
+        "min": 0.8,
         "max": 1.0,
         "bind": "legato"
     },
     "keyswitches": {},
-    "probabilities": {
-        "drop": 0.005,
-        "roll": 0.33,
-        "slide": 0.33,
-        "cut": 0.33,
-        "error": 0.005
-    },
     "ornamentation": {},
     "values": {
         "bend_resolution": 32,

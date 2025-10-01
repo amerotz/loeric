@@ -19,15 +19,25 @@ received_start = threading.Semaphore(value=0)
 done_playing = threading.Event()
 
 
+def player_loop(player):
+
+    global done_playing, received_start
+
+    received_start.acquire()
+    while not done_playing.is_set():
+
+        player.play_next()
+
+
 # play midi file
 def play(
     groover: gr.Groover,
+    player: pl.Player,
     tune: tu.Tune,
     out: mido.ports.BaseOutput,
     sync_port_out: mido.ports.BaseOutput,
     **kwargs,
 ) -> None:
-    global received_start
     try:
         """
         Play the given tune with the given groover.
@@ -37,66 +47,76 @@ def play(
         :param sync_port_out: the MIDI port for synchronization
         :param kwargs: the performance arguments
         """
-        # create player
-        player = pl.Player(
-            tempo=groover.tempo,
-            key_signature=tune.key_signature,
-            time_signature=tune.time_signature,
-            save=kwargs["save"],
-            verbose=kwargs["verbose"],
-            midi_out=out,
-        )
 
-        # wait for start
-        if kwargs["sync"]:
-            received_start.acquire()
-
+        received_start.release(n=1)
         player.init_playback()
 
         # repeat as specified
-        # iterate over messages
-        while True:
-            if groover.stopped.is_set():
-                player.reset()
-                with groover.playback_resumed:
-                    groover.playback_resumed.wait()
-                player.init_playback()
-            message = groover.next_event()
-            if message is None:
-                break
+        for r in range(kwargs["repeat"]):
+            if kwargs["verbose"] > 0:
+                print(f"[INFO]\tRepetition {r+1}/{kwargs['repeat']}")
 
-            if message.type == "sysex":
-                if kwargs["verbose"] > 0:
-                    print(f"[INFO]\tRepetition {message.data[0]+1}/{kwargs['repeat']}")
-                groover._offset = 0
-                groover._swing_offset = 0
-                continue
-            # perform notes
-            elif lu.is_note(message):
-                # make the groover play the messages
-                new_messages = groover.perform(message)
-            # keep meta messages intact
-            else:
-                if message.type == "songpos":
-                    if sync_port_out is not None:
-                        sync_port_out.send(message)
+            # iterate over messages
+            while True:
+
+                if groover.stopped.is_set():
+                    player.reset()
+                    with groover.playback_resumed:
+                        groover.playback_resumed.wait()
+                    player.init_playback()
+                original_message = groover.next_event()
+
+                if original_message is None:
+                    groover.reset()
+                    break
+
+                new_messages = []
+                # perform notes
+                if original_message.is_note:
+                    # make the groover play the messages
+                    midi_headers, new_messages = groover.perform(original_message)
+                # keep meta messages intact
+                else:
+                    original_message._time = groover.performance_time
+                    if isinstance(original_message, tu.SongPosition):
+                        if sync_port_out is not None:
+                            sync_port_out.send(original_message.to_midi())
+                            if kwargs["verbose"] > 0:
+                                print(
+                                    f"[INFO]\t{groover.loeric_id} SENT {original_message.position} ({time.time()})"
+                                )
+                    if (
+                        isinstance(original_message, tu.KeySignature)
+                        and kwargs["force_key"] is None
+                    ):
                         if kwargs["verbose"] > 0:
-                            print(
-                                f"[INFO]\t{groover.loeric_id} SENT {message.pos} ({time.time()})"
-                            )
-                elif message.type == "key_signature" and kwargs["force_key"] is None:
-                    if kwargs["verbose"] > 0:
-                        print(f"[INFO]\tChanging key. {message}")
-                    groover._tune.set_key_signature(message)
-                new_messages = groover.perform(message)
-            # play
-            player.play(new_messages)
+                            print(f"[INFO]\tChanging key. {original_message}")
+                        groover._tune.set_key_signature(original_message)
+                    midi_headers = [original_message.to_midi()]
+
+                player.set_tempo_scale(groover.tempo_scale)
+                player.add_midi(midi_headers)
+                player.add_notes(new_messages)
+
+                # play
+                player.wake_me_up_at(
+                    groover.performance_time - original_message.eighth_duration
+                )
+
+                with player.playback_done:
+                    player.playback_done.wait()
 
         # play an end note
         if groover.do_end_note:
-            groover.reset_contours()
+            groover.reset()
             groover.advance_contours()
-            player.play(groover.get_end_notes())
+            end_notes = groover.get_end_notes()
+            player.add_notes(end_notes)
+
+            player.wake_me_up_at(end_notes[-1].time + end_notes[-1].eighth_duration)
+
+            with player.playback_done:
+                player.playback_done.wait()
 
         if kwargs["save"]:
             name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
@@ -440,10 +460,6 @@ def main():
     # consistency with MIDI spec and mido
     args["midi_channel"] -= 1
 
-    if not args["sync"] and not args["no_prompt"]:
-        input("Press any key to start playback:")
-        print()
-
     # start the player thread
     try:
         print(args["verbose"])
@@ -484,14 +500,17 @@ def main():
         if port is not None:
             port.callback = groover.check_midi_control()
 
-        if args["sync"] and args["verbose"] > 0:
-            print("[INFO]\tWaiting for START message...")
-
-        player_t = threading.Thread(
-            target=play,
-            args=(groover, tune, out, sync_port_out),
-            kwargs=args,
+        # create player
+        player = pl.Player(
+            tempo=groover.tempo,
+            key_signature=tune.key_signature,
+            time_signature=tune.time_signature,
+            save=args["save"],
+            verbose=args["verbose"],
+            midi_out=out,
         )
+
+        player_t = threading.Thread(target=player_loop, args=[player])
         player_t.start()
 
         if args["sync"]:
@@ -500,6 +519,17 @@ def main():
                 target=sync_thread, args=(groover, sync_port_in, out)
             )
             sync_t.start()
+
+        if not args["sync"] and not args["no_prompt"]:
+            a = input("Press any key to start playback:")
+            print()
+
+        if args["sync"] and args["verbose"] > 0:
+            print("[INFO]\tWaiting for START message...")
+            received_start.acquire()
+
+        # start playback
+        play(groover, player, tune, out, sync_port_out, **args)
 
         while player_t.is_alive():
             player_t.join(1)

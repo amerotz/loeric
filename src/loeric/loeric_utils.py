@@ -17,12 +17,6 @@ MAX_TEMPO = 2**24 - 1
 
 # key signatures
 number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
-mode_offset = {
-    "major": 0,
-    "minor": 3,
-    "dorian": 10,
-    "mixolydian": 5,
-}
 
 
 def get_root(key_signature: str) -> int:
@@ -50,6 +44,12 @@ def major_root(root, mode) -> int:
     """
     :return: the root of the relative major of the key signature in pitch space.
     """
+    mode_offset = {
+        "major": 0,
+        "minor": 3,
+        "dorian": 10,
+        "mixolydian": 5,
+    }
     return (root + mode_offset[mode]) % 12
 
 

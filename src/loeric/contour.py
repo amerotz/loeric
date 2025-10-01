@@ -154,59 +154,37 @@ class HarmonicContour(Contour):
     ) -> None:
         # retrieve pitch and time info
         # note_events = [msg for msg in midi if "note" in msg.type]
-        note_events = midi.filter(
-            lambda x: "note" in x.type or "key_signature" in x.type
-        )
-        timings = np.array([msg.time for msg in note_events])
-        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
 
-        # cumulative time
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([lu.is_note_off(msg) for msg in note_events])
-        summed_timings = np.cumsum(timings)
-        summed_timings -= midi.offset
+        pitches = midi.pitches
+        summed_timings = midi.times
 
-        key_changes = [
-            (summed_timings[i], n.key)
-            for i, n in enumerate(note_events)
-            if "key" in n.type
-        ]
-
-        summed_timings = summed_timings[note_ons]
         notes = pitches % 12
 
         # message length
-        lengths = timings[note_offs] - timings[note_ons]
-        lengths /= midi.quarter_duration * 0.5
+        lengths = midi.durations
 
         # estimate chord for each bar
-        harmony = np.zeros(len(note_events))
+        harmony = np.zeros(len(pitches))
 
         t = summed_timings.min()
 
-        if midi.forced_key:
-            current_key = midi.root
-            current_mode = midi._key_signature.mode
-        else:
-            current_key = lu.get_root(key_changes[0][1])
-            current_mode = "minor" if key_changes[0][1][-1] == "m" else "major"
-            key_changes = key_changes[1:]
+        key_changes = midi._key_signatures
+        current_key = key_changes[0]
 
         while t <= summed_timings.max():
             start = t
-            stop = t + midi.bar_duration / chords_per_bar
+            stop = t + midi.time_signature.quarters_per_bar / chords_per_bar
             if t < 0:
                 stop = 0
 
             if len(key_changes) != 0 and not midi.forced_key:
-                if t >= key_changes[0][0]:
-                    current_key = lu.get_root(key_changes[0][1])
-                    current_mode = "minor" if key_changes[0][1][-1] == "m" else "major"
+                if t >= key_changes[0].time:
+                    current_key = key_changes[0]
                     key_changes = key_changes[1:]
 
             # select bar range
             indexes = np.where((summed_timings >= start) & (summed_timings < stop))
-            bar_notes = notes[indexes]
+            bar_notes = notes[indexes].astype(int)
             bar_lengths = lengths[indexes]
 
             # init counts
@@ -221,7 +199,7 @@ class HarmonicContour(Contour):
             # filter out chords that are not allowed
             chords_filtered = np.multiply(
                 chords,
-                np.roll(allowed_chords, current_key),
+                np.roll(allowed_chords, current_key.root),
             )
 
             # choose the chord with the highest score
@@ -232,7 +210,7 @@ class HarmonicContour(Contour):
 
             # check if the selected chord should be major according to the mode
             chord_quality = np.roll(
-                lu.chord_quality, lu.major_root(current_key, current_mode)
+                lu.chord_quality, lu.major_root(current_key.root, current_key.mode)
             )[root]
 
             harmony_value = root
@@ -279,8 +257,7 @@ class RandomContour(Contour):
         :param midi: the input tune.
         :param extremes: the upper and lower bound for the random contour. If None, the range will be (0, 1).
         """
-        note_events = midi.filter(lambda x: lu.is_note_on(x))
-        size = len(note_events)
+        size = len(midi.pitches)
         r_min = min
         r_max = max
         self._contour = np.random.uniform(r_min, r_max, size=size)
@@ -299,18 +276,11 @@ class PhraseContour(Contour):
         :param midi: the input tune.
         """
         # retrieve pitch and time info
-        note_events = midi.filter(lambda x: "note" in x.type)
-        timings = np.array([msg.time for msg in note_events])
-        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
+        summed_timings = midi.times
+        pitches = midi.pitches
+        durations = midi.durations
 
-        # cumulative time
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
-        summed_timings = np.cumsum(timings)
-        summed_timings -= midi.offset
-        summed_timings = summed_timings[note_ons]
-
-        bar_length = midi.bar_duration
+        bar_length = midi.time_signature.quarters_per_bar
 
         self._contour = self.scale_and_savgol(
             1
@@ -394,16 +364,9 @@ class IntensityContour(Contour):
         :return: the frequency score, the beat score, the ambitus score, the leap score and the length score.
         """
         # retrieve pitch and time info
-        note_events = midi.filter(lambda x: "note" in x.type)
-        timings = np.array([msg.time for msg in note_events])
-        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
-
-        # cumulative time
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
-        summed_timings = np.cumsum(timings)
-        summed_timings -= midi.offset
-        summed_timings = summed_timings[note_ons]
+        summed_timings = midi.times
+        pitches = midi.pitches
+        durations = midi.durations
 
         # o canainn score
         notes = pitches % 12
@@ -419,11 +382,12 @@ class IntensityContour(Contour):
         )
 
         # strong beat
-        beat_position = (summed_timings % midi.bar_duration) / midi.beat_duration
-        beat_position = abs(beat_position - np.round(beat_position))
-        trigger_delta = lu.TRIGGER_DELTA
+        indexes = np.where(
+            summed_timings
+            % (midi.time_signature.quarters_per_bar / midi.time_signature.beat_count)
+            == 0
+        )
         beats = -np.ones(notes.shape)
-        indexes = np.where(beat_position <= trigger_delta)
         beats[indexes] = notes[indexes]
         values, counts = np.unique(beats, return_counts=True)
         beat_score = np.array([counts[np.where(values == n)] for n in beats]).astype(
@@ -457,11 +421,10 @@ class IntensityContour(Contour):
             )
 
         # long score
-        timings = timings[note_offs] - timings[note_ons]
-        values, counts = np.unique(timings, return_counts=True)
+        values, counts = np.unique(durations, return_counts=True)
         index = np.argmax(counts)
         val = values[index]
-        length_score = (timings > val).astype(float)
+        length_score = (durations > val).astype(float)
 
         return frequency_score, beat_score, ambitus_score, leap_score, length_score
 
@@ -482,11 +445,7 @@ class MessageLengthContour(Contour):
         :param midi: the input tune object.
         """
 
-        note_events = midi.filter(lambda x: lu.is_note(x))
-        timings = np.array([msg.time for msg in note_events])
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([lu.is_note_off(msg) for msg in note_events])
-        self._contour = timings[note_offs] - timings[note_ons]
+        self._contour = midi.durations
 
 
 class PitchDifferenceContour(Contour):
@@ -499,8 +458,7 @@ class PitchDifferenceContour(Contour):
         self,
         midi: tune.Tune,
     ) -> None:
-        note_events = midi.filter(lambda x: "note" in x.type)
-        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
+        pitches = midi.pitches
         diff = np.diff(pitches)
         diff = np.insert(diff, 0, 0)
         self._contour = diff
@@ -519,11 +477,8 @@ class PitchContour(Contour):
         shift: bool = True,
         scale: bool = True,
     ) -> None:
-        note_events = midi.filter(lambda x: "note" in x.type)
-        pitches = np.array(
-            [msg.note for msg in note_events if lu.is_note_on(msg)]
-        ).astype(float)
-        self._contour = pitches
+
+        self._contour = midi.pitches
 
         if savgol or shift or scale:
             self._contour = self.scale_and_savgol(
@@ -560,18 +515,11 @@ class PatternContour(Contour):
         std = np.array(std).astype(float)
 
         # retrieve pitch and time info
-        note_events = midi.filter(lambda x: "note" in x.type)
-        timings = np.array([msg.time for msg in note_events])
-        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
+        summed_timings = midi.times
+        pitches = midi.pitches
+        durations = midi.durations
 
-        # cumulative time
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
-        summed_timings = np.cumsum(timings)
-        summed_timings -= midi.offset
-        summed_timings = summed_timings[note_ons]
-
-        time_period = midi.bar_duration * period
+        time_period = midi.time_signature.quarters_per_bar * period
         bar_position = summed_timings / time_period
 
         pattern_indexes = np.round(
