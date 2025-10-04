@@ -19,12 +19,20 @@ received_start = threading.Semaphore(value=0)
 done_playing = threading.Event()
 
 
-def player_loop(player):
+def player_loop(player, groover):
 
     global done_playing, received_start
 
     received_start.acquire()
     while not done_playing.is_set():
+
+        while groover.stopped.is_set():
+            player.reset()
+            # print("player waiting play")
+            with groover.playback_resumed:
+                groover.playback_resumed.wait()
+            # print("player awake")
+            player.init_playback()
 
         player.play_next()
 
@@ -52,71 +60,89 @@ def play(
         player.init_playback()
 
         # repeat as specified
-        for r in range(kwargs["repeat"]):
-            if kwargs["verbose"] > 0:
-                print(f"[INFO]\tRepetition {r+1}/{kwargs['repeat']}")
+        if kwargs["verbose"] > 0:
+            # print(f"[INFO]\tRepetition {r+1}/{kwargs['repeat']}")
+            pass
 
-            # iterate over messages
-            while True:
+        # iterate over messages
+        average_run_time = None
+        time_counter = 0
+        while True:
+            # print()
 
-                if groover.stopped.is_set():
-                    player.reset()
+            if groover.stopped.is_set():
+                while groover.stopped.is_set():
                     with groover.playback_resumed:
                         groover.playback_resumed.wait()
-                    player.init_playback()
-                original_message = groover.next_event()
 
-                if original_message is None:
-                    groover.reset()
-                    break
+            # play an end note
 
-                new_messages = []
-                # perform notes
-                if original_message.is_note:
-                    # make the groover play the messages
-                    midi_headers, new_messages = groover.perform(original_message)
-                # keep meta messages intact
-                else:
-                    original_message._time = groover.performance_time
-                    if isinstance(original_message, tu.SongPosition):
-                        if sync_port_out is not None:
-                            sync_port_out.send(original_message.to_midi())
-                            if kwargs["verbose"] > 0:
-                                print(
-                                    f"[INFO]\t{groover.loeric_id} SENT {original_message.position} ({time.time()})"
-                                )
-                    if (
-                        isinstance(original_message, tu.KeySignature)
-                        and kwargs["force_key"] is None
-                    ):
+            run_time = time.time()
+            original_message = groover.next_event()
+
+            if original_message is None:
+                groover.reset()
+                break
+
+            new_messages = []
+            # perform notes
+            if original_message.is_note:
+                # make the groover play the messages
+                midi_headers, new_messages = groover.perform(original_message)
+            # keep meta messages intact
+            else:
+                if isinstance(original_message, tu.SongPosition):
+                    if sync_port_out is not None:
+                        sync_port_out.send(original_message.to_midi())
                         if kwargs["verbose"] > 0:
-                            print(f"[INFO]\tChanging key. {original_message}")
-                        groover._tune.set_key_signature(original_message)
-                    midi_headers = [original_message.to_midi()]
+                            print(
+                                f"[INFO]\t{groover.loeric_id} SENT {original_message.position} ({time.time()})"
+                            )
+                elif (
+                    isinstance(original_message, tu.KeySignature)
+                    and kwargs["force_key"] is None
+                ):
+                    if kwargs["verbose"] > 0:
+                        print(f"[INFO]\tChanging key. {original_message}")
+                    groover._tune.set_key_signature(original_message)
+                midi_headers = [original_message.to_midi()]
 
-                player.set_tempo_scale(groover.tempo_scale)
-                player.add_midi(midi_headers)
-                player.add_notes(new_messages)
+            player.set_tempo_scale(groover.tempo_scale)
+            player.add_midi(midi_headers)
+            player.add_notes(new_messages)
 
-                # play
-                player.wake_me_up_at(
-                    groover.performance_time - original_message.eighth_duration
-                )
+            run_time = time.time() - run_time
+            time_counter += 1
+            if average_run_time is None:
+                average_run_time = run_time
+            else:
+                average_run_time += (run_time - average_run_time) / time_counter
+            # print(average_run_time)
 
-                with player.playback_done:
-                    player.playback_done.wait()
+            if len(new_messages) != 0:
+                last_message = original_message
+                player.wake_me_up_at(last_message.time + last_message.duration)
 
-        # play an end note
+                while not player.has_reached_wake_time.is_set():
+                    with player.playback_done:
+                        # print( f"waiting for { last_message.time + last_message.duration}")
+                        player.playback_done.wait()
+                        # print("awake")
+                    # print("done wait")
+
         if groover.do_end_note:
             groover.reset()
             groover.advance_contours()
             end_notes = groover.get_end_notes()
             player.add_notes(end_notes)
 
-            player.wake_me_up_at(end_notes[-1].time + end_notes[-1].eighth_duration)
+            player.wake_me_up_at(end_notes[-1].time + end_notes[-1].duration)
+        else:
+            player.wake_me_up_at(groover.performance_time)
 
-            with player.playback_done:
-                player.playback_done.wait()
+        with player.playback_done:
+            player.playback_done.wait_for(player.has_reached_wake_time.is_set)
+        # print("groover done")
 
         if kwargs["save"]:
             name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
@@ -174,9 +200,9 @@ def sync_thread(
             groover.stopped.set()
             print("Received STOP.")
         elif msg.type == "continue":
-            groover.stopped.clear()
             with groover.playback_resumed:
-                groover.playback_resumed.notify_all()
+                groover.playback_resumed.notifyAll()
+            groover.stopped.clear()
             print("Received CONTINUE.")
 
     print("Sync thread terminated.")
@@ -462,7 +488,6 @@ def main():
 
     # start the player thread
     try:
-        print(args["verbose"])
         # load a tune
         tune = tu.Tune(
             args["source"],
@@ -510,7 +535,7 @@ def main():
             midi_out=out,
         )
 
-        player_t = threading.Thread(target=player_loop, args=[player])
+        player_t = threading.Thread(target=player_loop, args=[player, groover])
         player_t.start()
 
         if args["sync"]:

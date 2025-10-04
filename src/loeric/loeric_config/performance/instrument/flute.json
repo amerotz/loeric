@@ -571,8 +571,7 @@
                 0
             ],
             "durations_mean": [
-                "var_divide_note_1_duration",
-                "var_divide_note_2_duration"
+                1,1
             ],
             "durations_std": [
                 0.01,
@@ -1011,7 +1010,7 @@
         "bind": "legato"
     },
     "values": {
-        "pitch_deviation_cents": 15,
+        "pitch_deviation_cents": 10,
         "min_velocity": 1,
         "max_velocity": 127
     },

@@ -1,8 +1,6 @@
 {
     "variables": {
-        "var_roll_2_prob": 1,
-        "var_divide_note_1_duration": 1.4,
-        "var_divide_note_2_duration": 0.6
+        "var_roll_2_prob": 1
     },
     "ornamentation": {
         "divide": {

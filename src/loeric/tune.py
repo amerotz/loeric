@@ -1,4 +1,5 @@
 import argparse
+import copy
 import random
 import os
 import numpy as np
@@ -10,12 +11,6 @@ from . import loeric_utils as lu
 ############################# CONSTANTS #########################
 
 MINIMUM_QUARTER_DIVISION = 48
-
-
-def quantize(eighth_duration):
-    return np.round(eighth_duration * MINIMUM_QUARTER_DIVISION / 2) / (
-        MINIMUM_QUARTER_DIVISION / 2
-    )
 
 
 def note_list_to_midi(notes):
@@ -40,33 +35,176 @@ def note_list_to_midi(notes):
     return midi_messages
 
 
+class TimeDelta:
+
+    def __init__(self, eighth_duration):
+        if isinstance(eighth_duration, int) or isinstance(eighth_duration, float):
+            self._eighth_duration = TimeDelta.quantize(eighth_duration)
+            if self._eighth_duration != 0:
+                self._absolute_duration = 8 / self._eighth_duration
+        else:
+            raise Exception(
+                f"Only ints and float are valid TimeDelta durations, not {type(eighth_duration)}"
+            )
+
+    @property
+    def eighth_duration(self):
+        return self._eighth_duration
+
+    def __repr__(self):
+        return str(np.round(self._eighth_duration, 4))
+
+    @eighth_duration.setter
+    def eighth_duration(self, value):
+        self._eighth_duration = TimeDelta.quantize(value)
+        if self._eighth_duration != 0:
+            self._absolute_duration = 8 / self._eighth_duration
+
+    @property
+    def absolute_duration(self):
+        return self._absolute_duration
+
+    @staticmethod
+    def quantize(value):
+        return np.round(value * MINIMUM_QUARTER_DIVISION / 2) / (
+            MINIMUM_QUARTER_DIVISION / 2
+        )
+
+    def __add__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration + other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration + other.eighth_duration
+            )
+
+    def __sub__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration - other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration - other.eighth_duration
+            )
+
+    def __mul__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration * other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration * other.eighth_duration
+            )
+
+    def __truediv__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration / other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration / other.eighth_duration
+            )
+
+    def __mod__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration % other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration % other.eighth_duration
+            )
+
+    def __iadd__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration + other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration + other.eighth_duration
+            )
+
+    def __isub__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration - other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration - other.eighth_duration
+            )
+
+    def __imul__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration * other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration * other.eighth_duration
+            )
+
+    def __itruediv__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration / other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration / other.eighth_duration
+            )
+
+    def __lt__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration < other
+        else:
+            return self._eighth_duration < other.eighth_duration
+
+    def __gt__(self, other):
+        return self._eighth_duration > other.eighth_duration
+
+    def __le__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration <= other
+        else:
+            return self._eighth_duration <= other.eighth_duration
+
+    def __ge__(self, other):
+        return self._eighth_duration >= other.eighth_duration
+
+    def __eq__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration == other
+        else:
+            return self._eighth_duration == other.eighth_duration
+
+    def __ne__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration != other
+        else:
+            return self._eighth_duration != other.eighth_duration
+
+    def __neg__(self):
+        return TimeDelta(eighth_duration=-self._eighth_duration)
+
+
 class ScoreElement:
 
     def __init__(self, time: float = 0):
-        self._time = time
+        self._time = TimeDelta(eighth_duration=time)
         self._is_note = False
-        self._eighth_duration = 0
-        self._absolute_duration = 0
+        self._duration = TimeDelta(eighth_duration=0)
 
     @property
     def time(self):
         return self._time
+
+    @time.setter
+    def time(self, value):
+        if isinstance(value, int) or isinstance(value, float):
+            self._time = TimeDelta(eighth_duration=value)
+        else:
+            self._time = TimeDelta(eighth_duration=value.eighth_duration)
 
     @property
     def is_note(self):
         return self._is_note
 
     @property
-    def eighth_duration(self):
-        return self._eighth_duration
+    def duration(self):
+        return self._duration
 
-    @property
-    def absolute_duration(self):
-        return self._absolute_duration
-
-    @eighth_duration.setter
-    def eighth_duration(self, value):
-        self._eighth_duration = value
+    @duration.setter
+    def duration(self, value):
+        self._duration = TimeDelta(eighth_duration=value)
 
 
 class Pause(ScoreElement):
@@ -74,21 +212,21 @@ class Pause(ScoreElement):
     def __init__(self, eighth_duration, time: float = 0):
         super().__init__(time)
 
-        self._eight_duration = eighth_duration
+        self.duration = eighth_duration
 
     @property
     def pitch(self):
         return -1
 
     def __repr__(self):
-        return f"(Pause d={np.round(self._eighth_duration,4)} t={self._time})"
+        return f"(Pause d={np.round(self._duration.eighth_duration,4)} t={self._time})"
 
     def to_midi(self, absolute_time=False):
-        time = self._eight_duration
+        time = self.duration
         if absolute_time:
             time += self._time
 
-        return [mido.Message("note_off", note=0, time=time)]
+        return [mido.Message("note_off", note=0, time=time.eighth_duration)]
 
 
 class SongPosition(ScoreElement):
@@ -97,6 +235,7 @@ class SongPosition(ScoreElement):
         super().__init__(time)
 
         self._position = position
+        self._is_note = False
 
     @property
     def position(self):
@@ -106,7 +245,9 @@ class SongPosition(ScoreElement):
         return f"(Position p={self._position} t={self._time})"
 
     def to_midi(self):
-        return mido.Message("songpos", pos=self._position, time=self._time)
+        return mido.Message(
+            "songpos", pos=self._position, time=self._time.eighth_duration
+        )
 
 
 class Tempo(ScoreElement):
@@ -161,7 +302,7 @@ class KeySignature(ScoreElement):
     def to_midi(self):
         names = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
         return mido.MetaMessage(
-            "key_signature", key=names[self.major_root], time=self._time
+            "key_signature", key=names[self.major_root], time=self._time.eighth_duration
         )
 
     @property
@@ -182,7 +323,7 @@ class TimeSignature(ScoreElement):
 
         self._numerator = numerator
         self._denominator = denominator
-        self._quarters_per_bar = 4 * numerator / denominator
+        self._quarters_per_bar = TimeDelta(eighth_duration=8 * numerator / denominator)
 
         if self._numerator % 3 == 0:
             self._beat_count = self._numerator / 3
@@ -224,6 +365,7 @@ class Repetition(ScoreElement):
         return f"(Repetition n={self._number} t={np.round(self._time, 4)})"
 
 
+"""
 class NoteGroup(ScoreElement):
 
     def __init__(self, time=0):
@@ -252,6 +394,8 @@ class NoteGroup(ScoreElement):
             s += "\n\t" + str(note)
         return s
 
+"""
+
 
 class Note(ScoreElement):
 
@@ -267,18 +411,18 @@ class Note(ScoreElement):
     ):
         super().__init__(time)
         self._pitch = pitch
-        self._eighth_duration = quantize(eighth_duration)
-        if eighth_duration != 0:
-            self._absolute_duration = 8 / eighth_duration
+
+        self._duration = TimeDelta(eighth_duration=eighth_duration)
+
         self._id = id
-        self._is_note = True
         self._velocity = velocity
         self._is_slide = slide
         self._slide_targets = []
         self.channel = channel
+        self._is_note = True
 
     def __repr__(self):
-        return f"(Note p={self._pitch} d={np.round(self._eighth_duration,4)} id={self._id} t={np.round(self._time,4)})"
+        return f"(Note p={self._pitch} d={self._duration} id={self._id} t={self._time})"
 
     def transpose(self, semitones):
         self._pitch += semitones
@@ -293,24 +437,28 @@ class Note(ScoreElement):
             )
         self._slide_targets.append(note)
         # print(self._pitch, self._slide_targets, self._eighth_duration)
-        duration = self._slide_targets[0].absolute_duration
+        duration = self._slide_targets[0].duration
         for note in self._slide_targets[1:]:
-            duration = absolute_add(duration, note.absolute_duration)
+            duration += note.duration
         """
         assert (
-            duration >= self._absolute_duration
-        ), f"Duration of targets {duration} exceeds note duration {self._absolute_duration}"
+            duration <= self._duration
+        ), f"Duration of targets {duration} exceeds note duration {self._duration}"
         """
 
     @property
-    def eighth_duration(self):
-        return self._eighth_duration
+    def duration(self):
+        return self._duration
 
-    @eighth_duration.setter
-    def eighth_duration(self, value):
-        self._eighth_duration = quantize(value)
-        if value != 0:
-            self._absolute_duration = 8 / value
+    @duration.setter
+    def duration(self, value):
+        original_duration = self._duration.eighth_duration
+        self._duration = value
+
+        if self._is_slide:
+            ratio = value / original_duration
+            for note in self._slide_targets:
+                note.duration = note.duration * ratio
 
     @property
     def pitch(self):
@@ -322,9 +470,9 @@ class Note(ScoreElement):
 
     def to_midi(self, absolute_time=False):
 
-        overall_time = 0
+        overall_time = TimeDelta(eighth_duration=0)
         if absolute_time:
-            overall_time = self._time
+            overall_time = TimeDelta(eighth_duration=self._time.eighth_duration)
 
         messages = []
         messages.append(
@@ -334,27 +482,29 @@ class Note(ScoreElement):
                     int
                 ),
                 channel=self.channel,
-                time=overall_time,
+                time=overall_time.eighth_duration,
             )
         )
         messages.append(
             mido.Message(
                 "note_on",
                 note=np.round(self._pitch).astype(int),
-                time=overall_time,
+                time=overall_time.eighth_duration,
                 channel=self.channel,
                 velocity=self._velocity,
             )
         )
 
-        note_duration = self._eighth_duration
+        note_duration = TimeDelta(eighth_duration=self._duration.eighth_duration)
         if self._is_slide:
 
             previous_bend = 0
             resolution = 24
 
             for note in self._slide_targets:
-                slide_duration = note.eighth_duration / resolution
+                slide_duration = TimeDelta(
+                    eighth_duration=note.duration.eighth_duration / resolution
+                )
 
                 bend = max(
                     min(4096.0 * (note.pitch - self._pitch), 8191),
@@ -366,7 +516,7 @@ class Note(ScoreElement):
                 mult = random.uniform(0.25, 0.5)
                 for j in range(resolution):
                     if absolute_time:
-                        overall_time += slide_duration
+                        overall_time = overall_time + slide_duration
                     perc = j / resolution
                     perc **= mult
                     pb = (1 - perc) * previous_bend + perc * bend
@@ -376,10 +526,10 @@ class Note(ScoreElement):
                             "pitchwheel",
                             pitch=pb,
                             channel=self.channel,
-                            time=overall_time,
+                            time=overall_time.eighth_duration,
                         )
                     )
-                    note_duration -= slide_duration
+                    note_duration = note_duration - slide_duration
 
                 previous_bend = bend
 
@@ -388,15 +538,11 @@ class Note(ScoreElement):
                 "note_off",
                 note=np.round(self._pitch).astype(int),
                 channel=self.channel,
-                time=overall_time + note_duration,
+                time=(overall_time + note_duration).eighth_duration,
                 velocity=0,
             )
         )
         return messages
-
-
-def absolute_add(a: float, b: float) -> float:
-    return (a * b) / (a + b)
 
 
 class Tune:
@@ -496,7 +642,7 @@ class Tune:
         if self._sync_interval is None:
             time_signature = self._time_signatures[0]
             self._sync_interval = (
-                2 * time_signature.quarters_per_bar / time_signature.beat_count
+                time_signature.quarters_per_bar * 2 / time_signature.beat_count
             )
 
         if self._verbose > 0:
@@ -525,13 +671,26 @@ class Tune:
             self.ticks_to_eighth_notes(msg.time, midi_source.resolution)
             for msg in midi_source_notes
         ]
-        self._score_end_time = note_times[-1] + note_durations[-1]
 
         # pitch, duration, note id, time
         self._score = [
             Note(pitch=p, eighth_duration=d, id=i, time=t)
             for p, d, i, t in zip(note_pitches, note_durations, note_ids, note_times)
         ]
+
+        # add repetitions
+        score_duration = self._score[-1].time + self._score[-1].duration
+
+        tmp_score = []
+        # add notes and repetitions
+        for r in range(repeats):
+            new_score = copy.deepcopy(self._score)
+            for n in new_score:
+                n.time += score_duration * r
+            tmp_score.extend(new_score)
+
+        self._score = tmp_score
+        self._score_end_time = self._score[-1].time + self._score[-1].duration
 
         ############# score with repetition signs, songpos etc ###########
 
@@ -543,8 +702,8 @@ class Tune:
         # arange songpos messages independently
         songpos_timestamps = np.arange(
             start=0,
-            stop=self._score_end_time,
-            step=self._sync_interval,
+            stop=self._score_end_time.eighth_duration,
+            step=self._sync_interval.eighth_duration,
         )
         self._annotated_score.extend(
             [SongPosition(position=p, time=t) for p, t in enumerate(songpos_timestamps)]
@@ -553,11 +712,14 @@ class Tune:
         self.maximum_songpos = len(songpos_timestamps) - 1
 
         # divide messages that are longer than the sync interval
+        """
         temp_score = []
+        split_notes = 0
         for note in self._score:
 
             # split up this note
             if note.eighth_duration > self._sync_interval:
+                split_notes += 1
                 total_duration = note.eighth_duration
                 new_duration = 0
                 # add a new note with the same id every sync interval
@@ -574,16 +736,23 @@ class Tune:
             else:
                 temp_score.append(note)
 
-        self._annotated_score.extend(temp_score)
+        print(split_notes, len(self._score), len(temp_score))
+        """
+
+        self._annotated_score.extend(self._score)
 
         self._annotated_score.sort(key=lambda x: x.time)
 
         # create index map to jump
         self.index_map = {}
+        contour_index = -1
         for i, el in enumerate(self._annotated_score):
 
             if isinstance(el, SongPosition):
-                self.index_map[el.position] = i
+                self.index_map[el.position] = (i, contour_index)
+
+            if el.is_note:
+                contour_index += 1
 
         if self._verbose > 0:
             print(f"[INFO]\tPlaying:\t\t{os.path.basename(filename)}")
@@ -622,7 +791,7 @@ class Tune:
 
     @property
     def durations(self):
-        return np.array([note.eighth_duration for note in self._score])
+        return np.array([note.duration for note in self._score])
 
     @property
     def times(self):

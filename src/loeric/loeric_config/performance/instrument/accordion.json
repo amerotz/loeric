@@ -55,8 +55,7 @@
                 0
             ],
             "durations_mean": [
-                "var_divide_note_1_duration",
-                "var_divide_note_2_duration"
+                1,1
             ],
             "durations_std": [
                 0.01,
@@ -500,6 +499,7 @@
         "strings_max": 0,
         "free_strings_min": 1,
         "free_strings_max": 2,
+        "break_ornaments": false,
         "free_strings": [
             55,
             50,

@@ -37,7 +37,11 @@ class Player:
         self._verbose = verbose
         self._message_queue = queue.PriorityQueue()
         self.playback_done = threading.Condition()
+        self.has_reached_wake_time = threading.Event()
         self._tempo_scale = 1
+
+        self._song_time = tu.TimeDelta(eighth_duration=0)
+        self._notify_song_time = tu.TimeDelta(eighth_duration=1000000)
 
         if self._saving:
             self._midi_performance = mido.MidiFile(type=0)
@@ -69,8 +73,6 @@ class Player:
         # to minimize drifting
         self._start_time = time.time()
         self._input_time = 0.0
-        self._song_time = 0
-        self._notify_song_time = 10000000
 
     def set_tempo_scale(self, tempo_scale):
         self._tempo_scale = tempo_scale
@@ -83,10 +85,12 @@ class Player:
     def add_midi(self, messages):
 
         for midi in messages:
+            # print(midi.time, time.time(), midi)
             self._message_queue.put((midi.time, time.time(), midi))
 
     def wake_me_up_at(self, time):
         self._notify_song_time = time
+        self.has_reached_wake_time.clear()
 
     def play_next(self) -> None:
         """
@@ -96,17 +100,31 @@ class Player:
         :param messages: the midi messages to play.
         """
 
+        # print(self._song_time, self._notify_song_time)
+        if self._song_time >= self._notify_song_time:
+            self.has_reached_wake_time.set()
+            # print(f"reached time {self._song_time}")
+            with self.playback_done:
+                self.playback_done.notify_all()
+                # print(f"wakey at {self._notify_song_time}")
+            # print("done notify")
+
         if self._message_queue.empty():
             return
 
         _, _, msg = self._message_queue.get()
 
         msg_time = msg.time
-        msg.time -= self._song_time
-        self._song_time = msg_time
+        # print(msg.time, msg_time, self._song_time)
+        msg.time -= self._song_time.eighth_duration
+        # print(msg.time, msg_time, self._song_time)
+        self._song_time = tu.TimeDelta(eighth_duration=msg_time)
+        # print(msg.time, msg_time, self._song_time)
 
         # bring to tempo
         msg.time *= self._tempo_scale
+        # print(msg.time, msg_time, self._song_time)
+        # print()
 
         # obtained from
         # mido/mido/midifiles/midifiles.py:427-430
@@ -133,10 +151,6 @@ class Player:
 
             if self._saving:
                 self._midi_track.append(msg)
-
-        if self._song_time >= self._notify_song_time:
-            with self.playback_done:
-                self.playback_done.notifyAll()
 
     def reset(self) -> None:
         """

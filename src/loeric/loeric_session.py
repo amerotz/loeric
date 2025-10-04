@@ -24,6 +24,7 @@ from loeric import loeric_utils as lu
 # parallel stuff
 received_start = threading.Condition()
 must_die = threading.Event()
+all_dead = threading.Semaphore()
 program_start = 0
 
 
@@ -676,22 +677,25 @@ def main():
 
     # create players
     for g in groovers:
+        # create a player per groover
         player = pl.Player(tempo=g.current_tempo, midi_out=out)
         player.init_playback()
 
-        player_t = threading.Thread(
+        tune_t = threading.Thread(
             target=play_tune,
             args=(player, tune, g, port, session),
         )
+        player_t = threading.Thread(target=player_loop, args=(player, groover))
+        threads.append(tune_t)
         threads.append(player_t)
 
     # all threads + session loop
     all_dead = threading.Semaphore(value=len(threads) + 1)
 
-    print("[SESSION] Awaiting message...")
     try:
         # set up port and wait
         if scheduler_port is not None:
+            print("[SESSION] Awaiting message...")
 
             scheduler_port.callback = get_callback(args["control"])
 
@@ -703,13 +707,13 @@ def main():
         session_t.start()
 
         # start all threads
-        for player_t in threads:
-            player_t.start()
+        for thread in threads:
+            thread.start()
 
         # join all threads
-        for player_t in threads:
-            while player_t.is_alive():
-                player_t.join(1)
+        for thread in threads:
+            while thread.is_alive():
+                thread.join(1)
 
         must_die.set()
         # join session thread to kill it
@@ -743,6 +747,28 @@ def main():
             print("[SESSION] Closed MIDI output.")
 
 
+def player_loop(player, groover):
+
+    global must_die, all_dead
+
+    all_dead.acquire()
+    print(f"[PLYR] Started {groover.loeric_id}")
+    while not must_die.is_set():
+
+        while groover.stopped.is_set():
+            player.reset()
+            print("player waiting play")
+            with groover.playback_resumed:
+                groover.playback_resumed.wait()
+            print("player awake")
+            player.init_playback()
+
+        player.play_next()
+
+    print(f"[PLYR] Terminated {groover.loeric_id}")
+    all_dead.release()
+
+
 def play_tune(player, tunes, groover, port, session):
     global must_die, all_dead
 
@@ -756,41 +782,61 @@ def play_tune(player, tunes, groover, port, session):
     # iterate over messages
     while not must_die.is_set():
 
-        if groover.stopped.is_set():
-            player.reset()
-            with groover.playback_resumed:
-                groover.playback_resumed.wait()
-            player.init_playback()
+        original_message = groover.next_event()
 
-        message = groover.next_event()
-        if message is None:
+        if original_message is None:
+            groover.reset()
             break
 
-        if message.type == "sysex":
-            # print(f"Repetition {message.data[0]+1}")
-            groover._offset = 0
-            groover._swing_offset = 0
-
-            continue
-
+        new_messages = []
         # perform notes
-        elif lu.is_note(message):
+        if original_message.is_note:
             # make the groover play the messages
-            new_messages = groover.perform(message)
+            midi_headers, new_messages = groover.perform(original_message)
             session.handle_loeric_intensity(groover)
         # keep meta messages intact
         else:
-            if message.type == "songpos":
-                session.handle_loeric_pos(groover, message.pos)
-            new_messages = groover.perform(message)
+            if isinstance(original_message, tu.SongPosition):
+                session.handle_loeric_pos(groover, original_message.position)
+            elif (
+                isinstance(original_message, tu.KeySignature)
+                and not groover._tune.forced_key
+            ):
+                groover._tune.set_key_signature(original_message)
+            midi_headers = [original_message.to_midi()]
+
+        player.set_tempo_scale(groover.tempo_scale)
+        player.add_midi(midi_headers)
+        player.add_notes(new_messages)
+
         # play
-        player.play(new_messages)
+        player.wake_me_up_at(
+            groover.performance_time - original_message.eighth_duration
+        )
+
+        if groover.stopped.is_set():
+            while groover.stopped.is_set():
+                print("groover waiting continue")
+                with groover.playback_resumed:
+                    groover.playback_resumed.wait()
+                print("groover awake")
+        else:
+            print("groover waiting player")
+            with player.playback_done:
+                player.playback_done.wait()
+            print("groover awake")
 
     # play an end note
     if groover.do_end_note:
-        groover.reset_contours()
+        groover.reset()
         groover.advance_contours()
-        player.play(groover.get_end_notes())
+        end_notes = groover.get_end_notes()
+        player.add_notes(end_notes)
+
+        player.wake_me_up_at(end_notes[-1].time + end_notes[-1].eighth_duration)
+
+        with player.playback_done:
+            player.playback_done.wait()
 
     print(f"[GRVR] Terminated {groover.loeric_id}")
     all_dead.release()

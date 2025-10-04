@@ -1,8 +1,6 @@
 {
 	"variables": {
 		"var_roll_2_prob": 0,
-		"var_divide_note_1_duration": 1.25,
-		"var_divide_note_2_duration": 1,
         "var_velocity_weight": [0,-1,1,1,1],
 		"var_legato_pattern": {
 			"mean": [
@@ -39,14 +37,9 @@
 							"std_scale": 1,
 							"normalize": false,
 							"period": 2
-						},
-						"phrasing#2": {
-							"phrase_exp": 1000,
-							"phrase_levels": -1.0
 						}
-
 					},
-					"weights": [ 1,1,-0.5]
+					"weights": [ 0.5,1]
 				}
 			}
         },
@@ -87,6 +80,6 @@
         "chords_per_bar": 2
 	},
 	"drone": {
-        "notes_per_bar": [8,4,2,1]
+        "notes_per_bar": [4,2,1]
 	}
 }

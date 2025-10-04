@@ -42,7 +42,7 @@ class Contour:
 
     def __getitem__(self, index):
         """
-        The length of this contour.
+        Index an item in the contour.
         """
         return self._contour[index]
 
@@ -156,12 +156,12 @@ class HarmonicContour(Contour):
         # note_events = [msg for msg in midi if "note" in msg.type]
 
         pitches = midi.pitches
-        summed_timings = midi.times
+        summed_timings = np.array([t.eighth_duration for t in midi.times])
 
         notes = pitches % 12
 
         # message length
-        lengths = midi.durations
+        lengths = np.array([n.eighth_duration for n in midi.durations])
 
         # estimate chord for each bar
         harmony = np.zeros(len(pitches))
@@ -173,7 +173,10 @@ class HarmonicContour(Contour):
 
         while t <= summed_timings.max():
             start = t
-            stop = t + midi.time_signature.quarters_per_bar / chords_per_bar
+            stop = (
+                t
+                + midi.time_signature.quarters_per_bar.eighth_duration / chords_per_bar
+            )
             if t < 0:
                 stop = 0
 
@@ -276,11 +279,11 @@ class PhraseContour(Contour):
         :param midi: the input tune.
         """
         # retrieve pitch and time info
-        summed_timings = midi.times
+        summed_timings = np.array([t.eighth_duration for t in midi.times])
         pitches = midi.pitches
         durations = midi.durations
 
-        bar_length = midi.time_signature.quarters_per_bar
+        bar_length = midi.time_signature.quarters_per_bar.eighth_duration
 
         self._contour = self.scale_and_savgol(
             1
@@ -364,7 +367,7 @@ class IntensityContour(Contour):
         :return: the frequency score, the beat score, the ambitus score, the leap score and the length score.
         """
         # retrieve pitch and time info
-        summed_timings = midi.times
+        summed_timings = np.array([t.eighth_duration for t in midi.times])
         pitches = midi.pitches
         durations = midi.durations
 
@@ -384,7 +387,10 @@ class IntensityContour(Contour):
         # strong beat
         indexes = np.where(
             summed_timings
-            % (midi.time_signature.quarters_per_bar / midi.time_signature.beat_count)
+            % (
+                midi.time_signature.quarters_per_bar.eighth_duration
+                / midi.time_signature.beat_count
+            )
             == 0
         )
         beats = -np.ones(notes.shape)
@@ -515,16 +521,14 @@ class PatternContour(Contour):
         std = np.array(std).astype(float)
 
         # retrieve pitch and time info
-        summed_timings = midi.times
+        summed_timings = np.array([t.eighth_duration for t in midi.times])
         pitches = midi.pitches
         durations = midi.durations
 
-        time_period = midi.time_signature.quarters_per_bar * period
+        time_period = 2 * midi.time_signature.quarters_per_bar.eighth_duration * period
         bar_position = summed_timings / time_period
 
-        pattern_indexes = np.round(
-            len(mean) * (summed_timings % time_period) / time_period
-        ).astype(int) % len(mean)
+        pattern_indexes = ((len(mean) * bar_position) % len(mean)).astype(int)
         diff = np.diff(pattern_indexes)
         index_diff = np.argwhere(diff > 1)
 

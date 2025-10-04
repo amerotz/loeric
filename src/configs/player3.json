@@ -2,10 +2,10 @@
     "variables": {
         "var_velocity_weight": [ 0, 1, 0, 1, 0 ],
         "var_legato_pattern": {
-            "mean": [ 1, 0.0, 1 ],
-            "std": [ 0, 0.1, 0 ],
+            "mean": [ 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 1, 1, 0.5 ],
+            "std": [ 0, 0, 0.1, 0, 0, 0.1, 0, 0, 0.1, 0, 0, 0.1 ],
             "std_scale": 1,
-            "period": 0.5,
+            "period": 2,
             "normalize": false
         },
         "major_allowed_chords": [ 2, 0, 0.5, 0, 0.25, 2, 0, 2, 0, 1, 0, 0 ],
@@ -41,7 +41,8 @@
                     },
                     "weights": [ 1, 1, -0.5 ]
                 }
-            }
+            },
+            "human_impact_scale": 0
         },
         "velocity": {
             "recipe": {
@@ -74,7 +75,8 @@
                     },
                     "mean": 0.6
                 }
-            }
+            },
+            "human_impact_scale": 0
         },
         "velocity_pattern": {
             "recipe": {
@@ -124,7 +126,8 @@
                     },
                     "weights": [ 0.7, 0.3 ]
                 }
-            }
+            },
+            "human_impact_scale": 0
         },
         "tempo_pattern": {
             "recipe": {
@@ -143,7 +146,8 @@
                     "phrase_exp": 10,
                     "phrase_levels": 0.0
                 }
-            }
+            },
+            "human_impact_scale": 0
         },
         "legato": {
             "recipe": {
@@ -171,7 +175,8 @@
                     "low": 0,
                     "high": 1
                 }
-            }
+            },
+            "human_impact_scale": 0
         }
     },
     "swing": {
@@ -186,13 +191,6 @@
         "bind": "legato"
     },
     "keyswitches": {},
-    "probabilities": {
-        "drop": 0.005,
-        "roll": 1,
-        "slide": 0,
-        "cut": 0,
-        "error": 0.005
-    },
     "ornamentation": {
         "drop": {
             "cases": [
@@ -422,19 +420,6 @@
             "slide": true
         }
     },
-    "old_ornaments": {
-        "cut_eight_fraction": 0.2,
-        "cut_velocity_fraction": 0.1,
-        "roll_velocity_fraction": 1,
-        "roll_eight_fraction_max": 0.4,
-        "roll_eight_fraction_min": 0.1,
-        "slide_eight_fraction": 0.2,
-        "slide_pitch_threshold": 6,
-        "diatonic_errors": true,
-        "max_pitch_error": 2,
-        "min_pitch_error": -2,
-        "use_old_ornaments": false
-    },
     "values": {
         "bend_resolution": 32,
         "beat_velocity_increase": 16,
@@ -445,8 +430,6 @@
     "tempo_control": {
         "increasing": false,
         "tempo_warp_bpms": 1,
-        "use_old_tempo_warp": false,
-        "old_tempo_warp": 0.1,
         "slow_start_percentage": 0.3,
         "slow_end_percentage": 0.8
     },

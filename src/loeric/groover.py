@@ -74,11 +74,12 @@ class Groover:
         self.loeric_id = loeric_id
 
         # to synchronize
+        self.lock = threading.Lock()
         self.stopped = threading.Event()
         self.playback_resumed = threading.Condition()
-        self.lock = threading.Lock()
         self._previous_note_duration = 0
 
+        self._contour_index = 0
         # tune
         self._tune = tune
         self._tempo = self._tune._tempos[0]
@@ -90,8 +91,8 @@ class Groover:
         # index to yield note events
         # will be increased before yielding message
         self._note_index = -1
-        self._note_index_lock = threading.Lock()
-        self._performance_time = 0
+        self._note_index_lock = threading.RLock()
+        self._performance_time = tu.TimeDelta(eighth_duration=0)
 
         # delay to randomize message_length
         self._message_delay = 0
@@ -257,8 +258,6 @@ class Groover:
         self._tempo_lock = threading.Lock()
         self._last_clock_time = None
 
-        self._did_swing = not (0 in self._config["swing"]["locations"])
-
         # create contours
         self._contours = {}
 
@@ -312,14 +311,16 @@ class Groover:
             if self._slow_start:
                 B = (
                     self._config["tempo_control"]["slow_start_bars"]
-                    * self._tune.bar_duration
+                    * self._tune.time_signature.quarters_per_bar
+                    * 2
                 )
                 ramp_up = np.minimum(np.ones_like(x), x / B)
 
             if self._slow_end:
                 B = (
                     self._config["tempo_control"]["slow_end_bars"]
-                    * self._tune.bar_duration
+                    * self._tune.time_signature.quarters_per_bar
+                    * 2
                 )
                 p = 1 / np.random.choice([2, 3])
                 ramp_down = np.minimum(
@@ -493,13 +494,19 @@ class Groover:
             self._note_index += 1
             if self._note_index >= len(self._tune):
                 return None
-            note = self._tune[self._note_index]
+
+            event = self._tune[self._note_index]
+
+            if event.is_note:
+                # advance contours
+                self.advance_contours()
+
             # update performance time
             self._performance_time += self._previous_note_duration
 
-            self._performance_time = tu.quantize(self._performance_time)
-            self._previous_note_duration = note.eighth_duration
-            return note
+            self._previous_note_duration = event.duration
+
+            return event
 
     def jump_to_pos(self, pos: int) -> None:
         """
@@ -512,15 +519,15 @@ class Groover:
             if pos > self._tune.maximum_songpos:
                 if self._verbose > 0:
                     print(
-                        f"Cannot jump to position {pos} with max pos {self._tune._maximum_songpos}"
+                        f"Cannot jump to position {pos} with max pos {self._tune.maximum_songpos}"
                     )
                 return
-            self._note_index = self._tune.index_map[pos]
+            self._note_index, contour_index = self._tune.index_map[pos]
             # update performance time
             # self._performance_time = self._tune.duration_map[pos]
             # update all contours
             for contour_name in self._contours:
-                self._contours[contour_name].jump(self._note_index - 1)
+                self._contours[contour_name].jump(contour_index)
 
     def reset_clock(self) -> None:
         """
@@ -563,13 +570,10 @@ class Groover:
 
         # work on a deepcopy to avoid side effects
         current_message = copy.deepcopy(message)
-        current_message._time = self._performance_time
+        current_message.time = self._performance_time
 
-        # advance contours
-        self.advance_contours()
-
-        if self._eighths_to_skip >= current_message.eighth_duration:
-            self._eighths_to_skip -= current_message.eighth_duration
+        if self._eighths_to_skip >= current_message.duration:
+            self._eighths_to_skip -= current_message.duration
             return (
                 [],
                 [],
@@ -587,13 +591,16 @@ class Groover:
             if ornament_type is not None:
                 notes = self.generate_ornament(current_message, ornament_type)
 
-        offset = 0
         for note in notes:
             # apply swing
-            swing_multiplier = self._apply_swing(note, offset)
-            print(swing_multiplier)
-            offset += note.eighth_duration
-            note.eighth_duration = note.eighth_duration * swing_multiplier
+            swing_multiplier = self._apply_swing(note)
+
+            original_duration = note.duration
+            new_duration = note.duration * swing_multiplier
+
+            if swing_multiplier < 1:
+                note.time = note.time + original_duration - new_duration
+            note.duration = new_duration
 
             # channel
             note.channel = self._midi_channel
@@ -606,9 +613,9 @@ class Groover:
                 "pitch_deviation_cents"
             ] * 0.01 * np.random.normal(loc=0, scale=0.33)
 
-        drone_notes = []
         # add drone
         if self._config["drone"]["active"]:
+            drone_notes = []
             # if above threshold
             if self._contour_values[self._drone_bound_contour] >= self._drone_threshold:
                 # change or stop notes depending on input
@@ -620,26 +627,21 @@ class Groover:
                 else:
                     drone_pitches = self._get_drone(current_message.pitch)
                     drone_notes.extend(self._add_drone(note, drone_pitches))
-        notes.extend(drone_notes)
+            notes.extend(drone_notes)
 
         # notes
         pauses = []
         for note in notes:
             # legato
-            mult = abs(
-                np.random.normal(
-                    loc=self._current_legato,
-                    scale=0.01,
-                )
-            )
-            new_length = note.eighth_duration * mult
+            mult = self._current_legato
+            new_length = note.duration * mult
             pause = tu.Pause(
-                eighth_duration=note.eighth_duration - new_length,
-                time=self._performance_time + new_length,
+                eighth_duration=(note.duration - new_length).eighth_duration,
+                time=(note.time + new_length).eighth_duration,
             )
-            if pause.eighth_duration != 0:
+            if pause.duration != 0:
                 pauses.append(pause)
-            note.eighth_duration = new_length
+            note.duration = new_length
 
         notes.extend(pauses)
         notes.sort(key=lambda x: (x.time, x.pitch))
@@ -663,7 +665,7 @@ class Groover:
         # fix notes
         for midi in midi_headers:
 
-            midi.time = self._performance_time
+            midi.time = notes[0].time.eighth_duration
 
         return (
             midi_headers,
@@ -743,15 +745,17 @@ class Groover:
             )
         return messages
 
-    def _apply_swing(self, message, duration_offset=0) -> float:
+    def _apply_swing(self, message) -> float:
 
-        x = tu.quantize(self._performance_time + duration_offset)
+        x = message.time
 
         # is it an eight note?
-        right_duration = message.eighth_duration <= 1
+        right_duration = message.duration == 1
 
         # is it the right place?
-        current_location = int(x % (2 * self._tune.time_signature.quarters_per_bar))
+        current_location = int(
+            (x % (self._tune.time_signature.quarters_per_bar * 2)).eighth_duration
+        )
         right_location = current_location in self._config["swing"]["locations"]
 
         swing = self._current_swing
@@ -759,12 +763,12 @@ class Groover:
         # make this shorter
         if right_duration and right_location:
             multiplier = 2 / (swing + 1)
-            self._did_swing = True
-
-        # if previous was shorter, make this longer
-        elif self._did_swing:
+        # if next one is shorter, make this longer
+        elif (
+            right_duration
+            and current_location + 1 in self._config["swing"]["locations"]
+        ):
             multiplier = 2 * swing / (swing + 1)
-            self._did_swing = False
         # don't change anything
         else:
             multiplier = 1
@@ -792,7 +796,7 @@ class Groover:
         else:
             notes_per_bar = options[0]
 
-        note_duration = self._tune.time_signature.quarters_per_bar / notes_per_bar
+        note_duration = self._tune.time_signature.quarters_per_bar * 2 / notes_per_bar
         should_play = self._performance_time % note_duration == 0
 
         notes = []
@@ -816,9 +820,9 @@ class Groover:
                 notes.append(
                     tu.Note(
                         pitch=drone,
-                        eighth_duration=note.eighth_duration,
+                        eighth_duration=note.duration.eighth_duration,
                         velocity=velocity,
-                        time=note.time,
+                        time=note.time.eighth_duration,
                         channel=self._config["drone"]["midi_channel"],
                     )
                 )
@@ -937,8 +941,8 @@ class Groover:
         last_note = self._tune.pitches[-1]
 
         # filter pitches that are too far away
-        # reachable within a fifth
-        pitches = pitches[abs(pitches - last_note) <= 7]
+        # reachable within a third
+        pitches = pitches[abs(pitches - last_note) <= 4]
 
         # select suitable pitches (e.g. any root, third, fifth within range)
         pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
@@ -957,7 +961,7 @@ class Groover:
         note = tu.Note(
             pitch=end_pitch,
             channel=self._midi_channel,
-            time=self._performance_time + self._tune.durations[-1],
+            time=(self._performance_time + self._tune.durations[-1]).eighth_duration,
             velocity=self._current_velocity,
             eighth_duration=2.0,
         )
@@ -1121,38 +1125,53 @@ class Groover:
             new_pitch = min(127, max(0, new_note))
 
             # limit velocity in allowed range
-            vel = min(
-                self._config["values"]["max_velocity"],
-                max(
-                    self._config["values"]["min_velocity"],
-                    int(self._current_velocity * v),
-                ),
-            )
+            if v != 0:
+                vel = min(
+                    self._config["values"]["max_velocity"],
+                    max(
+                        self._config["values"]["min_velocity"],
+                        int(self._current_velocity * v),
+                    ),
+                )
+            else:
+                vel = 0
 
             orn_note = tu.Note(
                 pitch=new_pitch,
                 eighth_duration=d,
                 velocity=vel,
-                time=offset,
+                time=offset.eighth_duration,
                 slide=is_slide and len(ornaments) == 0,
             )
             if is_slide and len(ornaments) != 0:
-                ornaments[-1].eighth_duration += d
+                ornaments[-1].duration += d
                 ornaments[-1].add_slide_target_pitch(orn_note)
 
             else:
                 ornaments.append(orn_note)
 
-            offset += orn_note.eighth_duration
+            offset += orn_note.duration
 
+        """
         original_message_duration = self._tune.get_note_by_id(
             message.id
-        ).eighth_duration
+        ).duration
+        """
 
-        self._eighths_to_skip = ornament_length - message.eighth_duration
+        self._eighths_to_skip = -message.duration + ornament_length
 
+        ornaments[-1].duration = message.time + ornament_length - ornaments[-1].time
         if self._eighths_to_skip < 0:
-            ornaments[-1].eighth_duration += abs(self._eighths_to_skip)
+            ornaments[-1].duration += abs(self._eighths_to_skip.eighth_duration)
+        """
+        print(
+            self._eighths_to_skip,
+            message.duration,
+            ornament_length,
+            np.sum([n.duration for n in ornaments]),
+        )
+        print(ornaments)
+        """
 
         return ornaments
 
@@ -1169,7 +1188,7 @@ class Groover:
 
         is_beat = self._is_on_a_beat()
         # create pattern from source notes
-        case_len = 0
+        case_len = tu.TimeDelta(eighth_duration=0)
         case_i = 0
         tune_notes = []
         first_pitch = 0
@@ -1188,7 +1207,7 @@ class Groover:
                     first_pitch = note.pitch
 
                 # update length counter
-                case_len += note.eighth_duration
+                case_len += note.duration
 
                 # add note
                 tune_notes.append(note)
@@ -1239,14 +1258,14 @@ class Groover:
 
                         # actual pitch & duration
                         pitch_difference = tune_notes[tune_i].pitch - first_pitch
-                        message_length = tune_notes[tune_i].eighth_duration
+                        message_length = tune_notes[tune_i].duration
                         tune_i += 1
 
                         # check
                         if pitch != "*":
                             elegible = elegible and pitch_difference == pitch
 
-                        elegible = elegible and abs(message_length - duration) == 0
+                        elegible = elegible and message_length - duration == 0
 
                         # if one fails, move on
                         if not elegible:
@@ -1315,8 +1334,8 @@ class Groover:
         return (
             self._performance_time
             % (
-                2
-                * self._tune.time_signature.quarters_per_bar
+                self._tune.time_signature.quarters_per_bar
+                * 2
                 / self._tune.time_signature.beat_count
             )
             == 0
