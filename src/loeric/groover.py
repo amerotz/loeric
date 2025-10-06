@@ -311,16 +311,14 @@ class Groover:
             if self._slow_start:
                 B = (
                     self._config["tempo_control"]["slow_start_bars"]
-                    * self._tune.time_signature.quarters_per_bar
-                    * 2
+                    * self._tune.time_signature.eighths_per_bar
                 )
                 ramp_up = np.minimum(np.ones_like(x), x / B)
 
             if self._slow_end:
                 B = (
                     self._config["tempo_control"]["slow_end_bars"]
-                    * self._tune.time_signature.quarters_per_bar
-                    * 2
+                    * self._tune.time_signature.eighths_per_bar
                 )
                 p = 1 / np.random.choice([2, 3])
                 ramp_down = np.minimum(
@@ -364,7 +362,7 @@ class Groover:
         if self._plot is not None:
             import matplotlib.pyplot as plt
 
-            x = np.cumsum(self._contours["message_length"]._contour)
+            x = np.cumsum([t.eighth_duration for t in self._tune.times])
             plt.step(x, self._contours[self._plot]._contour)
             plt.step(
                 x,
@@ -626,7 +624,7 @@ class Groover:
                 # only one note
                 else:
                     drone_pitches = self._get_drone(current_message.pitch)
-                    drone_notes.extend(self._add_drone(note, drone_pitches))
+                    drone_notes.extend(self._add_drone(current_message, drone_pitches))
             notes.extend(drone_notes)
 
         # notes
@@ -754,7 +752,7 @@ class Groover:
 
         # is it the right place?
         current_location = int(
-            (x % (self._tune.time_signature.quarters_per_bar * 2)).eighth_duration
+            (x % (self._tune.time_signature.eighths_per_bar)).eighth_duration
         )
         right_location = current_location in self._config["swing"]["locations"]
 
@@ -796,7 +794,7 @@ class Groover:
         else:
             notes_per_bar = options[0]
 
-        note_duration = self._tune.time_signature.quarters_per_bar * 2 / notes_per_bar
+        note_duration = self._tune.time_signature.eighths_per_bar / notes_per_bar
         should_play = self._performance_time % note_duration == 0
 
         notes = []
@@ -820,7 +818,7 @@ class Groover:
                 notes.append(
                     tu.Note(
                         pitch=drone,
-                        eighth_duration=note.duration.eighth_duration,
+                        eighth_duration=note_duration.eighth_duration,
                         velocity=velocity,
                         time=note.time.eighth_duration,
                         channel=self._config["drone"]["midi_channel"],
@@ -1334,8 +1332,7 @@ class Groover:
         return (
             self._performance_time
             % (
-                self._tune.time_signature.quarters_per_bar
-                * 2
+                self._tune.time_signature.eighths_per_bar
                 / self._tune.time_signature.beat_count
             )
             == 0

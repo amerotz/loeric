@@ -64,6 +64,10 @@ class TimeDelta:
     def absolute_duration(self):
         return self._absolute_duration
 
+    @property
+    def divisions(self):
+        return np.round(2 * self._eighth_duration * MINIMUM_QUARTER_DIVISION)
+
     @staticmethod
     def quantize(value):
         return np.round(value * MINIMUM_QUARTER_DIVISION / 2) / (
@@ -149,7 +153,10 @@ class TimeDelta:
             return self._eighth_duration < other.eighth_duration
 
     def __gt__(self, other):
-        return self._eighth_duration > other.eighth_duration
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration > other
+        else:
+            return self._eighth_duration > other.eighth_duration
 
     def __le__(self, other):
         if isinstance(other, int) or isinstance(other, float):
@@ -245,9 +252,9 @@ class SongPosition(ScoreElement):
         return f"(Position p={self._position} t={self._time})"
 
     def to_midi(self):
-        return mido.Message(
-            "songpos", pos=self._position, time=self._time.eighth_duration
-        )
+        return [
+            mido.Message("songpos", pos=self._position, time=self._time.eighth_duration)
+        ]
 
 
 class Tempo(ScoreElement):
@@ -301,9 +308,13 @@ class KeySignature(ScoreElement):
 
     def to_midi(self):
         names = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
-        return mido.MetaMessage(
-            "key_signature", key=names[self.major_root], time=self._time.eighth_duration
-        )
+        return [
+            mido.MetaMessage(
+                "key_signature",
+                key=names[self.major_root],
+                time=self._time.eighth_duration,
+            )
+        ]
 
     @property
     def major_root(self) -> int:
@@ -323,7 +334,7 @@ class TimeSignature(ScoreElement):
 
         self._numerator = numerator
         self._denominator = denominator
-        self._quarters_per_bar = TimeDelta(eighth_duration=8 * numerator / denominator)
+        self._eighths_per_bar = TimeDelta(eighth_duration=8 * numerator / denominator)
 
         if self._numerator % 3 == 0:
             self._beat_count = self._numerator / 3
@@ -339,8 +350,8 @@ class TimeSignature(ScoreElement):
         return self._denominator
 
     @property
-    def quarters_per_bar(self):
-        return self._quarters_per_bar
+    def eighths_per_bar(self):
+        return self._eighths_per_bar
 
     @property
     def beat_count(self):
@@ -489,7 +500,7 @@ class Note(ScoreElement):
             mido.Message(
                 "note_on",
                 note=np.round(self._pitch).astype(int),
-                time=overall_time.eighth_duration,
+                time=overall_time.eighth_duration.astype(float),
                 channel=self.channel,
                 velocity=self._velocity,
             )
@@ -526,7 +537,7 @@ class Note(ScoreElement):
                             "pitchwheel",
                             pitch=pb,
                             channel=self.channel,
-                            time=overall_time.eighth_duration,
+                            time=overall_time.eighth_duration.astype(float),
                         )
                     )
                     note_duration = note_duration - slide_duration
@@ -538,7 +549,7 @@ class Note(ScoreElement):
                 "note_off",
                 note=np.round(self._pitch).astype(int),
                 channel=self.channel,
-                time=(overall_time + note_duration).eighth_duration,
+                time=(overall_time + note_duration).eighth_duration.astype(float),
                 velocity=0,
             )
         )
@@ -642,7 +653,7 @@ class Tune:
         if self._sync_interval is None:
             time_signature = self._time_signatures[0]
             self._sync_interval = (
-                time_signature.quarters_per_bar * 2 / time_signature.beat_count
+                time_signature.eighths_per_bar / time_signature.beat_count
             )
 
         if self._verbose > 0:
@@ -652,7 +663,9 @@ class Tune:
 
         ######################### create the notes ######################
 
-        midi_source_notes = midi_source.tracks[0].notes
+        midi_source_notes = []
+        for i in range(len(midi_source.tracks)):
+            midi_source_notes.extend(midi_source.tracks[i].notes)
 
         # pitches
         note_pitches = np.array([msg.pitch for msg in midi_source_notes]).astype(float)

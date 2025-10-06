@@ -173,10 +173,7 @@ class HarmonicContour(Contour):
 
         while t <= summed_timings.max():
             start = t
-            stop = (
-                t
-                + midi.time_signature.quarters_per_bar.eighth_duration / chords_per_bar
-            )
+            stop =  midi.time_signature.eighths_per_bar/ chords_per_bar + t
             if t < 0:
                 stop = 0
 
@@ -283,7 +280,7 @@ class PhraseContour(Contour):
         pitches = midi.pitches
         durations = midi.durations
 
-        bar_length = midi.time_signature.quarters_per_bar.eighth_duration
+        bar_length = midi.time_signature.eighths_per_bar.eighth_duration
 
         self._contour = self.scale_and_savgol(
             1
@@ -388,7 +385,7 @@ class IntensityContour(Contour):
         indexes = np.where(
             summed_timings
             % (
-                midi.time_signature.quarters_per_bar.eighth_duration
+                midi.time_signature.eighths_per_bar.eighth_duration
                 / midi.time_signature.beat_count
             )
             == 0
@@ -525,7 +522,7 @@ class PatternContour(Contour):
         pitches = midi.pitches
         durations = midi.durations
 
-        time_period = 2 * midi.time_signature.quarters_per_bar.eighth_duration * period
+        time_period = midi.time_signature.eighths_per_bar.eighth_duration * period
         bar_position = summed_timings / time_period
 
         pattern_indexes = ((len(mean) * bar_position) % len(mean)).astype(int)

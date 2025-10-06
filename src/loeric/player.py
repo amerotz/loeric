@@ -5,6 +5,8 @@ import mido
 import music21 as m21
 import muspy as mp
 
+from collections import defaultdict
+
 from . import tune as tu
 
 
@@ -35,10 +37,13 @@ class Player:
         self._midi_out = midi_out
         self._tempo = tempo
         self._verbose = verbose
-        self._message_queue = queue.PriorityQueue()
+        self._message_queue = []
         self.playback_done = threading.Condition()
         self.has_reached_wake_time = threading.Event()
         self._tempo_scale = 1
+        self._time_division = tu.TimeDelta(
+            eighth_duration=2 / tu.MINIMUM_QUARTER_DIVISION
+        )
 
         self._song_time = tu.TimeDelta(eighth_duration=0)
         self._notify_song_time = tu.TimeDelta(eighth_duration=1000000)
@@ -84,9 +89,11 @@ class Player:
 
     def add_midi(self, messages):
 
-        for midi in messages:
-            # print(midi.time, time.time(), midi)
-            self._message_queue.put((midi.time, time.time(), midi))
+        if len(messages) == 0:
+            return
+        print(messages)
+        self._message_queue.extend(messages)
+        self._message_queue.sort(key=lambda x: (x.time, 1 if "off" in x.type else 1))
 
     def wake_me_up_at(self, time):
         self._notify_song_time = time
@@ -100,57 +107,47 @@ class Player:
         :param messages: the midi messages to play.
         """
 
-        # print(self._song_time, self._notify_song_time)
+        start_time = time.time()
         if self._song_time >= self._notify_song_time:
             self.has_reached_wake_time.set()
-            # print(f"reached time {self._song_time}")
             with self.playback_done:
                 self.playback_done.notify_all()
-                # print(f"wakey at {self._notify_song_time}")
-            # print("done notify")
 
-        if self._message_queue.empty():
-            return
+        while True:
 
-        _, _, msg = self._message_queue.get()
+            if len(self._message_queue) == 0:
+                break
 
-        msg_time = msg.time
-        # print(msg.time, msg_time, self._song_time)
-        msg.time -= self._song_time.eighth_duration
-        # print(msg.time, msg_time, self._song_time)
-        self._song_time = tu.TimeDelta(eighth_duration=msg_time)
-        # print(msg.time, msg_time, self._song_time)
+            delta = self._song_time - self._message_queue[0].time
 
-        # bring to tempo
-        msg.time *= self._tempo_scale
-        # print(msg.time, msg_time, self._song_time)
-        # print()
+            if delta < 0:
+                break
 
-        # obtained from
-        # mido/mido/midifiles/midifiles.py:427-430
-        self._input_time += msg.time
-        playback_time = time.time() - self._start_time
-        duration_to_next_event = self._input_time - playback_time
+            msg = self._message_queue.pop(0)
+            if self._verbose == 5:
+                print("[MIDI]\t", msg)
+            msg.time = 0
 
-        if self._midi_out is not None:
-            if not msg.is_meta:
-                # obtained from
-                # mido/mido/midifiles/midifiles.py:432-433
-                if duration_to_next_event > 0.0:
-                    time.sleep(duration_to_next_event)
+            if msg.is_meta:
+                continue
 
-                # don't send songpos messages
-                # but do wait if between pauses
-                if msg.type == "songpos":
-                    pass
-                else:
+            if self._midi_out is not None:
+                if msg.type != "songpos":
                     self._midi_out.send(msg)
-
-                if self._verbose == 5:
-                    print("[MIDI]\t", msg)
 
             if self._saving:
                 self._midi_track.append(msg)
+
+        if self._midi_out is not None:
+            self._song_time += self._time_division
+            delay_time = time.time() - start_time
+            time.sleep(
+                max(
+                    self._time_division.eighth_duration * self._tempo_scale
+                    - delay_time,
+                    0,
+                )
+            )
 
     def reset(self) -> None:
         """

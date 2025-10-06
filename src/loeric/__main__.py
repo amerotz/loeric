@@ -75,9 +75,6 @@ def play(
                     with groover.playback_resumed:
                         groover.playback_resumed.wait()
 
-            # play an end note
-
-            run_time = time.time()
             original_message = groover.next_event()
 
             if original_message is None:
@@ -105,30 +102,20 @@ def play(
                     if kwargs["verbose"] > 0:
                         print(f"[INFO]\tChanging key. {original_message}")
                     groover._tune.set_key_signature(original_message)
-                midi_headers = [original_message.to_midi()]
+                midi_headers = original_message.to_midi()
 
             player.set_tempo_scale(groover.tempo_scale)
             player.add_midi(midi_headers)
             player.add_notes(new_messages)
 
-            run_time = time.time() - run_time
-            time_counter += 1
-            if average_run_time is None:
-                average_run_time = run_time
-            else:
-                average_run_time += (run_time - average_run_time) / time_counter
-            # print(average_run_time)
+            player.wake_me_up_at(original_message.time + original_message.duration / 2)
 
-            if len(new_messages) != 0:
-                last_message = original_message
-                player.wake_me_up_at(last_message.time + last_message.duration)
-
-                while not player.has_reached_wake_time.is_set():
-                    with player.playback_done:
-                        # print( f"waiting for { last_message.time + last_message.duration}")
-                        player.playback_done.wait()
-                        # print("awake")
-                    # print("done wait")
+            while not player.has_reached_wake_time.is_set():
+                with player.playback_done:
+                    # print( f"waiting for { last_message.time + last_message.duration}")
+                    player.playback_done.wait()
+                    # print("awake")
+                # print("done wait")
 
         if groover.do_end_note:
             groover.reset()
@@ -549,8 +536,9 @@ def main():
             a = input("Press any key to start playback:")
             print()
 
-        if args["sync"] and args["verbose"] > 0:
-            print("[INFO]\tWaiting for START message...")
+        if args["sync"]:
+            if args["verbose"] > 0:
+                print("[INFO]\tWaiting for START message...")
             received_start.acquire()
 
         # start playback
