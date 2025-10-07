@@ -251,10 +251,12 @@ class SongPosition(ScoreElement):
     def __repr__(self):
         return f"(Position p={self._position} t={self._time})"
 
-    def to_midi(self):
-        return [
-            mido.Message("songpos", pos=self._position, time=self._time.eighth_duration)
-        ]
+    def to_midi(self, absolute_time=False):
+
+        time = self.duration
+        if absolute_time:
+            time += self._time
+        return [mido.Message("songpos", pos=self._position, time=time.eighth_duration)]
 
 
 class Tempo(ScoreElement):
@@ -431,9 +433,21 @@ class Note(ScoreElement):
         self._slide_targets = []
         self.channel = channel
         self._is_note = True
+        self._metadata = []
 
     def __repr__(self):
         return f"(Note p={self._pitch} d={self._duration} id={self._id} t={self._time})"
+
+    def add_metadata(self, data):
+        self._metadata.append(data)
+
+    @property
+    def has_metadata(self):
+        return len(self._metadata) != 0
+
+    @property
+    def metadata(self):
+        return self._metadata
 
     def transpose(self, semitones):
         self._pitch += semitones
@@ -444,7 +458,7 @@ class Note(ScoreElement):
     def add_slide_target_pitch(self, note):
         if not self._is_slide:
             raise Exception(
-                "slide not permitted. This note was created with slide=True."
+                "slide not permitted. This note was created with slide=False."
             )
         self._slide_targets.append(note)
         # print(self._pitch, self._slide_targets, self._eighth_duration)
@@ -582,9 +596,15 @@ class Tune:
         self._filename = filename
         self._verbose = verbose
         self._sync_interval = sync_interval
+        self._first_bar_length = 0
 
         if filename.endswith(".mid") or filename.endswith(".midi"):
             midi_source = mp.read_midi(filename)
+        elif filename.endswith(".abc"):
+            midi_source = mp.read_abc(filename)
+            self._first_bar_length = (
+                midi_source.barlines[1].time - midi_source.barlines[0].time
+            ) / 12
         else:
             raise Exception("Cannot read this file. Make sure it is a midi file.")
 
@@ -614,6 +634,7 @@ class Tune:
             self.forced_key = True
         else:
             for key in midi_source.key_signatures:
+                print(key)
                 self._key_signatures.append(
                     KeySignature(
                         root=key.root,
@@ -680,10 +701,12 @@ class Tune:
         note_ids = np.arange(len(note_pitches))
 
         # time
-        note_times = [
-            self.ticks_to_eighth_notes(msg.time, midi_source.resolution)
-            for msg in midi_source_notes
-        ]
+        note_times = np.array(
+            [
+                self.ticks_to_eighth_notes(msg.time, midi_source.resolution)
+                for msg in midi_source_notes
+            ]
+        )
 
         # pitch, duration, note id, time
         self._score = [
@@ -699,7 +722,7 @@ class Tune:
         for r in range(repeats):
             new_score = copy.deepcopy(self._score)
             for n in new_score:
-                n.time += score_duration * r
+                n.time += score_duration * r - self._first_bar_length
             tmp_score.extend(new_score)
 
         self._score = tmp_score
@@ -718,40 +741,28 @@ class Tune:
             stop=self._score_end_time.eighth_duration,
             step=self._sync_interval.eighth_duration,
         )
-        self._annotated_score.extend(
+        song_positions = np.array(
             [SongPosition(position=p, time=t) for p, t in enumerate(songpos_timestamps)]
         )
 
         self.maximum_songpos = len(songpos_timestamps) - 1
 
-        # divide messages that are longer than the sync interval
-        """
-        temp_score = []
-        split_notes = 0
+        # divide add songpos in messages that contain a sync interval
+        notes_to_add = []
+        should_add_position = np.ones_like(song_positions).astype(bool)
         for note in self._score:
 
-            # split up this note
-            if note.eighth_duration > self._sync_interval:
-                split_notes += 1
-                total_duration = note.eighth_duration
-                new_duration = 0
-                # add a new note with the same id every sync interval
-                while total_duration > 0:
-                    temp_score.append(
-                        Note(
-                            pitch=note.pitch,
-                            eighth_duration=min(self._sync_interval, total_duration),
-                            id=note.id,
-                            time=note.time + note.eighth_duration - total_duration,
-                        )
-                    )
-                    total_duration -= self._sync_interval
-            else:
-                temp_score.append(note)
+            note_start = note.time
+            note_end = note.time + note.duration
+            for i, position in enumerate(song_positions):
 
-        print(split_notes, len(self._score), len(temp_score))
-        """
+                timestamp = position.time
+                # if timestamp contained in note
+                if note_start < timestamp and timestamp < note_end:
+                    note.add_metadata(position)
+                    should_add_position[i] = False
 
+        self._annotated_score.extend(song_positions[should_add_position])
         self._annotated_score.extend(self._score)
 
         self._annotated_score.sort(key=lambda x: x.time)

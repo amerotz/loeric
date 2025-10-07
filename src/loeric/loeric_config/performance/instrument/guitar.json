@@ -380,6 +380,6 @@
             64
         ],
         "break_ornaments": false,
-        "delay_range": 0.01
+        "delay_range": 0.1
     }
 }

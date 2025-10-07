@@ -500,9 +500,7 @@ class Groover:
                 self.advance_contours()
 
             # update performance time
-            self._performance_time += self._previous_note_duration
-
-            self._previous_note_duration = event.duration
+            self._performance_time = event.time
 
             return event
 
@@ -620,11 +618,19 @@ class Groover:
                 if self._config["drone"]["break_ornaments"]:
                     for note in notes:
                         drone_pitches = self._get_drone(note.pitch)
-                        drone_notes.extend(self._add_drone(note, drone_pitches))
+                        # get drone
+                        d_notes, delay = self._add_drone(note, drone_pitches)
+                        drone_notes.extend(d_notes)
+                        # add delay
+                        note.time += delay
+                        note.duration -= delay
                 # only one note
                 else:
                     drone_pitches = self._get_drone(current_message.pitch)
-                    drone_notes.extend(self._add_drone(current_message, drone_pitches))
+                    d_notes, delay = self._add_drone(current_message, drone_pitches)
+                    notes[0].time += delay
+                    notes[0].duration -= delay
+                    drone_notes.extend(d_notes)
             notes.extend(drone_notes)
 
         # notes
@@ -642,7 +648,8 @@ class Groover:
             note.duration = new_length
 
         notes.extend(pauses)
-        notes.sort(key=lambda x: (x.time, x.pitch))
+        if note.has_metadata:
+            notes.extend(note.metadata)
 
         ################### convert to midi #########################
 
@@ -798,6 +805,7 @@ class Groover:
         should_play = self._performance_time % note_duration == 0
 
         notes = []
+        delay = 0
         if should_play:
 
             for drone in drones:
@@ -818,14 +826,15 @@ class Groover:
                 notes.append(
                     tu.Note(
                         pitch=drone,
-                        eighth_duration=note_duration.eighth_duration,
+                        eighth_duration=(note_duration - delay).eighth_duration,
                         velocity=velocity,
-                        time=note.time.eighth_duration,
+                        time=(note.time + delay).eighth_duration,
                         channel=self._config["drone"]["midi_channel"],
                     )
                 )
+                delay += self._config["drone"]["delay_range"]
 
-        return notes
+        return notes, delay
 
     def _get_drone(self, reference: int) -> np.array:
         # figure out what note is allowed depending on harmony
@@ -940,7 +949,7 @@ class Groover:
 
         # filter pitches that are too far away
         # reachable within a third
-        pitches = pitches[abs(pitches - last_note) <= 4]
+        pitches = pitches[abs(pitches - last_note) <= 7]
 
         # select suitable pitches (e.g. any root, third, fifth within range)
         pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]

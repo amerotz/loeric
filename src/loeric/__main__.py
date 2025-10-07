@@ -520,6 +520,7 @@ def main():
             save=args["save"],
             verbose=args["verbose"],
             midi_out=out,
+            song_start_time=tune.times[0].eighth_duration,
         )
 
         player_t = threading.Thread(target=player_loop, args=[player, groover])

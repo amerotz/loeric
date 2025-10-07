@@ -374,7 +374,7 @@
         "break_ornaments": false,
         "transpose": false,
         "allow_root": false,
-        "delay_range": 0.001,
+        "delay_range": 0.1,
         "notes_per_bar_bind": "velocity"
     },
     "approach_from_above": {},

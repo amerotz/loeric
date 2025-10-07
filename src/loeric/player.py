@@ -21,6 +21,7 @@ class Player:
         save: bool = False,
         midi_out=None,
         verbose: int = 0,
+        song_start_time=0,
     ):
         """
         Initialize the class.
@@ -45,7 +46,7 @@ class Player:
             eighth_duration=2 / tu.MINIMUM_QUARTER_DIVISION
         )
 
-        self._song_time = tu.TimeDelta(eighth_duration=0)
+        self._song_time = tu.TimeDelta(eighth_duration=song_start_time)
         self._notify_song_time = tu.TimeDelta(eighth_duration=1000000)
 
         if self._saving:
@@ -91,7 +92,6 @@ class Player:
 
         if len(messages) == 0:
             return
-        print(messages)
         self._message_queue.extend(messages)
         self._message_queue.sort(key=lambda x: (x.time, 1 if "off" in x.type else 1))
 

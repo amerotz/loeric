@@ -49,14 +49,10 @@
                 ]
             ],
             "pitches_mean": [
-                0,
-                1,
-                0
+                0, 1, 0
             ],
             "pitches_std": [
-                0,
-                0,
-                0
+                0, 0, 0
             ],
             "velocities_mean": [
                 1,
