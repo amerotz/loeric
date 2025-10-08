@@ -558,6 +558,9 @@ class Note(ScoreElement):
 
                 previous_bend = bend
 
+        if self._duration == 0:
+            note_duration += 0.001
+
         messages.append(
             mido.Message(
                 "note_off",

@@ -1,4 +1,5 @@
 import time
+import copy
 import threading
 import queue
 import mido
@@ -47,6 +48,7 @@ class Player:
         )
 
         self._song_time = tu.TimeDelta(eighth_duration=song_start_time)
+        self._last_played_message_time = copy.deepcopy(self._song_time)
         self._notify_song_time = tu.TimeDelta(eighth_duration=1000000)
 
         if self._saving:
@@ -136,10 +138,15 @@ class Player:
                     self._midi_out.send(msg)
 
             if self._saving:
+                msg.time = (
+                    self._song_time - self._last_played_message_time
+                ).eighth_duration * self._tempo_scale
                 self._midi_track.append(msg)
 
+            self._last_played_message_time = copy.deepcopy(self._song_time)
+
+        self._song_time += self._time_division
         if self._midi_out is not None:
-            self._song_time += self._time_division
             delay_time = time.time() - start_time
             time.sleep(
                 max(
@@ -168,4 +175,6 @@ class Player:
                     msg.time, self._midi_performance.ticks_per_beat, self._tempo
                 )
             )
+            print(
+            self._midi_performance.tracks[0][i])
         self._midi_performance.save(filename)
