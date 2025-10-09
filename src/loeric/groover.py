@@ -42,14 +42,18 @@ class Groover:
         bpm: int = None,
         midi_channel: int = 0,
         transpose: int = 0,
-        diatonic_errors: bool = True,
-        random_weight: float = 0,
         human_impact: float = 0,
         seed: int = 42,
         config_file: str = None,
         intensity_control: int = 1,
         human_impact_control: int = 11,
         syncing: bool = False,
+        plot=None,
+        slow_start=False,
+        slow_end=False,
+        do_end_note=False,
+        verbose=0,
+        loeric_id: str = None,
     ):
         """
         Initialize the groover class by setting user-defined parameters and creating the contours.
@@ -59,13 +63,27 @@ class Groover:
         :param bpm: the user-defined tempo in bpm for the tune.
         :param midi_channel: the midi output channel for all note messages. Drone messages will be sent on midi_channel + 1 if not specified otherwise in the configuration.
         :param transpose: the number of semitones by which to transpose the tune.
-        :param diatonic_errors: whether or not error generation should be quantized to the tune's mode.
-        :param random_weight: the weight of the random component in contour generation.
         :param human_impact: the initial weight of the external control signal.
         :param seed: the random seed of the performance.
         :param config_file: the path to the configuration file (must be a JSON file).
+        :param intensity_control: the MIDI CC to use for intensity.
+        :param human_impact_control: the MIDI CC to use for human impact.
         :param syncing: whether or not synchronization with multiple LOERIC istances is active.
+        :param plot: the contour to plot before playback.
+        :param slow_start: start the performance at a slower tempo.
+        :param slow_end: end the performance at a slower tempo.
         """
+
+        self._plot = plot
+        self._verbose = verbose
+        self._slow_start = slow_start
+        self._slow_end = slow_end
+        self.loeric_id = loeric_id
+
+        # to synchronize
+        self.stopped = threading.Event()
+        self.playback_resumed = threading.Condition()
+        self.lock = threading.Lock()
 
         # tune
         self._tune = tune
@@ -73,57 +91,73 @@ class Groover:
 
         # offset for messages after ornaments
         self._offset = 0
+        self._swing_offset = 0
         # index to yield note events
         # will be increased before yielding message
         self._note_index = -1
         self._note_index_lock = threading.Lock()
         self._performance_time = -tune.offset
 
-        # delay to randomize message length
+        # delay to randomize message_length
         self._delay = 0
         self._delay_max = 0
 
         # only define command line values
         # rest is part of loeric_config/base.json
         self._config = {
-            "velocity": {
-                "random": random_weight,
-                "human_impact_scale": human_impact,
-            },
-            "tempo": {
-                "random": random_weight,
-                "human_impact_scale": human_impact,
-            },
-            "ornament": {
-                "random": random_weight,
-                "human_impact_scale": human_impact,
+            "contours": {
+                "drone": {
+                    "human_impact_scale": human_impact,
+                },
+                "velocity": {
+                    "human_impact_scale": human_impact,
+                },
+                "tempo": {
+                    "human_impact_scale": human_impact,
+                },
+                "ornament": {
+                    "human_impact_scale": human_impact,
+                },
+                "legato": {
+                    "human_impact_scale": human_impact,
+                },
             },
             "values": {
                 "midi_channel": midi_channel,
-                "bpm": bpm,
                 "transpose": transpose,
-                "diatonic_errors": diatonic_errors,
                 "seed": seed,
+                "do_end_note": do_end_note,
             },
             "tempo_control": {
                 "tempo_warp_bpms": 10,
                 "use_old_tempo_warp": False,
                 "old_tempo_warp": 0.1,
+                "bpm": bpm,
+                "slow_start": False,
+                "slow_end": False,
+                "slow_start_bars": 3,
+                "slow_end_bars": 2,
+                "slow_affected_contours": ["velocity", "ornament", "tempo", "drone"],
             },
             "control_2_contour": {
                 "velocity_intensity": intensity_control,
                 "tempo_intensity": intensity_control,
                 "ornament_intensity": intensity_control,
+                "legato_intensity": intensity_control,
+                "drone_intensity": intensity_control,
                 "velocity_human_impact": human_impact_control,
                 "tempo_human_impact": human_impact_control,
                 "ornament_human_impact": human_impact_control,
+                "legato_human_impact": human_impact_control,
+                "drone_human_impact": human_impact_control,
             },
             "harmony": {
                 "chords_per_bar": self._tune.beat_count,
+                "allowed_chords": f"{self._tune.key_signature.mode}_allowed_chords",
             },
             "drone": {
                 "midi_channel": midi_channel + 1,
-                "notes_per_bar": self._tune.beat_count,
+                "notes_per_bar": [self._tune.beat_count],
             },
         }
 
@@ -137,15 +171,40 @@ class Groover:
         # the configuration file overwrites any defaults
         # specified by command line
         if config_file is not None:
+
             with open(config_file, "r") as f:
                 config_file = json.load(f)
+
             self._config = jsonmerge.merge(self._config, config_file)
+
+            if "contours" in config_file:
+                for c in config_file["contours"]:
+                    if "recipe" in config_file["contours"][c]:
+                        self._config["contours"][c]["recipe"] = config_file["contours"][c]["recipe"]
+
             config_hash = int(hash(str(config_file))) % 2**31
             self._config["values"]["seed"] = config_hash + seed
+
+        # compile variables by copying them explicitly
+        if "variables" in self._config:
+            variables = self._config["variables"]
+
+            del self._config["variables"]
+
+            # turn config into string
+            dict_string = json.dumps(self._config)
+
+            for name, value in variables.items():
+                dict_string = dict_string.replace(f'"{name}"', json.dumps(value))
+
+            self._config = json.loads(dict_string)
 
         self._initial_human_impact = human_impact
         self._did_swing = False
         self._syncing = syncing
+
+        with open(f"{dir_path}/last_config.json", "w") as f:
+            json.dump(self._config, f)
 
         # generate all parameter settings and contours
         self._instantiate()
@@ -160,12 +219,13 @@ class Groover:
         np.random.seed(self._config["values"]["seed"])
 
         # set parameters
-        if self._config["values"]["bpm"] is None:
+        if self._config["tempo_control"]["bpm"] is None:
             self._user_tempo = self._tune.tempo
         else:
-            self._user_tempo = mido.bpm2tempo(self._config["values"]["bpm"])
+            self._user_tempo = mido.bpm2tempo(self._config["tempo_control"]["bpm"])
 
         self._midi_channel = self._config["values"]["midi_channel"]
+        self._drone_midi_channel = self._config["drone"]["midi_channel"]
         self._transpose_semitones = self._config["values"]["transpose"]
         # table for pitch errors
         self._pitch_errors = defaultdict(int)
@@ -176,9 +236,12 @@ class Groover:
                 self._max_ornament_length, self._config["ornamentation"][o]["length"]
             )
 
+        # active notes
+        self._active_notes = np.zeros(127)
+
         # legato
         self._legato_amount = (
-            self._config["values"]["legato_max"] - self._config["values"]["legato_min"]
+            self._config["legato"]["max"] - self._config["legato"]["min"]
         )
 
         # droning
@@ -188,6 +251,13 @@ class Groover:
         self._drone_bound_contour = self._config["drone"]["bind"]
         self._last_played_drones = []
 
+        # keyswitches
+        self._last_keyswitches = []
+
+        # intonation
+        self._last_recorded_intonation = 0
+        self._intonation = np.zeros(127)
+
         # tempo sync
         self._external_tempo = None
         self._tempo_lock = threading.Lock()
@@ -196,167 +266,28 @@ class Groover:
         # create contours
         self._contours = {}
 
-        # velocity contour
-        velocity_intensity_contour = cnt.IntensityContour()
-        velocity_intensity_contour.calculate(
-            self._tune,
-            weights=np.array(self._config["velocity"]["weights"]),
-            random_weight=self._config["velocity"]["random"],
-            savgol=self._config["velocity"]["savgol"],
-            scale=self._config["velocity"]["scale"],
-            shift=self._config["velocity"]["shift"],
-        )
+        for c in self._config["contours"]:
+            if self._verbose in [1, 2, 3, 4]:
+                print(f"[INFO]\tCreating {c} contour.")
+            self._contours[c] = cnt.create_contour(
+                self._tune, self._config["contours"][c]["recipe"]
+            )
+            if (
+                not "human_impact_scale" in self._config["contours"][c]
+                or self._config["contours"][c]["human_impact_scale"] is None
+            ):
+                self._config["contours"][c]["human_impact_scale"] = 0
 
-        # pattern contour
-        self._contours["velocity_pattern"] = cnt.PatternContour()
-        self._contours["velocity_pattern"].calculate(
-            self._tune,
-            mean=np.array(self._config["velocity"]["pattern_means"]),
-            std=np.array(self._config["velocity"]["pattern_stds"]),
-            period=self._config["velocity"]["period"],
-        )
+        # message_length contour
+        self._contours["message_length"] = cnt.MessageLengthContour()
+        self._contours["message_length"].calculate(self._tune)
 
-        velocity_pitch_contour = cnt.PitchContour()
-        velocity_pitch_contour.calculate(
-            self._tune, savgol=True, shift=True, scale=True
-        )
-
-        velocity_phrasing_contour = cnt.PhraseContour()
-        velocity_phrasing_contour.calculate(
-            self._tune,
-            phrase_levels=self._config["values"]["phrase_levels"],
-            phrase_exp=self._config["velocity"]["phrase_exp"],
-        )
-
-        velocity_phrasing_contour = cnt.PhraseContour()
-        velocity_phrasing_contour.calculate(self._tune)
-
-        self._contours["velocity"] = cnt.weighted_sum(
-            [
-                velocity_intensity_contour,
-                velocity_pitch_contour,
-                velocity_phrasing_contour,
-            ],
-            np.array(
-                [
-                    1
-                    - self._config["velocity"]["high_loud_weight"]
-                    - self._config["velocity"]["phrase_weight"],
-                    self._config["velocity"]["high_loud_weight"],
-                    self._config["velocity"]["phrase_weight"],
-                ]
-            ),
-        )
-
-        # tempo contour
-        tempo_intensity_contour = cnt.IntensityContour()
-        tempo_intensity_contour.calculate(
-            self._tune,
-            weights=np.array(self._config["tempo"]["weights"]),
-            random_weight=self._config["tempo"]["random"],
-            savgol=self._config["tempo"]["savgol"],
-            scale=self._config["tempo"]["scale"],
-            shift=self._config["tempo"]["shift"],
-        )
-        tempo_phrasing_contour = cnt.PhraseContour()
-        tempo_phrasing_contour.calculate(
-            self._tune,
-            phrase_levels=self._config["values"]["phrase_levels"],
-            phrase_exp=self._config["tempo"]["phrase_exp"],
-        )
-
-        self._contours["tempo"] = cnt.weighted_sum(
-            [tempo_intensity_contour, tempo_phrasing_contour],
-            np.array(
-                [
-                    1 - self._config["tempo"]["phrase_weight"],
-                    self._config["tempo"]["phrase_weight"],
-                ]
-            ),
-        )
-
-        self._contours["phrasing"] = cnt.PhraseContour()
-        self._contours["phrasing"].calculate(
-            self._tune,
-            phrase_levels=self._config["values"]["phrase_levels"],
-            phrase_exp=self._config["values"]["legato_phrase_exp"],
-        )
-
-        self._contours["phrasing"] = cnt.PhraseContour()
-        self._contours["phrasing"].calculate(self._tune)
-
-        self._contours["tempo"] = cnt.weighted_sum(
-            [tempo_intensity_contour, self._contours["phrasing"]],
-            np.array(
-                [
-                    1 - self._config["tempo"]["phrase_weight"],
-                    self._config["tempo"]["phrase_weight"],
-                ]
-            ),
-        )
-
-        """
-        import matplotlib.pyplot as plt
-
-        plt.plot(self._contours["tempo"]._contour)
-        plt.show()
-        """
-
-        self._contours["tempo_pattern"] = cnt.PatternContour()
-        self._contours["tempo_pattern"].calculate(
-            self._tune,
-            mean=np.array(self._config["tempo"]["pattern_means"]),
-            std=np.array(self._config["tempo"]["pattern_stds"]),
-            std_scale=self._config["tempo"]["std_scale"],
-            period=self._config["tempo"]["period"],
-            normalize=True,
-        )
-
-        # ornament contour
-        ornament_intensity_contour = cnt.IntensityContour()
-        ornament_intensity_contour.calculate(
-            self._tune,
-            weights=np.array(self._config["ornament"]["weights"]),
-            random_weight=self._config["ornament"]["random"],
-            savgol=self._config["ornament"]["savgol"],
-            scale=self._config["ornament"]["scale"],
-            shift=self._config["ornament"]["shift"],
-        )
-
-        ornament_phrasing_contour = cnt.PhraseContour()
-        ornament_phrasing_contour.calculate(
-            self._tune,
-            phrase_levels=self._config["values"]["phrase_levels"],
-            phrase_exp=self._config["ornament"]["phrase_exp"],
-        )
-
-        self._contours["ornament"] = cnt.weighted_sum(
-            [ornament_intensity_contour, ornament_phrasing_contour],
-            np.array(
-                [
-                    1 - self._config["ornament"]["phrase_weight"],
-                    self._config["ornament"]["phrase_weight"],
-                ]
-            ),
-        )
-        """
-        import matplotlib.pyplot as plt
-
-        plt.plot(self._contours["ornament"]._contour)
-        plt.show()
-        """
-
-        # message length contour
-        self._contours["message length"] = cnt.MessageLengthContour()
-        self._contours["message length"].calculate(self._tune)
-
-        # pich difference
-        self._contours["pitch difference"] = cnt.PitchDifferenceContour()
-        self._contours["pitch difference"].calculate(self._tune)
+        self._contours["pitch_difference"] = cnt.PitchDifferenceContour()
+        self._contours["pitch_difference"].calculate(self._tune)
 
         # pich contour
-        self._contours["pitch contour"] = cnt.PitchContour()
-        self._contours["pitch contour"].calculate(
+        self._contours["pitch_contour"] = cnt.PitchContour()
+        self._contours["pitch_contour"].calculate(
             self._tune, savgol=False, shift=False, scale=False
         )
 
@@ -370,6 +301,88 @@ class Groover:
             allowed_chords=np.array(self._config["harmony"]["allowed_chords"]),
         )
 
+        if (self._slow_start or self._slow_end) and self._config["tempo_control"][
+            "tempo_warp_bpms"
+        ] != 0:
+
+            # create x
+            x = np.cumsum(self._contours["message_length"]._contour)
+            x -= min(x)
+
+            ramp_up = np.ones_like(x)
+            ramp_down = np.ones_like(x)
+
+            # create ramp
+            if self._slow_start:
+                B = (
+                    self._config["tempo_control"]["slow_start_bars"]
+                    * self._tune.bar_duration
+                )
+                ramp_up = np.minimum(np.ones_like(x), x / B)
+
+            if self._slow_end:
+                B = (
+                    self._config["tempo_control"]["slow_end_bars"]
+                    * self._tune.bar_duration
+                )
+                p = 1 / np.random.choice([2, 3])
+                ramp_down = np.minimum(
+                    np.ones_like(x), np.power(1 - (x - (max(x) - B)) / B, p)
+                )
+
+            # slower **= 0.5 + 0.5 * np.random.rand()
+
+            # update
+            for contour in self._config["tempo_control"]["slow_affected_contours"]:
+
+                if not contour in self._config["contours"]:
+                    pass
+
+                # retrieve original contour
+                data = self._contours[contour]._contour
+
+                k_up = 0
+                k_down = 0
+                if contour == "velocity":
+                    k_up = 0.5
+                    k_down = 0.5
+                elif contour == "tempo":
+                    k_up = 0.5 - (
+                        self._config["tempo_control"]["slow_start_percentage"]
+                        * self._config["tempo_control"]["bpm"]
+                    ) / (2 * self._config["tempo_control"]["tempo_warp_bpms"])
+                    k_down = 0.5 - (
+                        self._config["tempo_control"]["slow_end_percentage"]
+                        * self._config["tempo_control"]["bpm"]
+                    ) / (2 * self._config["tempo_control"]["tempo_warp_bpms"])
+
+                cnt_ramp_down = np.multiply(ramp_down, data) + (1 - ramp_down) * k_down
+                cnt_ramp_up = np.multiply(ramp_up, data) + (1 - ramp_up) * k_up
+
+                data = np.minimum(cnt_ramp_up, cnt_ramp_down)
+
+                # update contour
+                self._contours[contour]._contour = data
+
+        if self._plot is not None:
+            import matplotlib.pyplot as plt
+
+            x = np.cumsum(self._contours["message_length"]._contour)
+            plt.step(x, self._contours[self._plot]._contour)
+            plt.step(
+                x,
+                (
+                    self._contours["pitch_contour"]._contour
+                    - min(self._contours["pitch_contour"]._contour)
+                )
+                / (
+                    max(self._contours["pitch_contour"]._contour)
+                    - min(self._contours["pitch_contour"]._contour)
+                ),
+            )
+            plt.tight_layout()
+            plt.show()
+
         # object holding each contour's value in a given moment
         self._contour_values = {}
 
@@ -377,13 +390,37 @@ class Groover:
             self._contour_values[contour_name] = 0.5
 
         # init all contours
-        for contour_name in self._contours:
+        for contour_name in self._config["contours"]:
             # init the human contours
-            self._contour_values[contour_name] = 0.5
             self._contour_values[f"{contour_name}_intensity"] = 0.5
-            self._contour_values[f"{contour_name}_human_impact"] = (
-                self._initial_human_impact
-            )
+            self._contour_values[f"{contour_name}_human_impact"] = self._config[
+                "contours"
+            ][contour_name]["human_impact_scale"]
+            self._contour_values[contour_name] = 0.5
+
+    def get_control_value(self, control_num):
+        """
+        Read the value associated with a given control number.
+        """
+        if control_num in self._contour_values:
+            return self._contour_values[control_num]
+        else:
+            return 0.5
+
+    def set_control_value(self, control_num, value):
+        """
+        Set a given control number to a value.
+        """
+
+        # store the raw control
+        self._contour_values[control_num] = value
+        # traditional control
+        for contour_name, event_number in self._config["control_2_contour"].items():
+            if control_num == event_number:
+                self.set_contour_value(contour_name, value)
+                # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
+                if self._verbose == 3:
+                    print(f"{contour_name}:\t{round(value, 2)}")
 
     def check_midi_control(self) -> Callable[[], None]:
         """
@@ -394,14 +431,18 @@ class Groover:
         """
 
         def callback(msg):
+            # intonation
             if lu.is_note(msg):
+                self._intonation[msg.note] = self._last_recorded_intonation
+                if self._verbose == 4:
+                    print(f"intonation:\t\t{msg.note}")
+            elif msg.type == "pitchwheel":
+                self._last_recorded_intonation = msg.pitch
+            else:
                 pass
-            for contour_name, event_number in self._config["control_2_contour"].items():
-                if msg.is_cc(event_number):
-                    value = msg.value / 127
-                    self.set_contour_value(contour_name, value)
-                    # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
-                    print(f"{contour_name}:\t{round(value, 2)}")
+
+            if msg.is_cc():
+                self.set_control_value(msg.control, msg.value / 127)
 
         return callback
 
@@ -416,19 +457,22 @@ class Groover:
                 self._contour_values[contour_name] = self._contours[contour_name].next()
 
         # add the human part
-        for contour_name in ["velocity", "tempo", "ornament"]:
+        for contour_name in self._config["contours"]:
             hi = (
                 self._contour_values[f"{contour_name}_human_impact"]
-                * self._config[contour_name]["human_impact_scale"]
+                * self._config["contours"][contour_name]["human_impact_scale"]
             )
 
             intensity = self._contour_values[f"{contour_name}_intensity"]
-            if self._config[contour_name]["human_impact_scale"] < 0:
+            if self._config["contours"][contour_name]["human_impact_scale"] < 0:
                 intensity = 1 - intensity
                 hi = abs(hi)
 
             self._contour_values[contour_name] *= 1 - hi
             self._contour_values[contour_name] += hi * intensity
+            self._contour_values[contour_name] = np.nan_to_num(
+                self._contour_values[contour_name], nan=0.5
+            )
 
     def set_contour_value(self, contour_name: str, value: float) -> None:
         """
@@ -444,15 +488,6 @@ class Groover:
             raise UnknownContourError
 
         self._contour_values[contour_name] = value
-
-    '''
-    def has_next(self):
-        """
-        Check if there is any event that will be returned by a call to `nextEvent`.
-        """
-        with self._note_index_lock:
-            return self._note_index + 1 < len(self._tune)
-    '''
 
     def next_event(self):
         """
@@ -477,9 +512,10 @@ class Groover:
 
         with self._note_index_lock:
             if pos > self._tune._max_songpos:
-                print(
-                    f"Cannot jump to position {pos} with max pos {self._tune._max_songpos}"
-                )
+                if self._verbose > 0:
+                    print(
+                        f"Cannot jump to position {pos} with max pos {self._tune._max_songpos}"
+                    )
                 return
             self._note_index, contour_index = self._tune.index_map[pos]
             # update performance time
@@ -544,11 +580,17 @@ class Groover:
             self.advance_contours()
 
         # change note duration
-        should_skip = self._offset > new_message.time + lu.TRIGGER_DELTA
+        should_skip = self._offset > new_message.time + 0.00001 and lu.is_note(
+            new_message
+        )
+
         removable_offset = min(new_message.time, self._offset)
+        self._offset -= removable_offset
         new_message.time -= removable_offset
 
-        self._offset -= removable_offset
+        removable_swing_offset = min(new_message.time, self._swing_offset)
+        self._swing_offset -= removable_swing_offset
+        new_message.time -= removable_swing_offset
 
         if should_skip:
             return []
@@ -562,10 +604,15 @@ class Groover:
             new_message.channel = self._midi_channel
 
         if lu.is_note_off(new_message):
+
+            # keep track of active notes
+            self._active_notes[new_message.note] = 0
+
             # randomize end time and legato
             mult = np.random.normal(
-                loc=self._config["values"]["legato_min"]
-                + self._legato_amount * self._contour_values["phrasing"],
+                loc=self._config["legato"]["min"]
+                + self._legato_amount
+                * self._contour_values[self._config["legato"]["bind"]],
                 scale=0.0,
             )
             # self._delay_max = mult
@@ -584,6 +631,10 @@ class Groover:
 
         # change attributes
         if is_note_on:
+
+            # keep track of active notes
+            self._active_notes[new_message.note] = 1
+
             # change loudness
             new_message.velocity = self._current_velocity
 
@@ -591,31 +642,42 @@ class Groover:
             new_message.time += self._delay
 
             # apply swing
-            self._offset += self._apply_swing()
+            self._swing_offset += self._apply_swing()
 
         notes = []
 
         # add contour information as MIDI CC
         for contour_name in self._config["contour_2_control"]:
+
+            contour = contour_name.split("#")[0]
+            control = self._config["contour_2_control"][contour_name]["control"]
+            value = self._contour_values[contour]
+            min_value = self._config["contour_2_control"][contour_name]["min"]
+            max_value = self._config["contour_2_control"][contour_name]["max"]
+            value = max(0, min(127, round(min_value + value * (max_value - min_value))))
             notes.append(
                 mido.Message(
                     "control_change",
                     channel=self._config["values"]["midi_channel"],
-                    control=self._config["contour_2_control"][contour_name],
-                    value=round(self._contour_values[contour_name] * 127),
+                    control=control,
                     time=0,
+                    value=value,
                 )
             )
 
         if not self._syncing:
             # add explicit tempo information
-            notes.append(
-                mido.MetaMessage("set_tempo", tempo=self.current_tempo, time=0)
-            )
+            try:
+                notes.append(
+                    mido.MetaMessage("set_tempo", tempo=self.current_tempo, time=0)
+                )
+            except:
+                print(current_tempo)
 
         notes_to_add = [new_message]
-        # modify the note
-        if is_note_on:
+
+        # ornament note only if all other notes have stopped playing
+        if is_note_on and self._active_notes.sum() == 1:
             # create ornaments
             if self.can_generate_ornament():
                 # choose which ornament
@@ -642,11 +704,13 @@ class Groover:
             # add pitchbend
             if lu.is_note_on(note):
                 bend = int(
-                    self._config["values"]["pitch_deviation_cents"]
+                    self._intonation[note.note]
+                    + self._config["values"]["pitch_deviation_cents"]
                     * 0.01
                     * np.random.normal(loc=0, scale=0.33)
                     * 8192
                 )
+                bend = max(min(bend, 8191), -8192)
                 new_notes.append(
                     mido.Message("pitchwheel", channel=note.channel, pitch=bend)
                 )
@@ -662,7 +726,43 @@ class Groover:
 
             notes = self._add_drone(notes, drone, is_note_on)
 
-        # print("done")
+        if lu.is_note(new_message):
+
+            # keep track of what is active
+            new_keyswitches = []
+
+            # got through articulations
+            for articulation in self._config["keyswitches"]:
+
+                art_dict = self._config["keyswitches"][articulation]
+
+                val = self._contour_values[art_dict["bind"]]
+                kmin = art_dict["min"]
+                kmax = art_dict["max"]
+
+                # only add new keyswitches
+                if val > kmin and val <= kmax:
+
+                    new_keyswitches.append(articulation)
+
+                    if articulation not in self._last_keyswitches:
+                        notes.insert(
+                            0,
+                            mido.Message(
+                                "note_off", velocity=0, time=0, note=art_dict["key"]
+                            ),
+                        )
+                        notes.insert(
+                            0,
+                            mido.Message(
+                                "note_on", velocity=64, time=0, note=art_dict["key"]
+                            ),
+                        )
+
+            # if updated, change memory
+            if len(new_keyswitches) != 0:
+                self._last_keyswitches = new_keyswitches
+
         return notes
 
     def _apply_swing(self) -> float:
@@ -672,7 +772,7 @@ class Groover:
         :return: the computed offset for the next note
         """
 
-        duration = self._contour_values["message length"]
+        duration = self._contour_values["message_length"]
 
         x = 0.25 * self._performance_time / self._tune.quarter_duration
         # duration normalized so that quarter note = 0.25
@@ -684,18 +784,24 @@ class Groover:
         u = 0.125
 
         right_duration = d - u > -0.012
-        right_time = abs((x % (2 * u)) - u) < 0.012
-        swing_it = right_time and right_duration
+        # right_time = abs((x % (2 * u)) - u) < 0.012
+        right_location = (
+            np.round(2 * self._performance_time / self._tune.quarter_duration, 2)
+            % (2 * self._tune._quarters_per_bar)
+            in self._config["swing"]["locations"]
+        )
+        # swing_it = right_time and right_duration and right_location
+        swing_it = right_duration and right_location
 
         t = 0
         # on  on  on  on
         # on   on on   on
-        if swing_it:
-            t = 2 * u * ((p / (p + 1)) - 0.5)
-            self._did_swing = True
-        elif self._did_swing:
-            t = -2 * u * ((p / (p + 1)) - 0.5)
+        if self._did_swing:
+            t += -2 * u * ((p / (p + 1)) - 0.5)
             self._did_swing = False
+        if swing_it:
+            t += 2 * u * ((p / (p + 1)) - 0.5)
+            self._did_swing = True
 
         # scale back t to tune tempo
         t = 4 * t * self._tune.quarter_duration
@@ -714,8 +820,25 @@ class Groover:
 
         :return: the input notes, with an added drone.
         """
-        note_duration = self._tune.bar_duration / self._config["drone"]["notes_per_bar"]
-        should_play = self._performance_time % note_duration <= lu.TRIGGER_DELTA
+        options = self._config["drone"]["notes_per_bar"]
+        amount = self._contour_values[self._config["drone"]["notes_per_bar_bind"]]
+        amount_min = self._config["drone"]["threshold"]
+        if len(options) != 1:
+            index = np.round(
+                (len(options) - 1) * (amount - amount_min) / (1 - amount_min)
+            ).astype(int)
+            index = max(0, min(len(options) - 1, index))
+            notes_per_bar = options[index]
+        else:
+            notes_per_bar = options[0]
+        note_duration = self._tune.bar_duration / notes_per_bar
+        should_play = (
+            abs(
+                ((self._performance_time - note_duration * 0.5) % note_duration)
+                - note_duration * 0.5
+            )
+            <= lu.TRIGGER_DELTA
+        )
 
         if should_play and is_note_on:
             for drone in self._last_played_drones:
@@ -758,8 +881,36 @@ class Groover:
                         time=delay,
                     ),
                 )
-                self._offset += delay
+                self._swing_offset += delay
                 self._last_played_drones.append(drone)
+
+        elif self._config["drone"]["break_ornaments"]:
+            new_notes = []
+            for note in notes:
+                new_notes.append(note)
+                if lu.is_note_off(note):
+                    for drone in self._last_played_drones:
+                        new_notes.append(
+                            mido.Message(
+                                type="note_off",
+                                channel=self._config["drone"]["midi_channel"],
+                                note=drone,
+                                velocity=0,
+                                time=0,
+                            ),
+                        )
+                elif lu.is_note_on(note):
+                    for drone in self._last_played_drones:
+                        new_notes.append(
+                            mido.Message(
+                                type="note_on",
+                                channel=self._config["drone"]["midi_channel"],
+                                note=drone,
+                                velocity=note.velocity,
+                                time=0,
+                            ),
+                        )
+            notes = new_notes
 
         return notes
 
@@ -808,27 +959,38 @@ class Groover:
         ]
 
         drone = np.array([-1]).astype(int)
+        drone_perc = self._contour_values[self._config["drone"]["bind"]]
+        drone_perc = (drone_perc - self._drone_threshold) / (1 - self._drone_threshold)
 
         if len(index) != 0:
             drone_notes = self._drone_notes[index]
             index = np.argsort(abs(drone_notes - reference))
+            drone_num = np.round(
+                self._config["drone"]["strings_min"] * (1 - drone_perc)
+                + drone_perc * self._config["drone"]["strings_max"],
+            ).astype(int)
             drone = np.concatenate(
                 (
                     drone,
-                    drone_notes[
-                        index[: self._config["drone"]["strings_at_once"]]
-                    ].astype(int),
+                    drone_notes[index[:drone_num]].astype(int),
                 )
             )
 
         if len(free_index) != 0:
             free_drone_notes = self._free_drone_notes[free_index]
+            free_index = np.argsort(
+                0.1 * np.arange(len(free_drone_notes))
+                + (7 * (free_drone_notes - harmony)) % 12,
+            )
+            # number of strings changes with intensity of signal
+            drone_num = np.round(
+                self._config["drone"]["free_strings_min"] * (1 - drone_perc)
+                + drone_perc * self._config["drone"]["free_strings_max"],
+            ).astype(int)
             drone = np.concatenate(
                 (
                     drone,
-                    free_drone_notes[
-                        : self._config["drone"]["free_strings_at_once"]
-                    ].astype(int),
+                    free_drone_notes[free_index[:drone_num]].astype(int),
                 )
             )
 
@@ -841,7 +1003,7 @@ class Groover:
         :return: the midi messages containing the end note
         """
         # get root and range
-        root = int(self._contour_values["harmony"] % 12)
+        root = int(self._contours["harmony"]._contour[0] % 12)
         low, high = self._tune.ambitus
 
         # major or minor
@@ -855,27 +1017,32 @@ class Groover:
             step=1,
         )
 
+        # get first note of tune
+        first_note = self._tune.filter(lu.is_note_on)[0].note
+        chord_pitches.append((12 + first_note - root) % 12)
+
         # get last note of tune
         last_note = self._tune.filter(lu.is_note_on)[-1].note
 
-        """
         # filter pitches that are too far away
         # reachable within a fifth
         pitches = pitches[abs(pitches - last_note) <= 7]
-        """
 
         # select suitable pitches (e.g. any root, third, fifth within range)
         pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
 
         # sample weighted by distance
         w = abs(pitches - last_note).astype(float)
-        w /= max(w)
-        w = 1 - w
+        if sum(w) == 0 or len(w) == 1:
+            w = np.ones_like(w)
+        else:
+            w /= sum(w)
+            w = 1 - w
         end_pitch = random.choices(pitches, weights=w, k=1)[0]
         end_pitch += self._transpose_semitones
 
         # get duration (quarter note)
-        duration = self._eight_duration * 4
+        duration = self._duration_of(self._eight_duration * 4)
 
         # create msgs
         on_msg = mido.Message(
@@ -896,6 +1063,13 @@ class Groover:
         return [on_msg, off_msg]
 
     @property
+    def do_end_note(self) -> float:
+        """
+        :return: whether the groover is set up to play end notes.
+        """
+        return self._config["values"]["do_end_note"]
+
+    @property
     def _current_swing(self) -> float:
         """
         :return: the current swing amount given the bound countour.
@@ -910,14 +1084,18 @@ class Groover:
         """
         :return: the duration of a slide.
         """
-        return self._eight_duration * self._config["values"]["slide_eight_fraction"]
+        return (
+            self._eight_duration * self._config["old_ornaments"]["slide_eight_fraction"]
+        )
 
     @property
     def _cut_duration(self) -> float:
         """
         :return: the duration of a cut note.
         """
-        return self._eight_duration * self._config["values"]["cut_eight_fraction"]
+        return (
+            self._eight_duration * self._config["old_ornaments"]["cut_eight_fraction"]
+        )
 
     @property
     def _roll_duration(self) -> float:
@@ -927,10 +1105,10 @@ class Groover:
 
         tempo_impact = self._contour_values["tempo"]
         calculated = tempo_impact * (
-            self._config["values"]["roll_eight_fraction_max"]
-            - self._config["values"]["roll_eight_fraction_min"]
+            self._config["old_ornaments"]["roll_eight_fraction_max"]
+            - self._config["old_ornaments"]["roll_eight_fraction_min"]
         )
-        calculated += self._config["values"]["roll_eight_fraction_min"]
+        calculated += self._config["old_ornaments"]["roll_eight_fraction_min"]
 
         return self._eight_duration * calculated
 
@@ -1002,10 +1180,11 @@ class Groover:
         :return: the list of midi events corresponding to the chosen ornament.
         """
 
-        print(ornament_type)
+        if self._verbose >= 2:
+            print(f"[ORNT]\t{ornament_type}")
         ornaments = []
-        if self._config["values"]["use_old_ornaments"]:
-            message_length = self._contour_values["message length"]
+        if self._config["old_ornaments"]["use_old_ornaments"]:
+            message_length = self._contour_values["message_length"]
             if ornament_type == CUT:
                 # generate a cut
                 cut_note = self.approach_from_above(message.note, self._tune)
@@ -1014,7 +1193,7 @@ class Groover:
                     note=cut_note,
                     velocity=int(
                         self._current_velocity
-                        * self._config["values"]["cut_velocity_fraction"]
+                        * self._config["old_ornaments"]["cut_velocity_fraction"]
                     ),
                     time=message.time,
                     channel=message.channel,
@@ -1047,7 +1226,7 @@ class Groover:
                 # velocity
                 cut_velocity = int(
                     self._current_velocity
-                    * self._config["values"]["roll_velocity_fraction"]
+                    * self._config["old_ornaments"]["roll_velocity_fraction"]
                 )
 
                 # first note
@@ -1165,13 +1344,13 @@ class Groover:
             elif ornament_type == DROP:
                 pass
             elif ornament_type == ERROR:
-                max_limit = self._config["values"]["max_pitch_error"]
-                min_limit = self._config["values"]["min_pitch_error"]
+                max_limit = self._config["old_ornaments"]["max_pitch_error"]
+                min_limit = self._config["old_ornaments"]["min_pitch_error"]
                 # generate error
                 value = random.randint(min_limit, max_limit)
 
                 # correct if diatonic errors are required
-                if self._config["values"]["diatonic_errors"]:
+                if self._config["old_ornaments"]["diatonic_errors"]:
                     new_note = message.note + value
 
                     # get note position in scale
@@ -1234,21 +1413,31 @@ class Groover:
             first_note = message.note
             for i, (p, v, d) in enumerate(zip(pitches, velocities, durations)):
 
-                # slides can be microtonal
-                new_note = message.note + p
+                # if a step and diatonic
+                if (
+                    abs(p) == 1
+                    and self._config["ornamentation"][ornament_type]["diatonic"]
+                ):
+                    if p < 0:
+                        new_note = self.approach_from_below(message.note, self._tune)
+                    else:
+                        new_note = self.approach_from_above(message.note, self._tune)
+                else:
+                    new_note = message.note + p
 
                 # if not sliding, quantize
+                # slides can be microtonal
                 if not self._config["ornamentation"][ornament_type]["slide"]:
                     new_note = int(new_note)
 
                 # get note position in scale
-                note_index = self._tune.semitones_from_tonic(new_note)
+                note_index = int(self._tune.semitones_from_tonic(new_note))
 
                 # if quantization needed
                 if (
-                    not self._config["ornamentation"][ornament_type]["slide"]
+                    lu.needs_pitch_quantization[note_index]
+                    and not self._config["ornamentation"][ornament_type]["slide"]
                     and self._config["ornamentation"][ornament_type]["diatonic"]
-                    and lu.needs_pitch_quantization[note_index]
                 ):
                     # check both quantizing up and down
                     opt = {
@@ -1261,33 +1450,45 @@ class Groover:
                     else:
                         p -= opt[min(opt)]
 
+                    new_note = message.note + p
+
                 # if sliding, use only the base note and pitch bend that
                 if self._config["ornamentation"][ornament_type]["slide"]:
                     new_pitch = message.note
+
                 # else use a normal message
                 else:
-                    new_pitch = min(127, max(0, int(message.note + p)))
+                    new_pitch = min(127, max(0, int(new_note)))
 
                 # add a note on message if not sliding
                 # or if sliding and first message
                 if not self._config["ornamentation"][ornament_type]["slide"] or i == 0:
+                    # if v is 0, then it's a note off
+                    if v == 0:
+                        vel = 0
+                    else:
+                        # limit velocity in allowed range
+                        vel = min(
+                            self._config["values"]["max_velocity"],
+                            max(
+                                self._config["values"]["min_velocity"],
+                                int(self._current_velocity * v),
+                            ),
+                        )
+
                     ornaments.append(
                         mido.Message(
                             "note_on",
                             note=new_pitch,
-                            velocity=min(
-                                self._config["values"]["max_velocity"],
-                                max(
-                                    self._config["values"]["min_velocity"],
-                                    int(self._current_velocity * v),
-                                ),
-                            ),
+                            velocity=vel,
+                            channel=message.channel,
                         )
                     )
 
                 overall_duration = self._eight_duration * d
 
                 # add slide if necessary
+                # e.g. if going over 2 semitones
                 diff = new_note - first_note
                 if diff != 0 and self._config["ornamentation"][ornament_type]["slide"]:
                     bend = max(min(4096.0 * diff, 8191), -8192)
@@ -1298,8 +1499,8 @@ class Groover:
 
                     # append messages
                     mult = random.uniform(0.25, 0.5)
-                    for i in range(resolution, -1, -1):
-                        pb = i / resolution
+                    for j in range(resolution, -1, -1):
+                        pb = j / resolution
                         pb **= mult
                         pb *= bend
                         pb = int(pb)
@@ -1324,6 +1525,16 @@ class Groover:
                             "note_off",
                             note=new_pitch,
                             time=overall_duration,
+                            channel=message.channel,
+                        )
+                    )
+                else:
+                    ornaments.append(
+                        mido.Message(
+                            "pitchwheel",
+                            channel=message.channel,
+                            pitch=0,
+                            time=overall_duration,
                         )
                     )
 
@@ -1332,11 +1543,11 @@ class Groover:
                 * self._config["ornamentation"][ornament_type]["length"]
             )
             self._offset += max(
-                self._contour_values["message length"], ornament_duration
+                self._contour_values["message_length"], ornament_duration
             )
             ornaments[0].time = message.time
             ornaments[-1].time += max(
-                0, self._contour_values["message length"] - ornament_duration
+                0, self._contour_values["message_length"] - ornament_duration
             )
 
         return ornaments
@@ -1353,11 +1564,11 @@ class Groover:
         options_prob = []
 
         is_beat = self._is_on_a_beat()
-        if self._config["values"]["use_old_ornaments"]:
-            message_length = self._contour_values["message length"]
+        if self._config["old_ornaments"]["use_old_ornaments"]:
+            message_length = self._contour_values["message_length"]
 
             if message_length >= 0.75 * self._eight_duration and (
-                is_beat or self._contour_values["pitch difference"] == 0
+                is_beat or self._contour_values["pitch_difference"] == 0
             ):
                 options.append(CUT)
                 options_prob.append(self._config["probabilities"]["cut"])
@@ -1370,7 +1581,9 @@ class Groover:
 
             if (
                 is_beat and message_length > self._slide_duration
-            ) or self._contour_values["pitch difference"] >= self._config["values"][
+            ) or self._contour_values["pitch_difference"] >= self._config[
+                "old_ornaments"
+            ][
                 "slide_pitch_threshold"
             ]:
                 options.append(SLIDE)
@@ -1386,7 +1599,7 @@ class Groover:
         else:
 
             # create pattern from source notes
-            contour_index = self._contours["message length"]._index
+            contour_index = self._contours["message_length"]._index
             case_len = 0
             case_i = 0
             tune_notes = []
@@ -1395,29 +1608,49 @@ class Groover:
             while case_len < self._max_ornament_length:
                 index = min(
                     contour_index + case_i,
-                    len(self._contours["message length"]) - 1,
+                    len(self._contours["message_length"]) - 1,
                 )
                 # obtain pitch
-                p = self._contours["pitch contour"][index]
+                p = self._contours["pitch_contour"][index]
 
                 # save first pitch
                 if case_i == 0:
                     first_pitch = p
 
                 # obtain duration
-                d = self._contours["message length"][index] / self._eight_duration
+                d = self._contours["message_length"][index] / self._eight_duration
 
                 # update length counter
                 case_len += d
 
                 # add note
-                tune_notes.append([float(p - first_pitch), float(np.round(d * 4) / 4)])
+                tune_notes.append(
+                    [float(p - first_pitch), float(np.round(d * 4, 2) / 4)]
+                )
 
                 case_i += 1
 
             # for each ornament
             for ornament in self._config["ornamentation"]:
                 cases = self._config["ornamentation"][ornament]["cases"]
+
+                prob = self._config["ornamentation"][ornament]["probability"]
+                if f"orn_{ornament}_prob" in self._contour_values:
+                    prob = self._contour_values[f"orn_{ornament}_prob"]
+
+                if f"orn_{ornament}" in self._contour_values:
+
+                    thr = self._config["ornamentation"][ornament]["threshold"]
+                    val = self._contour_values[f"orn_{ornament}"]
+                    if thr < 0:
+                        val = 1 - val
+                        thr = abs(thr)
+
+                    if val <= thr:
+                        continue
+
+                if prob == 0:
+                    continue
 
                 # check elegibility for every listed case
                 for c in cases:
@@ -1445,7 +1678,8 @@ class Groover:
                             tune_i += 1
 
                             # check
-                            elegible = elegible and pitch_difference == pitch
+                            if pitch != "*":
+                                elegible = elegible and pitch_difference == pitch
 
                             elegible = (
                                 elegible and abs(message_length - duration) <= 0.01
@@ -1454,12 +1688,11 @@ class Groover:
                             # if one fails, move on
                             if not elegible:
                                 break
+
                     # if found a case, move to next ornament
                     if elegible:
                         options.append(ornament)
-                        options_prob.append(
-                            self._config["ornamentation"][ornament]["probability"]
-                        )
+                        options_prob.append(prob)
                         break
                     # else check another case
 
@@ -1491,7 +1724,7 @@ class Groover:
         :return: the new duration of the input time value in seconds.
         """
         tempo_ratio = self.current_tempo / self._tune.tempo
-        return tempo_ratio * time
+        return max(0, min(tempo_ratio * time, lu.MAX_TEMPO - 1))
 
     def reset_contours(self) -> None:
         """
@@ -1569,4 +1802,6 @@ class Groover:
         value *= self._contour_values["velocity_pattern"]
         # clamp velocity
         value = max(min(value, max_velocity), min_velocity)
+        if np.isnan(value):
+            return min_velocity
         return int(value)

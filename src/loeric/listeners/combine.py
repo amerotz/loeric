@@ -92,17 +92,29 @@ def main() -> None:
         while True:
             v1 = values[input_1]
             v2 = values[input_2]
-            value = aggregators[args.mode](v1, v2)
-            value = min(127, value)
-            value = max(0, value)
-            value = int(value)
-            print(v1, v2, value, sep="\t")
+            if args.mode == "through":
+                message = mido.Message(
+                    "control_change", channel=0, control=int(args.input_1_control), value=int(v1)
+                )
+                out.send(message)
+                message = mido.Message(
+                    "control_change", channel=0, control=int(args.input_2_control), value=int(v2)
+                )
+                out.send(message)
+                print(v1, v2, sep="\t")
 
-            message = mido.Message(
-                "control_change", channel=0, control=args.control, value=value
-            )
+            else:
+                value = aggregators[args.mode](v1, v2)
+                value = min(127, value)
+                value = max(0, value)
+                value = int(value)
+                print(v1, v2, value, sep="\t")
 
-            out.send(message)
+                message = mido.Message(
+                    "control_change", channel=0, control=args.control, value=value
+                )
+
+                out.send(message)
             time.sleep(1 / 10)
     except KeyboardInterrupt as e:
         done_listening = True

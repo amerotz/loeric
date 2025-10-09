@@ -1,5 +1,25 @@
 {
-    "swing": {"min": 1, "max": 1, "bind": "tempo"},
+	"variables": {
+		"var_roll_2_prob": 0,
+		"var_divide_note_1_duration": 1,
+		"var_divide_note_2_duration": 1,
+        "var_velocity_weight": [0,1,1,1,1]
+	},
+    "contours": {
+        "legato": {
+			"recipe":{
+				"pattern": {
+					"mean": [1.0],
+					"std": [0.0],
+					"std_scale": 1,
+					"normalize": false,
+					"period": 1
+				}
+			}
+		}
+    },
+    "swing": {"min": 1, "max": 1, "bind": "swing"},
+    "legato": {"min": 1, "max": 1, "bind": "legato"},
     "values": {
 		"beat_velocity_increase": 16
 	},
@@ -11,7 +31,7 @@
         "chords_per_bar": 3
     },
     "drone": {
-        "notes_per_bar": 9
+        "notes_per_bar": [9,3,1]
     }
 }
 

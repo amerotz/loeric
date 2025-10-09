@@ -1,4 +1,6 @@
 flit_core
+sounddevice
+aubio
 setuptools
 muspy
 attrs==24.2.0

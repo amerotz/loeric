@@ -1,19 +1,82 @@
 {
-    "velocity": {
-		"weights": [0, 1, 0, 0, 0],
-		"random": 0.05,
-		"savgol": true,
-		"scale": true,
-		"shift": true
+	"variables": {
+		"var_roll_2_prob": 0,
+		"var_divide_note_1_duration": 1.38,
+		"var_divide_note_2_duration": 0.62,
+        "var_velocity_weight": [0,1,0,0,0]
 	},
-    "tempo": {
-		"weights": [0, -1, 0, 0, 0],
-		"random": 0.05,
-		"savgol": true,
-		"scale": true,
-		"shift": true
+	"contours": {
+		"velocity": {
+			"recipe":{
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [0, 1, 0, 0, 0],
+							"savgol": true,
+							"scale": true,
+							"shift": true
+						},
+						"random": {
+							"min": 0.0,
+							"max": 1.0
+						}
+					},
+					"weights":[0.95, 0.05]
+				}
+			}
+		},
+		"tempo": {
+			"recipe":{
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [0, 1, 0, 0, 0],
+							"savgol": true,
+							"scale": true,
+							"shift": true
+						},
+						"random": {
+							"min": 0.0,
+							"max": 1.0
+						}
+					},
+					"weights":[0.95, 0.05]
+				}
+			}
+		},
+		"swing": {
+			"recipe":{
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [0, 1, 0, 0, 0],
+							"savgol": true,
+							"scale": true,
+							"shift": true
+						},
+						"random": {
+							"min": 0.0,
+							"max": 1.0
+						}
+					},
+					"weights":[0.95, 0.05]
+				}
+			}
+		},
+		"legato": {
+			"recipe":{
+				"pattern": {
+					"mean": [1.0],
+					"std": [0.0],
+					"std_scale": 1,
+					"normalize": false,
+					"period": 1
+				}
+			}
+		}
 	},
-    "swing": {"min": 3, "max": 1.5, "bind": "tempo"},
+    "legato": {"min": 1, "max": 1, "bind": "legato"},
+    "swing": {"min": 3, "max": 1.5, "bind": "swing"},
     "values": {
 		"beat_velocity_increase": 16
 	},
@@ -25,7 +88,7 @@
         "chords_per_bar": 4
     },
     "drone": {
-        "notes_per_bar": 8
+        "notes_per_bar": [8,4,2,1]
     }
 }
 
