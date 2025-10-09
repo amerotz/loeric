@@ -301,7 +301,7 @@ class Groover:
         ] != 0:
 
             # create x
-            x = np.cumsum(self._contours["message_length"]._contour)
+            x = self._tune.float_times
             x -= min(x)
 
             ramp_up = np.ones_like(x)
@@ -310,22 +310,21 @@ class Groover:
             # create ramp
             if self._slow_start:
                 B = (
-                    self._config["tempo_control"]["slow_start_bars"]
-                    * self._tune.time_signature.eighths_per_bar
-                )
+                    self._tune.time_signature.eighths_per_bar
+                    * self._config["tempo_control"]["slow_start_bars"]
+                ).eighth_duration
+
                 ramp_up = np.minimum(np.ones_like(x), x / B)
 
             if self._slow_end:
                 B = (
-                    self._config["tempo_control"]["slow_end_bars"]
-                    * self._tune.time_signature.eighths_per_bar
-                )
+                    self._tune.time_signature.eighths_per_bar
+                    * self._config["tempo_control"]["slow_end_bars"]
+                ).eighth_duration
                 p = 1 / np.random.choice([2, 3])
                 ramp_down = np.minimum(
                     np.ones_like(x), np.power(1 - (x - (max(x) - B)) / B, p)
                 )
-
-            # slower **= 0.5 + 0.5 * np.random.rand()
 
             # update
             for contour in self._config["tempo_control"]["slow_affected_contours"]:
@@ -362,7 +361,7 @@ class Groover:
         if self._plot is not None:
             import matplotlib.pyplot as plt
 
-            x = np.cumsum([t.eighth_duration for t in self._tune.times])
+            x = self._tune.float_times
             plt.step(x, self._contours[self._plot]._contour)
             plt.step(
                 x,

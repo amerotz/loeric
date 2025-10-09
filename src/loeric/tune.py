@@ -52,7 +52,7 @@ class TimeDelta:
         return self._eighth_duration
 
     def __repr__(self):
-        return str(np.round(self._eighth_duration, 4))
+        return f"d={np.round(self._eighth_duration, 4)}"
 
     @eighth_duration.setter
     def eighth_duration(self, value):
@@ -226,7 +226,7 @@ class Pause(ScoreElement):
         return -1
 
     def __repr__(self):
-        return f"(Pause d={np.round(self._duration.eighth_duration,4)} t={self._time})"
+        return f"(Pause {self._duration} t={self._time})"
 
     def to_midi(self, absolute_time=False):
         time = self.duration
@@ -308,13 +308,15 @@ class KeySignature(ScoreElement):
     def __repr__(self):
         return f"(KeySignature k={self._root} m={self._mode} t={self._time})"
 
-    def to_midi(self):
+    def to_midi(self, absolute_time=False):
+
+        time = self.duration
+        if absolute_time:
+            time += self._time
         names = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
         return [
             mido.MetaMessage(
-                "key_signature",
-                key=names[self.major_root],
-                time=self._time.eighth_duration,
+                "key_signature", key=names[self.major_root], time=time.eighth_duration
             )
         ]
 
@@ -436,7 +438,7 @@ class Note(ScoreElement):
         self._metadata = []
 
     def __repr__(self):
-        return f"(Note p={self._pitch} d={self._duration} id={self._id} t={self._time})"
+        return f"(Note p={self._pitch} {self._duration} id={self._id} t={self._time})"
 
     def add_metadata(self, data):
         self._metadata.append(data)
@@ -823,6 +825,10 @@ class Tune:
     @property
     def times(self):
         return np.array([note.time for note in self._score])
+
+    @property
+    def float_times(self):
+        return np.array([note.time.eighth_duration for note in self._score])
 
     @property
     def tempo(self):

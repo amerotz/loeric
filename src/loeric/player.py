@@ -5,6 +5,7 @@ import queue
 import mido
 import music21 as m21
 import muspy as mp
+import numpy as np
 
 from collections import defaultdict
 
@@ -48,7 +49,7 @@ class Player:
         )
 
         self._song_time = tu.TimeDelta(eighth_duration=song_start_time)
-        self._last_played_message_time = copy.deepcopy(self._song_time)
+        self._last_played_message_time = self._song_time.eighth_duration
         self._notify_song_time = tu.TimeDelta(eighth_duration=1000000)
 
         if self._saving:
@@ -95,7 +96,7 @@ class Player:
         if len(messages) == 0:
             return
         self._message_queue.extend(messages)
-        self._message_queue.sort(key=lambda x: (x.time, 1 if "off" in x.type else 1))
+        self._message_queue.sort(key=lambda x: (x.time, 1 if "off" in x.type else 0))
 
     def wake_me_up_at(self, time):
         self._notify_song_time = time
@@ -128,22 +129,20 @@ class Player:
             msg = self._message_queue.pop(0)
             if self._verbose == 5:
                 print("[MIDI]\t", msg)
-            msg.time = 0
+
+            if self._saving:
+
+                new_time = np.round(msg.time * 32767 / 2).astype(int)
+                msg.time = new_time
+                self._midi_track.append(msg)
 
             if msg.is_meta:
                 continue
 
             if self._midi_out is not None:
                 if msg.type != "songpos":
+                    msg.time = 0
                     self._midi_out.send(msg)
-
-            if self._saving:
-                msg.time = (
-                    self._song_time - self._last_played_message_time
-                ).eighth_duration * self._tempo_scale
-                self._midi_track.append(msg)
-
-            self._last_played_message_time = copy.deepcopy(self._song_time)
 
         self._song_time += self._time_division
         if self._midi_out is not None:
@@ -169,12 +168,11 @@ class Player:
 
         :param filename: the path to the output midi file.
         """
-        for i, msg in enumerate(self._midi_performance.tracks[0]):
-            self._midi_performance.tracks[0][i].time = round(
-                mido.second2tick(
-                    msg.time, self._midi_performance.ticks_per_beat, self._tempo
-                )
-            )
-            print(
-            self._midi_performance.tracks[0][i])
+        self._midi_track.sort(key=lambda x: x.time)
+        prev_time = self._midi_track[0].time
+        for i in range(len(self._midi_track)):
+            new_time = self._midi_track[i].time - prev_time
+            prev_time = self._midi_track[i].time
+            self._midi_track[i].time = new_time
+
         self._midi_performance.save(filename)

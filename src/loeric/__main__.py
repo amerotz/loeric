@@ -102,7 +102,7 @@ def play(
                     if kwargs["verbose"] > 0:
                         print(f"[INFO]\tChanging key. {original_message}")
                     groover._tune.set_key_signature(original_message)
-                midi_headers = original_message.to_midi()
+                midi_headers = original_message.to_midi(absolute_time=True)
 
             player.set_tempo_scale(groover.tempo_scale)
             player.add_midi(midi_headers)
@@ -533,7 +533,9 @@ def main():
             )
             sync_t.start()
 
-        if not args["sync"] and not args["no_prompt"]:
+        if (not args["sync"] and not args["no_prompt"]) and (
+            input_defined or output_defined
+        ):
             a = input("Press any key to start playback:")
             print()
 
