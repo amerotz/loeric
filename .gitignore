@@ -11,6 +11,7 @@ loeric-env/
 mini-session/
 paper-examples/
 cc-test/
+src/configs
 mini_session.sh
 generate.sh
 ### JupyterNotebooks ###
