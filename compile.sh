@@ -13,15 +13,20 @@ if [ ! -f "$TARGET_DIR/FluidR3_GM.sf2" ]; then
   echo "SoundFont downloaded and unzipped successfully."
 fi
 
-echo "Building Leoric WebUI"
+mkdir client/build
+mkdir static/midi
+mkdir static/site
+
+echo "Building LOERIC WebUI"
 cd client
 npm run build
 cd ..
 rm -r static/site
 cp -r client/build static/site
 
-echo "Building Loeric CLI"
+echo "Building LOERIC CLI"
 python -m build --no-isolation --wheel
-pip install dist/loeric-1.0.0-py2.py3-none-any.whl --force-reinstall
+<<<<<<< HEAD
+pip install dist/loeric-2.0.0-py2.py3-none-any.whl --force-reinstall
 
 pyinstaller --collect-submodules=src --add-data="static:./static" -n=loeric --icon=loeric-icon.png --hidden-import=mido.backends.rtmidi -w src/loeric/server/__main__.py

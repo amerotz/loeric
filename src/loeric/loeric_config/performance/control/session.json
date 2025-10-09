@@ -1,6 +1,10 @@
 {
 	"contour_2_control": {
-		"velocity": 41
+		"velocity": {
+			"control": 41,
+			"min": 0,
+			"max": 127
+		}
 	},	
 	"control_2_contour": {
 		"velocity_intensity": 51,

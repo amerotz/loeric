@@ -17,45 +17,6 @@ MAX_TEMPO = 2**24 - 1
 
 # key signatures
 number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
-mode_offset = {
-    "major": 0,
-    "minor": 3,
-    "dorian": 10,
-    "mixolydian": 5,
-}
-'''
-number_of_fifths = {
-    "Cb": -7,
-    "Abm": -7,
-    "Gb": -6,
-    "Ebm": -6,
-    "Db": -5,
-    "Bbm": -5,
-    "Ab": -4,
-    "Fm": -4,
-    "Eb": -3,
-    "Cm": -3,
-    "Bb": -2,
-    "Gm": -2,
-    "F": -1,
-    "Dm": -1,
-    "C": 0,
-    "Am": 0,
-    "G": 1,
-    "Em": 1,
-    "D": 2,
-    "Bm": 2,
-    "A": 3,
-    "F#m": 3,
-    "E": 4,
-    "C#m": 4,
-    "B": 5,
-    "G#m": 5,
-    "F#": 6,
-    "D#m": 6,
-    "C#": 7,
-    "A#m": 7,
-}
 
 
 def get_root(key_signature: str) -> int:
@@ -78,7 +39,19 @@ def get_root(key_signature: str) -> int:
 
     return base
 
-'''
+
+def major_root(root, mode) -> int:
+    """
+    :return: the root of the relative major of the key signature in pitch space.
+    """
+    mode_offset = {
+        "major": 0,
+        "minor": 3,
+        "dorian": 10,
+        "mixolydian": 5,
+    }
+    return (root + mode_offset[mode]) % 12
+
 
 # 0 = major
 # 1 = minor
@@ -126,15 +99,6 @@ def get_chord_pitches(harmony: int) -> np.array:
         fifth = 8
 
     return np.array([0, third, fifth])
-
-
-'''
-def is_contour_valid(msg: mido.Message) -> bool:
-    """
-    Check if a midi event is to be considered to calculate a contour.
-    """
-    return is_note_on(msg)
-'''
 
 
 def is_note_on(msg: mido.Message) -> bool:
@@ -247,18 +211,3 @@ def get_ports(
         outport = mido.get_output_names()[out_index]
 
     return inport, outport
-
-
-def is_aligned_with(time: float, interval: float, threshold: float) -> bool:
-    """
-    Checks whether a given time position in the tune aligns with some subdivision using a given threshold.
-
-    :param time: the time position to check.
-    :param interval: the time interval to check alignement for.
-    :param threshold: the time threshold to consider the position aligned with the interval.
-
-    :return: whether the time interval is aligned or not.
-    """
-
-    half_i = interval * 0.5
-    return abs(((time - half_i) % interval) - half_i) <= threshold

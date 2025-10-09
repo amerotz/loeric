@@ -1,7 +1,15 @@
 import time
+import copy
+import threading
+import queue
 import mido
 import music21 as m21
 import muspy as mp
+import numpy as np
+
+from collections import defaultdict
+
+from . import tune as tu
 
 
 class Player:
@@ -10,11 +18,12 @@ class Player:
     def __init__(
         self,
         tempo: int,
-        key_signature: mp.KeySignature,
-        time_signature: m21.meter.TimeSignature,
-        save: bool,
-        midi_out,
-        verbose: bool = False,
+        key_signature=None,
+        time_signature=None,
+        save: bool = False,
+        midi_out=None,
+        verbose: int = 0,
+        song_start_time=0,
     ):
         """
         Initialize the class.
@@ -31,6 +40,17 @@ class Player:
         self._midi_out = midi_out
         self._tempo = tempo
         self._verbose = verbose
+        self._message_queue = []
+        self.playback_done = threading.Condition()
+        self.has_reached_wake_time = threading.Event()
+        self._tempo_scale = 1
+        self._time_division = tu.TimeDelta(
+            eighth_duration=2 / tu.MINIMUM_QUARTER_DIVISION
+        )
+
+        self._song_time = tu.TimeDelta(eighth_duration=song_start_time)
+        self._last_played_message_time = self._song_time.eighth_duration
+        self._notify_song_time = tu.TimeDelta(eighth_duration=1000000)
 
         if self._saving:
             self._midi_performance = mido.MidiFile(type=0)
@@ -43,13 +63,14 @@ class Player:
                 mido.MetaMessage("key_signature", key=key_signature.root_str)
             )
             """
-            self._midi_track.append(
-                mido.MetaMessage(
-                    "time_signature",
-                    numerator=time_signature.numerator,
-                    denominator=time_signature.denominator,
+            if self._time_signature is not None:
+                self._midi_track.append(
+                    mido.MetaMessage(
+                        "time_signature",
+                        numerator=time_signature.numerator,
+                        denominator=time_signature.denominator,
+                    )
                 )
-            )
 
     def init_playback(self) -> None:
         """
@@ -62,7 +83,26 @@ class Player:
         self._start_time = time.time()
         self._input_time = 0.0
 
-    def play(self, messages: list[mido.Message]) -> None:
+    def set_tempo_scale(self, tempo_scale):
+        self._tempo_scale = tempo_scale
+
+    def add_notes(self, notes):
+        midi_messages = tu.note_list_to_midi(notes)
+
+        self.add_midi(midi_messages)
+
+    def add_midi(self, messages):
+
+        if len(messages) == 0:
+            return
+        self._message_queue.extend(messages)
+        self._message_queue.sort(key=lambda x: (x.time, 1 if "off" in x.type else 0))
+
+    def wake_me_up_at(self, time):
+        self._notify_song_time = time
+        self.has_reached_wake_time.clear()
+
+    def play_next(self) -> None:
         """
         Play the messages in input and append them to the generated performance.
         If no midi port has been specified, the messages will only be saved.
@@ -70,33 +110,50 @@ class Player:
         :param messages: the midi messages to play.
         """
 
-        for msg in messages:
+        start_time = time.time()
+        if self._song_time >= self._notify_song_time:
+            self.has_reached_wake_time.set()
+            with self.playback_done:
+                self.playback_done.notify_all()
 
-            # obtained from
-            # mido/mido/midifiles/midifiles.py:427-430
-            self._input_time += msg.time
-            playback_time = time.time() - self._start_time
-            duration_to_next_event = self._input_time - playback_time
+        while True:
 
-            if self._midi_out is not None:
-                if not msg.is_meta:
-                    # obtained from
-                    # mido/mido/midifiles/midifiles.py:432-433
-                    if duration_to_next_event > 0.0:
-                        time.sleep(duration_to_next_event)
+            if len(self._message_queue) == 0:
+                break
 
-                    # don't send songpos messages
-                    # but do wait if between pauses
-                    if msg.type == "songpos":
-                        pass
-                    else:
-                        self._midi_out.send(msg)
+            delta = self._song_time - self._message_queue[0].time
 
-                    if self._verbose:
-                        print("[INFO]\t", msg)
+            if delta < 0:
+                break
+
+            msg = self._message_queue.pop(0)
+            if self._verbose == 5:
+                print("[MIDI]\t", msg)
 
             if self._saving:
+
+                new_time = np.round(msg.time * 32767 / 2).astype(int)
+                msg.time = new_time
                 self._midi_track.append(msg)
+
+            if msg.is_meta:
+                continue
+
+            if self._midi_out is not None:
+                if msg.type != "songpos":
+                    msg.time = 0
+                    self._midi_out.send(msg)
+
+        self._song_time += self._time_division
+        if self._midi_out is not None:
+            delay_time = time.time() - start_time
+            time.sleep(
+                max(
+                    self._time_division.eighth_duration * self._tempo_scale
+                    - delay_time,
+                    0,
+                )
+            )
 
     def reset(self) -> None:
         """
@@ -111,10 +168,11 @@ class Player:
 
         :param filename: the path to the output midi file.
         """
-        for i, msg in enumerate(self._midi_performance.tracks[0]):
-            self._midi_performance.tracks[0][i].time = round(
-                mido.second2tick(
-                    msg.time, self._midi_performance.ticks_per_beat, self._tempo
-                )
-            )
+        self._midi_track.sort(key=lambda x: x.time)
+        prev_time = self._midi_track[0].time
+        for i in range(len(self._midi_track)):
+            new_time = self._midi_track[i].time - prev_time
+            prev_time = self._midi_track[i].time
+            self._midi_track[i].time = new_time
+
         self._midi_performance.save(filename)

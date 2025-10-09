@@ -12,6 +12,12 @@ class UncomputedContourError(Exception):
     pass
 
 
+class InvalidRecipeError(Exception):
+    """Raised if the contour recipe is invalid."""
+
+    pass
+
+
 class InvalidIndexError(Exception):
     """Raised if the index of the current value is below 0 or exceeds the length of the contour."""
 
@@ -36,7 +42,7 @@ class Contour:
 
     def __getitem__(self, index):
         """
-        The length of this contour.
+        Index an item in the contour.
         """
         return self._contour[index]
 
@@ -148,72 +154,81 @@ class HarmonicContour(Contour):
     ) -> None:
         # retrieve pitch and time info
         # note_events = [msg for msg in midi if "note" in msg.type]
-        note_events = midi.filter(lambda x: "note" in x.type)
-        timings = np.array([msg.time for msg in note_events])
-        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
 
-        # cumulative time
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
-        summed_timings = np.cumsum(timings)
-        summed_timings -= midi.offset
-        summed_timings = summed_timings[note_ons]
+        pitches = midi.pitches
+        summed_timings = np.array([t.eighth_duration for t in midi.times])
 
         notes = pitches % 12
 
         # message length
-        lengths = timings[note_offs] - timings[note_ons]
-        lengths /= midi.bar_duration
-        lengths = np.interp(lengths, (0, lengths.max()), (0, 1))
+        lengths = np.array([n.eighth_duration for n in midi.durations])
 
         # estimate chord for each bar
-        harmony = np.zeros(len(note_events))
+        harmony = np.zeros(len(pitches))
 
         t = summed_timings.min()
-        while t < summed_timings.max():
+
+        key_changes = midi._key_signatures
+        current_key = key_changes[0]
+
+        while t <= summed_timings.max():
             start = t
-            stop = t + midi.bar_duration / chords_per_bar
+            stop =  midi.time_signature.eighths_per_bar/ chords_per_bar + t
             if t < 0:
                 stop = 0
 
+            if len(key_changes) != 0 and not midi.forced_key:
+                if t >= key_changes[0].time:
+                    current_key = key_changes[0]
+                    key_changes = key_changes[1:]
+
             # select bar range
             indexes = np.where((summed_timings >= start) & (summed_timings < stop))
-            bar_notes = notes[indexes]
+            bar_notes = notes[indexes].astype(int)
             bar_lengths = lengths[indexes]
 
             # init counts
             chords = np.zeros(12)
+            note_count = np.zeros(12)
 
             # add chord score for each note
             for i, n in enumerate(bar_notes):
-                chords += np.roll(chord_score, n)  # * bar_lengths[i]
+                chords += np.roll(chord_score, n) * bar_lengths[i]
+                note_count[n % 12] += 1
 
             # filter out chords that are not allowed
-            root_chord = np.multiply(
+            chords_filtered = np.multiply(
                 chords,
-                np.roll(allowed_chords, midi.root),
+                np.roll(allowed_chords, current_key.root),
             )
+
             # choose the chord with the highest score
-            root = np.random.choice(np.argwhere(root_chord == root_chord.max())[0])
+            root = np.random.choice(
+                np.argwhere(chords_filtered == chords_filtered.max())[0]
+            )
+            previous_chord = root
 
             # check if the selected chord should be major according to the mode
-            chord_quality = np.roll(lu.chord_quality, midi.major_root)[root]
+            chord_quality = np.roll(
+                lu.chord_quality, lu.major_root(current_key.root, current_key.mode)
+            )[root]
 
             harmony_value = root
 
             # check if the note score suggests minor chord
             # (e.g. minor IV etc, minor V, etc)
-            if chords[(root + 3) % 12] > chords[(root + 4) % 12]:
-                # if not diminished already
-                if chord_quality != 2:
-                    # make it minor
-                    chord_quality = 1
+            if note_count[(root + 3) % 12] > note_count[(root + 4) % 12]:
+                # make it minor
+                chord_quality = 1
+            elif note_count[(root + 4) % 12] > note_count[(root + 3) % 12]:
+                chord_quality = 0
+            """
 
             # check if the note score suggests diminished chord
             if chords[(root + 6) % 12] > chords[(root + 7) % 12]:
                 chord_quality = 2
+                print(chords)
 
-            """
             # check if the note score suggests augmented chord
             if chords[(root + 8) % 12] > chords[(root + 7) % 12]:
                 chord_quality = 3
@@ -235,18 +250,17 @@ class RandomContour(Contour):
     def __init__(self):
         super().__init__()
 
-    def calculate(self, midi: tune.Tune, extremes: tuple[float, float] = None) -> None:
+    def calculate(self, midi: tune.Tune, min: float = 0, max: float = 1) -> None:
         """
         Compute a random contour following a uniform distribution in the specified range, by default between 0 and 1.
 
         :param midi: the input tune.
         :param extremes: the upper and lower bound for the random contour. If None, the range will be (0, 1).
         """
-        note_events = midi.filter(lambda x: lu.is_note_on(x))
-        size = len(note_events)
-        if extremes is None:
-            extremes = (0, 1)
-        self._contour = np.random.uniform(*extremes, size=size)
+        size = len(midi.pitches)
+        r_min = min
+        r_max = max
+        self._contour = np.random.uniform(r_min, r_max, size=size)
 
 
 class PhraseContour(Contour):
@@ -262,18 +276,11 @@ class PhraseContour(Contour):
         :param midi: the input tune.
         """
         # retrieve pitch and time info
-        note_events = midi.filter(lambda x: "note" in x.type)
-        timings = np.array([msg.time for msg in note_events])
-        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
+        summed_timings = np.array([t.eighth_duration for t in midi.times])
+        pitches = midi.pitches
+        durations = midi.durations
 
-        # cumulative time
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
-        summed_timings = np.cumsum(timings)
-        summed_timings -= midi.offset
-        summed_timings = summed_timings[note_ons]
-
-        bar_length = midi.bar_duration
+        bar_length = midi.time_signature.eighths_per_bar.eighth_duration
 
         self._contour = self.scale_and_savgol(
             1
@@ -294,8 +301,7 @@ class IntensityContour(Contour):
     def calculate(
         self,
         midi: tune.Tune,
-        weights: np.array = None,
-        random_weight: float = 0,
+        weights: list = None,
         savgol: bool = True,
         shift: bool = False,
         scale: bool = False,
@@ -306,12 +312,11 @@ class IntensityContour(Contour):
 
         :param midi: the input tune.
         :param weights: the weights for the components, respectively frequency score, beat score, ambitus score, leap score and length score.
-        :param random_weight: the weight of the random component over the sum of the weighted O'Canainn scores. If None, the components will be averaged together.
         :param savgol: whether or not to apply a final savgol filtering step (recommended).
         :param shift: whether or not to apply a final shifting step to bring the mean of the array close to 0.5.
         """
 
-        weights = weights.astype(float)
+        weights = np.array(weights).astype(float)
 
         # calculate the components
         components = self.ocanainn_scores(midi)
@@ -324,20 +329,18 @@ class IntensityContour(Contour):
         else:
             if weights.shape != (size, 1):
                 weights = weights.reshape(size, 1)
+            indexes = np.argwhere(weights < 0)
+            weights = abs(weights)
             weights /= weights.sum()
 
         # weight them
+        stacked_components[indexes] *= -1
+        stacked_components[indexes] += 1
         stacked_components = np.multiply(stacked_components, weights)
         # sum them
         stacked_components = stacked_components.sum(axis=0)
 
-        # add the random contour
         self._contour = stacked_components
-        if random_weight != 0:
-            self._contour *= 1 - random_weight
-            random_contour = RandomContour()
-            random_contour.calculate(midi, extremes=(0, 1))
-            self._contour += random_contour._contour * random_weight
 
         # savgol filtering
         self._contour = self.scale_and_savgol(
@@ -361,16 +364,9 @@ class IntensityContour(Contour):
         :return: the frequency score, the beat score, the ambitus score, the leap score and the length score.
         """
         # retrieve pitch and time info
-        note_events = midi.filter(lambda x: "note" in x.type)
-        timings = np.array([msg.time for msg in note_events])
-        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
-
-        # cumulative time
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
-        summed_timings = np.cumsum(timings)
-        summed_timings -= midi.offset
-        summed_timings = summed_timings[note_ons]
+        summed_timings = np.array([t.eighth_duration for t in midi.times])
+        pitches = midi.pitches
+        durations = midi.durations
 
         # o canainn score
         notes = pitches % 12
@@ -386,11 +382,15 @@ class IntensityContour(Contour):
         )
 
         # strong beat
-        beat_position = (summed_timings % midi.bar_duration) / midi.beat_duration
-        beat_position = abs(beat_position - np.round(beat_position))
-        trigger_delta = lu.TRIGGER_DELTA
+        indexes = np.where(
+            summed_timings
+            % (
+                midi.time_signature.eighths_per_bar.eighth_duration
+                / midi.time_signature.beat_count
+            )
+            == 0
+        )
         beats = -np.ones(notes.shape)
-        indexes = np.where(beat_position <= trigger_delta)
         beats[indexes] = notes[indexes]
         values, counts = np.unique(beats, return_counts=True)
         beat_score = np.array([counts[np.where(values == n)] for n in beats]).astype(
@@ -424,11 +424,10 @@ class IntensityContour(Contour):
             )
 
         # long score
-        timings = timings[note_offs] - timings[note_ons]
-        values, counts = np.unique(timings, return_counts=True)
+        values, counts = np.unique(durations, return_counts=True)
         index = np.argmax(counts)
         val = values[index]
-        length_score = (timings > val).astype(float)
+        length_score = (durations > val).astype(float)
 
         return frequency_score, beat_score, ambitus_score, leap_score, length_score
 
@@ -449,11 +448,7 @@ class MessageLengthContour(Contour):
         :param midi: the input tune object.
         """
 
-        note_events = midi.filter(lambda x: lu.is_note(x))
-        timings = np.array([msg.time for msg in note_events])
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([lu.is_note_off(msg) for msg in note_events])
-        self._contour = timings[note_offs] - timings[note_ons]
+        self._contour = midi.durations
 
 
 class PitchDifferenceContour(Contour):
@@ -466,8 +461,7 @@ class PitchDifferenceContour(Contour):
         self,
         midi: tune.Tune,
     ) -> None:
-        note_events = midi.filter(lambda x: "note" in x.type)
-        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
+        pitches = midi.pitches
         diff = np.diff(pitches)
         diff = np.insert(diff, 0, 0)
         self._contour = diff
@@ -486,11 +480,8 @@ class PitchContour(Contour):
         shift: bool = True,
         scale: bool = True,
     ) -> None:
-        note_events = midi.filter(lambda x: "note" in x.type)
-        pitches = np.array(
-            [msg.note for msg in note_events if lu.is_note_on(msg)]
-        ).astype(float)
-        self._contour = pitches
+
+        self._contour = midi.pitches
 
         if savgol or shift or scale:
             self._contour = self.scale_and_savgol(
@@ -507,11 +498,11 @@ class PatternContour(Contour):
     def calculate(
         self,
         midi: tune.Tune,
-        mean: np.array = np.array([1]),
-        std: np.array = np.array([0]),
+        mean: list = [1],
+        std: list = [0],
         std_scale: float = 1,
         normalize: bool = False,
-        period: float = 0.5,
+        period: float = 1,
     ) -> None:
         """
         Create the contour by repeating the input weights over the specified period.
@@ -523,23 +514,18 @@ class PatternContour(Contour):
         """
         assert len(mean) == len(std)
 
+        mean = np.array(mean).astype(float)
+        std = np.array(std).astype(float)
+
         # retrieve pitch and time info
-        note_events = midi.filter(lambda x: "note" in x.type)
-        timings = np.array([msg.time for msg in note_events])
-        pitches = np.array([msg.note for msg in note_events if lu.is_note_on(msg)])
+        summed_timings = np.array([t.eighth_duration for t in midi.times])
+        pitches = midi.pitches
+        durations = midi.durations
 
-        # cumulative time
-        note_ons = np.array([lu.is_note_on(msg) for msg in note_events])
-        note_offs = np.array([not lu.is_note_on(msg) for msg in note_events])
-        summed_timings = np.cumsum(timings)
-        summed_timings -= midi.offset
-        summed_timings = summed_timings[note_ons]
+        time_period = midi.time_signature.eighths_per_bar.eighth_duration * period
+        bar_position = summed_timings / time_period
 
-        bar_position = summed_timings / midi.bar_duration
-
-        pattern_indexes = np.round(
-            len(mean) * (summed_timings % midi.bar_duration) / midi.bar_duration
-        ).astype(int) % len(mean)
+        pattern_indexes = ((len(mean) * bar_position) % len(mean)).astype(int)
         diff = np.diff(pattern_indexes)
         index_diff = np.argwhere(diff > 1)
 
@@ -557,7 +543,7 @@ class PatternContour(Contour):
         )
 
         if normalize:
-            bars = summed_timings // midi.bar_duration
+            bars = summed_timings // time_period
 
             for i in np.unique(bars):
 
@@ -571,7 +557,7 @@ class PatternContour(Contour):
         self._contour = pattern
 
 
-def multiply(contours: list[Contour]):
+def multiply(contours: list[Contour] = []) -> Contour:
     """
     Returns a new contour that holds the product of the input contours.
 
@@ -588,7 +574,7 @@ def multiply(contours: list[Contour]):
     return new_contour
 
 
-def weighted_sum(contours: list[Contour], weights: np.ndarray):
+def weighted_sum(contours: list[Contour] = [], weights: list = []) -> Contour:
     """
     Returns a new contour that holds the weighted sum of the input contours.
 
@@ -597,12 +583,179 @@ def weighted_sum(contours: list[Contour], weights: np.ndarray):
 
     :return: a new contour holding the weighted sum of the input contours.
     """
+    assert len(contours) == len(weights)
+
     result = np.zeros(len(contours[0]))
-    weights /= np.sum(weights)
-    for c, w in zip(contours, weights):
-        result += c._contour * w
+    size = len(contours)
+    weights = np.array(weights).astype(float)
+
+    if weights is None:
+        weights = np.ones((size, 1)) / size
+    else:
+        if weights.shape != (size, 1):
+            weights = weights.reshape(size, 1)
+        indexes = np.argwhere(weights < 0)
+        weights = abs(weights)
+        weights /= weights.sum()
+
+    stacked_components = np.stack([c._contour for c in contours])
+
+    # invert negative ones
+    stacked_components[indexes] *= -1
+    stacked_components[indexes] += 1
+
+    # weight them
+    stacked_components = np.multiply(stacked_components, weights)
+    # sum them
+    result = stacked_components.sum(axis=0)
 
     new_contour = Contour()
     new_contour._contour = result
 
     return new_contour
+
+
+def linear_transform(contours: Contour = None, a: float = 1, b: float = 0) -> Contour:
+    """
+    Apply a linear transformation of the input contour f(x)= ax + b.
+
+    :param contour: the input contour.
+    :param a: the slope.
+    :param b: the intercept.
+
+    :return: the linear transformation of the input contour.
+    """
+    assert len(contours) == 1
+    new_contour = Contour()
+    new_contour._contour = a * contours[0]._contour + b
+
+    return new_contour
+
+
+def clamp(contours: Contour = None, low: float = 0, high: float = 1) -> Contour:
+    """
+    Clamp the contour in the given range.
+
+    :param contour: the input contour.
+    :param low: the lower limit.
+    :param high: the higher limit.
+
+    :return: the clamped input contour.
+    """
+    assert len(contours) == 1
+    new_contour = Contour()
+    new_contour._contour = np.clip(contours[0]._contour, a_min=low, a_max=high)
+
+    return new_contour
+
+
+def shift(contours: list[Contour] = None, offset: int = -1) -> Contour:
+    """
+    Shift the contour by offset.
+
+    :param contour: the input contour.
+    :param offset: the offset of the contour, in note indexes.
+
+    :return: the shifted input contour.
+    """
+    assert len(contours) == 1
+    new_contour = Contour()
+    new_contour._contour = np.roll(contours[0]._contour, offset)
+    return new_contour
+
+
+def to_mean(contours: list[Contour] = None, mean: float = 0.5) -> Contour:
+    """
+    Shift the contour so that it has a specific mean.
+
+    :param contour: the input contour.
+    :param mean: the desired mean.
+
+    :return: the shifted input contour.
+    """
+    assert len(contours) == 1
+    new_contour = Contour()
+    cnt_mean = contours[0]._contour.mean()
+    new_contour._contour = contours[0]._contour - cnt_mean + mean
+    return new_contour
+
+
+def power(contours: list[Contour] = None, exp: float = 1) -> Contour:
+    """
+    Elevate the contour to the specified power.
+
+    :param contour: the input contour.
+    :param exp: the exponent.
+
+    :return: the modified input contour.
+    """
+    assert len(contours) == 1
+    new_contour = Contour()
+    new_contour._contour = contours[0]._contour ** exp
+    return new_contour
+
+
+def create_contour(tune: tune.Tune, contour_program: dict, key=None) -> Contour:
+    """
+    Programmatically create a contour given its definition.
+
+    :param tune: the input tune for the contour.
+    :param contour_program: the dictionary containing the contour definition.
+
+    :return: the final assembled contour.
+    """
+
+    eval_dict = {
+        "o_canainn": IntensityContour,
+        "pitch": PitchContour,
+        "phrasing": PhraseContour,
+        "random": RandomContour,
+        "pattern": PatternContour,
+    }
+
+    operation_dict = {
+        "weighted_sum": weighted_sum,
+        "multiply": multiply,
+        "linear": linear_transform,
+        "shift": shift,
+        "to_mean": to_mean,
+        "power": power,
+        "clamp": clamp,
+    }
+
+    if key is not None:
+        key = key.split("#")[0]
+
+    # check
+    if key is None:
+        c = list(contour_program.keys())
+        if len(c) != 1:
+            raise InvalidRecipeError(
+                f"Only one contour can be provided. Make sure that 'recipe' in contour {c} only has one item in the configuration file."
+            )
+        c = c[0]
+        return create_contour(tune, contour_program[c], key=c)
+
+    # create the contour, leaf
+    elif key in eval_dict:
+        contour = eval_dict[key]()
+        contour.calculate(tune, **contour_program)
+        return contour
+
+    # aggregate calculated contours
+    elif key in operation_dict:
+
+        all_contours = []
+
+        for c in contour_program["contours"]:
+            all_contours.append(
+                create_contour(tune, contour_program["contours"][c], key=c)
+            )
+
+        contour_program["contours"] = all_contours
+        return operation_dict[key](**contour_program)
+
+    else:
+        raise InvalidRecipeError(
+            f"Recipe argument {key} is invalid. Check your configuration file."
+        )

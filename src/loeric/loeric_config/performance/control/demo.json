@@ -1,0 +1,48 @@
+{
+	"contours": {
+		"ornament": {
+			"human_impact_scale": 1
+		},
+		"drone": {
+			"human_impact_scale": 1
+		},
+		"legato": {
+			"human_impact_scale": 1
+		},
+		"swing": {
+			"human_impact_scale": 1
+		},
+		"velocity": {
+			"human_impact_scale": 1
+		},
+		"tempo": {
+			"human_impact_scale": 1
+		}
+	},
+	"tempo_control":{
+		"tempo_warp_bpms": 50
+	},
+	"contour_2_control": {
+	},	
+	"legato":{
+		"min": 0.1,
+		"max": 1
+	},
+	"control_2_contour": {
+		"ornament_intensity": 77,
+		"drone_intensity": 78,
+		"legato_intensity": 79,
+		"swing_intensity": 81,
+		"velocity_intensity": 82,
+		"tempo_intensity": 83,
+
+		"orn_error_diatonic": 80,
+        "orn_error_diatonic_prob": 80,
+
+        "orn_error_chromatic": 80,
+        "orn_error_chromatic_prob": 80,
+
+        "orn_error_slide": 80,
+        "orn_error_slide_prob": 80
+	}
+}

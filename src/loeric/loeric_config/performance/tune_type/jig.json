@@ -1,28 +1,84 @@
 {
-	"velocity": {
-		"pattern_means": [0.999, 0.999, 1.012, 0.997, 1.003, 0.99],
-		"pattern_stds": [0.14, 0.092, 0.096, 0.097, 0.092, 0.161],
-		"std_scale": 1,
-		"period": 1
+	"variables": {
+		"var_roll_2_prob": 0,
+        "var_velocity_weight": [0,1,0,1,0],
+		"var_legato_pattern": {
+			"mean": [
+				1,1,1,1,1,0.8,
+				1,1,1,1,1,0.5
+			],
+			"std": [
+				0,0,0.1,0,0,0.1,
+				0,0,0.1,0,0,0.1],
+			"std_scale": 1,
+			"period": 2,
+			"normalize": false
+		}
 	},
-	"tempo": {
-		"pattern_means": [0.171, 0.167, 0.169, 0.167, 0.168, 0.165],
-		"pattern_stds": [0.06, 0.061, 0.06, 0.058, 0.062, 0.061],
-		"period": 1,
-		"std_scale": 0.1
+	"contours":{
+		"drone": {
+			"recipe": {
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [0, 1, 1, 1, -1],
+							"savgol": false,
+							"scale": true,
+							"shift": true
+						},
+						
+						"pattern": {
+							"mean": [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
+							"std": [0,0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0],
+							"std_scale": 1,
+							"normalize": false,
+							"period": 2
+						},
+						"phrasing": {
+							"phrase_exp": 1000,
+							"phrase_levels": -1.0
+						}
+					},
+					"weights": [1, 1, -0.5]
+				}
+			}
+        },
+		"velocity_pattern": {
+			"recipe": {
+				"pattern": {
+					"mean": [0.999, 0.999, 1.012, 0.997, 1.003, 0.99],
+					"std": [0.14, 0.092, 0.096, 0.097, 0.092, 0.161],
+					"std_scale": 1,
+					"normalize": false,
+					"period": 1
+				}
+			}
+		},
+		"tempo_pattern": {
+			"recipe": {
+				"pattern": {
+					"mean":[1],
+					"std": [0],
+					"std_scale": 0.1,
+					"normalize": true,
+					"period": 1
+				}
+			}
+		}
 	},
 	"swing": {
-		"min": 1,
+		"min": 1.5,
 		"max": 1,
-		"bind": "tempo"
+		"bind": "swing",
+		"locations": [1,4]
 	},
 	"values": {
-		"beat_velocity_increase": 0
+		"beat_velocity_increase": 16
 	},
 	"harmony": {
         "chords_per_bar": 2
     },
     "drone": {
-        "notes_per_bar": 6
+        "notes_per_bar": [6,2,1]
     }
 }
