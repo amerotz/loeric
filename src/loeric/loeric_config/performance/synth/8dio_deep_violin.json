@@ -1,0 +1,46 @@
+{
+    "contour_2_control": {
+		"velocity": {
+			"control": 1,
+			"min": 90,
+			"max": 127
+		}
+	},
+    "ornamentation": {
+        "roll_1": {
+            "slide": true
+        },
+        "roll_2": {
+            "slide": true
+        },
+        "roll_3": {
+            "slide": true
+        },
+        "cut_1": {
+            "slide": true
+        },
+        "cut_2": {
+            "slide": true
+        }
+    },
+    "keyswitches": {
+        "marcato": {
+            "bind": "legato",
+            "min": 0.0,
+            "max": 0.25,
+            "key": 24
+        },
+        "legato": {
+            "bind": "legato",
+            "min": 0.5,
+            "max": 1,
+            "key": 25
+        },
+        "poco_vibrato": {
+            "bind": "legato",
+            "min": 0.25,
+            "max": 0.5,
+            "key": 27
+        }
+    }
+}

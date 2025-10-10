@@ -15,11 +15,14 @@
 		"@sveltejs/vite-plugin-svelte": "^6.1.0",
 		"@tailwindcss/vite": "^4.1.11",
 		"@vite-pwa/sveltekit": "^1.0.0",
-		"svelte": "^5.36.6",
+		"svelte": "^5.39.11",
 		"svelte-jsoneditor": "^3.7.0",
 		"tailwindcss": "^4.1.11",
 		"typescript": "^5.8.3",
 		"vite": "^7.0.5",
 		"vite-plugin-devtools-json": "^0.3.0"
+	},
+	"dependencies": {
+		"node": "^24.10.0"
 	}
 }

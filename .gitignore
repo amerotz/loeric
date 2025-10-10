@@ -170,5 +170,4 @@ cython_debug/
 /client/build/
 /client/node_modules/
 /static/site/
-
-/static/sound/FluidR3_GM.sf2
+/static/sound/
