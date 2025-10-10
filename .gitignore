@@ -41,11 +41,10 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
-lib/
+./lib/
 lib64/
 parts/
 sdist/
@@ -171,3 +170,5 @@ cython_debug/
 /client/build/
 /client/node_modules/
 /static/site/
+
+/static/sound/FluidR3_GM.sf2
