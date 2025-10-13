@@ -4,6 +4,29 @@ import jsonmerge
 import json
 import os
 
+from os.path import dirname, realpath, isfile
+
+def config_path(filename: str) -> str:
+    file_path = filename
+    if not filename.startswith("/"):
+        dir_path = dirname(realpath(__file__))
+        file_path = f"{dir_path}/performance/{filename}"
+
+    if not file_path.endswith(".json"):
+        file_path = f"{file_path}.json"
+
+    return file_path
+
+
+def load_config(file: str):
+    file = config_path(file)
+    if file is not None and isfile(file):
+        with open(file, "r") as f:
+            print(f"Loading config from {file}")
+            return json.load(f)
+    print(f"Failed Loading config from {file}")
+    return {}
+
 
 def main():
     dir_path = os.path.dirname(os.path.realpath(__file__))

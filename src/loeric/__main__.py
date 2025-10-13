@@ -10,6 +10,7 @@ from . import tune as tu
 from . import groover as gr
 from . import player as pl
 from . import loeric_utils as lu
+from .server.server import start_server
 
 
 faulthandler.enable()
@@ -199,6 +200,11 @@ def main():
     global received_start, done_playing
     # args
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--server",
+        help="Start local web server",
+        action="store_true",
+    )
     parser.add_argument(
         "--list-ports",
         help="list available input and output MIDI ports and exit.",
@@ -399,6 +405,10 @@ def main():
         loeric_id = int(time.time())
     else:
         loeric_id = args["name"]
+
+    if args["server"]:
+        start_server()
+        return
 
     if args["create_in"]:
         port = mido.open_input(f"LOERIC in #{loeric_id}#", virtual=True)

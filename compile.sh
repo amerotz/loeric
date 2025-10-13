@@ -26,7 +26,6 @@ cp -r client/build static/site
 
 echo "Building LOERIC CLI"
 python -m build --no-isolation --wheel
-<<<<<<< HEAD
 pip install dist/loeric-2.0.0-py2.py3-none-any.whl --force-reinstall
 
 pyinstaller --collect-submodules=src --add-data="static:./static" -n=loeric --icon=loeric-icon.png --hidden-import=mido.backends.rtmidi -w src/loeric/server/__main__.py

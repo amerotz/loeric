@@ -71,6 +71,7 @@ def list_tracks() -> List[str]:
 
 @app.get('/api/state')
 def state():
+    global tune
     response.set_header('Access-Control-Allow-Origin', '*')
     return {
         'musicians': list(map(lambda m: m.__json__(), musicians)),
