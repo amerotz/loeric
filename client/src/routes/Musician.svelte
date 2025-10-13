@@ -36,7 +36,7 @@
 <style lang="postcss">
 	input[type="range"] {
 		-webkit-appearance: none;
-		appearance: none;
+		appearance: auto;
 		background: transparent;
 		width: 60px;
 		height: 400px;
@@ -55,7 +55,7 @@
 
 	input[type=range]::-webkit-slider-thumb {
 		-webkit-appearance: none;
-		appearance: none;
+		appearance: auto;
 		width: 50px;
 		height: 64px;
 		margin-left: -22px;
@@ -70,9 +70,9 @@
 	<div class="flex-1 font-semibold">{musician.name}</div>
 	<div class="opacity-60 font-light">Musician</div>
 </div>
-<JSONEditorBar json={musician.config} onUpload={uploadConfig}></JSONEditorBar>
+	<!--<JSONEditorBar json={musician.config} onUpload={uploadConfig}></JSONEditorBar>-->
 <label class="flex flex-col">
-	<span class="text-xs px-1 opacity-60">Instrument</span>
+	<span class="text-m px-1 opacity-60">Instrument</span>
 	<select onchange={instrumentChange}>
 		{#each options.instruments as instrument}
 			<option value={instrument}
@@ -81,12 +81,12 @@
 	</select>
 </label>
 <label class="flex flex-col">
-	<span class="text-xs px-1 opacity-60">Output</span>
+	<span class="text-m px-1 opacity-60">Output</span>
 	<select onchange={outputChange}>
-		<option value="synth" selected={musician.midiOut?.startsWith("Loeric Synth ")}>Loeric
+		<option value="synth" selected={musician.midiOut?.startsWith("LOERIC Synth ")}>LOERIC
 			Synth
 		</option>
-		<option value="create_out" selected={musician.midiOut?.startsWith("Loeric Out ")}>Midi
+		<option value="create_out" selected={musician.midiOut?.startsWith("LOERIC out ")}>MIDI
 			Output
 		</option>
 		{#each options.outputs as output}
@@ -95,12 +95,12 @@
 	</select>
 </label>
 <label class="flex flex-col">
-	<span class="text-xs px-1 opacity-60">Input</span>
+	<span class="text-m px-1 opacity-60">Input</span>
 	<select onchange={inputChange}>
 		<option value="no_in" selected={musician.midiIn === undefined}>None</option>
-		{#each Object.keys(options.audio) as input}
-			<option value={"audioIn:" + options.audio[input]}
-			        selected={musician.midiIn === "audioIn:" + options.audio[input]}>{input}</option>
+		{#each Object.keys(options.audio_inputs) as input}
+			<option value={"audioIn:" + options.audio_inputs[input]}
+			        selected={musician.midiIn === "audioIn:" + options.audio_inputs[input]}>{input}</option>
 		{/each}
 		{#each options.inputs as input}
 			<option value={input} selected={musician.midiIn === input}>{input}</option>
@@ -111,7 +111,7 @@
 	{#each musician.controls as control}
 		<label class="flex flex-col items-center gap-1">
 			<span class="text-xs text-center">{control.name}</span>
-			<input type="range" max="127" min="0" data-control={control.control}
+			<input type="range" step="0.01" max="1" min="0" data-control={control.control}
 			       value={control.value} onchange={controlChange}/>
 		</label>
 	{/each}

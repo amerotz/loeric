@@ -361,8 +361,12 @@ class TimeSignature(ScoreElement):
     def beat_count(self):
         return self._beat_count
 
+    @property
+    def meter_string(self):
+        return f"{self._numerator}/{self._denominator}"
+
     def __repr__(self):
-        return f"(TimeSignature {self._numerator}/{self._denominator} t={self._time})"
+        return f"(TimeSignature {self.meter_string} t={self._time})"
 
 
 class Repetition(ScoreElement):
@@ -602,6 +606,7 @@ class Tune:
         self._verbose = verbose
         self._sync_interval = sync_interval
         self._first_bar_length = 0
+        self._tune_type = None
 
         if filename.endswith(".mid") or filename.endswith(".midi"):
             midi_source = mp.read_midi(filename)
@@ -610,6 +615,9 @@ class Tune:
             self._first_bar_length = (
                 midi_source.barlines[1].time - midi_source.barlines[0].time
             ) / 12
+
+            # TODO obtain tune type
+            self._tune_type = None
         else:
             raise Exception("Cannot read this file. Make sure it is a midi file.")
 
@@ -741,16 +749,19 @@ class Tune:
         self._annotated_score.extend(self._key_signatures)
 
         # arange songpos messages independently
-        songpos_timestamps = np.arange(
+        self._position_times = np.arange(
             start=0,
             stop=self._score_end_time.eighth_duration,
             step=self._sync_interval.eighth_duration,
         )
         song_positions = np.array(
-            [SongPosition(position=p, time=t) for p, t in enumerate(songpos_timestamps)]
+            [
+                SongPosition(position=p, time=t)
+                for p, t in enumerate(self._position_times)
+            ]
         )
 
-        self.maximum_songpos = len(songpos_timestamps) - 1
+        self.maximum_songpos = len(self._position_times) - 1
 
         # divide add songpos in messages that contain a sync interval
         notes_to_add = []
@@ -800,6 +811,10 @@ class Tune:
         )
 
     @property
+    def name(self) -> str:
+        return os.path.basename(self._filename)
+
+    @property
     def time_signature(self):
         return self._time_signatures[0]
 
@@ -830,9 +845,28 @@ class Tune:
     def float_times(self):
         return np.array([note.time.eighth_duration for note in self._score])
 
+    def position_time(self, position):
+        return self._position_times[position]
+
     @property
     def tempo(self):
         return self._tempos[0]
+
+    @property
+    def tune_type(self):
+        if self._tune_type is None:
+            tunes = {
+                "2/2": "reel",
+                "2/4": "polka",
+                "3/4": "waltz",
+                "4/4": "hornpipe",
+                "6/8": "jig",
+                "9/8": "slipjig",
+                "12/8": "slide",
+            }
+            return tunes[self.time_signature.meter_string]
+        else:
+            return self._tune_type
 
     def get_note_by_id(self, id):
         return [note for note in self._score if note.id == id][0]

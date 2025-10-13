@@ -9,6 +9,8 @@
 
 	let base = "http://localhost:8080"
 
+	export let audioOutput : string
+
 	onMount(refresh)
 	let poller = 0
 
@@ -46,6 +48,17 @@
 		})
 		data = await response.json()
 	}
+
+	async function tempoChange(event: Event) {
+		const select = event.target as HTMLSelectElement
+		await apiPut("tempo", {tempo: select.value})
+	}
+
+	async function audioOutputChange(event: Event) {
+		const select = event.target as HTMLSelectElement
+		await apiPut("audio_out", {device: select.value})
+	}
+
 </script>
 
 <svelte:head><title>Loeric</title></svelte:head>
@@ -62,9 +75,9 @@
 				<div class="px-1 flex gap-2">
 					<div><span class="opacity-70 font-light">Key:</span> {data.track.key}</div>
 					<div><span class="opacity-70 font-light">Meter:</span> {data.track.time}</div>
-					<div><span class="opacity-70 font-light">Tempo:</span> <input type="number" value={data.track.tempo}
+					<div><span class="opacity-70 font-light">Tempo:</span> <input type="number" onchange={tempoChange} value={data.track.tempo}
 					                                                              min="60" max="480"/><span
-							class="opacity-70 font-light">bpm</span></div>
+							class="opacity-70 font-light">QPM</span></div>
 					<FileUpload accepted="mid, midi, audio/rtp-midi" onUpload={(file) => apiUpload('track', file)}/>
 				</div>
 			</div>
@@ -83,15 +96,32 @@
 				{/if}
 			</div>
 		</div>
+		<!--
 		<JSONEditorBar bind:json={data.track.config} onUpload={(form) => apiUpload('track/config', form)}></JSONEditorBar>
+		-->
 		<div class="grid grid-cols-3 gap-4 mt-8">
 			{#each data.musicians as musician}
 				<div class="p-3 rounded-2xl bg-gray-800 flex flex-col gap-2">
 					<Musician musician={musician} options={data.options} apiPut={apiPut} apiUpload={apiUpload}/>
 				</div>
 			{/each}
-			<div class="self-center justify-self-center">
+		<!--<div class="self-center justify-self-center">
 				<button class="material-symbols-outlined" onclick={() => apiGet('add_musician')}>add</button>
+			</div>
+		-->
+			<div class="p-3 rounded-2xl bg-gray-800 flex flex-col gap-2">
+				<label class="flex flex-col">
+					<span class="text-m pb-2 opacity-60">Audio Output</span>
+					<select onchange={audioOutputChange}>
+						{#each Object.keys(data.options.audio_outputs) as output}
+							<option value={"audioOut:" + data.options.audio_outputs[output]}
+									selected={audioOutput=== "audioOut:" + data.options.audio_outputs[output]}>{output}</option>
+						{/each}
+						{#each data.options.output as output}
+							<option value={output} selected={audioOutput=== output}>{output}</option>
+						{/each}
+					</select>
+				</label>
 			</div>
 		</div>
 	{/if}

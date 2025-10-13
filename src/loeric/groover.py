@@ -15,9 +15,10 @@ from collections import defaultdict
 from collections.abc import Callable
 
 
-from . import tune as tu
-from . import contour as cnt
-from . import loeric_utils as lu
+from loeric import tune as tu
+from loeric import contour as cnt
+from loeric import loeric_utils as lu
+from loeric.loeric_config import loeric_config as lc
 
 
 class UnknownContourError(Exception):
@@ -38,6 +39,7 @@ class Groover:
         human_impact: float = 0,
         seed: int = 42,
         config_file: str = None,
+        additional_configs: list = [],
         intensity_control: int = 1,
         human_impact_control: int = 11,
         syncing: bool = False,
@@ -76,7 +78,7 @@ class Groover:
         # to synchronize
         self.lock = threading.Lock()
         self.stopped = threading.Event()
-        self.playback_resumed = threading.Condition()
+        self.playback_resumed = threading.Event()
         self._previous_note_duration = 0
 
         self._contour_index = 0
@@ -115,7 +117,7 @@ class Groover:
                     "human_impact_scale": human_impact,
                 },
                 "legato": {
-                    "human_impact_scale": human_impact,
+                    "human_impact_scale": -human_impact,
                 },
             },
             "values": {
@@ -169,17 +171,19 @@ class Groover:
             with open(config_file, "r") as f:
                 config_file = json.load(f)
 
-            self._config = jsonmerge.merge(self._config, config_file)
+                self._config = lc.merge_configs(self._config, config_file)
 
-            if "contours" in config_file:
-                for c in config_file["contours"]:
-                    if "recipe" in config_file["contours"][c]:
-                        self._config["contours"][c]["recipe"] = config_file["contours"][
-                            c
-                        ]["recipe"]
+        # add additional configuration bits
+        for config_file in additional_configs:
 
-            config_hash = int(hash(str(config_file))) % 2**31
-            self._config["values"]["seed"] = config_hash + seed
+            print(f"[GRVR] Using additional config {os.path.basename(config_file)}")
+            with open(config_file, "r") as f:
+                config_file = json.load(f)
+
+                self._config = lc.merge_configs(self._config, config_file)
+
+        config_hash = int(hash(str(config_file))) % 2**31
+        self._config["values"]["seed"] = config_hash + seed
 
         # compile variables by copying them explicitly
         if "variables" in self._config:
@@ -217,7 +221,7 @@ class Groover:
         if self._config["tempo_control"]["bpm"] is None:
             self._user_tempo = self._tune._tempos[0]
         else:
-            self._user_tempo = mido.bpm2tempo(self._config["tempo_control"]["bpm"])
+            self._user_tempo = tu.Tempo(qpm=self._config["tempo_control"]["bpm"])
 
         self._midi_channel = self._config["values"]["midi_channel"]
         self._drone_midi_channel = self._config["drone"]["midi_channel"]
@@ -533,14 +537,14 @@ class Groover:
         with self._tempo_lock:
             self._external_tempo = None
 
-    def set_tempo(self, tempo: int) -> None:
+    def set_tempo(self, tempo: float) -> None:
         """
         Set the new performance tempo.
 
         :param tempo: the requested tempo in bpms.
         """
         with self._tempo_lock:
-            self._external_tempo = mido.bpm2tempo(tempo)
+            self._external_tempo = tu.Tempo(qpm=tempo)
 
     def set_clock(self) -> None:
         """
@@ -551,7 +555,7 @@ class Groover:
             # update tempo
             # 24 clocks per quarter note
             diff = now - self._last_clock_time
-            new_tempo = mido.bpm2tempo(60 / (24 * diff))
+            new_tempo = tu.Tempo(qpm=60 / (24 * diff))
 
             # if too long, reset
             if new_tempo > lu.MAX_TEMPO:
@@ -1359,20 +1363,20 @@ class Groover:
             if self._external_tempo is not None:
                 base_tempo = self._external_tempo
 
-        bpm = max(mido.tempo2bpm(base_tempo), 1)
+        bpm = base_tempo.qpm
         value = (
             2
             * self._config["tempo_control"]["tempo_warp_bpms"]
             * (self._contour_values["tempo"] - 0.5)
         )
 
-        calculated_tempo = mido.bpm2tempo(int(bpm + value))
+        calculated_tempo = bpm + value
 
         if self._config["tempo_control"]["increasing"]:
             self._tempo = min(self._tempo, calculated_tempo)
         else:
             self._tempo = calculated_tempo
-        return self._tempo
+        return mido.bpm2tempo(self._tempo)
 
     @property
     def _eighth_duration_seconds(self) -> float:

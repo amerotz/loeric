@@ -1,4 +1,5 @@
 import argparse
+import copy
 import re
 import jsonmerge
 import json
@@ -6,11 +7,12 @@ import os
 
 from os.path import dirname, realpath, isfile
 
-def config_path(filename: str) -> str:
+
+def webapp_config_path(filename: str) -> str:
     file_path = filename
     if not filename.startswith("/"):
         dir_path = dirname(realpath(__file__))
-        file_path = f"{dir_path}/performance/{filename}"
+        file_path = f"{dir_path}/webapp_configs/{filename}"
 
     if not file_path.endswith(".json"):
         file_path = f"{file_path}.json"
@@ -18,14 +20,27 @@ def config_path(filename: str) -> str:
     return file_path
 
 
-def load_config(file: str):
-    file = config_path(file)
+def webapp_load_config(file: str):
+    file = webapp_config_path(file)
     if file is not None and isfile(file):
         with open(file, "r") as f:
-            print(f"Loading config from {file}")
+            print(f"[CNFG] Loading config from {file}")
             return json.load(f)
-    print(f"Failed Loading config from {file}")
+    print(f"[CNFG] Failed Loading config from {file}")
     return {}
+
+
+def merge_configs(original, new_config):
+    base = copy.deepcopy(original)
+
+    base = jsonmerge.merge(base, new_config)
+
+    if "contours" in new_config:
+        for c in new_config["contours"]:
+            if "recipe" in new_config["contours"][c]:
+                base["contours"][c]["recipe"] = new_config["contours"][c]["recipe"]
+
+    return base
 
 
 def main():
@@ -126,14 +141,11 @@ def main():
                 name = f"{dir_path}/{a}/{option}.json"
                 print("Using", f"{a}/{option}.json")
                 config_name.append(args[a])
+
                 with open(name, "r") as f:
                     selected = json.load(f)
-                    base = jsonmerge.merge(base, selected)
 
-                    if "contours" in selected:
-                        for c in selected["contours"]:
-                            if "recipe" in selected["contours"][c]:
-                                base["contours"][c]["recipe"] = selected["contours"][c]["recipe"]
+                base = merge_configs(base, selected)
 
     # specific values for shell
     if args["shell"]:

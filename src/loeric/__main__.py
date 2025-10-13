@@ -16,22 +16,21 @@ from .server.server import start_server
 faulthandler.enable()
 # bad code goes here
 
-received_start = threading.Semaphore(value=0)
+play_event = threading.Event()
 done_playing = threading.Event()
 
 
 def player_loop(player, groover):
 
-    global done_playing, received_start
+    global done_playing, play_event
 
-    received_start.acquire()
+    play_event.wait()
     while not done_playing.is_set():
 
         while groover.stopped.is_set():
             player.reset()
             # print("player waiting play")
-            with groover.playback_resumed:
-                groover.playback_resumed.wait()
+            groover.playback_resumed.wait()
             # print("player awake")
             player.init_playback()
 
@@ -57,7 +56,7 @@ def play(
         :param kwargs: the performance arguments
         """
 
-        received_start.release(n=1)
+        play_event.set()
         player.init_playback()
 
         # repeat as specified
@@ -66,15 +65,12 @@ def play(
             pass
 
         # iterate over messages
-        average_run_time = None
-        time_counter = 0
         while True:
             # print()
 
             if groover.stopped.is_set():
                 while groover.stopped.is_set():
-                    with groover.playback_resumed:
-                        groover.playback_resumed.wait()
+                    groover.playback_resumed.wait()
 
             original_message = groover.next_event()
 
@@ -91,14 +87,15 @@ def play(
             else:
                 if isinstance(original_message, tu.SongPosition):
                     if sync_port_out is not None:
-                        sync_port_out.send(original_message.to_midi())
+                        for msg in original_message.to_midi():
+                            sync_port_out.send(msg)
                         if kwargs["verbose"] > 0:
                             print(
                                 f"[INFO]\t{groover.loeric_id} SENT {original_message.position} ({time.time()})"
                             )
                 elif (
                     isinstance(original_message, tu.KeySignature)
-                    and kwargs["force_key"] is None
+                    and not groover._tune.forced_key
                 ):
                     if kwargs["verbose"] > 0:
                         print(f"[INFO]\tChanging key. {original_message}")
@@ -111,12 +108,7 @@ def play(
 
             player.wake_me_up_at(original_message.time + original_message.duration / 2)
 
-            while not player.has_reached_wake_time.is_set():
-                with player.playback_done:
-                    # print( f"waiting for { last_message.time + last_message.duration}")
-                    player.playback_done.wait()
-                    # print("awake")
-                # print("done wait")
+            player.has_reached_wake_time.wait()
 
         if groover.do_end_note:
             groover.reset()
@@ -128,8 +120,7 @@ def play(
         else:
             player.wake_me_up_at(groover.performance_time)
 
-        with player.playback_done:
-            player.playback_done.wait_for(player.has_reached_wake_time.is_set)
+        player.has_reached_wake_time.wait()
         # print("groover done")
 
         if kwargs["save"]:
@@ -158,7 +149,10 @@ def play(
 
 
 def sync_thread(
-    groover: gr.Groover, sync_port_in: mido.ports.BaseInput, out: mido.ports.BaseOutput
+    groover: gr.Groover,
+    player: pl.Player,
+    sync_port_in: mido.ports.BaseInput,
+    out: mido.ports.BaseOutput,
 ) -> None:
     """
     Handle MIDI start, stop, songpos and tempo messages.
@@ -179,17 +173,17 @@ def sync_thread(
             print(f"Received JUMP {msg.pos}.")
             if groover.stopped.is_set():
                 groover.jump_to_pos(msg.pos)
+                player.set_song_time(groover._tune.position_time(msg.pos))
             else:
                 print(f"Ignoring JUMP because playback is active.")
         elif msg.type == "start":
-            received_start.release(n=2)
+            play_event.set()
             print("Received START.")
         elif msg.type == "stop":
             groover.stopped.set()
             print("Received STOP.")
         elif msg.type == "continue":
-            with groover.playback_resumed:
-                groover.playback_resumed.notifyAll()
+            groover.playback_resumed.set()
             groover.stopped.clear()
             print("Received CONTINUE.")
 
@@ -197,7 +191,7 @@ def sync_thread(
 
 
 def main():
-    global received_start, done_playing
+    global play_event, done_playing
     # args
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -539,7 +533,7 @@ def main():
         if args["sync"]:
 
             sync_t = threading.Thread(
-                target=sync_thread, args=(groover, sync_port_in, out)
+                target=sync_thread, args=(groover, player, sync_port_in, out)
             )
             sync_t.start()
 
@@ -552,7 +546,7 @@ def main():
         if args["sync"]:
             if args["verbose"] > 0:
                 print("[INFO]\tWaiting for START message...")
-            received_start.acquire()
+            play_event.wait()
 
         # start playback
         play(groover, player, tune, out, sync_port_out, **args)

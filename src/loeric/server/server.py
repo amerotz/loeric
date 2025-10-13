@@ -1,5 +1,5 @@
 from os import listdir, getcwd, rename, remove, makedirs
-from os.path import isfile, join, splitext, dirname
+from os.path import isfile, join, splitext, dirname, realpath
 from random import shuffle
 from typing import List
 
@@ -12,10 +12,17 @@ from muspy.outputs.midi import PITCH_NAMES
 from nanoid import generate
 from pyaudio import PyAudio
 
-from loeric.loeric_config.loeric_config import load_config, config_path
-from loeric.server.musician import Musician, get_state, play_all, stop_all, pause_all
+from loeric.server.musician import (
+    Musician,
+    get_state,
+    play_all,
+    stop_all,
+    pause_all,
+    State,
+)
 from loeric.server.synthout import SynthOutput
 from loeric.tune import Tune
+from loeric.loeric_config.loeric_config import webapp_load_config, webapp_config_path
 
 track_dir = join(getcwd(), "static/midi")
 temp_dir = join(getcwd(), "static/temp")
@@ -24,19 +31,19 @@ app = Bottle()
 
 tune: Tune
 musicians: list[Musician] = []
-names = ["Aoife", "Caoimhe", "Saoirse", "Ciara", "Niamh", "Róisín", "Cara", "Clodagh", "Aisling", "Éabha",
-         "Conor", "Sean", "Oisín", "Patrick", "Cian", "Liam", "Darragh", "Eoin", "Caoimhín", "Cillian"]
+names = ["Larry"]
 shuffle(names)
 
 instruments = {"Accordion": 21, "Guitar": 24, "Harp": 46, "Flute": 73, "Violin": 40}
 
 synth = tinysoundfont.Synth()
+synth_is_running = False
 soundfont_id = 0
 
 filetypes = [".mid", ".abc"]
 
 
-def list_audio():
+def list_audio_inputs():
     audio = PyAudio()
     info = audio.get_host_api_info_by_index(0)
     device_count = info.get("deviceCount")
@@ -44,7 +51,28 @@ def list_audio():
     audio_list = {}
 
     for i in range(0, device_count):
-        if (audio.get_device_info_by_host_api_device_index(0, i).get("maxInputChannels")) > 0:
+        if (
+            audio.get_device_info_by_host_api_device_index(0, i).get("maxInputChannels")
+        ) > 0:
+            name = audio.get_device_info_by_host_api_device_index(0, i).get("name")
+            audio_list[name] = i
+
+    return audio_list
+
+
+def list_audio_outputs():
+    audio = PyAudio()
+    info = audio.get_host_api_info_by_index(0)
+    device_count = info.get("deviceCount")
+
+    audio_list = {}
+
+    for i in range(0, device_count):
+        if (
+            audio.get_device_info_by_host_api_device_index(0, i).get(
+                "maxOutputChannels"
+            )
+        ) > 0:
             name = audio.get_device_info_by_host_api_device_index(0, i).get("name")
             audio_list[name] = i
 
@@ -65,113 +93,127 @@ def trim_ext(file: str) -> str:
 
 
 def list_tracks() -> List[str]:
-    return [f for f in listdir(track_dir) if
-            isfile(join(track_dir, f)) and splitext(f)[1].casefold() in filetypes]
+    return [
+        f
+        for f in listdir(track_dir)
+        if isfile(join(track_dir, f)) and splitext(f)[1].casefold() in filetypes
+    ]
 
 
-@app.get('/api/state')
+@app.get("/api/state")
 def state():
     global tune
-    response.set_header('Access-Control-Allow-Origin', '*')
+    response.set_header("Access-Control-Allow-Origin", "*")
     return {
-        'musicians': list(map(lambda m: m.__json__(), musicians)),
-        'state': get_state().name,
-        'track': {
-            'name': tune.name,
-            'time': f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
-            'config': tune.config,
-            'key': key_to_str(tune.key_signature),
-            'tempo': mido.tempo2bpm(tune.tempo, [tune.time_signature.numerator, tune.time_signature.denominator]),
+        "musicians": list(map(lambda m: m.__json__(), musicians)),
+        "state": get_state().name,
+        "track": {
+            "name": tune.name,
+            "time": f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
+            # "config": tune.config,
+            "key": key_to_str(tune.key_signature),
+            "tempo": tune.tempo.qpm,
         },
-        'options': {
-            'inputs': mido.get_input_names(),
-            'outputs': mido.get_output_names(),
-            'instruments': list(instruments.keys()),
-            'trackList': list_tracks(),
-            'audio': list_audio()
+        "options": {
+            "inputs": mido.get_input_names(),
+            "outputs": mido.get_output_names(),
+            "instruments": list(instruments.keys()),
+            "trackList": list_tracks(),
+            "audio_inputs": list_audio_inputs(),
+            "audio_outputs": list_audio_outputs(),
         },
     }
 
 
 def __set_track(track: str):
-    global tune, track_config
+    global tune
     track_list = list_tracks()
     if track in track_list:
         tune = Tune(join(track_dir, track), 1)
-        tune.config = load_config(f"tune/{splitext(tune.name.lower())[0]}")
+
+        tune.config = webapp_load_config(f"tunes/{splitext(tune.name.lower())[0]}")
+
         for musician in musicians:
             musician.tune = tune
 
 
-@app.get('/api/play')
+@app.get("/api/play")
 def play():
+    global synth_is_running
     for index, musician in enumerate(musicians):
         if musician.midi_out is None or isinstance(musician.midi_out, SynthOutput):
-            synth.program_select(index, soundfont_id, 0, instruments[musician.instrument])
+            synth.program_select(
+                musician.groover._midi_channel,
+                soundfont_id,
+                0,
+                instruments[musician.instrument],
+            )
             if musician.midi_out is None:
-                musician.midi_out = SynthOutput(f"Loeric Synth #{musician.id}#", synth, index)
+                musician.midi_out = SynthOutput(
+                    f"LOERIC out #{musician.id}#", synth, index
+                )
             else:
                 musician.midi_out.channel = index
         musician.ready()
-    synth.start()
-    # sync_ports_in = list(map(lambda m: m.sync, musicians))
-    # sync_ports_out = list(map(lambda m: m.control_out, musicians))
-    #
-    # dir_path = getcwd() + "/src/loeric/loeric_config/shell"
-    # load_sync_config(f"{dir_path}/config.json")
-    # sync_stop.clear()
-    # _sync_thread = Thread(
-    #     target=sync_loeric, args=([sync_ports_in, sync_ports_out])
-    # )
-    # _sync_thread.start()
+    if not synth_is_running:
+        synth.start()
+        synth_is_running = True
     play_all()
     return state()
 
 
-@app.get('/api/pause')
+@app.get("/api/pause")
 def pause():
     pause_all()
     return state()
 
 
-@app.get('/api/stop')
+@app.get("/api/stop")
 def stop():
-    # sync_stop.set()
-    stop_all()
+    global synth_is_running
+    synth.sounds_off()
     synth.stop()
+    synth_is_running = False
+    stop_all()
+    for musician in musicians:
+        musician.stop()
     return state()
 
 
-@app.put('/api/instrument')
+@app.put("/api/instrument")
 def instrument_change():
     global musicians
+    stop()
     musician_id = request.forms.id
     new_instrument = request.forms.instrument
 
     for musician in musicians:
         if musician.id == musician_id:
             musician.instrument = new_instrument
+            for channel in musician.midi_channels:
+                synth.program_select(
+                    channel, soundfont_id, 0, instruments[musician.instrument]
+                )
 
     return state()
 
 
-@app.put('/api/control')
+@app.put("/api/control")
 def control_change():
     global musicians
-    print(request.forms)
     musician_id = request.forms.id
     control = int(request.forms.control)
-    new_value = int(request.forms.value)
+    new_value = float(request.forms.value)
 
     for musician in musicians:
         if musician.id == musician_id:
-            if musician.midi_out is not None:
-                musician.control_out.send(Message("control_change", channel=0, control=control, value=new_value))
+            print(control, new_value)
+            musician.groover.set_control_value(control, new_value)
 
     return state()
 
 
-@app.put('/api/output')
+@app.put("/api/output")
 def output_change():
     global musicians
     musician_id = request.forms.id
@@ -179,17 +221,21 @@ def output_change():
 
     for index, musician in enumerate(musicians):
         if musician.id == musician_id:
-            if new_output == 'create_output':
-                musician.midi_in = mido.open_output(f"Loeric Virtual Out {musician.id}", virtual=True)
-            elif new_output == 'synth':
-                musician.midi_in = SynthOutput(f"Loeric Synth {musician.id}", synth, index)
+            if new_output == "create_out":
+                musician.midi_out = mido.open_output(
+                    f"LOERIC out #{musician.id}#", virtual=True
+                )
+            elif new_output == "synth":
+                musician.midi_out = SynthOutput(
+                    f"LOERIC Synth {musician.id}", synth, index
+                )
             else:
-                musician.midi_in = mido.open_output(new_output)
+                musician.midi_out = mido.open_output(new_output)
 
     return state()
 
 
-@app.put('/api/input')
+@app.put("/api/input")
 def input_change():
     global musicians
     musician_id = request.forms.id
@@ -197,7 +243,7 @@ def input_change():
 
     for musician in musicians:
         if musician.id == musician_id:
-            if new_input == 'no_in':
+            if new_input == "no_in":
                 musician.midi_in = None
             else:
                 musician.midi_in = new_input
@@ -205,101 +251,113 @@ def input_change():
     return state()
 
 
-@app.get('/api/add_musician')
+@app.get("/api/add_musician")
 def add_musician():
     global musicians
-    loeric_id = generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
+    loeric_id = generate(
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10
+    )
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
     musician = Musician(unused[0], loeric_id, tune, next(iter(instruments)))
-    musician.config = load_config(f"musician/{unused[0]}")
     musicians.append(musician)
 
     return state()
 
 
-@app.put('/api/track')
+@app.put("/api/tempo")
+def set_tempo():
+    global musicians
+    tempo = int(request.forms.tempo)
+    for musician in musicians:
+        musician.set_tempo(tempo)
+
+    return state()
+
+
+@app.put("/api/audio_out")
+def set_audio_out():
+    global synth_is_running
+    stop()
+    index = int(request.forms.device.split(":")[-1])
+    synth.stop()
+    synth_is_running = False
+    synth.start(output_device_index=index)
+    synth_is_running = True
+
+    return state()
+
+
+@app.put("/api/track")
 def set_track():
+    stop()
     global musicians
     track = request.forms.track
     __set_track(track)
     return state()
 
 
-@app.get('/api/track')
+@app.get("/api/track")
 def get_track():
     return state()
 
 
 @app.error(405)
 def method_not_allowed(res):
-    if request.method == 'OPTIONS':
+    if request.method == "OPTIONS":
         new_res = HTTPResponse()
-        new_res.set_header('Access-Control-Allow-Methods', 'POST, PUT, GET, OPTIONS')
-        new_res.set_header('Access-Control-Allow-Origin', '*')
+        new_res.set_header("Access-Control-Allow-Methods", "POST, PUT, GET, OPTIONS")
+        new_res.set_header("Access-Control-Allow-Origin", "*")
         return new_res
-    res.headers['Allow'] += ', OPTIONS'
+    res.headers["Allow"] += ", OPTIONS"
     return request.app.default_error_handler(res)
 
 
-@app.post('/api/musician/config')
+@app.post("/api/musician/config")
 def upload_musician_config():
     global musicians
     musician_id = request.forms.id
     for index, musician in enumerate(musicians):
         if musician.id == musician_id:
-            upload = request.files.get('upload')
+            upload = request.files.get("upload")
             filename = f"musician/{musician.name}"
-            path = config_path(filename)
+            path = webapp_config_path(filename)
             makedirs(dirname(path), exist_ok=True)
             upload.save(path, overwrite=True)
 
-            musician.config = load_config(filename)
+            musician.config = webapp_load_config(filename)
 
     return state()
 
 
-@app.post('/api/track/config')
+@app.post("/api/track/config")
 def upload_track_config():
     global tune
-    upload = request.files.get('upload')
-    filename = f"tune/{splitext(tune.name.lower())[0]}"
-    path = config_path(filename)
+    upload = request.files.get("upload")
+    filename = f"tunes/{splitext(tune.name.lower())[0]}"
+    path = webapp_config_path(filename)
     makedirs(dirname(path), exist_ok=True)
     upload.save(path, overwrite=True)
 
-    tune.config = load_config(filename)
+    tune.config = webapp_load_config(filename)
 
     return state()
 
 
-@app.post('/api/track')
+@app.post("/api/track")
 def upload_track():
-    upload = request.files.get('upload')
+    upload = request.files.get("upload")
     temp_file = join(temp_dir, upload.filename)
     upload.save(temp_file)
 
-    try:
-        mido_source = MidiFile(temp_file)
-        for i, track in enumerate(mido_source.tracks):
-            print('Track {}: {}'.format(i, track.name))
-            for msg in track:
-                print(msg)
-        track = mido_source.tracks[0]
-        track_file = join(track_dir, track.name + '.mid')
-        rename(temp_file, track_file)
-
-        __set_track(track.name + '.mid')
-    except:
-        remove(temp_file)
-        return abort(401, 'Not a recognised midi file')
+    __set_track(track.name + ".mid")
 
     return state()
 
 
 @app.get("/")
 def get_static():
-    return static_file('/index.html', root="static/site")
+    return static_file("/index.html", root="static/site")
 
 
 @app.get("/<filepath:path>")
@@ -307,14 +365,30 @@ def get_static(filepath):
     return static_file(filepath, root="static/site")
 
 
+def init_musician():
+
+    add_musician()
+    musician = musicians[0]
+
+    musician.instrument = "Accordion"
+    for channel in musician.midi_channels:
+        synth.program_select(channel, soundfont_id, 0, instruments[musician.instrument])
+
+    musician.midi_out = SynthOutput(f"LOERIC Synth {musician.id}", synth, 0)
+
+
 def start_server():
-    global soundfont_id
+    global soundfont_id, synth_is_running
     soundfont_id = synth.sfload("static/sound/FluidR3_GM.sf2")
-    track_list = [f for f in listdir(track_dir) if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == '.mid']
+    track_list = [
+        f
+        for f in listdir(track_dir)
+        if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == ".mid"
+    ]
     if len(track_list) > 0:
         track = track_list[0]
         __set_track(track)
-        add_musician()
-
-    run(app, host='localhost', port=8080)
+        init_musician()
+    run(app, host="localhost", port=8080)
     synth.stop()
+    synth_is_running = False

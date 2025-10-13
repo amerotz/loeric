@@ -17,7 +17,8 @@ export interface Options {
 	'outputs': string[],
 	'inputs': string[],
 	'instruments': string[],
-	'audio': { [id: string]: number }
+	'audio_inputs': { [id: string]: number },
+	'audio_outputs': { [id: string]: number }
 }
 
 export interface Track {

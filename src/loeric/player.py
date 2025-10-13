@@ -41,7 +41,6 @@ class Player:
         self._tempo = tempo
         self._verbose = verbose
         self._message_queue = []
-        self.playback_done = threading.Condition()
         self.has_reached_wake_time = threading.Event()
         self._tempo_scale = 1
         self._time_division = tu.TimeDelta(
@@ -71,6 +70,9 @@ class Player:
                         denominator=time_signature.denominator,
                     )
                 )
+
+    def set_midi_out(self, midi_out):
+        self._midi_out = midi_out
 
     def init_playback(self) -> None:
         """
@@ -102,6 +104,10 @@ class Player:
         self._notify_song_time = time
         self.has_reached_wake_time.clear()
 
+    def set_song_time(self, value):
+        self._song_time = tu.TimeDelta(eighth_duration=value)
+        self._notify_song_time = tu.TimeDelta(eighth_duration=value)
+
     def play_next(self) -> None:
         """
         Play the messages in input and append them to the generated performance.
@@ -113,8 +119,6 @@ class Player:
         start_time = time.time()
         if self._song_time >= self._notify_song_time:
             self.has_reached_wake_time.set()
-            with self.playback_done:
-                self.playback_done.notify_all()
 
         while True:
 
