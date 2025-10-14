@@ -8,28 +8,6 @@ import os
 from os.path import dirname, realpath, isfile
 
 
-def webapp_config_path(filename: str) -> str:
-    file_path = filename
-    if not filename.startswith("/"):
-        dir_path = dirname(realpath(__file__))
-        file_path = f"{dir_path}/webapp_configs/{filename}"
-
-    if not file_path.endswith(".json"):
-        file_path = f"{file_path}.json"
-
-    return file_path
-
-
-def webapp_load_config(file: str):
-    file = webapp_config_path(file)
-    if file is not None and isfile(file):
-        with open(file, "r") as f:
-            print(f"[CNFG] Loading config from {file}")
-            return json.load(f)
-    print(f"[CNFG] Failed Loading config from {file}")
-    return {}
-
-
 def merge_configs(original, new_config):
     base = copy.deepcopy(original)
 
@@ -39,6 +17,9 @@ def merge_configs(original, new_config):
         for c in new_config["contours"]:
             if "recipe" in new_config["contours"][c]:
                 base["contours"][c]["recipe"] = new_config["contours"][c]["recipe"]
+
+    if "control_2_contour" in new_config:
+        base["control_2_contour"] = new_config["control_2_contour"]
 
     return base
 

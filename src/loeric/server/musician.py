@@ -83,13 +83,14 @@ class Musician:
         tune: tu.Tune,
         instrument: str,
         midi_out: BaseOutput | None = None,
-        midi_in: str | None = None,
     ):
         self.name = name
         self.id = loeric_id
         self._instrument = instrument
-        self.midi_out = midi_out
-        self.midi_in = midi_in
+        self._midi_out = midi_out
+
+        self._midi_in = None
+
         self.sync = EchoPort(f"LOERIC Sync #{loeric_id}#")
         self.seed = randint(0, 1000000)
         self.thread = threading.Thread()
@@ -141,35 +142,50 @@ class Musician:
 
     def create_all(self):
 
-        additional_configs = [
-            f"{general_configs_path}/tune_type/{self.tune.tune_type}.json",
-            f"{general_configs_path}/instrument/{self.instrument.lower()}.json",
-            # f"{general_configs_path}/control/demo.json",
-            f"{specific_configs_path}/tunes/{splitext(self.tune.name.lower())[0]}.json",
-            f"{specific_configs_path}/musicians/{self.name.lower()}.json",
-        ]
+        name = splitext(self.tune.name.lower().replace("'", "").replace(" ", ""))[0]
+        config = f"{specific_configs_path}/tunes/{name}.json"
+
+        additional_configs = []
+        if not os.path.isfile(config):
+            print(f"Could not load {config}")
+            additional_configs.extend(
+                [
+                    f"{general_configs_path}/tune_type/{self.tune.tune_type}.json",
+                    f"{general_configs_path}/instrument/{self.instrument.lower()}.json",
+                    f"{general_configs_path}/drone/on.json",
+                    # f"{specific_configs_path}/musicians/{self.name.lower()}.json",
+                ]
+            )
+            config = None
+
         self.groover = Groover(
             self.tune,
             seed=self.seed,
+            config_file=config,
             additional_configs=[
                 file for file in additional_configs if os.path.isfile(file)
             ],
             loeric_id=self.id,
             bpm=self._tempo,
             human_impact=1,
+            verbose=3
         )
 
         config = self.groover._config["control_2_contour"]
         self._controls = [
-            {"name": " ".join(c.split("_")).title(), "control": config[c], "value": 0.5}
+            {
+                "name": " ".join(c.split("_")).title(),
+                "control": config[c]["control"],
+                "value": 0.5,
+            }
             for c in config
         ]
 
         midi_output = None
-        if self.midi_out is None:
+        if self._midi_out is None:
             midi_output = mido.open_output(f"LOERIC out #{self.id}#", virtual=True)
         else:
-            midi_output = self.midi_out
+            midi_output = self._midi_out
 
         midi_output.reset()
 
@@ -182,6 +198,24 @@ class Musician:
             midi_out=midi_output,
             song_start_time=self.tune.times[0].eighth_duration,
         )
+
+    @property
+    def midi_in(self):
+        return self._midi_in
+
+    @midi_in.setter
+    def midi_in(self, midi_in):
+        self._midi_in = midi_in
+        self._midi_in.callback = self.groover.check_midi_control()
+
+    @property
+    def midi_out(self):
+        return self._midi_out
+
+    @midi_out.setter
+    def midi_out(self, out):
+        self._midi_out = out
+        self.player.set_midi_out(out)
 
     def stop(self):
         self.groover.jump_to_pos(0)
@@ -209,15 +243,6 @@ class Musician:
             global _play_event, _state
 
             midi_input = None
-            listener = None
-            if self.midi_in is not None:
-                if self.midi_in.startswith("audioIn:"):
-                    device = int(self.midi_in.split(":")[1])
-                    listener = ListenerThread(device, self.control_out, 1)
-                    listener.start()
-                else:
-                    midi_input = mido.open_input(self.midi_in)
-                    midi_input.callback = self.groover.check_midi_control()
 
             player_t = threading.Thread(
                 target=self.player_loop, args=[self.player, self.groover]
@@ -293,9 +318,6 @@ class Musician:
             while player_t.is_alive():
                 player_t.join(1)
 
-            if listener is not None:
-                listener.stop = True
-
             if midi_input is not None:
                 midi_input.close()
                 if midi_input.closed:
@@ -323,14 +345,17 @@ class Musician:
             raise e
 
     def __json__(self):
-        out = self.midi_out
-        if isinstance(self.midi_out, BaseOutput):
-            out = self.midi_out.name
+        out = self._midi_out
+        if isinstance(self._midi_out, BaseOutput):
+            out = self._midi_out.name
+        midi_in = None
+        if isinstance(self._midi_in, BaseInput):
+            midi_in = self._midi_in.name
         return {
             "id": self.id,
             "name": self.name,
             "midiOut": out,
-            "midiIn": self.midi_in,
+            "midiIn": midi_in,
             "instrument": self.instrument,
             "controls": self._controls,
         }

@@ -54,33 +54,56 @@
 		await apiPut("tempo", {tempo: select.value})
 	}
 
+	async function repeatChange(event: Event) {
+		const select = event.target as HTMLSelectElement
+		await apiPut("repeat", {repeats: select.value})
+	}
+
 	async function audioOutputChange(event: Event) {
 		const select = event.target as HTMLSelectElement
 		await apiPut("audio_out", {device: select.value})
 	}
 
 </script>
-
 <svelte:head><title>Loeric</title></svelte:head>
 
 <div class="container m-auto my-8">
 	{#if data && data.options.trackList}
-		<div class="flex items-center bg-gray-950 py-3 px-6 rounded-xl">
-			<div class="flex-1">
-				<select class="w-full text-3xl" onchange={trackChange}>
+		<div class="flex justify-between items-center bg-gray-950 py-3 px-6 rounded-xl">
+			<el-select class="flex w-1/2 gap-5 items-center" onchange={trackChange}>
+				<button type="button" class="flex w-full items-center gap-2"> 
+					<el-selectedcontent class="flex w-full items-center justify-between cursor-default rounded-md bg-transparent text-left hover:text-primary text-white">
+						<div class="text-3xl w-5/6">{data.track.name.split(".")[0]}</div>
+						<div class="opacity-70 text-xl">{data.track.name.split(".")[1].toUpperCase()}</div>
+					</el-selectedcontent>
+						<svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5 justify-self-end text-gray-500 sm:size-4">
+							<path d="M5.22 10.22a.75.75 0 0 1 1.06 0L8 11.94l1.72-1.72a.75.75 0 1 1 1.06 1.06l-2.25 2.25a.75.75 0 0 1-1.06 0l-2.25-2.25a.75.75 0 0 1 0-1.06ZM10.78 5.78a.75.75 0 0 1-1.06 0L8 4.06 6.28 5.78a.75.75 0 0 1-1.06-1.06l2.25-2.25a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1 0 1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+						</svg>
+				</button>
+				<el-options anchor="bottom start" class="
+					w-1/2 bg-gray-950 text-white rounded-xl py-3 px-6">
 					{#each data.options.trackList as file}
-						<option value={file} selected={file === data.track.name}>{file.replace(/\.mid$/i, '').replace(/\.abc$/i, '')}</option>
+						<el-option class="
+							relative block cursor-default py-2 pr-9 pl-3 select-none 
+hover:text-primary
+							flex w-full items-baselins-last justify-between group/option" value={file}>
+							<div class="text-3xl w-5/6">{file.split(".")[0]}</div>
+							<div class="opacity-70 text-xl">{file.split(".")[1].toUpperCase()}</div>
+						</el-option>
 					{/each}
-				</select>
-				<div class="px-1 flex gap-2">
-					<div><span class="opacity-70 font-light">Key:</span> {data.track.key}</div>
-					<div><span class="opacity-70 font-light">Meter:</span> {data.track.time}</div>
-					<div><span class="opacity-70 font-light">Tempo:</span> <input type="number" onchange={tempoChange} value={data.track.tempo}
-					                                                              min="60" max="480"/><span
-							class="opacity-70 font-light">QPM</span></div>
-					<FileUpload accepted="mid, midi, audio/rtp-midi" onUpload={(file) => apiUpload('track', file)}/>
-				</div>
+				</el-options>
+			</el-select>
+			<div><span class="opacity-70 font-light">Key:</span> {data.track.key}</div>
+			<div><span class="opacity-70 font-light">Meter:</span> {data.track.time}</div>
+			<div>
+				<span class="opacity-70 font-light">Tempo (QPM):</span>
+				<input class="text-center" type="number" onchange={tempoChange} value={data.track.tempo} min="60" max="480"/>
 			</div>
+			<div>
+				<span class="opacity-70 font-light">Repeats:</span>
+				<input class="text-center" type="number" onchange={repeatChange} value={data.track.repeats} min="1" max="100"/>
+			</div>
+			<FileUpload accepted="mid, midi, audio/rtp-midi" onUpload={(file) => apiUpload('track', file)}/>
 			<div>
 				{#if data.state !== LoericPlayingState.PLAYING}
 					<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('play')}>
@@ -105,17 +128,17 @@
 					<Musician musician={musician} options={data.options} apiPut={apiPut} apiUpload={apiUpload}/>
 				</div>
 			{/each}
-		<!--<div class="self-center justify-self-center">
+			<!--<div class="self-center justify-self-center">
 				<button class="material-symbols-outlined" onclick={() => apiGet('add_musician')}>add</button>
 			</div>
-		-->
+			-->
 			<div class="p-3 rounded-2xl bg-gray-800 flex flex-col gap-2">
 				<label class="flex flex-col">
 					<span class="text-m pb-2 opacity-60">Audio Output</span>
 					<select onchange={audioOutputChange}>
 						{#each Object.keys(data.options.audio_outputs) as output}
 							<option value={"audioOut:" + data.options.audio_outputs[output]}
-									selected={audioOutput=== "audioOut:" + data.options.audio_outputs[output]}>{output}</option>
+								selected={audioOutput=== "audioOut:" + data.options.audio_outputs[output]}>{output}</option>
 						{/each}
 						{#each data.options.output as output}
 							<option value={output} selected={audioOutput=== output}>{output}</option>

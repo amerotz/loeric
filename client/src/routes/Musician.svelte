@@ -107,7 +107,7 @@
 		{/each}
 	</select>
 </label>
-<div class="flex py-2 justify-between">
+<div class="flex py-2 justify-evenly">
 	{#each musician.controls as control}
 		<label class="flex flex-col w-24 gap-5">
 			<span class="text-xs text-center h-12">{control.name}</span>

@@ -42,6 +42,7 @@ class Player:
         self._verbose = verbose
         self._message_queue = []
         self.has_reached_wake_time = threading.Event()
+        self._midi_out_lock = threading.Lock()
         self._tempo_scale = 1
         self._time_division = tu.TimeDelta(
             eighth_duration=2 / tu.MINIMUM_QUARTER_DIVISION
@@ -72,7 +73,8 @@ class Player:
                 )
 
     def set_midi_out(self, midi_out):
-        self._midi_out = midi_out
+        with self._midi_out_lock:
+            self._midi_out = midi_out
 
     def init_playback(self) -> None:
         """
@@ -146,7 +148,8 @@ class Player:
             if self._midi_out is not None:
                 if msg.type != "songpos":
                     msg.time = 0
-                    self._midi_out.send(msg)
+                    with self._midi_out_lock:
+                        self._midi_out.send(msg)
 
         self._song_time += self._time_division
         if self._midi_out is not None:

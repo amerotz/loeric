@@ -22,7 +22,6 @@ from loeric.server.musician import (
 )
 from loeric.server.synthout import SynthOutput
 from loeric.tune import Tune
-from loeric.loeric_config.loeric_config import webapp_load_config, webapp_config_path
 
 track_dir = join(getcwd(), "static/midi")
 temp_dir = join(getcwd(), "static/temp")
@@ -31,7 +30,7 @@ app = Bottle()
 
 tune: Tune
 musicians: list[Musician] = []
-names = ["Larry"]
+names = ["LOERIC"]
 shuffle(names)
 
 instruments = {"Accordion": 21, "Guitar": 24, "Harp": 46, "Flute": 73, "Violin": 40}
@@ -41,7 +40,8 @@ synth_is_running = False
 soundfont_id = 0
 audio_device_index = 0
 tempo = 140
-
+repetitions = 2
+current_track = None
 filetypes = [".mid", ".abc"]
 
 
@@ -89,13 +89,8 @@ def stop_synth():
         synth_is_running = False
 
 
-def key_to_str(key: KeySignature) -> str:
-    if key.root is None:
-        return ""
-    if key.mode not in ("major", "minor"):
-        return ""
-    suffix = " Minor" if key.mode == "minor" else ""
-    return f"{PITCH_NAMES[key.root]}{suffix}"
+def key_to_str(key) -> str:
+    return f"{PITCH_NAMES[key.root]} {key.mode}"
 
 
 def trim_ext(file: str) -> str:
@@ -112,7 +107,7 @@ def list_tracks() -> List[str]:
 
 @app.get("/api/state")
 def state():
-    global tune, tempo
+    global tune, tempo, repetitions
     response.set_header("Access-Control-Allow-Origin", "*")
     return {
         "musicians": list(map(lambda m: m.__json__(), musicians)),
@@ -123,6 +118,7 @@ def state():
             # "config": tune.config,
             "key": key_to_str(tune.key_signature),
             "tempo": tempo,
+            "repeats": repetitions,
         },
         "options": {
             "inputs": mido.get_input_names(),
@@ -136,12 +132,12 @@ def state():
 
 
 def __set_track(track: str):
-    global tune
+    global tune, repetitions, current_track
+
+    current_track = track
     track_list = list_tracks()
     if track in track_list:
-        tune = Tune(join(track_dir, track), 1)
-
-        tune.config = webapp_load_config(f"tunes/{splitext(tune.name.lower())[0]}")
+        tune = Tune(join(track_dir, track), repeats=repetitions)
 
         for musician in musicians:
             musician.tune = tune
@@ -181,7 +177,6 @@ def stop():
     global synth_is_running
 
     stop_all()
-    synth.sounds_off()
     stop_synth()
     for musician in musicians:
         musician.stop()
@@ -250,12 +245,13 @@ def input_change():
     musician_id = request.forms.id
     new_input = request.forms.input
 
+    stop()
     for musician in musicians:
         if musician.id == musician_id:
             if new_input == "no_in":
                 musician.midi_in = None
             else:
-                musician.midi_in = new_input
+                musician.midi_in = mido.open_input(new_input)
 
     return state()
 
@@ -263,9 +259,12 @@ def input_change():
 @app.get("/api/add_musician")
 def add_musician():
     global musicians
+    """
     loeric_id = generate(
         "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10
     )
+    """
+    loeric_id = "WebApp"
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
     musician = Musician(unused[0], loeric_id, tune, next(iter(instruments)))
@@ -284,13 +283,21 @@ def set_tempo():
     return state()
 
 
+@app.put("/api/repeat")
+def set_tempo():
+    global repetitions
+    stop()
+    repetitions = int(request.forms.repeats)
+    __set_track(current_track)
+
+    return state()
+
+
 @app.put("/api/audio_out")
 def set_audio_out():
     global audio_device_index, synth_is_running
 
-    stop()
     stop_synth()
-
     audio_device_index = int(request.forms.device.split(":")[-1])
     start_synth()
 
@@ -322,6 +329,7 @@ def method_not_allowed(res):
     return request.app.default_error_handler(res)
 
 
+"""
 @app.post("/api/musician/config")
 def upload_musician_config():
     global musicians
@@ -351,6 +359,7 @@ def upload_track_config():
     tune.config = webapp_load_config(filename)
 
     return state()
+"""
 
 
 @app.post("/api/track")
@@ -382,12 +391,16 @@ def init_musician():
     )
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
-    musician = Musician(unused[0], loeric_id, tune, next(iter(instruments)))
+    musician = Musician(
+        name=unused[0],
+        loeric_id=loeric_id,
+        tune=tune,
+        instrument=next(iter(instruments)),
+        midi_out=SynthOutput(f"LOERIC Synth {loeric_id}", synth, 0),
+    )
 
     for channel in musician.midi_channels:
         synth.program_select(channel, soundfont_id, 0, instruments[musician.instrument])
-
-    musician.midi_out = SynthOutput(f"LOERIC Synth {musician.id}", synth, 0)
 
     musicians.append(musician)
     start_synth()
