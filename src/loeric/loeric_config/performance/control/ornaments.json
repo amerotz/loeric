@@ -1,49 +1,103 @@
 {
     "contour_2_control": {},
     "control_2_contour": {
+        "ornaments": {
+            "control": 77,
+            "contours": [
+                "orn_roll_1",
+                "orn_roll_2",
+                "orn_roll_3",
+                "orn_cut_1",
+                "orn_cut_2",
+                "orn_strike",
+                "orn_slide",
+                "orn_divide",
+                "orn_triplet_1",
+                "orn_triplet_2",
+                "orn_triplet_3",
+                "orn_vibrato"
+            ]
+        },
+        "roll_probability": {
+            "control": 13,
+            "contours": [
+                "orn_roll_1_prob",
+                "orn_roll_2_prob",
+                "orn_roll_3_prob"
+            ]
+        },
+        "cut_probability": {
+            "control": 14,
+            "contours": [
+                "orn_cut_1_prob",
+                "orn_cut_2_prob"                
+            ]
+        },
+        "triplet_probability": {
+            "control": 18,
+            "contours": [
+                "orn_triplet_1_prob",
+                "orn_triplet_2_prob",             
+                "orn_triplet_3_prob"                
+            ]
+        },
+        "strike_probability":{
+            "control":15,
+            "contours":[
+                "orn_strike_prob"
+            ]
+        },
+        "slide_probability":{
+            "control":16,
+            "contours":[
+                "orn_slide_prob"
+            ]
+        },
+        "divide_probability":{
+            "control":17,
+            "contours":[
+                "orn_divide_prob"
+            ]
+        },
+        "vibrato_probability":{
+            "control":19,
+            "contours":[
+                "orn_vibrato_prob"
+            ]
+        },
+        "error_diatonic_probability":{
+            "control":29,
+            "contours":[
+                "orn_error_diatonic_prob"
+            ]
+        },
+        "error_slide_probability":{
+            "control":31,
+            "contours":[
+                "orn_error_slide_prob"
+            ]
+        },
+        "drop_probability":{
+            "control":32,
+            "contours":[
+                "orn_drop_prob"
+            ]
+        },
+        "error_chromatic_probability":{
+            "control":30,
+            "contours":[
+                "orn_error_chromatic_prob"
+            ]
+        },
+        "errors": {
+            "control": 78,
+            "contours": [
+                "orn_error_slide",
+                "orn_drop",
+                "orn_error_chromatic",
+                "orn_error_diatonic"
 
-        "orn_roll_1": 77,
-        "orn_roll_2": 77,
-        "orn_roll_3": 77,
-        "orn_roll_1_prob": 13,
-        "orn_roll_2_prob": 13,
-        "orn_roll_3_prob": 13,
-
-        "orn_cut_1": 77,
-        "orn_cut_2": 77,
-        "orn_cut_1_prob": 14,
-        "orn_cut_2_prob": 14,
-
-        "orn_strike": 77,
-        "orn_strike_prob": 15,
-
-        "orn_slide": 77,
-        "orn_slide_prob": 16,
-
-        "orn_divide": 77,
-        "orn_divide_prob": 17,
-
-        "orn_triplet_1": 77,
-        "orn_triplet_2": 77,
-        "orn_triplet_3": 77,
-        "orn_triplet_1_prob": 18,
-        "orn_triplet_2_prob": 18,
-        "orn_triplet_3_prob": 18,
-
-        "orn_vibrato": 77,
-        "orn_vibrato_prob": 19,
-
-        "orn_error_diatonic": 78,
-        "orn_error_diatonic_prob": 29,
-
-        "orn_error_chromatic": 78,
-        "orn_error_chromatic_prob": 30,
-
-        "orn_error_slide": 78,
-        "orn_error_slide_prob": 31,
-
-        "orn_drop": 78,
-        "orn_drop_prob": 32
-        
+            ]
+        }
     }
 }

@@ -10,7 +10,7 @@ from mido import MidiFile, Message
 from muspy import KeySignature
 from muspy.outputs.midi import PITCH_NAMES
 from nanoid import generate
-from pyaudio import PyAudio
+import pyaudio as pa
 
 from loeric.server.musician import (
     Musician,
@@ -39,44 +39,54 @@ instruments = {"Accordion": 21, "Guitar": 24, "Harp": 46, "Flute": 73, "Violin":
 synth = tinysoundfont.Synth()
 synth_is_running = False
 soundfont_id = 0
+audio_device_index = 0
+tempo = 140
 
 filetypes = [".mid", ".abc"]
 
 
 def list_audio_inputs():
-    audio = PyAudio()
-    info = audio.get_host_api_info_by_index(0)
-    device_count = info.get("deviceCount")
-
+    audio = pa.PyAudio()
     audio_list = {}
 
-    for i in range(0, device_count):
-        if (
-            audio.get_device_info_by_host_api_device_index(0, i).get("maxInputChannels")
-        ) > 0:
-            name = audio.get_device_info_by_host_api_device_index(0, i).get("name")
+    for i in range(0, audio.get_device_count()):
+        if (audio.get_device_info_by_index(i).get("maxInputChannels")) > 0:
+            name = audio.get_device_info_by_index(i).get("name")
             audio_list[name] = i
 
     return audio_list
 
 
 def list_audio_outputs():
-    audio = PyAudio()
-    info = audio.get_host_api_info_by_index(0)
-    device_count = info.get("deviceCount")
+    audio = pa.PyAudio()
 
     audio_list = {}
 
-    for i in range(0, device_count):
-        if (
-            audio.get_device_info_by_host_api_device_index(0, i).get(
-                "maxOutputChannels"
-            )
-        ) > 0:
-            name = audio.get_device_info_by_host_api_device_index(0, i).get("name")
+    for i in range(0, audio.get_device_count()):
+        if (audio.get_device_info_by_index(i).get("maxOutputChannels")) > 0:
+            name = audio.get_device_info_by_index(i).get("name")
             audio_list[name] = i
 
     return audio_list
+
+
+def start_synth():
+    global audio_device_index, synth_is_running, synth
+    if not synth_is_running:
+        audio = pa.PyAudio()
+        info = audio.get_device_info_by_index(audio_device_index)
+        print(info)
+        synth.start(
+            output_device_index=audio_device_index,
+        )
+        synth_is_running = True
+
+
+def stop_synth():
+    global synth_is_running, synth
+    if synth_is_running:
+        synth.stop()
+        synth_is_running = False
 
 
 def key_to_str(key: KeySignature) -> str:
@@ -102,7 +112,7 @@ def list_tracks() -> List[str]:
 
 @app.get("/api/state")
 def state():
-    global tune
+    global tune, tempo
     response.set_header("Access-Control-Allow-Origin", "*")
     return {
         "musicians": list(map(lambda m: m.__json__(), musicians)),
@@ -112,7 +122,7 @@ def state():
             "time": f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
             # "config": tune.config,
             "key": key_to_str(tune.key_signature),
-            "tempo": tune.tempo.qpm,
+            "tempo": tempo,
         },
         "options": {
             "inputs": mido.get_input_names(),
@@ -139,7 +149,7 @@ def __set_track(track: str):
 
 @app.get("/api/play")
 def play():
-    global synth_is_running
+    global synth_is_running, musicians
     for index, musician in enumerate(musicians):
         if musician.midi_out is None or isinstance(musician.midi_out, SynthOutput):
             synth.program_select(
@@ -155,9 +165,7 @@ def play():
             else:
                 musician.midi_out.channel = index
         musician.ready()
-    if not synth_is_running:
-        synth.start()
-        synth_is_running = True
+    start_synth()
     play_all()
     return state()
 
@@ -171,10 +179,10 @@ def pause():
 @app.get("/api/stop")
 def stop():
     global synth_is_running
-    synth.sounds_off()
-    synth.stop()
-    synth_is_running = False
+
     stop_all()
+    synth.sounds_off()
+    stop_synth()
     for musician in musicians:
         musician.stop()
     return state()
@@ -182,7 +190,7 @@ def stop():
 
 @app.put("/api/instrument")
 def instrument_change():
-    global musicians
+    global musicians, soundfont_id
     stop()
     musician_id = request.forms.id
     new_instrument = request.forms.instrument
@@ -207,7 +215,6 @@ def control_change():
 
     for musician in musicians:
         if musician.id == musician_id:
-            print(control, new_value)
             musician.groover.set_control_value(control, new_value)
 
     return state()
@@ -221,6 +228,7 @@ def output_change():
 
     for index, musician in enumerate(musicians):
         if musician.id == musician_id:
+            stop_synth()
             if new_output == "create_out":
                 musician.midi_out = mido.open_output(
                     f"LOERIC out #{musician.id}#", virtual=True
@@ -229,6 +237,7 @@ def output_change():
                 musician.midi_out = SynthOutput(
                     f"LOERIC Synth {musician.id}", synth, index
                 )
+                start_synth()
             else:
                 musician.midi_out = mido.open_output(new_output)
 
@@ -267,7 +276,7 @@ def add_musician():
 
 @app.put("/api/tempo")
 def set_tempo():
-    global musicians
+    global tempo, musicians
     tempo = int(request.forms.tempo)
     for musician in musicians:
         musician.set_tempo(tempo)
@@ -277,13 +286,13 @@ def set_tempo():
 
 @app.put("/api/audio_out")
 def set_audio_out():
-    global synth_is_running
+    global audio_device_index, synth_is_running
+
     stop()
-    index = int(request.forms.device.split(":")[-1])
-    synth.stop()
-    synth_is_running = False
-    synth.start(output_device_index=index)
-    synth_is_running = True
+    stop_synth()
+
+    audio_device_index = int(request.forms.device.split(":")[-1])
+    start_synth()
 
     return state()
 
@@ -347,8 +356,8 @@ def upload_track_config():
 @app.post("/api/track")
 def upload_track():
     upload = request.files.get("upload")
-    temp_file = join(temp_dir, upload.filename)
-    upload.save(temp_file)
+    file = join(track_dir, upload.filename)
+    upload.save(file)
 
     __set_track(track.name + ".mid")
 
@@ -366,29 +375,34 @@ def get_static(filepath):
 
 
 def init_musician():
+    global musicians, synth, soundfont_id
 
-    add_musician()
-    musician = musicians[0]
+    loeric_id = generate(
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10
+    )
+    existing = map(lambda m: m.name, musicians)
+    unused = list(set(names) - set(existing))
+    musician = Musician(unused[0], loeric_id, tune, next(iter(instruments)))
 
-    musician.instrument = "Accordion"
     for channel in musician.midi_channels:
         synth.program_select(channel, soundfont_id, 0, instruments[musician.instrument])
 
     musician.midi_out = SynthOutput(f"LOERIC Synth {musician.id}", synth, 0)
 
+    musicians.append(musician)
+    start_synth()
+
 
 def start_server():
-    global soundfont_id, synth_is_running
+    global audio_device_index, soundfont_id, synth_is_running
     soundfont_id = synth.sfload("static/sound/FluidR3_GM.sf2")
-    track_list = [
-        f
-        for f in listdir(track_dir)
-        if isfile(join(track_dir, f)) and splitext(f)[1].casefold() == ".mid"
-    ]
+
+    audio_device_index = pa.PyAudio().get_default_output_device_info()["index"]
+    track_list = list_tracks()
     if len(track_list) > 0:
         track = track_list[0]
         __set_track(track)
         init_musician()
+
     run(app, host="localhost", port=8080)
-    synth.stop()
-    synth_is_running = False
+    stop_synth()

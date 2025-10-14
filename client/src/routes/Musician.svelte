@@ -107,11 +107,11 @@
 		{/each}
 	</select>
 </label>
-<div class="flex py-2 self-center">
+<div class="flex py-2 justify-between">
 	{#each musician.controls as control}
-		<label class="flex flex-col items-center gap-1">
-			<span class="text-xs text-center">{control.name}</span>
-			<input type="range" step="0.01" max="1" min="0" data-control={control.control}
+		<label class="flex flex-col w-24 gap-5">
+			<span class="text-xs text-center h-12">{control.name}</span>
+			<input class="place-self-center" type="range" step="0.01" max="1" min="0" data-control={control.control}
 			       value={control.value} onchange={controlChange}/>
 		</label>
 	{/each}

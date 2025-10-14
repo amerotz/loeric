@@ -7,11 +7,21 @@
 		}
 	},	
 	"control_2_contour": {
-		"velocity_intensity": 51,
-		"tempo_intensity": 51,
-		"ornament_intensity": 51,
-		"velocity_human_impact": 52,
-		"tempo_human_impact": 52,
-		"ornament_human_impact": 52
+		"intensity":{
+			"control":51,
+			"contours":[
+				"velocity_intensity",
+				"tempo_intensity",
+				"ornament_intensity"
+			]
+		},
+		"human_impact":{
+			"control":52,
+			"contours":[
+				"velocity_human_impact",
+				"tempo_human_impact",
+				"ornament_human_impact"
+			]
+		}
 	}
 }

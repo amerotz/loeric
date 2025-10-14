@@ -69,7 +69,7 @@
 			<div class="flex-1">
 				<select class="w-full text-3xl" onchange={trackChange}>
 					{#each data.options.trackList as file}
-						<option value={file} selected={file === data.track.name}>{file.replace(/\.mid$/i, '')}</option>
+						<option value={file} selected={file === data.track.name}>{file.replace(/\.mid$/i, '').replace(/\.abc$/i, '')}</option>
 					{/each}
 				</select>
 				<div class="px-1 flex gap-2">
@@ -99,7 +99,7 @@
 		<!--
 		<JSONEditorBar bind:json={data.track.config} onUpload={(form) => apiUpload('track/config', form)}></JSONEditorBar>
 		-->
-		<div class="grid grid-cols-3 gap-4 mt-8">
+		<div class="grid grid-cols-1 gap-4 mt-8">
 			{#each data.musicians as musician}
 				<div class="p-3 rounded-2xl bg-gray-800 flex flex-col gap-2">
 					<Musician musician={musician} options={data.options} apiPut={apiPut} apiUpload={apiUpload}/>

@@ -136,16 +136,26 @@ class Groover:
                 "slow_affected_contours": ["velocity", "ornament", "tempo", "drone"],
             },
             "control_2_contour": {
-                "velocity_intensity": intensity_control,
-                "tempo_intensity": intensity_control,
-                "ornament_intensity": intensity_control,
-                "legato_intensity": intensity_control,
-                "drone_intensity": intensity_control,
-                "velocity_human_impact": human_impact_control,
-                "tempo_human_impact": human_impact_control,
-                "ornament_human_impact": human_impact_control,
-                "legato_human_impact": human_impact_control,
-                "drone_human_impact": human_impact_control,
+                "intensity": {
+                    "control": intensity_control,
+                    "contours": [
+                        "velocity_intensity",
+                        "tempo_intensity",
+                        "ornament_intensity",
+                        "legato_intensity",
+                        "drone_intensity",
+                    ],
+                },
+                "human_impact": {
+                    "control": human_impact_control,
+                    "contours": [
+                        "velocity_human_impact",
+                        "tempo_human_impact",
+                        "ornament_human_impact",
+                        "legato_human_impact",
+                        "drone_human_impact",
+                    ],
+                },
             },
             "harmony": {
                 "chords_per_bar": self._tune.time_signature.beat_count,
@@ -384,8 +394,9 @@ class Groover:
         # object holding each contour's value in a given moment
         self._contour_values = {}
 
-        for contour_name in self._config["control_2_contour"]:
-            self._contour_values[contour_name] = 0.5
+        for group in self._config["control_2_contour"].values():
+            for contour_name in group["contours"]:
+                self._contour_values[contour_name] = 0.5
 
         # init all contours
         for contour_name in self._config["contours"]:
@@ -413,12 +424,14 @@ class Groover:
         # store the raw control
         self._contour_values[control_num] = value
         # traditional control
-        for contour_name, event_number in self._config["control_2_contour"].items():
+        for group in self._config["control_2_contour"].values():
+            event_number = group["control"]
             if control_num == event_number:
-                self.set_contour_value(contour_name, value)
-                # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
-                if self._verbose == 3:
-                    print(f"{contour_name}:\t{round(value, 2)}")
+                for contour_name in group["contours"]:
+                    self.set_contour_value(contour_name, value)
+                    # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
+                    if self._verbose == 3:
+                        print(f"{contour_name}:\t{round(value, 2)}")
 
     def check_midi_control(self) -> Callable[[], None]:
         """

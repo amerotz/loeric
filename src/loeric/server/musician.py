@@ -94,7 +94,6 @@ class Musician:
         self.seed = randint(0, 1000000)
         self.thread = threading.Thread()
         self._tempo = 140
-        self.control_out = ControlOutput(f"Loeric Control #{loeric_id}#", None)
 
         self.tune = tune
 
@@ -145,6 +144,7 @@ class Musician:
         additional_configs = [
             f"{general_configs_path}/tune_type/{self.tune.tune_type}.json",
             f"{general_configs_path}/instrument/{self.instrument.lower()}.json",
+            # f"{general_configs_path}/control/demo.json",
             f"{specific_configs_path}/tunes/{splitext(self.tune.name.lower())[0]}.json",
             f"{specific_configs_path}/musicians/{self.name.lower()}.json",
         ]
@@ -159,7 +159,13 @@ class Musician:
             human_impact=1,
         )
 
-        midi_output: Optional[BaseOutput] = None
+        config = self.groover._config["control_2_contour"]
+        self._controls = [
+            {"name": " ".join(c.split("_")).title(), "control": config[c], "value": 0.5}
+            for c in config
+        ]
+
+        midi_output = None
         if self.midi_out is None:
             midi_output = mido.open_output(f"LOERIC out #{self.id}#", virtual=True)
         else:
@@ -174,9 +180,8 @@ class Musician:
             time_signature=self.tune.time_signature,
             save=False,
             midi_out=midi_output,
+            song_start_time=self.tune.times[0].eighth_duration,
         )
-
-        self.control_out.set_groover(self.groover)
 
     def stop(self):
         self.groover.jump_to_pos(0)
@@ -327,31 +332,5 @@ class Musician:
             "midiOut": out,
             "midiIn": self.midi_in,
             "instrument": self.instrument,
-            "controls": list(map(lambda m: m.__json__(), self.control_out.controls)),
+            "controls": self._controls,
         }
-
-
-class ControlOutput(BaseOutput):
-    def __init__(self, name: str, groover: Groover | None, **kwargs):
-        self.groover = groover
-        self.controls = [Control("Volume", 7, 127), Control("Intensity", 21, 127)]
-        BaseOutput.__init__(self, name=name, **kwargs)
-
-    def set_groover(self, groover: Groover | None):
-        self.groover = groover
-        if groover is not None:
-            contours = self.groover._config.get("control_2_contour")
-            grouped = defaultdict(list)
-            for key, val in sorted(contours.items()):
-                grouped[val].append(key)
-
-            self.controls = [self.controls[0]]
-            for control, values in grouped.items():
-                name = values[0]
-                value = int(self.groover._contour_values[name] * 127)
-                if len(values) > 1:
-                    if all("_human_impact" in x for x in values):
-                        name = "Human Impact"
-                    else:
-                        name = "Intensity"
-                self.controls.append(Control(name, control, value))
