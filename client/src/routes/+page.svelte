@@ -21,6 +21,7 @@
 	async function trackChange(event: Event) {
 		const select = event.target as HTMLSelectElement
 		await apiPut("track", {track: select.value})
+		await apiGet("state")
 	}
 
 	async function apiPut(call: string, data: any) {
@@ -37,7 +38,7 @@
 		data = await response.json()
 		clearTimeout(poller)
 		if (data.state === LoericPlayingState.PLAYING) {
-			poller = setTimeout(refresh, 500)
+			poller = setTimeout(refresh, 50)
 		}
 	}
 

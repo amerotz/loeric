@@ -8,6 +8,7 @@ from os.path import splitext
 from random import randint
 from typing import Optional
 
+import pyaudio as pa
 import mido
 from mido import Message
 from mido.ports import BaseOutput, BaseInput, EchoPort
@@ -17,6 +18,7 @@ from loeric.groover import Groover
 from loeric.player import Player
 import loeric.server as ls
 import loeric.tune as tu
+import loeric.listeners.playalong as lp
 
 faulthandler.enable()
 
@@ -96,6 +98,12 @@ class Musician:
         self.thread = threading.Thread()
         self._tempo = 140
 
+        self._intensity_control = 49
+        self._human_impact_control = 50
+        self._invert = False
+        self._responsiveness = 0.75
+        self._device_index = None
+
         self.tune = tune
 
     def player_loop(self, player, groover):
@@ -112,6 +120,57 @@ class Musician:
                 break
 
             player.play_next()
+
+    def set_input_audio_device(self, device_index):
+        self._device_index = device_index
+
+    def start_listener(self):
+        p = pa.PyAudio()
+        info = p.get_device_info_by_index(self._device_index)
+        name = info["name"]
+        print(f"Connecting to device {self._device_index}: {name}")
+
+        for i in range(len(self._controls)):
+            if self._controls[i]["control"] == self._intensity_control:
+                self._controls[i]["value"] = 0.5
+            elif self._controls[i]["control"] == self._human_impact_control:
+                self._controls[i]["value"] = 0.5
+
+        # create listening thread
+        self._listener_thread = lp.ListenerThread(
+            sample_rate=int(info["defaultSampleRate"]),
+            chunk_per_sec=10,
+            device_index=self._device_index,
+            num_channels=1,
+            selected_channels=[1],
+        )
+        self._listener_thread.open_stream()
+
+        # create audio monitor
+        audio_monitor = lp.AudioMonitor()
+
+        # create playback thread
+        self._control_thread = lp.PlayerThread(self._invert)
+
+        # go until midi is playing
+        l = threading.Thread(
+            target=self._listener_thread.listen,
+            args=(audio_monitor, self._responsiveness),
+        )
+
+        def callback(perc):
+            self.groover.set_control_value(self._intensity_control, perc)
+            for i in range(len(self._controls)):
+                if self._controls[i]["control"] == self._intensity_control:
+                    self._controls[i]["value"] = perc
+
+        p = threading.Thread(
+            target=self._control_thread.send_control_loop,
+            args=[audio_monitor, callback],
+        )
+
+        l.start()
+        p.start()
 
     @property
     def midi_channels(self):
@@ -137,39 +196,47 @@ class Musician:
 
     def set_tempo(self, tempo):
         self._tempo = tempo
-        print(tempo)
         self.groover.set_tempo(tempo)
 
     def create_all(self):
 
+        self._listener_thread = None
+        self._control_thread = None
+        ################### configs ###########################
         name = splitext(self.tune.name.lower().replace("'", "").replace(" ", ""))[0]
         config = f"{specific_configs_path}/tunes/{name}.json"
 
-        additional_configs = []
+        additional_configs = [
+            f"{general_configs_path}/instrument/{self.instrument.lower()}.json"
+        ]
         if not os.path.isfile(config):
             print(f"Could not load {config}")
             additional_configs.extend(
                 [
                     f"{general_configs_path}/tune_type/{self.tune.tune_type}.json",
-                    f"{general_configs_path}/instrument/{self.instrument.lower()}.json",
                     f"{general_configs_path}/drone/on.json",
                     # f"{specific_configs_path}/musicians/{self.name.lower()}.json",
                 ]
             )
             config = None
 
+        ################### groover ###########################
+
         self.groover = Groover(
             self.tune,
             seed=self.seed,
             config_file=config,
+            intensity_control=self._intensity_control,
+            human_impact_control=self._human_impact_control,
             additional_configs=[
                 file for file in additional_configs if os.path.isfile(file)
             ],
             loeric_id=self.id,
             bpm=self._tempo,
             human_impact=1,
-            verbose=3
+            verbose=3,
         )
+        ################### controls ###########################
 
         config = self.groover._config["control_2_contour"]
         self._controls = [
@@ -181,6 +248,8 @@ class Musician:
             for c in config
         ]
 
+        ################### output ###########################
+
         midi_output = None
         if self._midi_out is None:
             midi_output = mido.open_output(f"LOERIC out #{self.id}#", virtual=True)
@@ -188,6 +257,23 @@ class Musician:
             midi_output = self._midi_out
 
         midi_output.reset()
+
+        ################### input ###########################
+
+        if self._midi_in is not None:
+
+            def callback(msg):
+                if msg.is_cc():
+                    for i in range(len(self._controls)):
+                        if self._controls[i]["control"] == msg.control:
+                            self._controls[i]["value"] = msg.value / 127
+
+                callback.handle_midi(msg)
+
+            callback.handle_midi = self.groover.check_midi_control()
+            self._midi_in.callback = callback
+
+        ################### player ###########################
 
         # create player
         self.player = Player(
@@ -206,7 +292,21 @@ class Musician:
     @midi_in.setter
     def midi_in(self, midi_in):
         self._midi_in = midi_in
-        self._midi_in.callback = self.groover.check_midi_control()
+
+        if midi_in is None:
+            return
+
+        def callback(msg):
+            if msg.is_cc():
+                for i in range(len(self._controls)):
+                    if self._controls[i]["control"] == msg.control:
+                        self._controls[i]["value"] = msg.value / 127
+
+            callback.handle_midi(msg)
+
+        callback.handle_midi = self.groover.check_midi_control()
+
+        self._midi_in.callback = callback
 
     @property
     def midi_out(self):
@@ -221,6 +321,12 @@ class Musician:
         self.groover.jump_to_pos(0)
         if self.player is not None:
             self.player.set_song_time(self.groover._tune.position_time(0))
+
+        if self._listener_thread is not None:
+            self._listener_thread.stop = True
+
+        if self._control_thread is not None:
+            self._control_thread.stop = True
 
     def ready(self) -> None:
         global _state
@@ -242,16 +348,18 @@ class Musician:
             """
             global _play_event, _state
 
-            midi_input = None
-
             player_t = threading.Thread(
                 target=self.player_loop, args=[self.player, self.groover]
             )
             player_t.start()
 
+            if self._device_index is not None:
+                self.start_listener()
+
             # wait for start
             _play_event.wait()
             self.player.init_playback()
+            self.player.reset_song_time()
 
             # iterate over messages
             while True:
@@ -317,24 +425,6 @@ class Musician:
 
             while player_t.is_alive():
                 player_t.join(1)
-
-            if midi_input is not None:
-                midi_input.close()
-                if midi_input.closed:
-                    print("Closed MIDI input.")
-
-            # make sure to turn off all notes
-            """
-            if midi_output is not None:
-                for i in range(127):
-                    midi_output.send(
-                        mido.Message("note_off", velocity=0, note=i, time=0)
-                    )
-                midi_output.reset()
-                # midi_output.close()
-                if midi_output.closed:
-                    print("Closed MIDI output.")
-            """
 
             print("Player thread terminated.")
 

@@ -212,6 +212,8 @@ class ScoreElement:
     @duration.setter
     def duration(self, value):
         self._duration = TimeDelta(eighth_duration=value)
+        if self._duration.eighth_duration < 0:
+            raise Exception("Duration cannot be negative")
 
 
 class Pause(ScoreElement):
@@ -442,7 +444,7 @@ class Note(ScoreElement):
         self._metadata = []
 
     def __repr__(self):
-        return f"(Note p={self._pitch} {self._duration} id={self._id} t={self._time})"
+        return f"(Note p={self._pitch} {self._duration} id={self._id} t={self._time.eighth_duration})"
 
     def add_metadata(self, data):
         self._metadata.append(data)

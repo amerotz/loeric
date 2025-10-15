@@ -493,7 +493,6 @@
         "C5": "B4"
     },
     "drone": {
-        "active": false,
         "strings_min": 0,
         "strings_max": 0,
         "free_strings_min": 1,

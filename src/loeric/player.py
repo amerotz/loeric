@@ -48,6 +48,7 @@ class Player:
             eighth_duration=2 / tu.MINIMUM_QUARTER_DIVISION
         )
 
+        self.__song_start_time = song_start_time
         self._song_time = tu.TimeDelta(eighth_duration=song_start_time)
         self._last_played_message_time = self._song_time.eighth_duration
         self._notify_song_time = tu.TimeDelta(eighth_duration=1000000)
@@ -86,6 +87,9 @@ class Player:
         # to minimize drifting
         self._start_time = time.time()
         self._input_time = 0.0
+
+    def reset_song_time(self):
+        self._song_time = tu.TimeDelta(eighth_duration=self.__song_start_time)
 
     def set_tempo_scale(self, tempo_scale):
         self._tempo_scale = tempo_scale

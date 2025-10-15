@@ -246,12 +246,16 @@ def input_change():
     new_input = request.forms.input
 
     stop()
+    print(new_input)
     for musician in musicians:
         if musician.id == musician_id:
-            if new_input == "no_in":
+            if new_input.startswith("audioIn"):
                 musician.midi_in = None
+                device_index = int(new_input.split(":")[-1])
+                musician.set_input_audio_device(device_index)
             else:
                 musician.midi_in = mido.open_input(new_input)
+                musician.set_input_audio_device(None)
 
     return state()
 

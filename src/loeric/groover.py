@@ -111,13 +111,13 @@ class Groover:
                     "human_impact_scale": human_impact,
                 },
                 "tempo": {
-                    "human_impact_scale": human_impact,
+                    "human_impact_scale": 0,
                 },
                 "ornament": {
                     "human_impact_scale": human_impact,
                 },
                 "legato": {
-                    "human_impact_scale": -human_impact,
+                    "human_impact_scale": 0,
                 },
             },
             "values": {
@@ -244,9 +244,6 @@ class Groover:
             self._max_ornament_length = max(
                 self._max_ornament_length, self._config["ornamentation"][o]["length"]
             )
-
-        # active notes
-        self._active_notes = np.zeros(127)
 
         # legato
         self._legato_amount = (
@@ -638,14 +635,16 @@ class Groover:
                         d_notes, delay = self._add_drone(note, drone_pitches)
                         drone_notes.extend(d_notes)
                         # add delay
-                        note.time += delay
-                        note.duration -= delay
+                        removable_delay = min(delay, note.duration)
+                        note.time += removable_delay
+                        note.duration -= removable_delay
                 # only one note
                 else:
                     drone_pitches = self._get_drone(current_message.pitch)
                     d_notes, delay = self._add_drone(current_message, drone_pitches)
-                    notes[0].time += delay
-                    notes[0].duration -= delay
+                    removable_delay = min(delay, notes[0].duration)
+                    notes[0].time += removable_delay
+                    notes[0].duration -= removable_delay
                     drone_notes.extend(d_notes)
             notes.extend(drone_notes)
 
@@ -965,10 +964,13 @@ class Groover:
 
         # filter pitches that are too far away
         # reachable within a third
-        pitches = pitches[abs(pitches - last_note) <= 7]
+        pitches = pitches[abs(pitches - last_note) < 7]
 
         # select suitable pitches (e.g. any root, third, fifth within range)
         pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
+
+        if len(pitches) == 0:
+            pitches = np.append(pitches, root + (high // 12 + low // 12) / 2)
 
         # sample weighted by distance
         w = abs(pitches - last_note).astype(float)
@@ -977,6 +979,7 @@ class Groover:
         else:
             w /= sum(w)
             w = 1 - w
+
         end_pitch = random.choices(pitches, weights=w, k=1)[0]
         end_pitch += self._transpose_semitones
 

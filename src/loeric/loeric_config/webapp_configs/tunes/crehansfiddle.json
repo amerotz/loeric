@@ -540,7 +540,7 @@
         "break_ornaments": false,
         "transpose": false,
         "allow_root": false,
-        "delay_range": 0.1,
+        "delay_range": 0.01,
         "notes_per_bar_bind": "velocity",
         "notes_per_bar": [ 6, 2, 1 ]
     },
