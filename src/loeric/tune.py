@@ -1,4 +1,5 @@
 import argparse
+import json
 import copy
 import random
 import os
@@ -592,6 +593,7 @@ class Tune:
         meter=None,
         verbose: int = 0,
         sync_interval: float = None,
+        config=None,
     ):
         """
         Initialize the class.
@@ -609,6 +611,7 @@ class Tune:
         self._sync_interval = sync_interval
         self._first_bar_length = 0
         self._tune_type = None
+        self.config = config
 
         if filename.endswith(".mid") or filename.endswith(".midi"):
             midi_source = mp.read_midi(filename)
@@ -813,12 +816,14 @@ class Tune:
         )
 
     @property
-    def name(self) -> str:
-        return os.path.basename(self._filename)
-
-    @property
     def time_signature(self):
         return self._time_signatures[0]
+
+    def get_config(self):
+        if self.config is None or not os.path.isfile(self.config):
+            return ""
+        with open(self.config, "r") as f:
+            return json.load(f)
 
     @property
     def key_signature(self):

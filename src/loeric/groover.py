@@ -623,6 +623,7 @@ class Groover:
             ] * 0.01 * np.random.normal(loc=0, scale=0.33)
 
         # add drone
+        print(self._config["drone"])
         if self._config["drone"]["active"]:
             drone_notes = []
             # if above threshold
@@ -1397,6 +1398,9 @@ class Groover:
     @property
     def _eighth_duration_seconds(self) -> float:
         return 30 / mido.tempo2bpm(self.current_tempo)
+
+    def set_droning(self, value):
+        self._config["drone"]["active"] = value
 
     @property
     def _current_velocity(self) -> int:

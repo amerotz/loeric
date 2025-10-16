@@ -173,7 +173,7 @@ class HarmonicContour(Contour):
 
         while t <= summed_timings.max():
             start = t
-            stop =  midi.time_signature.eighths_per_bar/ chords_per_bar + t
+            stop = midi.time_signature.eighths_per_bar / chords_per_bar + t
             if t < 0:
                 stop = 0
 
@@ -222,11 +222,11 @@ class HarmonicContour(Contour):
                 chord_quality = 1
             elif note_count[(root + 4) % 12] > note_count[(root + 3) % 12]:
                 chord_quality = 0
-            """
 
             # check if the note score suggests diminished chord
-            if chords[(root + 6) % 12] > chords[(root + 7) % 12]:
+            elif note_count[(root + 6) % 12] > note_count[(root + 7) % 12]:
                 chord_quality = 2
+            """
                 print(chords)
 
             # check if the note score suggests augmented chord

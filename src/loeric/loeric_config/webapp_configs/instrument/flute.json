@@ -1,0 +1,1041 @@
+{
+    "contours": {
+        "ornament": {
+            "recipe": {
+                "phrasing": {
+                    "phrase_exp": 10,
+                    "phrase_levels": 0.0
+                }
+            }
+        },
+        "velocity": {
+            "recipe": {
+                "to_mean": {
+                    "contours": {
+                        "weighted_sum": {
+                            "contours": {
+                                "o_canainn": {
+                                    "weights": "var_velocity_weight",
+                                    "savgol": true,
+                                    "scale": true,
+                                    "shift": false
+                                },
+                                "shift": {
+                                    "contours": {
+                                        "phrasing": {
+                                            "phrase_exp": 10,
+                                            "phrase_levels": -1.0
+                                        }
+                                    },
+                                    "offset": -1
+                                },
+                                "pitch": {
+                                    "scale": true,
+                                    "shift": true
+                                }
+                            },
+                            "weights": [
+                                0.5,
+                                0.2,
+                                0.3
+                            ]
+                        }
+                    },
+                    "mean": 0.6
+                }
+            }
+        },
+        "legato": {
+            "recipe": {
+                "clamp": {
+                    "contours": {
+                        "weighted_sum": {
+                            "contours": {
+                                "pattern": {
+                                    "mean": [
+                                        0.1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1
+                                    ],
+                                    "std": [
+                                        0.5,
+                                        0,
+                                        0,
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "std_scale": 1,
+                                    "period": 1,
+                                    "normalize": false
+                                },
+                                "o_canainn": {
+                                    "weights": [
+                                        0,
+                                        0,
+                                        -1,
+                                        -1,
+                                        -1
+                                    ],
+                                    "savgol": false,
+                                    "scale": true,
+                                    "shift": false
+                                }
+                            },
+                            "weights": [
+                                0.67,
+                                0.33
+                            ]
+                        }
+                    },
+                    "low": 0,
+                    "high": 1
+                }
+            }
+        }
+    },
+    "ornamentation": {
+        "drop": {
+            "cases": [
+                "not beat"
+            ],
+            "pitches_mean": [
+                0
+            ],
+            "pitches_std": [
+                0
+            ],
+            "velocities_mean": [
+                0
+            ],
+            "velocities_std": [
+                0
+            ],
+            "durations_mean": [
+                0.01
+            ],
+            "durations_std": [
+                0
+            ],
+            "probability": 0.01,
+            "length": 1,
+            "diatonic": false,
+            "threshold": 0,
+            "slide": false
+        },
+        "triplet_1": {
+            "cases": [
+                [
+                    [
+                        0,
+                        3
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        2
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        2
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                0,
+                1,
+                0,
+                1,
+                0,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "durations_mean": [
+                0.45,
+                0.05,
+                0.45,
+                0.05,
+                0.95,
+                0.05,
+                1
+            ],
+            "durations_std": [
+                0.1,
+                0.01,
+                0.1,
+                0.01,
+                0.1,
+                0.1,
+                0.01
+            ],
+            "probability": 1,
+            "length": 3,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "triplet_2": {
+            "cases": [
+                [
+                    [
+                        0,
+                        0.666
+                    ],
+                    [
+                        0,
+                        0.666
+                    ],
+                    [
+                        0,
+                        0.666
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                0,
+                1,
+                0,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "durations_mean": [
+                0.45,
+                0.05,
+                0.45,
+                0.05,
+                1
+            ],
+            "durations_std": [
+                0.1,
+                0.01,
+                0.1,
+                0.01,
+                0.1
+            ],
+            "probability": 1,
+            "length": 2,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "triplet_3": {
+            "cases": [
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        4,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        0.666
+                    ],
+                    [
+                        2,
+                        0.666
+                    ],
+                    [
+                        4,
+                        0.666
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                0,
+                0,
+                2,
+                2,
+                4
+            ],
+            "pitches_std": [
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                0,
+                1,
+                0,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "durations_mean": [
+                0.45,
+                0.05,
+                0.45,
+                0.05,
+                1
+            ],
+            "durations_std": [
+                0.1,
+                0.01,
+                0.1,
+                0.01,
+                0.1
+            ],
+            "probability": 1,
+            "length": 2,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "vibrato": {
+            "cases": [
+                [
+                    [
+                        0,
+                        2
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                0,
+                0.3,
+                0,
+                -0.3,
+                0
+            ],
+            "pitches_std": [
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1
+            ],
+            "velocities_mean": [
+                1,
+                1,
+                1,
+                1,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "durations_mean": [
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                1
+            ],
+            "durations_std": [
+                0.01,
+                0.01,
+                0.01,
+                0.01,
+                0
+            ],
+            "probability": 1,
+            "length": 2,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": true
+        },
+        "roll_1": {
+            "cases": [
+                [
+                    [
+                        0,
+                        3
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        2
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        2
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        -2,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        -1,
+                        1
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                0,
+                1,
+                0,
+                -1,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                0.2,
+                1,
+                0.2,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0.1,
+                0,
+                0.1,
+                0
+            ],
+            "durations_mean": [
+                1,
+                0.1,
+                0.9,
+                0.1,
+                0.9
+            ],
+            "durations_std": [
+                0,
+                0.01,
+                0.1,
+                0.01,
+                0.1
+            ],
+            "probability": 1,
+            "length": 3,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "divide": {
+            "cases": [
+                [
+                    [
+                        0,
+                        2
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                0,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0
+            ],
+            "durations_mean": [
+                1,1
+            ],
+            "durations_std": [
+                0.01,
+                0.01
+            ],
+            "probability": 1,
+            "length": 2,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "crann": {
+            "cases": [
+                [
+                    [
+                        0,
+                        3
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        2
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        2
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        -2,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        -1,
+                        1
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                0,
+                1,
+                0,
+                1,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                0.2,
+                1,
+                0.2,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0.1,
+                0,
+                0.1,
+                0
+            ],
+            "durations_mean": [
+                1,
+                0.1,
+                0.9,
+                0.1,
+                0.9
+            ],
+            "durations_std": [
+                0,
+                0.01,
+                0.1,
+                0.01,
+                0.1
+            ],
+            "probability": 1,
+            "length": 3,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "roll_2": {
+            "cases": [
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        -2,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ],
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        -1,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                0,
+                1,
+                0,
+                -1,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                0.33,
+                0.33,
+                0.33,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0.1,
+                0.1,
+                0.1,
+                0
+            ],
+            "durations_mean": [
+                1,
+                0.1,
+                0.9,
+                0.1,
+                0.9
+            ],
+            "durations_std": [
+                0,
+                0.01,
+                0.1,
+                0.01,
+                0
+            ],
+            "probability": "var_roll_2_prob",
+            "length": 3,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "roll_3": {
+            "cases": [
+                [
+                    [
+                        0,
+                        3
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                1,
+                0,
+                -1,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0,
+                0,
+                0
+            ],
+            "velocities_mean": [
+                0.1,
+                0.5,
+                0.8,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0.1,
+                0.1,
+                0
+            ],
+            "durations_mean": [
+                0.25,
+                0.25,
+                0.25,
+                0.75
+            ],
+            "durations_std": [
+                0.01,
+                0.01,
+                0.01,
+                0.1
+            ],
+            "probability": 1,
+            "length": 3,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "cut_1": {
+            "cases": [
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                0,
+                1,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                0.1,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0.1,
+                0
+            ],
+            "durations_mean": [
+                1,
+                0.1,
+                0.9
+            ],
+            "durations_std": [
+                0.1,
+                0.01,
+                0.1
+            ],
+            "probability": 1,
+            "length": 2,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "cut_2": {
+            "cases": [
+                "beat"
+            ],
+            "pitches_mean": [
+                1,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0
+            ],
+            "velocities_mean": [
+                0.2,
+                1
+            ],
+            "velocities_std": [
+                0.1,
+                0
+            ],
+            "durations_mean": [
+                0.1,
+                0.9
+            ],
+            "durations_std": [
+                0.01,
+                0.1
+            ],
+            "probability": 1,
+            "length": 1,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "strike": {
+            "cases": [
+                [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        1
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                0,
+                -1,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                0.1,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0,
+                0
+            ],
+            "durations_mean": [
+                1,
+                0.1,
+                0.9
+            ],
+            "durations_std": [
+                0.1,
+                0.01,
+                0.1
+            ],
+            "probability": 1,
+            "length": 2,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "slide": {
+            "cases": [
+                [
+                    [
+                        0,
+                        2
+                    ]
+                ]
+            ],
+            "pitches_mean": [
+                -1,
+                0
+            ],
+            "pitches_std": [
+                0,
+                0
+            ],
+            "velocities_mean": [
+                1,
+                1
+            ],
+            "velocities_std": [
+                0,
+                0
+            ],
+            "durations_mean": [
+                0.4,
+                0.6
+            ],
+            "durations_std": [
+                0.1,
+                0.1
+            ],
+            "probability": 1,
+            "length": 1,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": true
+        }
+    },
+    "legato": {
+        "min": 0.4,
+        "max": 1.0,
+        "bind": "legato"
+    },
+    "values": {
+        "pitch_deviation_cents": 10,
+        "transpose": -12
+    },
+    "approach_from_above": {
+        "E4": "F#4",
+        "E5": "F#5",
+        "F#4": "A4",
+        "F#5": "A5",
+        "G4": "A4",
+        "G5": "A5",
+        "A4": "B4",
+        "A5": "B5",
+        "B4": "C#5"
+    },
+    "approach_from_below": {
+        "E4": "D4",
+        "E5": "D5",
+        "F#4": "E4",
+        "F#5": "E5",
+        "G4": "F#4",
+        "G5": "F#5",
+        "A4": "G4",
+        "A5": "G5",
+        "B4": "A4"
+    },
+    "drone": {
+        "active": false
+    }
+}

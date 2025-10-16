@@ -1,16 +1,13 @@
-from os import listdir, getcwd, rename, remove, makedirs
-from os.path import isfile, join, splitext, dirname, realpath
-from random import shuffle
-from typing import List
-
+import os
 import mido
 import tinysoundfont
+import pyaudio as pa
+
+from typing import List
 from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
-from mido import MidiFile, Message
-from muspy import KeySignature
 from muspy.outputs.midi import PITCH_NAMES
 from nanoid import generate
-import pyaudio as pa
+from random import shuffle
 
 from loeric.server.musician import (
     Musician,
@@ -23,8 +20,10 @@ from loeric.server.musician import (
 from loeric.server.synthout import SynthOutput
 from loeric.tune import Tune
 
-track_dir = join(getcwd(), "static/midi")
-temp_dir = join(getcwd(), "static/temp")
+track_dir = os.path.join(os.getcwd(), "static/midi")
+temp_dir = os.path.join(os.getcwd(), "static/temp")
+general_configs_path = os.getcwd() + "/src/loeric/loeric_config/performance"
+specific_configs_path = os.getcwd() + "/src/loeric/loeric_config/webapp_configs"
 
 app = Bottle()
 
@@ -33,11 +32,41 @@ musicians: list[Musician] = []
 names = ["LOERIC"]
 shuffle(names)
 
-instruments = {"Accordion": 21, "Guitar": 24, "Harp": 46, "Flute": 73, "Violin": 40}
-
 synth = tinysoundfont.Synth()
 synth_is_running = False
-soundfont_id = 0
+instruments = {
+    "Accordion": 1,
+    "Guitar": 25,
+    "Piano": 0,
+    "Harp": 46,
+    "Flute": 0,
+    "Violin": 40,
+}
+
+default_soundfont_id = 0
+soundfonts = {}
+
+
+def load_soundfont(path, gain=0):
+    global default_soundfont_id
+    if not os.path.isfile(path):
+        return default_soundfont_id
+    return synth.sfload(path, gain=gain)
+
+
+def load_synths():
+    global soundfonts, default_soundfont_id
+    default_soundfont_id = synth.sfload("static/sound/FluidR3_GM.sf2")
+    soundfonts = {
+        "Accordion": load_soundfont("static/sound/accordion.sf2"),
+        "Guitar": load_soundfont("static/sound/MusicLab_Acoustic_Guitars.sf2"),
+        "Harp": load_soundfont("static/sound/Celtic Harp.sf2", gain=-10),
+        "Flute": load_soundfont("static/sound/FLUTE2.sf2"),
+        "Violin": default_soundfont_id,
+        "Piano": load_soundfont("static/sound/piano.sf2"),
+    }
+
+
 audio_device_index = 0
 tempo = 140
 repetitions = 2
@@ -94,14 +123,15 @@ def key_to_str(key) -> str:
 
 
 def trim_ext(file: str) -> str:
-    return splitext(file)[0]
+    return os.path.splitext(file)[0]
 
 
 def list_tracks() -> List[str]:
     return [
         f
-        for f in listdir(track_dir)
-        if isfile(join(track_dir, f)) and splitext(f)[1].casefold() in filetypes
+        for f in os.listdir(track_dir)
+        if os.path.isfile(os.path.join(track_dir, f))
+        and os.path.splitext(f)[1].casefold() in filetypes
     ]
 
 
@@ -113,9 +143,9 @@ def state():
         "musicians": list(map(lambda m: m.__json__(), musicians)),
         "state": get_state().name,
         "track": {
-            "name": tune.name,
+            "name": os.path.basename(tune._filename),
             "time": f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
-            # "config": tune.config,
+            "config": tune.get_config(),
             "key": key_to_str(tune.key_signature),
             "tempo": tempo,
             "repeats": repetitions,
@@ -127,6 +157,7 @@ def state():
             "trackList": list_tracks(),
             "audio_inputs": list_audio_inputs(),
             "audio_outputs": list_audio_outputs(),
+            "selected_audio_out": audio_device_index,
         },
     }
 
@@ -137,7 +168,13 @@ def __set_track(track: str):
     current_track = track
     track_list = list_tracks()
     if track in track_list:
-        tune = Tune(join(track_dir, track), repeats=repetitions)
+
+        name = os.path.splitext(track.lower().replace("'", "").replace(" ", ""))[0]
+        tune = Tune(
+            os.path.join(track_dir, track),
+            repeats=repetitions,
+            config=f"{specific_configs_path}/tunes/{name}.json",
+        )
 
         for musician in musicians:
             musician.tune = tune
@@ -150,7 +187,7 @@ def play():
         if musician.midi_out is None or isinstance(musician.midi_out, SynthOutput):
             synth.program_select(
                 musician.groover._midi_channel,
-                soundfont_id,
+                soundfonts[musician.instrument],
                 0,
                 instruments[musician.instrument],
             )
@@ -185,7 +222,7 @@ def stop():
 
 @app.put("/api/instrument")
 def instrument_change():
-    global musicians, soundfont_id
+    global musicians
     stop()
     musician_id = request.forms.id
     new_instrument = request.forms.instrument
@@ -194,8 +231,12 @@ def instrument_change():
         if musician.id == musician_id:
             musician.instrument = new_instrument
             for channel in musician.midi_channels:
+
                 synth.program_select(
-                    channel, soundfont_id, 0, instruments[musician.instrument]
+                    channel,
+                    soundfonts[musician.instrument],
+                    0,
+                    instruments[musician.instrument],
                 )
 
     return state()
@@ -229,9 +270,7 @@ def output_change():
                     f"LOERIC out #{musician.id}#", virtual=True
                 )
             elif new_output == "synth":
-                musician.midi_out = SynthOutput(
-                    f"LOERIC Synth {musician.id}", synth, index
-                )
+                musician.midi_out = SynthOutput(f"LOERIC Synth {musician.id}", synth)
                 start_synth()
             else:
                 musician.midi_out = mido.open_output(new_output)
@@ -245,11 +284,13 @@ def input_change():
     musician_id = request.forms.id
     new_input = request.forms.input
 
-    stop()
-    print(new_input)
     for musician in musicians:
         if musician.id == musician_id:
-            if new_input.startswith("audioIn"):
+            musician.stop_threads()
+            if new_input == "no_in":
+                musician.midi_in = None
+                musician.set_input_audio_device(None)
+            elif new_input.startswith("audioIn"):
                 musician.midi_in = None
                 device_index = int(new_input.split(":")[-1])
                 musician.set_input_audio_device(device_index)
@@ -283,6 +324,19 @@ def set_tempo():
     tempo = int(request.forms.tempo)
     for musician in musicians:
         musician.set_tempo(tempo)
+
+    return state()
+
+
+@app.put("/api/drones")
+def set_tempo():
+    global musicians
+    value = request.forms.drones == "True"
+    musician_id = request.forms.id
+    print(value)
+    for musician in musicians:
+        if musician.id == musician_id:
+            musician.droning = value
 
     return state()
 
@@ -343,7 +397,7 @@ def upload_musician_config():
             upload = request.files.get("upload")
             filename = f"musician/{musician.name}"
             path = webapp_config_path(filename)
-            makedirs(dirname(path), exist_ok=True)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
             upload.save(path, overwrite=True)
 
             musician.config = webapp_load_config(filename)
@@ -355,9 +409,9 @@ def upload_musician_config():
 def upload_track_config():
     global tune
     upload = request.files.get("upload")
-    filename = f"tunes/{splitext(tune.name.lower())[0]}"
+    filename = f"tunes/{os.path.splitext(tune.name.lower())[0]}"
     path = webapp_config_path(filename)
-    makedirs(dirname(path), exist_ok=True)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     upload.save(path, overwrite=True)
 
     tune.config = webapp_load_config(filename)
@@ -369,7 +423,7 @@ def upload_track_config():
 @app.post("/api/track")
 def upload_track():
     upload = request.files.get("upload")
-    file = join(track_dir, upload.filename)
+    file = os.path.join(track_dir, upload.filename)
     upload.save(file)
 
     __set_track(track.name + ".mid")
@@ -388,7 +442,7 @@ def get_static(filepath):
 
 
 def init_musician():
-    global musicians, synth, soundfont_id
+    global musicians, synth
 
     loeric_id = generate(
         "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10
@@ -400,20 +454,25 @@ def init_musician():
         loeric_id=loeric_id,
         tune=tune,
         instrument=next(iter(instruments)),
-        midi_out=SynthOutput(f"LOERIC Synth {loeric_id}", synth, 0),
+        midi_out=SynthOutput(f"LOERIC Synth {loeric_id}", synth),
     )
 
     for channel in musician.midi_channels:
-        synth.program_select(channel, soundfont_id, 0, instruments[musician.instrument])
+        synth.program_select(
+            channel,
+            soundfonts[musician.instrument],
+            0,
+            instruments[musician.instrument],
+        )
 
     musicians.append(musician)
     start_synth()
 
 
 def start_server():
-    global audio_device_index, soundfont_id, synth_is_running
-    soundfont_id = synth.sfload("static/sound/FluidR3_GM.sf2")
+    global audio_device_index, synth_is_running
 
+    load_synths()
     audio_device_index = pa.PyAudio().get_default_output_device_info()["index"]
     track_list = list_tracks()
     if len(track_list) > 0:

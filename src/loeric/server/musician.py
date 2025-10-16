@@ -25,9 +25,6 @@ faulthandler.enable()
 
 # bad code goes here
 
-general_configs_path = os.getcwd() + "/src/loeric/loeric_config/performance"
-specific_configs_path = os.getcwd() + "/src/loeric/loeric_config/webapp_configs"
-
 
 class State(Enum):
     STOPPED = 0
@@ -90,8 +87,7 @@ class Musician:
         self.id = loeric_id
         self._instrument = instrument
         self._midi_out = midi_out
-
-        self._midi_in = None
+        self._droning = False
 
         self.sync = EchoPort(f"LOERIC Sync #{loeric_id}#")
         self.seed = randint(0, 1000000)
@@ -101,7 +97,9 @@ class Musician:
         self._intensity_control = 49
         self._human_impact_control = 50
         self._invert = False
-        self._responsiveness = 0.75
+        self._responsiveness = 0.8
+
+        self._midi_in = None
         self._device_index = None
 
         self.tune = tune
@@ -123,18 +121,14 @@ class Musician:
 
     def set_input_audio_device(self, device_index):
         self._device_index = device_index
+        if self._device_index is not None:
+            self.start_listener()
 
     def start_listener(self):
         p = pa.PyAudio()
         info = p.get_device_info_by_index(self._device_index)
         name = info["name"]
         print(f"Connecting to device {self._device_index}: {name}")
-
-        for i in range(len(self._controls)):
-            if self._controls[i]["control"] == self._intensity_control:
-                self._controls[i]["value"] = 0.5
-            elif self._controls[i]["control"] == self._human_impact_control:
-                self._controls[i]["value"] = 0.5
 
         # create listening thread
         self._listener_thread = lp.ListenerThread(
@@ -203,19 +197,17 @@ class Musician:
         self._listener_thread = None
         self._control_thread = None
         ################### configs ###########################
-        name = splitext(self.tune.name.lower().replace("'", "").replace(" ", ""))[0]
-        config = f"{specific_configs_path}/tunes/{name}.json"
+        config = self.tune.config
 
         additional_configs = [
-            f"{general_configs_path}/instrument/{self.instrument.lower()}.json"
+            f"{ls.server.specific_configs_path}/instrument/{self.instrument.lower()}.json"
         ]
         if not os.path.isfile(config):
             print(f"Could not load {config}")
             additional_configs.extend(
                 [
-                    f"{general_configs_path}/tune_type/{self.tune.tune_type}.json",
-                    f"{general_configs_path}/drone/on.json",
-                    # f"{specific_configs_path}/musicians/{self.name.lower()}.json",
+                    f"{ls.server.general_configs_path}/tune_type/{self.tune.tune_type}.json",
+                    # f"{ls.server.specific_configs_path}/musicians/{self.name.lower()}.json",
                 ]
             )
             config = None
@@ -322,9 +314,9 @@ class Musician:
         if self.player is not None:
             self.player.set_song_time(self.groover._tune.position_time(0))
 
+    def stop_threads(self):
         if self._listener_thread is not None:
             self._listener_thread.stop = True
-
         if self._control_thread is not None:
             self._control_thread.stop = True
 
@@ -348,13 +340,24 @@ class Musician:
             """
             global _play_event, _state
 
+            int_value = 0.5
+            hi_value = 0.5
+
+            if self._midi_in is None and self._device_index is None:
+                hi_value = 0
+
+            for i in range(len(self._controls)):
+                if self._controls[i]["control"] == self._intensity_control:
+                    self._controls[i]["value"] = int_value
+                    self.groover.set_control_value(self._intensity_control, int_value)
+                elif self._controls[i]["control"] == self._human_impact_control:
+                    self._controls[i]["value"] = hi_value
+                    self.groover.set_control_value(self._human_impact_control, hi_value)
+
             player_t = threading.Thread(
                 target=self.player_loop, args=[self.player, self.groover]
             )
             player_t.start()
-
-            if self._device_index is not None:
-                self.start_listener()
 
             # wait for start
             _play_event.wait()
@@ -434,6 +437,15 @@ class Musician:
             print("Player thread terminated.")
             raise e
 
+    @property
+    def droning(self):
+        return self._droning
+
+    @droning.setter
+    def droning(self, value):
+        self._droning = value
+        self.groover.set_droning(self._droning)
+
     def __json__(self):
         out = self._midi_out
         if isinstance(self._midi_out, BaseOutput):
@@ -446,6 +458,7 @@ class Musician:
             "name": self.name,
             "midiOut": out,
             "midiIn": midi_in,
+            "audioIn": f"audioIn:{self._device_index}",
             "instrument": self.instrument,
             "controls": self._controls,
         }

@@ -1,4 +1,5 @@
 import loeric.loeric_utils as lu
+import time
 import mido
 import argparse
 
@@ -28,11 +29,19 @@ def main() -> None:
     inport, outport = lu.get_ports(
         input_number=args.input, output_number=args.output, list_ports=False
     )
+
+    if outport is None:
+        human_id = int(time.time())
+        outport = mido.open_output(f"HUMAN out #{human_id}#", virtual=True)
+    else:
+        outport = mido.open_output(outport)
+
     if inport is None and outport is None:
         return
     intensity = 64
 
-    with mido.open_output(outport) as out:
+    try:
+        print("Listening ...")
         with mido.open_input(inport) as port:
             for msg in port:
                 message = msg.copy()
@@ -43,7 +52,7 @@ def main() -> None:
                     intensity += args.responsive * message.velocity
 
                     print(f"INT:{round(intensity/127, 2)}")
-                    out.send(
+                    outport.send(
                         mido.Message(
                             "control_change",
                             channel=0,
@@ -52,4 +61,6 @@ def main() -> None:
                         )
                     )
 
-                out.send(message)
+                outport.send(message)
+    except:
+        outport.close()

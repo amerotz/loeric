@@ -9,8 +9,6 @@
 
 	let base = "http://localhost:8080"
 
-	export let audioOutput : string
-
 	onMount(refresh)
 	let poller = 0
 
@@ -70,26 +68,38 @@
 
 <div class="container m-auto my-8">
 	{#if data && data.options.trackList}
-		<div class="flex justify-between items-center bg-gray-950 py-3 px-6 rounded-xl">
-			<el-select class="flex w-1/2 gap-5 items-center" onchange={trackChange}>
-				<button type="button" class="flex w-full items-center gap-2"> 
-					<el-selectedcontent class="flex w-full items-center justify-between cursor-default rounded-md bg-transparent text-left hover:text-primary text-white">
-						<div class="text-3xl w-5/6">{data.track.name.split(".")[0]}</div>
-						<div class="opacity-70 text-xl">{data.track.name.split(".")[1].toUpperCase()}</div>
+		<div class="flex justify-between items-center bg-gray-950 py-3 px-6 shadow-lg rounded-xl">
+			<el-select onchange={trackChange} class="w-1/2 mt-2 block">
+				<button type="button" class="grid w-full cursor-default grid-cols-1 rounded-md bg-transparent py-1.5 pr-2 pl-3 text-left text-white sm:text-sm/6">
+					<el-selectedcontent class="col-start-1 row-start-1">
+
+						<div class="flex items-center justify-between  flex justify-between items-center gap-3 pr-6">
+							<div class="text-3xl">{data.track.name.split(".")[0]}</div>
+							<div class="opacity-70 text-xl">{data.track.name.split(".")[1].toUpperCase()}</div>
+						</div>
+
 					</el-selectedcontent>
-						<svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5 justify-self-end text-gray-500 sm:size-4">
-							<path d="M5.22 10.22a.75.75 0 0 1 1.06 0L8 11.94l1.72-1.72a.75.75 0 1 1 1.06 1.06l-2.25 2.25a.75.75 0 0 1-1.06 0l-2.25-2.25a.75.75 0 0 1 0-1.06ZM10.78 5.78a.75.75 0 0 1-1.06 0L8 4.06 6.28 5.78a.75.75 0 0 1-1.06-1.06l2.25-2.25a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1 0 1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
-						</svg>
+					<svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="col-start-1 row-start-1 size-5 self-center justify-self-end text-gray-500 sm:size-4">
+						<path d="M5.22 10.22a.75.75 0 0 1 1.06 0L8 11.94l1.72-1.72a.75.75 0 1 1 1.06 1.06l-2.25 2.25a.75.75 0 0 1-1.06 0l-2.25-2.25a.75.75 0 0 1 0-1.06ZM10.78 5.78a.75.75 0 0 1-1.06 0L8 4.06 6.28 5.78a.75.75 0 0 1-1.06-1.06l2.25-2.25a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1 0 1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+					</svg>
 				</button>
-				<el-options anchor="bottom start" class="
-					w-1/2 bg-gray-950 text-white rounded-xl py-3 px-6">
+
+				<el-options anchor="bottom start" popover class="max-h-110 w-(--button-width) overflow-auto rounded-md bg-gray-950 py-1 text-white shadow-lg [--anchor-gap:--spacing(1)] data-leave:transition data-leave:transition-discrete data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+
 					{#each data.options.trackList as file}
-						<el-option class="
-							relative block cursor-default py-2 pr-9 pl-3 select-none 
-hover:text-primary
-							flex w-full items-baselins-last justify-between group/option" value={file}>
-							<div class="text-3xl w-5/6">{file.split(".")[0]}</div>
-							<div class="opacity-70 text-xl">{file.split(".")[1].toUpperCase()}</div>
+						<el-option value={file} class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary focus:text-white focus:outline-hidden">
+
+							<div class="flex items-center justify-between  flex justify-between items-center gap-3 pr-6">
+								<div class="text-3xl">{file.split(".")[0]}</div>
+								<div class="opacity-70 text-xl">{file.split(".")[1].toUpperCase()}</div>
+							</div>
+
+							<span class="absolute inset-y-0 right-0 flex items-center pr-4 text-primary group-not-aria-selected/option:hidden group-focus/option:text-white in-[el-selectedcontent]:hidden">
+								<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+									<path d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" fill-rule="evenodd" />
+								</svg>
+							</span>
+
 						</el-option>
 					{/each}
 				</el-options>
@@ -123,11 +133,9 @@ hover:text-primary
 		<!--
 		<JSONEditorBar bind:json={data.track.config} onUpload={(form) => apiUpload('track/config', form)}></JSONEditorBar>
 		-->
-		<div class="grid grid-cols-1 gap-4 mt-8">
+		<div class="grid grid-cols-1 gap-4 mt-8 justify-center">
 			{#each data.musicians as musician}
-				<div class="p-3 rounded-2xl bg-gray-800 flex flex-col gap-2">
 					<Musician musician={musician} options={data.options} apiPut={apiPut} apiUpload={apiUpload}/>
-				</div>
 			{/each}
 			<!--<div class="self-center justify-self-center">
 				<button class="material-symbols-outlined" onclick={() => apiGet('add_musician')}>add</button>
@@ -139,10 +147,7 @@ hover:text-primary
 					<select onchange={audioOutputChange}>
 						{#each Object.keys(data.options.audio_outputs) as output}
 							<option value={"audioOut:" + data.options.audio_outputs[output]}
-								selected={audioOutput=== "audioOut:" + data.options.audio_outputs[output]}>{output}</option>
-						{/each}
-						{#each data.options.output as output}
-							<option value={output} selected={audioOutput=== output}>{output}</option>
+								selected={data.options.selected_audio_out ===  data.options.audio_outputs[output]}>{output}</option>
 						{/each}
 					</select>
 				</label>
