@@ -3,7 +3,7 @@
 		"var_roll_2_prob": 0,
         "var_velocity_weight": [0,-2,1,1,1],
 		"var_legato_pattern": {
-			"mean": [1,0],
+			"mean": [1,0.8],
 			"std": [0,0.1],
 			"std_scale": 1,
 			"period": 0.5,

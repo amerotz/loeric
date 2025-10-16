@@ -87,7 +87,7 @@ class Musician:
         self.id = loeric_id
         self._instrument = instrument
         self._midi_out = midi_out
-        self._droning = False
+        self._droning = True
 
         self.sync = EchoPort(f"LOERIC Sync #{loeric_id}#")
         self.seed = randint(0, 1000000)
@@ -102,7 +102,11 @@ class Musician:
         self._midi_in = None
         self._device_index = None
 
-        self.tune = tune
+        self._slow_start = False
+        self._slow_end = False
+        self._tune = tune
+
+        self.create_all()
 
     def player_loop(self, player, groover):
 
@@ -188,6 +192,24 @@ class Musician:
         self._instrument = value
         self.create_all()
 
+    @property
+    def slow_start(self):
+        return self._slow_start
+
+    @slow_start.setter
+    def slow_start(self, value):
+        self._slow_start = value
+        self.create_all()
+
+    @property
+    def slow_end(self):
+        return self._slow_end
+
+    @slow_end.setter
+    def slow_end(self, value):
+        self._slow_end = value
+        self.create_all()
+
     def set_tempo(self, tempo):
         self._tempo = tempo
         self.groover.set_tempo(tempo)
@@ -226,6 +248,8 @@ class Musician:
             loeric_id=self.id,
             bpm=self._tempo,
             human_impact=1,
+            slow_start=self._slow_start,
+            slow_end=self._slow_end,
             verbose=3,
         )
         ################### controls ###########################
@@ -313,6 +337,8 @@ class Musician:
         self.groover.jump_to_pos(0)
         if self.player is not None:
             self.player.set_song_time(self.groover._tune.position_time(0))
+        if self._midi_out is not None:
+            self._midi_out.panic()
 
     def stop_threads(self):
         if self._listener_thread is not None:
@@ -437,15 +463,6 @@ class Musician:
             print("Player thread terminated.")
             raise e
 
-    @property
-    def droning(self):
-        return self._droning
-
-    @droning.setter
-    def droning(self, value):
-        self._droning = value
-        self.groover.set_droning(self._droning)
-
     def __json__(self):
         out = self._midi_out
         if isinstance(self._midi_out, BaseOutput):
@@ -461,4 +478,8 @@ class Musician:
             "audioIn": f"audioIn:{self._device_index}",
             "instrument": self.instrument,
             "controls": self._controls,
+            "droning": self.groover._config["drone"]["active"],
+            "slow_start": self.groover._config["tempo_control"]["slow_start"],
+            "slow_end": self.groover._config["tempo_control"]["slow_end"],
+            "transpose": self.groover._config["values"]["transpose"],
         }

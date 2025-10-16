@@ -329,20 +329,45 @@ def set_tempo():
 
 
 @app.put("/api/drones")
-def set_tempo():
+def set_drones():
     global musicians
-    value = request.forms.drones == "True"
+    value = request.forms.drones == "true"
     musician_id = request.forms.id
-    print(value)
     for musician in musicians:
         if musician.id == musician_id:
-            musician.droning = value
+            musician.groover.set_droning(value)
+
+    return state()
+
+
+@app.put("/api/slow_start")
+def set_slow_start():
+    stop()
+    global musicians
+    value = request.forms.slow_start == "true"
+    musician_id = request.forms.id
+    for musician in musicians:
+        if musician.id == musician_id:
+            musician.slow_start = value
+
+    return state()
+
+
+@app.put("/api/slow_end")
+def set_slow_end():
+    global musicians
+    stop()
+    value = request.forms.slow_end == "true"
+    musician_id = request.forms.id
+    for musician in musicians:
+        if musician.id == musician_id:
+            musician.slow_end = value
 
     return state()
 
 
 @app.put("/api/repeat")
-def set_tempo():
+def set_repeat():
     global repetitions
     stop()
     repetitions = int(request.forms.repeats)
