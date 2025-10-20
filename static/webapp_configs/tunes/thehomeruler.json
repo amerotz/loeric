@@ -1,0 +1,36 @@
+{
+    "contours": {
+        "drone": {
+            "human_impact_scale": 1.0
+        },
+        "velocity": {
+            "human_impact_scale": 0.0
+        },
+        "velocity_pattern": {
+            "human_impact_scale": 0.0
+        },
+        "tempo": {
+            "human_impact_scale": 0
+        },
+        "swing": {
+            "human_impact_scale": 0
+        },
+        "tempo_pattern": {
+            "human_impact_scale": 0.0
+        },
+        "ornament": {
+            "human_impact_scale": 0.0
+        },
+        "legato": {
+            "human_impact_scale": 0.0
+        }
+    },
+    "control_2_contour": {
+        "drones": {
+            "control": 49,
+            "contours": [
+                "drone_intensity"
+            ]
+        }
+    }
+}
