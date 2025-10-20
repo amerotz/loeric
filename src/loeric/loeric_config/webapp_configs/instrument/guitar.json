@@ -360,26 +360,26 @@
         "active": true,
         "threshold": 0.5,
         "velocity_multiplier": 0.9,
-        "strings": [
+"strings": [
             38,
             45,
             50,
             55,
             59,
-            64
+            64 
         ],
-        "strings_min": 1,
-        "strings_max": 2,
-        "free_strings_min": 0,
-        "free_strings_max": 3,
         "free_strings": [
             38,
             45,
             50,
             55,
             59,
-            64
+            64 
         ],
+        "strings_min": 1,
+        "strings_max": 2,
+        "free_strings_min": 0,
+        "free_strings_max": 3,
         "break_ornaments": false,
         "delay_range": 0.01
     }

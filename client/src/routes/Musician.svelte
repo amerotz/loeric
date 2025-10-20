@@ -9,6 +9,7 @@
 	export let droning = musician.droning
 	export let slow_start = musician.slow_start
 	export let slow_end = musician.slow_end
+	export let transpose = musician.transpose
 
 	async function inputChange(event: Event) {
 		const select = event.target as HTMLSelectElement
@@ -33,6 +34,9 @@
 	}
 	async function endChange(event: Event) {
 		await apiPut("slow_end", {id: musician.id, slow_end: slow_end})
+	}
+	async function transposeChange(event: Event) {
+		await apiPut("transpose", {id: musician.id, transpose: transpose})
 	}
 
 	async function controlChange(event: Event) {
@@ -98,15 +102,15 @@
 					</label>
 					<label class="flex flex-col gap-3">
 						<label>
-						<div class="flex gap-3 justify-between">
-							<span class="opacity-60 font-bold">DRONES</span>
-							<input class="col-span-1" type="checkbox" bind:checked={droning} onchange={droningChange}>
-						</div>
+							<div class="flex gap-3 justify-between">
+								<span class="opacity-60 font-bold">DRONES</span>
+								<input class="col-span-1" type="checkbox" bind:checked={droning} onchange={droningChange}>
+							</div>
 							<span class="">Toggles LOERIC's accompanying system.</span>
 						</label>
 						<label class="flex gap-3 justify-between">
 							<span class="opacity-60 font-bold ">TRANSPOSE</span>
-							<input class="col-span-1" type="number" onchange={transposeChange} value=0 min="-12" max="12"/>
+							<input class="col-span-1" type="number" onchange={transposeChange} bind:value={transpose} min="-12" max="12"/>
 						</label>
 						<label class="flex gap-3 justify-between">
 							<span class="opacity-60 font-bold ">SLOW START</span>
@@ -115,6 +119,7 @@
 						<label class="flex gap-3 justify-between">
 							<span class="opacity-60 font-bold ">SLOW END</span>
 							<input class="col-span-1"type="checkbox" bind:checked={slow_end} onchange={endChange}>
+						</label>
 						</label>
 
 					</div>

@@ -214,7 +214,9 @@ class ScoreElement:
     def duration(self, value):
         self._duration = TimeDelta(eighth_duration=value)
         if self._duration.eighth_duration < 0:
-            raise Exception("Duration cannot be negative")
+            self._duration = TimeDelta(eighth_duration=0)
+            print("[WARN] Duration cannot be negative!")
+            # raise Exception("Duration cannot be negative")
 
 
 class Pause(ScoreElement):

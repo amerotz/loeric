@@ -19,7 +19,8 @@ def merge_configs(original, new_config):
                 base["contours"][c]["recipe"] = new_config["contours"][c]["recipe"]
 
     if "control_2_contour" in new_config:
-        base["control_2_contour"] = new_config["control_2_contour"]
+        if len(new_config["control_2_contour"]) != 0:
+            base["control_2_contour"] = new_config["control_2_contour"]
 
     return base
 

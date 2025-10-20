@@ -235,7 +235,6 @@ class Groover:
 
         self._midi_channel = self._config["values"]["midi_channel"]
         self._drone_midi_channel = self._config["drone"]["midi_channel"]
-        self._transpose_semitones = self._config["values"]["transpose"]
         # table for pitch errors
         self._pitch_errors = defaultdict(int)
 
@@ -450,6 +449,7 @@ class Groover:
                 pass
 
             if msg.is_cc():
+                print(msg)
                 self.set_control_value(msg.control, msg.value / 127)
 
         return callback
@@ -615,7 +615,7 @@ class Groover:
             note.channel = self._midi_channel
 
             # transpsose
-            note.transpose(self._transpose_semitones)
+            note.transpose(self._config["values"]["transpose"])
 
             # change intonation
             note._pitch += self._intonation[int(note.pitch)] + self._config["values"][
@@ -825,7 +825,7 @@ class Groover:
 
             for drone in drones:
                 if self._config["drone"]["transpose"]:
-                    drone += self._transpose_semitones
+                    drone += self._config["values"]["transpose"]
 
                 # delay = random.uniform(0, self._config["drone"]["delay_range"])
 
@@ -855,7 +855,7 @@ class Groover:
         # figure out what note is allowed depending on harmony
         harmony = self._contour_values["harmony"]
         if not self._config["drone"]["transpose"]:
-            harmony += self._transpose_semitones
+            harmony += self._config["values"]["transpose"]
 
         harmony = int(harmony % 12)
 
@@ -879,7 +879,8 @@ class Groover:
         if self._config["drone"]["allow_root"]:
             allowed_harmony = np.append(
                 allowed_harmony,
-                (24 + self._tune.root + self._transpose_semitones - harmony) % 12,
+                (24 + self._tune.root + self._config["values"]["transpose"] - harmony)
+                % 12,
             )
 
         index = np.array(index)
@@ -981,7 +982,7 @@ class Groover:
             w = 1 - w
 
         end_pitch = random.choices(pitches, weights=w, k=1)[0]
-        end_pitch += self._transpose_semitones
+        end_pitch += self._config["values"]["transpose"]
 
         # create msgs
         note = tu.Note(

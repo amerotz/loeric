@@ -17,7 +17,7 @@ from loeric.server.musician import (
     pause_all,
     State,
 )
-from loeric.server.synthout import SynthOutput
+import loeric.server.synthout as lss
 from loeric.tune import Tune
 
 track_dir = os.path.join(os.getcwd(), "static/midi")
@@ -32,39 +32,73 @@ musicians: list[Musician] = []
 names = ["LOERIC"]
 shuffle(names)
 
-synth = tinysoundfont.Synth()
+synth = None  # , tinysoundfont.Synth()
 synth_is_running = False
-instruments = {
-    "Accordion": 1,
-    "Guitar": 25,
-    "Piano": 0,
-    "Harp": 46,
-    "Flute": 0,
-    "Violin": 40,
-}
-
-default_soundfont_id = 0
-soundfonts = {}
+soundfonts = []
 
 
-def load_soundfont(path, gain=0):
-    global default_soundfont_id
-    if not os.path.isfile(path):
-        return default_soundfont_id
-    return synth.sfload(path, gain=gain)
-
-
-def load_synths():
-    global soundfonts, default_soundfont_id
+def load_soundfonts():
+    global synth, soundfonts
     default_soundfont_id = synth.sfload("static/sound/FluidR3_GM.sf2")
     soundfonts = {
-        "Accordion": load_soundfont("static/sound/accordion.sf2"),
-        "Guitar": load_soundfont("static/sound/MusicLab_Acoustic_Guitars.sf2"),
-        "Harp": load_soundfont("static/sound/Celtic Harp.sf2", gain=-10),
-        "Flute": load_soundfont("static/sound/FLUTE2.sf2"),
-        "Violin": default_soundfont_id,
-        "Piano": load_soundfont("static/sound/piano.sf2"),
+        "Accordion": lss.SynthSound(
+            name="Accordion",
+            path="static/sound/accordion.sf2",
+            program=1,
+            config=f"{specific_configs_path}/instrument/accordion.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=21,
+            default_config=f"{specific_configs_path}/instrument/default_accordion.json",
+        ),
+        "Guitar": lss.SynthSound(
+            name="Guitar",
+            path="static/sound/MusicLab_Acoustic_Guitars.sf2",
+            program=25,
+            config=f"{specific_configs_path}/instrument/guitar.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=25,
+            default_config=f"{specific_configs_path}/instrument/guitar.json",
+        ),
+        "Piano": lss.SynthSound(
+            name="Piano",
+            path="static/sound/piano.sf2",
+            program=0,
+            config=f"{specific_configs_path}/instrument/piano.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=0,
+            default_config=f"{specific_configs_path}/instrument/piano.json",
+        ),
+        "Harp": lss.SynthSound(
+            name="Harp",
+            path="static/sound/Celtic Harp.sf2",
+            program=46,
+            config=f"{specific_configs_path}/instrument/harp.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=46,
+            default_config=f"{specific_configs_path}/instrument/harp.json",
+        ),
+        "Flute": lss.SynthSound(
+            name="Flute",
+            path="static/sound/FLUTE2.sf2",
+            program=0,
+            config=f"{specific_configs_path}/instrument/flute.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=73,
+            default_config=f"{specific_configs_path}/instrument/default_flute.json",
+        ),
+        "Violin": lss.SynthSound(
+            name="Violin",
+            path="static/sound/violin.sf2",
+            program=0,
+            config=f"{specific_configs_path}/instrument/violin.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=40,
+            default_config=f"{specific_configs_path}/instrument/violin.json",
+        ),
     }
+
+    for sound in soundfonts.values():
+        sound.load(synth)
 
 
 audio_device_index = 0
@@ -127,12 +161,14 @@ def trim_ext(file: str) -> str:
 
 
 def list_tracks() -> List[str]:
-    return [
-        f
-        for f in os.listdir(track_dir)
-        if os.path.isfile(os.path.join(track_dir, f))
-        and os.path.splitext(f)[1].casefold() in filetypes
-    ]
+    return sorted(
+        [
+            f
+            for f in os.listdir(track_dir)
+            if os.path.isfile(os.path.join(track_dir, f))
+            and os.path.splitext(f)[1].casefold() in filetypes
+        ]
+    )
 
 
 @app.get("/api/state")
@@ -153,7 +189,7 @@ def state():
         "options": {
             "inputs": mido.get_input_names(),
             "outputs": mido.get_output_names(),
-            "instruments": list(instruments.keys()),
+            "instruments": list(soundfonts.keys()),
             "trackList": list_tracks(),
             "audio_inputs": list_audio_inputs(),
             "audio_outputs": list_audio_outputs(),
@@ -184,15 +220,15 @@ def __set_track(track: str):
 def play():
     global synth_is_running, musicians
     for index, musician in enumerate(musicians):
-        if musician.midi_out is None or isinstance(musician.midi_out, SynthOutput):
+        if musician.midi_out is None or isinstance(musician.midi_out, lss.SynthOutput):
             synth.program_select(
                 musician.groover._midi_channel,
-                soundfonts[musician.instrument],
+                soundfonts[musician.instrument].soundfont_id,
                 0,
-                instruments[musician.instrument],
+                soundfonts[musician.instrument].program,
             )
             if musician.midi_out is None:
-                musician.midi_out = SynthOutput(
+                musician.midi_out = lss.SynthOutput(
                     f"LOERIC out #{musician.id}#", synth, index
                 )
             else:
@@ -229,14 +265,14 @@ def instrument_change():
 
     for musician in musicians:
         if musician.id == musician_id:
-            musician.instrument = new_instrument
+            musician.instrument = soundfonts[new_instrument]
             for channel in musician.midi_channels:
 
                 synth.program_select(
                     channel,
-                    soundfonts[musician.instrument],
+                    soundfonts[musician.instrument].soundfont_id,
                     0,
-                    instruments[musician.instrument],
+                    soundfonts[musician.instrument].program,
                 )
 
     return state()
@@ -270,7 +306,9 @@ def output_change():
                     f"LOERIC out #{musician.id}#", virtual=True
                 )
             elif new_output == "synth":
-                musician.midi_out = SynthOutput(f"LOERIC Synth {musician.id}", synth)
+                musician.midi_out = lss.SynthOutput(
+                    f"LOERIC Synth {musician.id}", synth
+                )
                 start_synth()
             else:
                 musician.midi_out = mido.open_output(new_output)
@@ -284,9 +322,9 @@ def input_change():
     musician_id = request.forms.id
     new_input = request.forms.input
 
+    musician.stop_threads()
     for musician in musicians:
         if musician.id == musician_id:
-            musician.stop_threads()
             if new_input == "no_in":
                 musician.midi_in = None
                 musician.set_input_audio_device(None)
@@ -312,7 +350,13 @@ def add_musician():
     loeric_id = "WebApp"
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
-    musician = Musician(unused[0], loeric_id, tune, next(iter(instruments)))
+    instrument_key = next(iter(soundfonts))
+    musician = Musician(
+        name=unused[0],
+        loeric_id=loeric_id,
+        tune=tune,
+        synth_sound=soundfonts[instrument_key],
+    )
     musicians.append(musician)
 
     return state()
@@ -362,6 +406,19 @@ def set_slow_end():
     for musician in musicians:
         if musician.id == musician_id:
             musician.slow_end = value
+
+    return state()
+
+
+@app.put("/api/transpose")
+def set_transpose():
+    global musicians
+    value = int(request.forms.transpose)
+    print(value)
+    musician_id = request.forms.id
+    for musician in musicians:
+        if musician.id == musician_id:
+            musician.groover.set_transpose(value)
 
     return state()
 
@@ -474,20 +531,21 @@ def init_musician():
     )
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
+    instrument_key = next(iter(soundfonts))
     musician = Musician(
         name=unused[0],
         loeric_id=loeric_id,
         tune=tune,
-        instrument=next(iter(instruments)),
-        midi_out=SynthOutput(f"LOERIC Synth {loeric_id}", synth),
+        synth_sound=soundfonts[instrument_key],
+        midi_out=lss.SynthOutput(f"LOERIC Synth {loeric_id}", synth),
     )
 
     for channel in musician.midi_channels:
         synth.program_select(
             channel,
-            soundfonts[musician.instrument],
+            soundfonts[musician.instrument].soundfont_id,
             0,
-            instruments[musician.instrument],
+            soundfonts[musician.instrument].program,
         )
 
     musicians.append(musician)
@@ -495,9 +553,11 @@ def init_musician():
 
 
 def start_server():
-    global audio_device_index, synth_is_running
+    global audio_device_index, synth, synth_is_running
 
-    load_synths()
+    synth = tinysoundfont.Synth()
+    load_soundfonts()
+
     audio_device_index = pa.PyAudio().get_default_output_device_info()["index"]
     track_list = list_tracks()
     if len(track_list) > 0:

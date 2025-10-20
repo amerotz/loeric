@@ -80,12 +80,12 @@ class Musician:
         name: str,
         loeric_id: str,
         tune: tu.Tune,
-        instrument: str,
+        synth_sound: str,
         midi_out: BaseOutput | None = None,
     ):
         self.name = name
         self.id = loeric_id
-        self._instrument = instrument
+        self._synth_sound = synth_sound
         self._midi_out = midi_out
         self._droning = True
 
@@ -185,11 +185,11 @@ class Musician:
 
     @property
     def instrument(self):
-        return self._instrument
+        return self._synth_sound.name
 
     @instrument.setter
     def instrument(self, value):
-        self._instrument = value
+        self._synth_sound = value
         self.create_all()
 
     @property
@@ -221,9 +221,7 @@ class Musician:
         ################### configs ###########################
         config = self.tune.config
 
-        additional_configs = [
-            f"{ls.server.specific_configs_path}/instrument/{self.instrument.lower()}.json"
-        ]
+        additional_configs = [self._synth_sound.config]
         if not os.path.isfile(config):
             print(f"Could not load {config}")
             additional_configs.extend(

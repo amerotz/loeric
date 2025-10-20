@@ -1,22 +1,78 @@
 import tinysoundfont
 from mido.ports import BaseOutput
+import os
+
+
+class SynthSound:
+
+    def __init__(
+        self,
+        name,
+        path,
+        program,
+        config,
+        default_soundfont_id=0,
+        default_program=0,
+        default_config=None,
+    ):
+
+        self._name = name
+        self._path = path
+        self._program = program
+        self._soundfont_id = None
+        self._is_default = True
+        self._config = config
+
+        self._default_soundfont_id = default_soundfont_id
+        self._default_program = default_program
+        self._default_config = default_config
+
+    def load(self, synth):
+        if not os.path.isfile(self._path):
+            self._is_default = True
+        else:
+            self._is_default = False
+            self._soundfont_id = synth.sfload(self._path)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def soundfont_id(self):
+        if self._is_default:
+            return self._default_soundfont_id
+        else:
+            return self._soundfont_id
+
+    @property
+    def program(self):
+        if self._is_default:
+            return self._default_program
+        else:
+            return self._program
+
+    @property
+    def config(self):
+        if self._is_default:
+            return self._default_config
+        else:
+            return self._config
 
 
 class SynthOutput(BaseOutput):
     def __init__(self, name: str, synth: tinysoundfont.Synth, **kwargs):
-        self.synth = synth
+        self._synth = synth
         BaseOutput.__init__(self, name=name, **kwargs)
 
     def _send(self, msg):
         if msg.type == "note_on":
-            self.synth.noteon(msg.channel, msg.note, msg.velocity)
+            self._synth.noteon(msg.channel, msg.note, msg.velocity)
         elif msg.type == "note_off":
-            self.synth.noteoff(msg.channel, msg.note)
+            self._synth.noteoff(msg.channel, msg.note)
         elif msg.type == "pitchwheel":
-            self.synth.pitchbend(msg.channel, msg.pitch + 8192)
+            self._synth.pitchbend(msg.channel, msg.pitch + 8192)
         elif msg.type == "control_change":
-            self.synth.control_change(msg.channel, msg.control, msg.value)
+            self._synth.control_change(msg.channel, msg.control, msg.value)
         else:
             print("Unknown message type: ", msg.type)
-
-    pass
