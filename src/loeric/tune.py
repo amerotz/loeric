@@ -757,7 +757,7 @@ class Tune:
 
         # arange songpos messages independently
         self._position_times = np.arange(
-            start=0,
+            start=-self._first_bar_length,
             stop=self._score_end_time.eighth_duration,
             step=self._sync_interval.eighth_duration,
         )

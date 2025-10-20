@@ -79,6 +79,6 @@
         "chords_per_bar": 2
     },
     "drone": {
-        "notes_per_bar": [6,2,1]
+        "notes_per_bar": [6, 2, 1]
     }
 }

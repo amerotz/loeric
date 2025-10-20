@@ -64,7 +64,7 @@
 	}
 
 </script>
-<svelte:head><title>Loeric</title></svelte:head>
+<svelte:head><title>LOERIC</title></svelte:head>
 
 <div class="container m-auto my-8">
 	{#if data && data.options.trackList}
@@ -75,7 +75,12 @@
 
 						<div class="flex items-center justify-between  flex justify-between items-center gap-3 pr-6">
 							<div class="text-3xl">{data.track.name.split(".")[0]}</div>
-							<div class="opacity-70 text-xl">{data.track.name.split(".")[1].toUpperCase()}</div>
+							<div class="flex gap-3 items-center">
+								{#if data.options.customized_tracks.includes(data.track.name)}
+									<svg aria-hidden="true" clip-rule="evenodd" fill-rule="evenodd" xmlns="http://www.w3.org/2000/svg" class="text-gray-500" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+								{/if}
+								<div class="opacity-70 text-xl">{data.track.name.split(".")[1].toUpperCase()}</div>
+							</div>
 						</div>
 
 					</el-selectedcontent>
@@ -91,7 +96,12 @@
 
 							<div class="flex items-center justify-between  flex justify-between items-center gap-3 pr-6">
 								<div class="text-3xl">{file.split(".")[0]}</div>
-								<div class="opacity-70 text-xl">{file.split(".")[1].toUpperCase()}</div>
+								<div class="flex gap-3 items-center">
+								{#if data.options.customized_tracks.includes(file)}
+									<svg aria-hidden="true" clip-rule="evenodd" fill-rule="evenodd" xmlns="http://www.w3.org/2000/svg" class="text-gray-500" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+								{/if}
+								<div class="opacity-70 text-xl">{data.track.name.split(".")[1].toUpperCase()}</div>
+							</div>
 							</div>
 
 							<span class="absolute inset-y-0 right-0 flex items-center pr-4 text-primary group-not-aria-selected/option:hidden group-focus/option:text-white in-[el-selectedcontent]:hidden">
@@ -135,7 +145,7 @@
 		-->
 		<div class="grid grid-cols-1 gap-4 mt-8 justify-center">
 			{#each data.musicians as musician}
-					<Musician musician={musician} options={data.options} apiPut={apiPut} apiUpload={apiUpload}/>
+				<Musician musician={musician} options={data.options} apiPut={apiPut} apiUpload={apiUpload}/>
 			{/each}
 			<!--<div class="self-center justify-self-center">
 				<button class="material-symbols-outlined" onclick={() => apiGet('add_musician')}>add</button>

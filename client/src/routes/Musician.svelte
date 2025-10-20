@@ -88,82 +88,96 @@
 		<div class="flex-1 font-semibold">{musician.name}</div> <!--<div class="opacity-60 font-light">Musician</div>-->
 	</div>
 	<div class="flex text-lg justify-start gap-5">
-		<div class="bg-gray-700 rounded-2xl h-full">
+		<div class="bg-gray-700 rounded-2xl w-2/3 h-full">
 			<!--<JSONEditorBar json={musician.config} onUpload={uploadConfig}></JSONEditorBar>-->
 			<div class="flex flex-col p-5 gap-5">
-				<div class="flex justify-between gap-5">
+				<div class="flex flex-col justify-between gap-5">
 					<label class="flex flex-col">
 						<span class="opacity-60 font-bold">INSTRUMENT</span>
+						<span class="opacity-80">Change LOERIC's sound and instrument model.</span>
 						<select class="" onchange={instrumentChange}>
 							{#each options.instruments as instrument}
 								<option value={instrument} selected={musician.instrument === instrument}>{instrument}</option>
 							{/each}
 						</select>
 					</label>
-					<label class="flex flex-col gap-3">
-						<label>
-							<div class="flex gap-3 justify-between">
-								<span class="opacity-60 font-bold">DRONES</span>
-								<input class="col-span-1" type="checkbox" bind:checked={droning} onchange={droningChange}>
-							</div>
-							<span class="">Toggles LOERIC's accompanying system.</span>
+				<hr class="h-0.5 border-t-0 bg-gray-600" />
+					<div class="flex gap-3 justify-between">
+						<label class="flex flex-col">
+							<span class="opacity-60 font-bold">DRONES</span>
+							<span class="opacity-80">Toggle LOERIC's accompanying system.</span>
 						</label>
-						<label class="flex gap-3 justify-between">
-							<span class="opacity-60 font-bold ">TRANSPOSE</span>
-							<input class="col-span-1" type="number" onchange={transposeChange} bind:value={transpose} min="-12" max="12"/>
-						</label>
-						<label class="flex gap-3 justify-between">
-							<span class="opacity-60 font-bold ">SLOW START</span>
-							<input class="col-span-1"type="checkbox" bind:checked={slow_start} onchange={startChange}>
-						</label>
-						<label class="flex gap-3 justify-between">
-							<span class="opacity-60 font-bold ">SLOW END</span>
-							<input class="col-span-1"type="checkbox" bind:checked={slow_end} onchange={endChange}>
-						</label>
-						</label>
-
+						<input class="col-span-1" type="checkbox" bind:checked={droning} onchange={droningChange}>
 					</div>
-					<label class="flex flex-col">
-						<span class="opacity-60 font-bold">OUTPUT</span>
-						<select class="" onchange={outputChange}>
-							<option value="synth" selected={musician.midiOut?.startsWith("LOERIC Synth ")}>LOERIC Synth</option>
-							<option value="create_out" selected={musician.midiOut?.startsWith("LOERIC out ")}>MIDI Output</option>
-							{#each options.outputs as output}
-								<option value={output} selected={musician.midiOut === output}>{output}</option>
-							{/each}
-						</select>
-					</label>
+				<hr class="h-0.5 border-t-0 bg-gray-600" />
+					<div class="flex gap-3 justify-between">
+						<label class="flex flex-col">
+							<span class="opacity-60 font-bold ">TRANSPOSE</span>
+							<span class="opacity-80">Transpose LOERIC's performance (semitones).</span>
+						</label>
+						<input class="col-span-1" type="number" onchange={transposeChange} bind:value={transpose} min="-12" max="12"/>
+					</div>
+				<hr class="h-0.5 border-t-0 bg-gray-600" />
+					<div class="flex gap-3 justify-between">
+						<label class="flex flex-col">
+							<span class="opacity-60 font-bold ">SLOW START</span>
+							<span class="opacity-80">Build up speed to selected tempo at performance start.</span>
+						</label>
+						<input class="col-span-1"type="checkbox" bind:checked={slow_start} onchange={startChange}>
+					</div>
+				<hr class="h-0.5 border-t-0 bg-gray-600" />
+					<div class="flex gap-3 justify-between">
+						<label class="flex flex-col">
+							<span class="opacity-60 font-bold ">SLOW END</span>
+							<span class="opacity-80">Slow down from selected tempo at performance end.</span>
+						</label>
+						<input class="col-span-1"type="checkbox" bind:checked={slow_end} onchange={endChange}>
+					</div>
 				</div>
-			</div>
-			<div class="flex justify-start w-full p-5 shadow-lg rounded-2xl bg-gray-700 overflow-auto">
-				<label class="flex flex-col w-1/4 gap-3">
-					<span class="opacity-60 font-bold">INTERACTION</span>
-					<select onchange={inputChange}>
-						<option value="no_in" selected={musician.midiIn === undefined}>Sliders</option>
-						{#each Object.keys(options.audio_inputs) as input}
-							<option value={"audioIn:" + options.audio_inputs[input]}
-								selected={musician.audioIn === "audioIn:" + options.audio_inputs[input]}>{input}</option>
-						{/each}
-						{#each options.inputs as input}
-							<option value={input} selected={musician.midiIn === input}>{input}</option>
+				<hr class="h-0.5 border-t-0 bg-gray-600" />
+				<div class="flex flex-col justify-between">
+						<span class="opacity-60 font-bold">OUTPUT</span>
+						<span class="opacity-80">Choose between built-in sounds or MIDI for external sounds.</span>
+					<select class="mt-3" onchange={outputChange}>
+						<option value="synth" selected={musician.midiOut?.startsWith("LOERIC Synth ")}>LOERIC Built-In Synth</option>
+						<option value="create_out" selected={musician.midiOut?.startsWith("LOERIC out ")}>LOERIC MIDI Output</option>
+						{#each options.outputs as output}
+							<option value={output} selected={musician.midiOut === output}>{output}</option>
 						{/each}
 					</select>
-				</label>
-				{#if musician.controls.length != 0}
-					<div class="flex w-auto justify-evenly">
-						{#each musician.controls as control}
-							<label class="flex flex-col w-24 gap-5">
-								<span class="text-center h-12">{control.name}</span>
-								<input class="place-self-center" type="range" step="0.01" max="1" min="0" data-control={control.control}
-									value={control.value} onchange={controlChange}/>
-							</label>
-						{/each}
-					</div>
-				{:else}
-					<div class="text-2xl text-center place-self-center w-full">
-						No interaction setup.<br> Sit back and have a listen!
-					</div>
-				{/if}
+				</div>
 			</div>
 		</div>
+		<div class="flex gap-3 justify-start w-full p-5 shadow-lg rounded-2xl bg-gray-700 overflow-auto">
+			<label class="flex flex-col w-1/5 gap-3">
+				<span class="opacity-60 font-bold">INTERACTION</span>
+				<span class="opacity-80">Choose how to interact with LOERIC (sliders, audio input, MIDI).</span>
+				<select onchange={inputChange}>
+					<option value="no_in" selected={musician.midiIn === undefined}>Sliders</option>
+					{#each Object.keys(options.audio_inputs) as input}
+						<option value={"audioIn:" + options.audio_inputs[input]}
+							selected={musician.audioIn === "audioIn:" + options.audio_inputs[input]}>{input}</option>
+					{/each}
+					{#each options.inputs as input}
+						<option value={input} selected={musician.midiIn === input}>{input}</option>
+					{/each}
+				</select>
+			</label>
+  			<div class="inline-block h-full w-0.5 self-stretch bg-gray-600"></div>
+			{#if musician.controls.length != 0}
+				<div class="flex w-auto justify-evenly">
+					{#each musician.controls as control}
+						<label class="flex flex-col w-24 gap-5">
+							<span class="text-center h-12">{control.name}</span>
+							<input class="place-self-center" type="range" step="0.01" max="1" min="0" data-control={control.control} value={control.value} onchange={controlChange}/>
+						</label>
+					{/each}
+				</div>
+			{:else}
+				<div class="text-2xl text-center place-self-center w-full">
+					No interaction setup.<br> Sit back and have a listen!
+				</div>
+			{/if}
+		</div>
 	</div>
+</div>

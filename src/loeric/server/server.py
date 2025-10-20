@@ -23,7 +23,7 @@ from loeric.tune import Tune
 track_dir = os.path.join(os.getcwd(), "static/midi")
 temp_dir = os.path.join(os.getcwd(), "static/temp")
 general_configs_path = os.getcwd() + "/src/loeric/loeric_config/performance"
-specific_configs_path = os.getcwd() + "/src/loeric/loeric_config/webapp_configs"
+specific_configs_path = os.path.join(os.getcwd(), "static/webapp_configs")
 
 app = Bottle()
 
@@ -94,6 +94,51 @@ def load_soundfonts():
             default_soundfont_id=default_soundfont_id,
             default_program=40,
             default_config=f"{specific_configs_path}/instrument/violin.json",
+        ),
+        "Saw": lss.SynthSound(
+            name="Saw",
+            path="static/sound/saw.sf2",
+            program=0,
+            config=f"{specific_configs_path}/instrument/piano.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=81,
+            default_config=f"{specific_configs_path}/instrument/piano.json",
+        ),
+        "Square": lss.SynthSound(
+            name="Square",
+            path="static/sound/saw.sf2",
+            program=0,
+            config=f"{specific_configs_path}/instrument/piano.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=80,
+            default_config=f"{specific_configs_path}/instrument/piano.json",
+        ),
+        "Polysynth": lss.SynthSound(
+            name="Polysynth",
+            path="static/sound/saw.sf2",
+            program=0,
+            config=f"{specific_configs_path}/instrument/piano.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=90,
+            default_config=f"{specific_configs_path}/instrument/piano.json",
+        ),
+        "Fantasia": lss.SynthSound(
+            name="Fantasia",
+            path="static/sound/saw.sf2",
+            program=0,
+            config=f"{specific_configs_path}/instrument/piano.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=88,
+            default_config=f"{specific_configs_path}/instrument/piano.json",
+        ),
+        "Vox": lss.SynthSound(
+            name="Vox",
+            path="static/sound/saw.sf2",
+            program=0,
+            config=f"{specific_configs_path}/instrument/piano.json",
+            default_soundfont_id=default_soundfont_id,
+            default_program=85,
+            default_config=f"{specific_configs_path}/instrument/piano.json",
         ),
     }
 
@@ -171,6 +216,17 @@ def list_tracks() -> List[str]:
     )
 
 
+def list_custom_tracks() -> List[str]:
+    configs = os.listdir(specific_configs_path + "/tunes")
+    print(configs)
+    return [
+        f
+        for f in list_tracks()
+        if f.replace(" ", "").replace("'", "").lower().split(".")[0] + ".json"
+        in configs
+    ]
+
+
 @app.get("/api/state")
 def state():
     global tune, tempo, repetitions
@@ -191,6 +247,7 @@ def state():
             "outputs": mido.get_output_names(),
             "instruments": list(soundfonts.keys()),
             "trackList": list_tracks(),
+            "customized_tracks": list_custom_tracks(),
             "audio_inputs": list_audio_inputs(),
             "audio_outputs": list_audio_outputs(),
             "selected_audio_out": audio_device_index,
@@ -322,8 +379,8 @@ def input_change():
     musician_id = request.forms.id
     new_input = request.forms.input
 
-    musician.stop_threads()
     for musician in musicians:
+        musician.stop_threads()
         if musician.id == musician_id:
             if new_input == "no_in":
                 musician.midi_in = None

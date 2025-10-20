@@ -219,25 +219,19 @@ class Musician:
         self._listener_thread = None
         self._control_thread = None
         ################### configs ###########################
-        config = self.tune.config
 
-        additional_configs = [self._synth_sound.config]
-        if not os.path.isfile(config):
-            print(f"Could not load {config}")
-            additional_configs.extend(
-                [
-                    f"{ls.server.general_configs_path}/tune_type/{self.tune.tune_type}.json",
-                    # f"{ls.server.specific_configs_path}/musicians/{self.name.lower()}.json",
-                ]
-            )
-            config = None
+        additional_configs = [
+            self._synth_sound.config,
+            f"{ls.server.general_configs_path}/tune_type/{self.tune.tune_type}.json",
+            self.tune.config,
+        ]
 
         ################### groover ###########################
 
         self.groover = Groover(
             self.tune,
             seed=self.seed,
-            config_file=config,
+            config_file=None,
             intensity_control=self._intensity_control,
             human_impact_control=self._human_impact_control,
             additional_configs=[

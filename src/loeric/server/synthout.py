@@ -34,6 +34,10 @@ class SynthSound:
             self._is_default = False
             self._soundfont_id = synth.sfload(self._path)
 
+    def unload(self, synth):
+        if self._soundfont_id is not None:
+            synth.sfunload(self._soundfont_id)
+
     @property
     def name(self):
         return self._name

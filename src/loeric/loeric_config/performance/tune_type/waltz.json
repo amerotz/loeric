@@ -22,9 +22,9 @@
                         },
                         "pattern": {
                             "mean": [ 1, 0, 1, 0, 1, 0,
+                                      0, 0, 1, 0, 1, 0,
                                       1, 0, 1, 0, 1, 0,
-                                      1, 0, 0, 0, 1, 0,
-                                      1, 0, 1, 0, 1, 0
+                                      0, 0, 1, 0, 1, 0
                             ],
                             "std":  [ 0, 0, 0, 0, 0, 0,
                                       0, 0, 0, 0, 0, 0,
@@ -43,8 +43,8 @@
         "velocity_pattern": {
             "recipe": {
                 "pattern": {
-                    "mean": [1.2, 1, 1, 1, 1.05, 1],
-                    "std": [ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                    "mean": [1.5, 1, 1],
+                    "std": [ 0.1, 0.1, 0.1],
                     "std_scale": 1,
                     "normalize": false,
                     "period": 1
@@ -97,8 +97,8 @@
         "tempo_pattern": {
             "recipe": {
                 "pattern": {
-                    "mean": [ 1.05, 1, 1, 1, 1, 1],
-                    "std": [ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                    "mean": [ 1.05, 1, 1],
+                    "std": [ 0.01, 0.01, 0.01],
                     "std_scale": 0.1,
                     "normalize": true,
                     "period": 1
@@ -144,7 +144,7 @@
         "max": 1.0,
         "bind": "legato"
     },
-    "drone": {"notes_per_bar": [1]},
+    "drone": {"notes_per_bar": [3, 1]},
     "values": {
         "beat_velocity_increase": 16
     },
