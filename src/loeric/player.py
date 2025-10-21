@@ -88,8 +88,11 @@ class Player:
         self._start_time = time.time()
         self._input_time = 0.0
 
-    def reset_song_time(self):
-        self._song_time = tu.TimeDelta(eighth_duration=self.__song_start_time)
+    def reset_song_time(self, song_time=None):
+        if song_time is None:
+            self._song_time = tu.TimeDelta(eighth_duration=self.__song_start_time)
+        else:
+            self._song_time = tu.TimeDelta(eighth_duration=song_time)
 
     def set_tempo_scale(self, tempo_scale):
         self._tempo_scale = tempo_scale

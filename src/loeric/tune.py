@@ -386,7 +386,10 @@ class Repetition(ScoreElement):
         return self._number
 
     def __repr__(self):
-        return f"(Repetition n={self._number} t={np.round(self._time, 4)})"
+        return f"(Repetition n={self._number} t={self._time})"
+
+    def to_midi(self, absolute_time=False):
+        return []
 
 
 """
@@ -738,11 +741,15 @@ class Tune:
         score_duration = self._score[-1].time + self._score[-1].duration
 
         tmp_score = []
+        repetitions = []
         # add notes and repetitions
         for r in range(repeats):
             new_score = copy.deepcopy(self._score)
             for n in new_score:
                 n.time += score_duration * r - self._first_bar_length
+            repetitions.append(
+                Repetition(number=r + 1, time=new_score[0].time.eighth_duration)
+            )
             tmp_score.extend(new_score)
 
         self._score = tmp_score
@@ -751,6 +758,9 @@ class Tune:
         ############# score with repetition signs, songpos etc ###########
 
         self._annotated_score = []
+
+        # add repetitions
+        self._annotated_score.extend(repetitions)
 
         # add key signatures
         self._annotated_score.extend(self._key_signatures)

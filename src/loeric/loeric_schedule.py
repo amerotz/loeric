@@ -154,21 +154,18 @@ def main():
         tunes.append(tune)
         groovers.append(groover)
 
-    print("Awaiting message...")
-    with received_start:
-        received_start.wait()
-
     # create player
     player = pl.Player(tempo=groovers[0].current_tempo, midi_out=out)
-    player.init_playback()
 
-    player_t = threading.Thread(
-        target=play_tunes,
-        args=(player, tunes, groovers, port),
-    )
+    player_t = threading.Thread(target=player_loop, args=[player])
+
+    print("Awaiting message...")
+    player_t.start()
+
+    play_tunes(player, tunes, groovers, port)
 
     try:
-        player_t.start()
+
         while player_t.is_alive():
             player_t.join(1)
 
@@ -192,7 +189,7 @@ def main():
             print("Closed MIDI output.")
 
 
-received_start = threading.Condition()
+received_start = threading.Event()
 skip_to_next = False
 
 
@@ -207,8 +204,7 @@ def get_callback(control):
             return
 
         if check_skips.counter == 0:
-            with received_start:
-                received_start.notify()
+            received_start.set()
             print("received start")
             check_skips.counter += 1
         else:
@@ -220,10 +216,28 @@ def get_callback(control):
     return check_skips
 
 
+def player_loop(player):
+
+    received_start.wait()
+    print("Player started")
+    while True:
+
+        player.play_next()
+
+
 def play_tunes(player, tunes, groovers, port):
     global skip_to_next, received_start
 
+    received_start.wait()
+    print("Groovers started")
+
     for tune, groover in zip(tunes, groovers):
+
+        print(f"Playing next tune.")
+        player.init_playback()
+        player.reset_song_time(
+            song_time=tune.times[0].eighth_duration,
+        )
 
         # set input callback
         if port is not None:
@@ -231,38 +245,53 @@ def play_tunes(player, tunes, groovers, port):
 
         # iterate over messages
         while True:
+            # print()
 
-            message = groover.next_event()
-            if message is None:
+            original_message = groover.next_event()
+
+            if original_message is None:
                 break
 
-            if message.type == "sysex":
-                print(f"Repetition {message.data[0]+1}")
-                groover._offset = 0
-                groover._swing_offset = 0
-
-                if skip_to_next:
-                    skip_to_next = False
-                    break
-
-                continue
-
+            new_messages = []
             # perform notes
-            elif lu.is_note(message):
+            if original_message.is_note:
                 # make the groover play the messages
-                new_messages = groover.perform(message)
+                midi_headers, new_messages = groover.perform(original_message)
             # keep meta messages intact
             else:
-                if message.type == "songpos":
-                    pass
-                new_messages = groover.perform(message)
-            # play
-            player.play(new_messages)
+                if (
+                    isinstance(original_message, tu.KeySignature)
+                    and not tune.forced_key
+                ):
+                    print(f"[INFO]\tChanging key. {original_message}")
+                    groover._tune.set_key_signature(original_message)
+                elif isinstance(original_message, tu.Repetition):
 
-        # play an end note
+                    print(original_message)
+                    if skip_to_next:
+                        skip_to_next = False
+                        break
+
+                midi_headers = original_message.to_midi(absolute_time=True)
+
+            player.set_tempo_scale(groover.tempo_scale)
+            player.add_midi(midi_headers)
+            player.add_notes(new_messages)
+
+            player.wake_me_up_at(original_message.time + original_message.duration / 2)
+
+            player.has_reached_wake_time.wait()
+
         if groover.do_end_note:
-            groover.reset_contours()
+            groover.reset()
             groover.advance_contours()
-            player.play(groover.get_end_notes())
+            end_notes = groover.get_end_notes()
+            player.add_notes(end_notes)
 
-    print("Player thread terminated.")
+            player.wake_me_up_at(end_notes[-1].time + end_notes[-1].duration)
+        else:
+            player.wake_me_up_at(groover.performance_time)
+
+        player.has_reached_wake_time.wait()
+
+        print("Player thread terminated.")
