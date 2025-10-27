@@ -3,6 +3,9 @@ import muspy as mp
 import numpy as np
 import music21 as m21
 
+from . import tune as tu
+
+
 # how to approach a note from above or below in a major scale
 above_approach_scale = [2, 1, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1]
 below_approach_scale = [-1, -1, -2, -1, -2, -1, -1, -2, -1, -2, -1, -2]
@@ -17,6 +20,80 @@ MAX_TEMPO = 2**24 - 1
 
 # key signatures
 number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
+
+
+# play midi file
+def play(
+    groover,
+    player,
+    songpos_callback=None,
+    repetition_callback=None,
+    **kwargs,
+) -> None:
+    """
+    Play the given tune with the given groover.
+
+    :param groover: the groover object
+    :param kwargs: the performance arguments
+    """
+
+    player.init_playback()
+    player.reset_song_time(
+        song_time=groover._tune.times[0].eighth_duration,
+    )
+
+    # iterate over messages
+    while True:
+
+        if groover.stopped.is_set():
+            while groover.stopped.is_set():
+                groover.playback_resumed.wait()
+
+        original_message = groover.next_event()
+
+        if original_message is None:
+            groover.reset()
+            break
+
+        new_messages = []
+        # perform notes
+        if original_message.is_note:
+            # make the groover play the messages
+            midi_headers, new_messages = groover.perform(original_message)
+        # keep meta messages intact
+        else:
+            if isinstance(original_message, tu.SongPosition):
+                songpos_callback(original_message)
+            elif isinstance(original_message, tu.Repetition):
+                repetition_callback(original_message)
+            elif (
+                isinstance(original_message, tu.KeySignature)
+                and not groover._tune.forced_key
+            ):
+                if kwargs["verbose"] > 0:
+                    print(f"[INFO]\tChanging key. {original_message}")
+                groover._tune.set_key_signature(original_message)
+            midi_headers = original_message.to_midi(absolute_time=True)
+
+        player.set_tempo_scale(groover.tempo_scale)
+        player.add_midi(midi_headers)
+        player.add_notes(new_messages)
+
+        player.wake_me_up_at(original_message.time + original_message.duration)
+
+        player.has_reached_wake_time.wait()
+
+    if groover.do_end_note:
+        groover.reset()
+        groover.advance_contours()
+        end_notes = groover.get_end_notes()
+        player.add_notes(end_notes)
+
+        player.wake_me_up_at(end_notes[-1].time + end_notes[-1].duration)
+    else:
+        player.wake_me_up_at(groover.performance_time)
+
+    player.has_reached_wake_time.wait()
 
 
 def get_root(key_signature: str) -> int:

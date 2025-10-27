@@ -58,7 +58,9 @@ class Player:
             self._midi_track = mido.MidiTrack()
             self._midi_performance.ticks_per_beat = 32767
             self._midi_performance.tracks.append(self._midi_track)
-            self._midi_track.append(mido.MetaMessage("set_tempo", tempo=self._tempo))
+            self._midi_track.append(
+                mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(self._tempo.qpm))
+            )
             """
             self._midi_track.append(
                 mido.MetaMessage("key_signature", key=key_signature.root_str)
@@ -145,6 +147,8 @@ class Player:
 
             if self._saving:
 
+                # TODO
+                # fix export
                 new_time = np.round(msg.time * 32767 / 2).astype(int)
                 msg.time = new_time
                 self._midi_track.append(msg)

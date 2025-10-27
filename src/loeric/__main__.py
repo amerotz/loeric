@@ -37,117 +37,6 @@ def player_loop(player, groover):
         player.play_next()
 
 
-# play midi file
-def play(
-    groover: gr.Groover,
-    player: pl.Player,
-    tune: tu.Tune,
-    out: mido.ports.BaseOutput,
-    sync_port_out: mido.ports.BaseOutput,
-    **kwargs,
-) -> None:
-    try:
-        """
-        Play the given tune with the given groover.
-
-        :param groover: the groover object
-        :param tune: the tune object
-        :param sync_port_out: the MIDI port for synchronization
-        :param kwargs: the performance arguments
-        """
-
-        play_event.set()
-        player.init_playback()
-
-        # repeat as specified
-        if kwargs["verbose"] > 0:
-            # print(f"[INFO]\tRepetition {r+1}/{kwargs['repeat']}")
-            pass
-
-        # iterate over messages
-        while True:
-            # print()
-
-            if groover.stopped.is_set():
-                while groover.stopped.is_set():
-                    groover.playback_resumed.wait()
-
-            original_message = groover.next_event()
-
-            if original_message is None:
-                groover.reset()
-                break
-
-            new_messages = []
-            # perform notes
-            if original_message.is_note:
-                # make the groover play the messages
-                midi_headers, new_messages = groover.perform(original_message)
-            # keep meta messages intact
-            else:
-                if isinstance(original_message, tu.SongPosition):
-                    if sync_port_out is not None:
-                        for msg in original_message.to_midi():
-                            sync_port_out.send(msg)
-                        if kwargs["verbose"] > 0:
-                            print(
-                                f"[INFO]\t{groover.loeric_id} SENT {original_message.position} ({time.time()})"
-                            )
-                elif (
-                    isinstance(original_message, tu.KeySignature)
-                    and not groover._tune.forced_key
-                ):
-                    if kwargs["verbose"] > 0:
-                        print(f"[INFO]\tChanging key. {original_message}")
-                    groover._tune.set_key_signature(original_message)
-                midi_headers = original_message.to_midi(absolute_time=True)
-
-            player.set_tempo_scale(groover.tempo_scale)
-            player.add_midi(midi_headers)
-            player.add_notes(new_messages)
-
-            player.wake_me_up_at(original_message.time + original_message.duration / 2)
-
-            player.has_reached_wake_time.wait()
-
-        if groover.do_end_note:
-            groover.reset()
-            groover.advance_contours()
-            end_notes = groover.get_end_notes()
-            player.add_notes(end_notes)
-
-            player.wake_me_up_at(end_notes[-1].time + end_notes[-1].duration)
-        else:
-            player.wake_me_up_at(groover.performance_time)
-
-        player.has_reached_wake_time.wait()
-        # print("groover done")
-
-        if kwargs["save"]:
-            name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
-            if kwargs["output_dir"] is None:
-                dirname = os.path.dirname(kwargs["source"])
-            else:
-                if not os.path.isdir(kwargs["output_dir"]):
-                    os.makedirs(kwargs["output_dir"])
-                dirname = kwargs["output_dir"]
-
-            filename = kwargs["filename"]
-            if filename is None:
-                filename = f"generated_{name}_{kwargs['seed']}_{groover.loeric_id}.mid"
-            if kwargs["verbose"] > 0:
-                print(f"[INFO]\tSaving to {dirname}/{filename}.")
-            player.save(f"{dirname}/{filename}")
-
-    except Exception as e:
-        raise e
-    finally:
-        # stop sync thread
-        done_playing.set()
-        if kwargs["verbose"] > 0:
-            print("[INFO]\tPlayer thread terminated.")
-
-
 def sync_thread(
     groover: gr.Groover,
     player: pl.Player,
@@ -547,9 +436,53 @@ def main():
             if args["verbose"] > 0:
                 print("[INFO]\tWaiting for START message...")
             play_event.wait()
+        else:
+            play_event.set()
+
+        def songpos_callback(message):
+            if sync_port_out is not None:
+                for msg in message.to_midi():
+                    sync_port_out.send(msg)
+                if args["verbose"] > 0:
+                    print(
+                        f"[INFO]\t{groover.loeric_id} SENT {message.position} ({time.time()})"
+                    )
 
         # start playback
-        play(groover, player, tune, out, sync_port_out, **args)
+        try:
+            lu.play(
+                groover,
+                player,
+                songpos_callback,
+                repetition_callback=lambda x: print(x),
+                **args,
+            )
+
+            if args["save"]:
+                name = os.path.splitext(os.path.basename(args["source"]))[0]
+                if args["output_dir"] is None:
+                    dirname = os.path.dirname(args["source"])
+                else:
+                    if not os.path.isdir(args["output_dir"]):
+                        os.makedirs(args["output_dir"])
+                    dirname = args["output_dir"]
+
+                filename = args["filename"]
+                if filename is None:
+                    filename = (
+                        f"generated_{name}_{args['seed']}_{groover.loeric_id}.mid"
+                    )
+                if args["verbose"] > 0:
+                    print(f"[INFO]\tSaving to {dirname}/{filename}.")
+                player.save(f"{dirname}/{filename}")
+
+        except Exception as e:
+            raise e
+        finally:
+            # stop sync thread
+            done_playing.set()
+            if args["verbose"] > 0:
+                print("[INFO]\tPlayer thread terminated.")
 
         while player_t.is_alive():
             player_t.join(1)

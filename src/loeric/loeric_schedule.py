@@ -233,23 +233,29 @@ def play_tunes(player, tunes, groovers, port):
 
     for tune, groover in zip(tunes, groovers):
 
+        ############# PREAMBLE ###############
         print(f"Playing next tune.")
         player.init_playback()
         player.reset_song_time(
-            song_time=tune.times[0].eighth_duration,
+            song_time=groover._tune.times[0].eighth_duration,
         )
 
         # set input callback
         if port is not None:
             port.callback = groover.check_midi_control()
+        ############# PREAMBLE ###############
 
         # iterate over messages
         while True:
-            # print()
+
+            if groover.stopped.is_set():
+                while groover.stopped.is_set():
+                    groover.playback_resumed.wait()
 
             original_message = groover.next_event()
 
             if original_message is None:
+                groover.reset()
                 break
 
             new_messages = []
@@ -261,7 +267,7 @@ def play_tunes(player, tunes, groovers, port):
             else:
                 if (
                     isinstance(original_message, tu.KeySignature)
-                    and not tune.forced_key
+                    and not groover._tune.forced_key
                 ):
                     print(f"[INFO]\tChanging key. {original_message}")
                     groover._tune.set_key_signature(original_message)
@@ -278,8 +284,7 @@ def play_tunes(player, tunes, groovers, port):
             player.add_midi(midi_headers)
             player.add_notes(new_messages)
 
-            player.wake_me_up_at(original_message.time + original_message.duration / 2)
-
+            player.wake_me_up_at(original_message.time + original_message.duration)
             player.has_reached_wake_time.wait()
 
         if groover.do_end_note:

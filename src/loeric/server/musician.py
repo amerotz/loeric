@@ -344,6 +344,11 @@ class Musician:
             self.thread = threading.Thread(target=self.__play)
             self.thread.start()
 
+            self.player_t = threading.Thread(
+                target=self.player_loop, args=[self.player, self.groover]
+            )
+            self.player_t.start()
+
     def __play(
         self,
     ) -> None:
@@ -372,15 +377,14 @@ class Musician:
                     self._controls[i]["value"] = hi_value
                     self.groover.set_control_value(self._human_impact_control, hi_value)
 
-            player_t = threading.Thread(
-                target=self.player_loop, args=[self.player, self.groover]
-            )
-            player_t.start()
-
+            ############# PREAMBLE ###############
             # wait for start
             _play_event.wait()
             self.player.init_playback()
-            self.player.reset_song_time()
+            self.player.reset_song_time(
+                song_time=self.groover._tune.times[0].eighth_duration,
+            )
+            ############# PREAMBLE ###############
 
             # iterate over messages
             while True:
@@ -412,6 +416,8 @@ class Musician:
                         print(
                             f"[INFO]\t{self.groover.loeric_id} SENT {original_message.position} ({time.time()})"
                         )
+                    elif isinstance(original_message, tu.Repetition):
+                        print(original_message)
                     elif (
                         isinstance(original_message, tu.KeySignature)
                         and not self.tune.forced_key
@@ -425,7 +431,7 @@ class Musician:
                 self.player.add_notes(new_messages)
 
                 self.player.wake_me_up_at(
-                    original_message.time + original_message.duration / 2
+                    original_message.time + original_message.duration
                 )
 
                 self.player.has_reached_wake_time.wait()
@@ -444,8 +450,8 @@ class Musician:
 
             _update(State.STOPPED)
 
-            while player_t.is_alive():
-                player_t.join(1)
+            while self.player_t.is_alive():
+                self.player_t.join(1)
 
             print("Player thread terminated.")
 
