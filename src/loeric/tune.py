@@ -742,6 +742,7 @@ class Tune:
 
         tmp_score = []
         repetitions = []
+        key_signatures = []
         # add notes and repetitions
         for r in range(repeats):
             new_score = copy.deepcopy(self._score)
@@ -750,9 +751,20 @@ class Tune:
             repetitions.append(
                 Repetition(number=r + 1, time=new_score[0].time.eighth_duration)
             )
+            for k in self._key_signatures:
+                key_signatures.append(
+                    KeySignature(
+                        root=k.root,
+                        mode=k.mode,
+                        time=(
+                            k.time + score_duration * r - self._first_bar_length
+                        ).eighth_duration,
+                    )
+                )
             tmp_score.extend(new_score)
 
         self._score = tmp_score
+        self._key_signatures = key_signatures
         self._score_end_time = self._score[-1].time + self._score[-1].duration
 
         ############# score with repetition signs, songpos etc ###########
