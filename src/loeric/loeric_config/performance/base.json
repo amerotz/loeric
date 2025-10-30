@@ -242,29 +242,54 @@
         },
         "ornament": {
             "recipe": {
-                "weighted_sum": {
+                "multiply": {
                     "contours": {
-                        "o_canainn": {
+                        "weighted_sum": {
+                            "contours": {
+                                "o_canainn": {
+                                    "weights": [
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1
+                                    ],
+                                    "savgol": false,
+                                    "scale": true,
+                                    "shift": false
+                                },
+                                "phrasing": {
+                                    "phrase_exp": 10,
+                                    "phrase_levels": 1.0
+                                }
+                            },
                             "weights": [
-                                1,
-                                1,
-                                1,
-                                1,
-                                1
-                            ],
-                            "savgol": false,
-                            "scale": true,
-                            "shift": false
+                                0.8,
+                                0.2
+                            ]
                         },
-                        "phrasing": {
-                            "phrase_exp": 10,
-                            "phrase_levels": 1.0
+                        "pattern": {
+                            "mean": [
+                                0,1,
+                                1,1,
+                                1,1,
+                                1,1,
+                                1,1,
+                                1,1,
+                                1,1,
+                                1,0
+                            ],
+                            "std": [
+                                0,0,0,0,
+                                0,0,0,0,
+                                0,0,0,0,
+                                0,0,0,0
+                            ],
+                            "period": 8,
+                            "std_scale": 1,
+                            "normalize": false
                         }
-                    },
-                    "weights": [
-                        0.8,
-                        0.2
-                    ]
+                    }
                 }
             },
             "human_impact_scale": 0

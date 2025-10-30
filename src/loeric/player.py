@@ -187,6 +187,7 @@ class Player:
         :param filename: the path to the output midi file.
         """
         self._midi_track.sort(key=lambda x: x.time)
+        print(self._midi_track)
         prev_time = self._midi_track[0].time
         for i in range(len(self._midi_track)):
             new_time = self._midi_track[i].time - prev_time

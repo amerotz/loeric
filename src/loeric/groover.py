@@ -588,13 +588,13 @@ class Groover:
                 [],
             )
 
-        notes = [current_message]
         current_message.velocity = self._current_velocity
+        notes = [current_message]
 
         # create ornaments
         if self.can_generate_ornament():
             # choose which ornament
-            ornament_type = self.choose_ornament(current_message)
+            ornament_type = self.choose_ornament(notes[0])
 
             # generate it
             if ornament_type is not None:
@@ -609,18 +609,19 @@ class Groover:
 
             if swing_multiplier < 1:
                 note.time = note.time + original_duration - new_duration
-            note.duration = new_duration
+            note.duration = new_duration.eighth_duration
 
             # channel
             note.channel = self._midi_channel
 
             # transpsose
-            note.transpose(self._config["values"]["transpose"])
+            if note.is_note:
+                note.transpose(self._config["values"]["transpose"])
 
-            # change intonation
-            note._pitch += self._intonation[int(note.pitch)] + self._config["values"][
-                "pitch_deviation_cents"
-            ] * 0.01 * np.random.normal(loc=0, scale=0.33)
+                # change intonation
+                note._pitch += self._intonation[int(note.pitch)] + self._config[
+                    "values"
+                ]["pitch_deviation_cents"] * 0.01 * np.random.normal(loc=0, scale=0.33)
 
         # add drone
         if self._config["drone"]["active"]:
@@ -631,6 +632,7 @@ class Groover:
                 if self._config["drone"]["break_ornaments"]:
                     for note in notes:
                         drone_pitches = self._get_drone(note.pitch)
+                        drone_pitches = sorted(drone_pitches)
                         # get drone
                         d_notes, delay = self._add_drone(note, drone_pitches)
                         drone_notes.extend(d_notes)
@@ -641,6 +643,7 @@ class Groover:
                 # only one note
                 else:
                     drone_pitches = self._get_drone(current_message.pitch)
+                    drone_pitches = sorted(drone_pitches)
                     d_notes, delay = self._add_drone(current_message, drone_pitches)
                     removable_delay = min(delay, notes[0].duration)
                     notes[0].time += removable_delay
@@ -648,7 +651,6 @@ class Groover:
                     drone_notes.extend(d_notes)
             notes.extend(drone_notes)
 
-        # notes
         pauses = []
         for note in notes:
             # legato
@@ -658,13 +660,14 @@ class Groover:
                 eighth_duration=(note.duration - new_length).eighth_duration,
                 time=(note.time + new_length).eighth_duration,
             )
-            if pause.duration != 0:
+            if pause.duration > 0:
                 pauses.append(pause)
-            note.duration = new_length
+                note.duration *= mult
+
+            if note.is_note and note.has_metadata:
+                notes.extend(note.metadata)
 
         notes.extend(pauses)
-        if note.has_metadata:
-            notes.extend(note.metadata)
 
         ################### convert to midi #########################
 
@@ -1202,11 +1205,10 @@ class Groover:
 
         return ornaments
 
-    def choose_ornament(self, message: mido.Message) -> str:
+    def choose_ornament(self, first_note) -> str:
         """
         Evaluate the ornament specific rules and chooose how the note will be ornamented.
 
-        :param message: the midi message to ornament.
 
         :return: the chosen ornament type.
         """
@@ -1228,10 +1230,13 @@ class Groover:
             )
             note = self._tune[index]
 
-            if note.is_note:
-                # save first pitch
-                if case_i == 0:
-                    first_pitch = note.pitch
+            # save first pitch
+            if case_i == 0:
+                first_pitch = first_note.pitch
+                case_len += first_note.duration
+                tune_notes.append(first_note)
+
+            elif note.is_note:
 
                 # update length counter
                 case_len += note.duration

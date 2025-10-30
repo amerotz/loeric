@@ -903,14 +903,14 @@
             ],
             "durations_mean": [
                 0.1,
-                0.9
+                0.4
             ],
             "durations_std": [
                 0.01,
                 0.1
             ],
             "probability": 1,
-            "length": 1,
+            "length": 0.5,
             "diatonic": true,
             "threshold": 0,
             "slide": false

@@ -59,11 +59,11 @@
                 0
             ],
             "pitches_std": [
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1
+                0.01,
+                0.01,
+                0.01,
+                0.01,
+                0.01
             ],
             "velocities_mean": [
                 1,
@@ -110,45 +110,27 @@
             ],
             "pitches_mean": [
                 -2,
-                -2,
-                -1,
-                -1,
                 0
             ],
             "pitches_std": [
                 0,
-                0,
-                0,
-                0,
                 0
             ],
             "velocities_mean": [
-                1.2,
-                1,
-                1,
                 1,
                 1
             ],
             "velocities_std": [
                 0,
-                0,
-                0,
-                0,
                 0
             ],
             "durations_mean": [
                 0.2,
-                0.05,
-                0.2,
-                0.05,
-                0.5
+                0.8
             ],
             "durations_std": [
                 0.01,
-                0.01,
-                0.01,
-                0.01,
-                0.1
+                0.01
             ],
             "probability": 1,
             "length": 1,
@@ -214,83 +196,15 @@
         },
         "triplet_1": {
             "cases": [
-                [
-                    [
-                        0,
-                        3
-                    ]
-                ],
-                [
-                    [
-                        0,
-                        1
-                    ],
-                    [
-                        0,
-                        2
-                    ]
-                ],
-                [
-                    [
-                        0,
-                        2
-                    ],
-                    [
-                        0,
-                        1
-                    ]
-                ],
-                [
-                    [
-                        0,
-                        1
-                    ],
-                    [
-                        0,
-                        1
-                    ],
-                    [
-                        0,
-                        1
-                    ]
-                ]
+                [[0,3]],
+                [[0,1],[0,1],[0,1]]
             ],
-            "pitches_mean": [
-                0,
-                0,
-                0,
-                0
-            ],
-            "pitches_std": [
-                0,
-                0,
-                0,
-                0
-            ],
-            "velocities_mean": [
-                1,
-                1,
-                1,
-                1
-            ],
-            "velocities_std": [
-                0,
-                0,
-                0,
-                0
-            ],
-            "durations_mean": [
-                0.5,
-                0.5,
-                1,
-                1
-            ],
-            "durations_std": [
-                0.01,
-                0.01,
-                0.1,
-                0.1
-            ],
+            "pitches_mean": [ 0, 0, 0, 0 ],
+            "pitches_std": [ 0, 0, 0, 0 ],
+            "velocities_mean": [ 1, 1, 1, 1 ],
+            "velocities_std": [ 0, 0, 0, 0 ],
+            "durations_mean": [ 0.5, 0.5, 1, 1 ],
+            "durations_std": [ 0.01, 0.01, 0.01, 0.01 ],
             "probability": 1,
             "length": 3,
             "diatonic": true,
@@ -299,84 +213,67 @@
         },
         "triplet_2": {
             "cases": [
-                [
-                    [
-                        0,
-                        2
-                    ]
-                ],
-                [
-                    [
-                        0,
-                        1
-                    ],
-                    [
-                        0,
-                        1
-                    ]
-                ]
+                [[0,2]],
+                [[0,1],[0,1]]
             ],
-            "pitches_mean": [
-                0,
-                0,
-                0
-            ],
-            "pitches_std": [
-                0,
-                0,
-                0
-            ],
-            "velocities_mean": [
-                1,
-                1,
-                1
-            ],
-            "velocities_std": [
-                0,
-                0,
-                0
-            ],
-            "durations_mean": [
-                0.5,
-                0.5,
-                1
-            ],
-            "durations_std": [
-                0.01,
-                0.01,
-                0.1
-            ],
+            "pitches_mean": [ 0, 0, 0 ],
+            "pitches_std": [ 0, 0, 0 ],
+            "velocities_mean": [ 1, 1, 1 ],
+            "velocities_std": [ 0, 0, 0 ],
+            "durations_mean": [ 0.5, 0.5, 1 ],
+            "durations_std": [ 0.01, 0.01, 0.01 ],
             "probability": 1,
             "length": 2,
             "diatonic": true,
             "threshold": 0,
             "slide": false
+        },
+        "triplet_3": {
+            "cases": [
+                [[0,2],[0,1]]
+            ],
+            "pitches_mean": [ 0, 0, 0, 0 ],
+            "pitches_std": [ 0, 0, 0, 0 ],
+            "velocities_mean": [ 1, 1, 1, 1 ],
+            "velocities_std": [ 0, 0, 0, 0 ],
+            "durations_mean": [ 1, 0.5, 0.5, 1 ],
+            "durations_std": [ 0.01, 0.01, 0.01, 0.01 ],
+            "probability": 1,
+            "length": 3,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
         }
+    },
+    "legato": {
+        "min": 0.7,
+        "max": 1,
+        "bind": "legato"
     },
     "drone": {
         "threshold": 0.5,
         "velocity_multiplier": 0.9,
         "strings": [
-            38,
-            45,
-            50,
-            55,
+            64,
             59,
-            64
+            55,
+            50,
+            45,
+            38
         ],
-        "strings_min": 1,
-        "strings_max": 2,
+        "strings_min": 0,
+        "strings_max": 1,
         "free_strings_min": 0,
-        "free_strings_max": 3,
+        "free_strings_max": 2,
         "free_strings": [
-            38,
-            45,
-            50,
-            55,
+            64,
             59,
-            64
+            55,
+            50,
+            45,
+            38
         ],
-        "break_ornaments": false,
+        "break_ornaments": true,
         "delay_range": 0.1
     }
 }

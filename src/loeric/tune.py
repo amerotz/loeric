@@ -212,7 +212,10 @@ class ScoreElement:
 
     @duration.setter
     def duration(self, value):
-        self._duration = TimeDelta(eighth_duration=value)
+        if isinstance(value, TimeDelta):
+            self._duration = copy.deepcopy(value)
+        else:
+            self._duration = TimeDelta(eighth_duration=value)
         if self._duration.eighth_duration < 0:
             self._duration = TimeDelta(eighth_duration=0)
             print("[WARN] Duration cannot be negative!")
@@ -492,7 +495,10 @@ class Note(ScoreElement):
     @duration.setter
     def duration(self, value):
         original_duration = self._duration.eighth_duration
-        self._duration = value
+        if isinstance(value, TimeDelta):
+            self._duration = copy.deepcopy(value)
+        else:
+            self._duration = TimeDelta(eighth_duration=value)
 
         if self._is_slide:
             ratio = value / original_duration
