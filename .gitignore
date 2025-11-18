@@ -5,7 +5,6 @@
 dist/
 mid/
 abc/
-*.mid
 *.scl
 loeric-env/
 mini-session/
@@ -169,4 +168,4 @@ cython_debug/
 /client/.svelte-kit/
 /client/build/
 /client/node_modules/
-/static/
+/static/sound
