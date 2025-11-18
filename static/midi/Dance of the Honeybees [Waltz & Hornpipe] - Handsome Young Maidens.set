@@ -1,7 +1,7 @@
 [
 	{
 		"file": "Dance of the Honeybees [Waltz].abc",
-		"repetitions": 1,
+		"repetitions": 2,
 		"config": null,
 		"trim_end_eighths": 0,
 		"qpm": 140
@@ -9,7 +9,7 @@
 	},
 	{
 		"file": "Dance of the Honeybees [Hornpipe].abc",
-		"repetitions": 1,
+		"repetitions": 2,
 		"config": null,
 		"trim_end_eighths": 0,
 		"qpm": 140
@@ -17,7 +17,7 @@
 	},
 	{
 		"file": "Handsome Young Maidens.abc",
-		"repetitions": 1,
+		"repetitions": 2,
 		"config": null,
 		"trim_end_eighths": 0,
 		"qpm": 140
