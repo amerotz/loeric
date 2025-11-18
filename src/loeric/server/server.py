@@ -230,6 +230,7 @@ def state():
         "state": get_state().name,
         "track": {
             "name": current_track,
+            "type": current_track.split(".")[-1],
             "time": f"{musicians[0].tune.time_signature.numerator}/{musicians[0].tune.time_signature.denominator}",
             "config": musicians[0].tune.get_config(),
             "key": key_to_str(musicians[0].tune.key_signature),

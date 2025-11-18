@@ -3,24 +3,31 @@
 		"file": "Dan Dowd's.abc",
 		"repetitions": 2,
 		"config": null,
-		"trim_end_eighths": 0
+		"trim_end_eighths": 0,
+		"qpm": 170
 	},
 	{
 		"file": "Hardiman's Jig.abc",
 		"repetitions": 2,
 		"config": null,
-		"trim_end_eighths": 0
+		"trim_end_eighths": 0,
+		"qpm": 170
+
 	},
 	{
 		"file": "The Hunter's Purse [Jig].abc",
 		"repetitions": 2,
 		"config": null,
-		"trim_end_eighths": 2
+		"trim_end_eighths": 2,
+		"qpm": 170
+
 	},
 	{
 		"file": "The Hunter's Purse [Reel].abc",
 		"repetitions": 2,
 		"config": null,
-		"trim_end_eighths": 0
+		"trim_end_eighths": 0,
+		"qpm": 170
+
 	}
 ]

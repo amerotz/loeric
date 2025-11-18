@@ -122,7 +122,12 @@
 			</div>
 			<div>
 				<span class="opacity-70 font-light">Repeats:</span>
+			{#if data.track.type != 'set'}
 				<input class="text-center" type="number" onchange={repeatChange} value={data.track.repeats} min="1" max="100"/>
+				{:else}
+				<span class="text-center">{data.track.repeats}</span>
+
+			{/if}
 			</div>
 			<FileUpload accepted="mid, midi, audio/rtp-midi" onUpload={(file) => apiUpload('track', file)}/>
 			<div>
