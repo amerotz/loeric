@@ -1,0 +1,16 @@
+[
+	{
+		"file": "The Hunter's Purse [Jig].abc",
+		"repetitions": 1,
+		"config": null,
+		"trim_end_eighths": 2,
+		"qpm": 180
+	},
+	{
+		"file": "The Hunter's Purse [Reel].abc",
+		"repetitions": 1,
+		"config": null,
+		"trim_end_eighths": 0,
+		"qpm": 240
+	}
+]
