@@ -1012,9 +1012,14 @@ class Groover:
 
     @property
     def _current_legato(self):
-        return (
-            self._config["legato"]["min"]
-            + self._legato_amount * self._contour_values[self._config["legato"]["bind"]]
+        return max(
+            min(
+                1,
+                self._config["legato"]["min"]
+                + self._legato_amount
+                * self._contour_values[self._config["legato"]["bind"]],
+            ),
+            0,
         )
 
     @property

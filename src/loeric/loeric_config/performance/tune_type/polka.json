@@ -1,6 +1,17 @@
 {
 	"variables": {
-        "var_velocity_weight": [0,-2,1,1,1]
+        "var_velocity_weight": [0,-2,1,1,1],
+        "var_ornament_pattern": {
+                            "mean": [ 
+								0, 1, 1, 1, 
+								1, 1, 1, 0
+							],
+                            "std":  [ 0, 0, 0, 0,
+									  0, 0, 0, 0 ],
+							"std_scale": 1,
+							"normalize": false,
+							"period": 8
+						}
 	},
 	"contours": {
 		"drone": {
@@ -8,7 +19,7 @@
 				"weighted_sum": {
 					"contours": {
 						"o_canainn": {
-							"weights": [1, 2, 1, 1, 2],
+							"weights": "var_velocity_weight",
 							"savgol": true,
 							"scale": true,
 							"shift": true
@@ -37,7 +48,7 @@
 			"recipe":{
 				"pattern": {
 					"mean":  [0.5, 1.8, 0.5, 1.8, 0.5, 1.8, 1.8, 1],
-					"std":[0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1],
+					"std":[0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01],
 					"std_scale": 1,
 					"normalize": false,
 					"period": 2

@@ -11,6 +11,28 @@
 			"period": 1,
 			"normalize": false
 		},
+        "var_ornament_pattern": {
+            "mean": [
+                                0,1,
+                                1,1,
+                                1,1,
+                                1,1,
+                                1,1,
+                                1,1,
+                                1,1,
+                                1,0
+                            ],
+                            "std": [
+                                0,0,0,0,
+                                0,0,0,0,
+                                0,0,0,0,
+                                0,0,0,0
+                            ],
+                            "period": 8,
+                            "std_scale": 1,
+                            "normalize": false
+                        },
+
         "major_allowed_chords": [
             2,
             0,
@@ -269,27 +291,7 @@
                                 0.2
                             ]
                         },
-                        "pattern": {
-                            "mean": [
-                                0,1,
-                                1,1,
-                                1,1,
-                                1,1,
-                                1,1,
-                                1,1,
-                                1,1,
-                                1,0
-                            ],
-                            "std": [
-                                0,0,0,0,
-                                0,0,0,0,
-                                0,0,0,0,
-                                0,0,0,0
-                            ],
-                            "period": 8,
-                            "std_scale": 1,
-                            "normalize": false
-                        }
+                        "pattern": "var_ornament_pattern"                  
                     }
                 }
             },
