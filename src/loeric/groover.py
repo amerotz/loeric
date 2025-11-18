@@ -129,8 +129,8 @@ class Groover:
             "tempo_control": {
                 "tempo_warp_bpms": 10,
                 "bpm": bpm,
-                "slow_start": False,
-                "slow_end": False,
+                "slow_start": slow_start,
+                "slow_end": slow_end,
                 "slow_start_bars": 3,
                 "slow_end_bars": 2,
                 "slow_affected_contours": ["velocity", "ornament", "tempo", "drone"],
@@ -372,7 +372,7 @@ class Groover:
             import matplotlib.pyplot as plt
 
             x = self._tune.float_times
-            plt.step(x, self._contours[self._plot]._contour)
+            plt.figure(figsize=(20, 5))
             plt.step(
                 x,
                 (
@@ -383,7 +383,9 @@ class Groover:
                     max(self._contours["pitch_contour"]._contour)
                     - min(self._contours["pitch_contour"]._contour)
                 ),
+                linestyle=":",
             )
+            plt.step(x, self._contours[self._plot]._contour, marker="x")
             plt.tight_layout()
             plt.show()
 
@@ -675,9 +677,12 @@ class Groover:
         # tempo
         if not self._syncing:
             # add explicit tempo information
-            midi_headers.append(
-                mido.MetaMessage("set_tempo", tempo=self.current_tempo, time=0)
-            )
+            try:
+                midi_headers.append(
+                    mido.MetaMessage("set_tempo", tempo=self.current_tempo, time=0)
+                )
+            except:
+                print(self.current_tempo)
 
         # add contour information as MIDI CC
         midi_headers.extend(self._contours_to_midi())
@@ -733,7 +738,7 @@ class Groover:
                     notes.append(
                         mido.Message(
                             "note_on",
-                            velocity=64,
+                            velocity=127,
                             time=0,
                             note=articulation_dictionary["key"],
                         )
@@ -1027,7 +1032,12 @@ class Groover:
         """
         :return: the user-set tempo.
         """
-        return self._user_tempo
+        base_tempo = self._user_tempo
+        with self._tempo_lock:
+            if self._external_tempo is not None:
+                base_tempo = self._external_tempo
+
+        return base_tempo
 
     def approach_from_above(self, note_number: int, tune: tu.Tune) -> int:
         """
@@ -1338,7 +1348,7 @@ class Groover:
         :return: the new duration of the input time value in seconds.
         """
         tempo_ratio = self.current_tempo / self._tune.tempo
-        return max(0, min(tempo_ratio * time, lu.MAX_TEMPO - 1))
+        return max(0, min(tempo_ratio * time, lu.MAX_TEMPO))
 
     def reset(self) -> None:
         """
@@ -1380,10 +1390,7 @@ class Groover:
         """
 
         calculated_tempo = None
-        base_tempo = self._user_tempo
-        with self._tempo_lock:
-            if self._external_tempo is not None:
-                base_tempo = self._external_tempo
+        base_tempo = self.tempo
 
         bpm = base_tempo.qpm
         value = (

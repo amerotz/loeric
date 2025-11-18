@@ -1,8 +1,9 @@
 #!/bin/bash
 
 SOUNDFONT_URL="https://keymusician01.s3.amazonaws.com/FluidR3_GM.zip"
+ACCORDION_SOUNDFONT_URL="http://sonimusicae.free.fr/Banques/SoniMusicae-Diato-sf2.zip"
 TARGET_DIR="static/sound"
-TEMP_ZIP_FILE="static/sound/FluidR3_GM.zip"
+TEMP_ZIP_FILE="static/sound/tmp.zip"
 
 if [ ! -f "$TARGET_DIR/FluidR3_GM.sf2" ]; then
   echo "SoundFont not found. Downloading and unzipping..."
@@ -11,6 +12,18 @@ if [ ! -f "$TARGET_DIR/FluidR3_GM.sf2" ]; then
   unzip "$TEMP_ZIP_FILE" -d "$TARGET_DIR"
   rm "$TEMP_ZIP_FILE"
   echo "SoundFont downloaded and unzipped successfully."
+fi
+
+if [ ! -f "$TARGET_DIR/Diato.sf2" ]; then
+  echo "Accordion soundfont not found. Downloading and unzipping..."
+  mkdir -p "$TARGET_DIR"
+  curl -L "$ACCORDION_SOUNDFONT_URL" -o "$TEMP_ZIP_FILE"
+  unzip "$TEMP_ZIP_FILE" -d "$TARGET_DIR"
+  sfarkxtc "$TARGET_DIR/Sonimusicae-diato-sf2/Diato.sfArk"
+  mv "$TARGET_DIR/Sonimusicae-diato-sf2/Diato.sf2" "$TARGET_DIR"
+  rm "$TEMP_ZIP_FILE"
+  rm "$TARGET_DIR/Sonimusicae-diato-sf2" -fr
+  echo "Accordion soundfont downloaded and unzipped successfully."
 fi
 
 mkdir client/build

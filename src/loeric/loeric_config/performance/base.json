@@ -1,6 +1,7 @@
 {
     "variables": {
         "var_webapp_intensity_control": 49,
+        "var_roll_2_prob": 0,
         "var_webapp_human_impact_control": 50,
         "var_velocity_weight": [1,1,1,1,1],
         "var_legato_pattern": {

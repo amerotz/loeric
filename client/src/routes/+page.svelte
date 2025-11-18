@@ -79,7 +79,7 @@
 								{#if data.options.customized_tracks.includes(data.track.name)}
 									<svg aria-hidden="true" clip-rule="evenodd" fill-rule="evenodd" xmlns="http://www.w3.org/2000/svg" class="text-gray-500" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
 								{/if}
-								<div class="opacity-70 text-xl">{data.track.name.split(".")[1].toUpperCase()}</div>
+								<div class="opacity-70 text-xl font-mono {data.track.name.split(".")[1].toUpperCase() == 'SET' ? 'text-amber-300' : ''} {data.track.name.split(".")[1].toUpperCase() == 'ABC' ? 'text-cyan-200' : ''} {data.track.name.split(".")[1].toUpperCase() == 'MID' ? 'text-pink-300' : ''}">{data.track.name.split(".")[1].toUpperCase()}</div>
 							</div>
 						</div>
 
@@ -92,19 +92,19 @@
 				<el-options anchor="bottom start" popover class="max-h-110 w-(--button-width) overflow-auto rounded-md bg-gray-950 py-1 text-white shadow-lg [--anchor-gap:--spacing(1)] data-leave:transition data-leave:transition-discrete data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
 
 					{#each data.options.trackList as file}
-						<el-option value={file} class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary focus:text-white focus:outline-hidden">
+						<el-option value={file} class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
 
 							<div class="flex items-center justify-between  flex justify-between items-center gap-3 pr-6">
-								<div class="text-3xl">{file.split(".")[0]}</div>
+								<div class="text-3xl {data.track.name == file ? "text-green-200" : ''}">{file.split(".")[0]}</div>
 								<div class="flex gap-3 items-center">
 								{#if data.options.customized_tracks.includes(file)}
 									<svg aria-hidden="true" clip-rule="evenodd" fill-rule="evenodd" xmlns="http://www.w3.org/2000/svg" class="text-gray-500" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
 								{/if}
-								<div class="opacity-70 text-xl">{data.track.name.split(".")[1].toUpperCase()}</div>
+								<div class="opacity-70 text-xl font-mono group-focus/option:text-white {file.split(".")[1].toUpperCase() == 'SET' ? 'text-amber-300' : ''} {file.split(".")[1].toUpperCase() == 'ABC' ? 'text-cyan-200' : ''} {file.split(".")[1].toUpperCase() == 'MID' ? 'text-pink-300' : ''}">{file.split(".")[1].toUpperCase()}</div>
 							</div>
 							</div>
 
-							<span class="absolute inset-y-0 right-0 flex items-center pr-4 text-primary group-not-aria-selected/option:hidden group-focus/option:text-white in-[el-selectedcontent]:hidden">
+							<span class="text-gren-300 absolute inset-y-0 right-0 flex items-center pr-4 group-not-aria-selected/option:hidden group-focus/option:text-white in-[el-selectedcontent]:hidden">
 								<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
 									<path d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" fill-rule="evenodd" />
 								</svg>

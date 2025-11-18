@@ -263,6 +263,7 @@ def play_tunes(player, tunes, groovers, port):
             if original_message.is_note:
                 # make the groover play the messages
                 midi_headers, new_messages = groover.perform(original_message)
+
             # keep meta messages intact
             else:
                 if (

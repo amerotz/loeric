@@ -102,37 +102,37 @@
 						</select>
 					</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-					<div class="flex gap-3 justify-between">
-						<label class="flex flex-col">
+					<label class="flex gap-3 justify-between">
+						<div class="flex flex-col">
 							<span class="opacity-60 font-bold">DRONES</span>
 							<span class="opacity-80">Toggle LOERIC's accompanying system.</span>
-						</label>
+						</div>
 						<input class="col-span-1" type="checkbox" bind:checked={droning} onchange={droningChange}>
-					</div>
+					</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-					<div class="flex gap-3 justify-between">
-						<label class="flex flex-col">
+					<label class="flex gap-3 justify-between">
+						<div class="flex flex-col">
 							<span class="opacity-60 font-bold ">TRANSPOSE</span>
 							<span class="opacity-80">Transpose LOERIC's performance (semitones).</span>
-						</label>
+						</div>
 						<input class="col-span-1" type="number" onchange={transposeChange} bind:value={transpose} min="-12" max="12"/>
-					</div>
+					</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-					<div class="flex gap-3 justify-between">
-						<label class="flex flex-col">
+					<label class="flex gap-3 justify-between">
+						<div class="flex flex-col">
 							<span class="opacity-60 font-bold ">SLOW START</span>
 							<span class="opacity-80">Build up speed to selected tempo at performance start.</span>
-						</label>
+						</div>
 						<input class="col-span-1"type="checkbox" bind:checked={slow_start} onchange={startChange}>
-					</div>
+					</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-					<div class="flex gap-3 justify-between">
-						<label class="flex flex-col">
+					<label class="flex gap-3 justify-between">
+						<div class="flex flex-col">
 							<span class="opacity-60 font-bold ">SLOW END</span>
 							<span class="opacity-80">Slow down from selected tempo at performance end.</span>
-						</label>
+						</div>
 						<input class="col-span-1"type="checkbox" bind:checked={slow_end} onchange={endChange}>
-					</div>
+					</label>
 				</div>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<div class="flex flex-col justify-between">
@@ -147,6 +147,7 @@
 					</select>
 				</div>
 			</div>
+
 		</div>
 		<div class="flex gap-3 justify-start w-full p-5 shadow-lg rounded-2xl bg-gray-700 overflow-auto">
 			<label class="flex flex-col w-1/5 gap-3">

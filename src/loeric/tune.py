@@ -604,6 +604,7 @@ class Tune:
         meter=None,
         verbose: int = 0,
         sync_interval: float = None,
+        trim_end_eighths=0,
         config=None,
     ):
         """
@@ -623,6 +624,7 @@ class Tune:
         self._first_bar_length = 0
         self._tune_type = None
         self.config = config
+        self.repeats = repeats
 
         if filename.endswith(".mid") or filename.endswith(".midi"):
             midi_source = mp.read_midi(filename)
@@ -635,7 +637,9 @@ class Tune:
             # TODO obtain tune type
             self._tune_type = None
         else:
-            raise Exception("Cannot read this file. Make sure it is a midi file.")
+            raise Exception(
+                f"Cannot read {filename}. Make sure it is a MIDI or ABC file."
+            )
 
         ############################# tempo #############################
 
@@ -663,7 +667,6 @@ class Tune:
             self.forced_key = True
         else:
             for key in midi_source.key_signatures:
-                print(key)
                 self._key_signatures.append(
                     KeySignature(
                         root=key.root,
@@ -772,6 +775,9 @@ class Tune:
         self._score = tmp_score
         self._key_signatures = key_signatures
         self._score_end_time = self._score[-1].time + self._score[-1].duration
+        self._score_end_time -= trim_end_eighths
+
+        self._score = [el for el in self._score if el.time <= self._score_end_time]
 
         ############# score with repetition signs, songpos etc ###########
 

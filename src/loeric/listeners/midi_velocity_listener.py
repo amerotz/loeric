@@ -13,9 +13,21 @@ def main() -> None:
     parser.add_argument("-i", "--input", help="the input MIDI port.", type=int)
     parser.add_argument("-o", "--output", help="the output MIDI port.", type=int)
     parser.add_argument(
-        "-c",
-        "--control",
-        help="the control channel on which intensity is sent.",
+        "-vc",
+        "--velocity-control",
+        help="the control channel on which MPE velocity is sent.",
+        type=int,
+    )
+    parser.add_argument(
+        "-pc",
+        "--pressure-control",
+        help="the control channel on which MPE pressure is sent.",
+        type=int,
+    )
+    parser.add_argument(
+        "-tc",
+        "--timbre-control",
+        help="the control channel on which MPE timbre is sent.",
         type=int,
     )
     parser.add_argument(
@@ -23,6 +35,9 @@ def main() -> None:
         "--responsive",
         help="the weight of incoming values when computing intensity, in range 0 to 1.",
         type=float,
+    )
+    parser.add_argument(
+        "--intonate", help="send intonation information", type=bool, action="store_true"
     )
     args = parser.parse_args()
 
@@ -38,7 +53,9 @@ def main() -> None:
 
     if inport is None and outport is None:
         return
-    intensity = 64
+    velocity_intensity = 64
+    pressure_intensity = 64
+    timbre_intensity = 64
 
     try:
         print("Listening ...")
@@ -48,19 +65,44 @@ def main() -> None:
 
                 # check if we care about the message
                 if lu.is_note_on(msg):
-                    intensity *= 1 - args.responsive
-                    intensity += args.responsive * message.velocity
+                    velocity_intensity *= 1 - args.responsive
+                    velocity_intensity += args.responsive * message.velocity
 
-                    print(f"INT:{round(intensity/127, 2)}")
                     outport.send(
                         mido.Message(
                             "control_change",
                             channel=0,
-                            control=args.control,
-                            value=round(intensity),
+                            control=args.velocity_control,
+                            value=round(velocity_intensity),
+                        )
+                    )
+                elif msg.type == "aftertouch":
+                    pressure_intensity *= 1 - args.responsive
+                    pressure_intensity += args.responsive * message.value
+
+                    outport.send(
+                        mido.Message(
+                            "control_change",
+                            channel=0,
+                            control=args.pressure_control,
+                            value=round(pressure_intensity),
+                        )
+                    )
+                elif msg.type == "control_change" and msg.control == 74:
+                    timbre_intensity *= 1 - args.responsive
+                    timbre_intensity += args.responsive * message.value
+
+                    outport.send(
+                        mido.Message(
+                            "control_change",
+                            channel=0,
+                            control=args.timbre_control,
+                            value=round(timbre_intensity),
                         )
                     )
 
-                outport.send(message)
+                print(
+                    f"[VLTY]\t{round(velocity_intensity/127, 2)}\t[PRSR]\t{round(pressure_intensity/127, 2)}\t[TMBR]\t{round(timbre_intensity/127, 2)}"
+                )
     except:
         outport.close()

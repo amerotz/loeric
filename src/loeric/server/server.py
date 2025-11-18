@@ -1,4 +1,5 @@
 import os
+import json
 import mido
 import tinysoundfont
 import pyaudio as pa
@@ -27,7 +28,6 @@ specific_configs_path = os.path.join(os.getcwd(), "static/webapp_configs")
 
 app = Bottle()
 
-tune: Tune
 musicians: list[Musician] = []
 names = ["LOERIC"]
 shuffle(names)
@@ -43,7 +43,7 @@ def load_soundfonts():
     soundfonts = {
         "Accordion": lss.SynthSound(
             name="Accordion",
-            path="static/sound/accordion.sf2",
+            path="static/sound/Diato.sf2",
             program=1,
             config=f"{specific_configs_path}/instrument/accordion.json",
             default_soundfont_id=default_soundfont_id,
@@ -150,7 +150,7 @@ audio_device_index = 0
 tempo = 140
 repetitions = 2
 current_track = None
-filetypes = [".mid", ".abc"]
+filetypes = [".mid", ".abc", ".set"]
 
 
 def list_audio_inputs():
@@ -218,29 +218,23 @@ def list_tracks() -> List[str]:
 
 def list_custom_tracks() -> List[str]:
     configs = os.listdir(specific_configs_path + "/tunes")
-    print(configs)
-    return [
-        f
-        for f in list_tracks()
-        if f.replace(" ", "").replace("'", "").lower().split(".")[0] + ".json"
-        in configs
-    ]
+    return [f for f in list_tracks() if f.split(".")[0] + ".json" in configs]
 
 
 @app.get("/api/state")
 def state():
-    global tune, tempo, repetitions
+    global tempo, repetitions
     response.set_header("Access-Control-Allow-Origin", "*")
     return {
         "musicians": list(map(lambda m: m.__json__(), musicians)),
         "state": get_state().name,
         "track": {
-            "name": os.path.basename(tune._filename),
-            "time": f"{tune.time_signature.numerator}/{tune.time_signature.denominator}",
-            "config": tune.get_config(),
-            "key": key_to_str(tune.key_signature),
-            "tempo": tempo,
-            "repeats": repetitions,
+            "name": current_track,
+            "time": f"{musicians[0].tune.time_signature.numerator}/{musicians[0].tune.time_signature.denominator}",
+            "config": musicians[0].tune.get_config(),
+            "key": key_to_str(musicians[0].tune.key_signature),
+            "tempo": musicians[0].groover.tempo.qpm,
+            "repeats": musicians[0].tune.repeats,
         },
         "options": {
             "inputs": mido.get_input_names(),
@@ -256,21 +250,67 @@ def state():
 
 
 def __set_track(track: str):
-    global tune, repetitions, current_track
+    global repetitions, current_track
 
     current_track = track
     track_list = list_tracks()
+
     if track in track_list:
 
-        name = os.path.splitext(track.lower().replace("'", "").replace(" ", ""))[0]
-        tune = Tune(
-            os.path.join(track_dir, track),
-            repeats=repetitions,
-            config=f"{specific_configs_path}/tunes/{name}.json",
-        )
+        tunes = []
+        if os.path.splitext(track)[1] == ".set":
+
+            with open(os.path.join(track_dir, track), "r") as f:
+                set_config = json.load(f)
+
+            for t in set_config:
+                tune_config = f"{specific_configs_path}/tunes/{os.path.splitext(t["file"])[0]}.json"
+                if t["config"] is not None:
+                    tune_config = t["config"]
+
+                tune_qpm = tempo
+                if t["qpm"] is not None:
+                    tune_qpm = t["qpm"]
+
+                tunes.append(
+                    (
+                        t["file"],
+                        t["repetitions"],
+                        tune_config,
+                        t["trim_end_eighths"],
+                        tune_qpm,
+                    )
+                )
+
+        else:
+            tunes.append(
+                (
+                    track,
+                    repetitions,
+                    f"{specific_configs_path}/tunes/{os.path.splitext(track)[0]}.json",
+                    0,
+                    tempo,
+                )
+            )
 
         for musician in musicians:
-            musician.tune = tune
+            musician._tunes = []
+            musician._tempos = []
+
+        for name, repeats, config, trim, qpm in tunes:
+            tune = Tune(
+                filename=os.path.join(track_dir, name),
+                repeats=repeats,
+                config=config,
+                trim_end_eighths=trim,
+            )
+
+            for musician in musicians:
+                musician._tunes.append(tune)
+                musician._tempos.append(qpm)
+
+        for musician in musicians:
+            musician.create_all()
 
 
 @app.get("/api/play")
@@ -344,7 +384,7 @@ def control_change():
 
     for musician in musicians:
         if musician.id == musician_id:
-            musician.groover.set_control_value(control, new_value)
+            musician.set_control_value(control, new_value)
 
     return state()
 
@@ -411,7 +451,6 @@ def add_musician():
     musician = Musician(
         name=unused[0],
         loeric_id=loeric_id,
-        tune=tune,
         synth_sound=soundfonts[instrument_key],
     )
     musicians.append(musician)
@@ -475,7 +514,7 @@ def set_transpose():
     musician_id = request.forms.id
     for musician in musicians:
         if musician.id == musician_id:
-            musician.groover.set_transpose(value)
+            musician.set_transpose(value)
 
     return state()
 
@@ -504,7 +543,6 @@ def set_audio_out():
 @app.put("/api/track")
 def set_track():
     stop()
-    global musicians
     track = request.forms.track
     __set_track(track)
     return state()
@@ -565,8 +603,6 @@ def upload_track():
     file = os.path.join(track_dir, upload.filename)
     upload.save(file)
 
-    __set_track(track.name + ".mid")
-
     return state()
 
 
@@ -580,7 +616,7 @@ def get_static(filepath):
     return static_file(filepath, root="static/site")
 
 
-def init_musician():
+def init_musician(track):
     global musicians, synth
 
     loeric_id = generate(
@@ -592,10 +628,12 @@ def init_musician():
     musician = Musician(
         name=unused[0],
         loeric_id=loeric_id,
-        tune=tune,
         synth_sound=soundfonts[instrument_key],
         midi_out=lss.SynthOutput(f"LOERIC Synth {loeric_id}", synth),
     )
+    musicians.append(musician)
+
+    __set_track(track)
 
     for channel in musician.midi_channels:
         synth.program_select(
@@ -605,7 +643,6 @@ def init_musician():
             soundfonts[musician.instrument].program,
         )
 
-    musicians.append(musician)
     start_synth()
 
 
@@ -619,8 +656,7 @@ def start_server():
     track_list = list_tracks()
     if len(track_list) > 0:
         track = track_list[0]
-        __set_track(track)
-        init_musician()
+        init_musician(track)
 
-    run(app, host="localhost", port=8080)
+    run(app, host="localhost", port=8080, quiet=True)
     stop_synth()

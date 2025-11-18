@@ -1,6 +1,5 @@
 {
     "variables": {
-        "var_roll_2_prob": 0,
         "var_legato_pattern": {
             "mean": [1, 0, 0],
             "std": [0,0.1,0.1],
