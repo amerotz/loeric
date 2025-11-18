@@ -169,4 +169,5 @@ cython_debug/
 /client/.svelte-kit/
 /client/build/
 /client/node_modules/
-/static/
+/static/site
+/static/sound
