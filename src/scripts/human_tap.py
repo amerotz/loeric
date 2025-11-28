@@ -14,7 +14,6 @@ sync_duration = 2
 
 
 def send_songpos():
-    global tempo
     with mido.open_output(outport) as out:
         i = 0
         while True:
@@ -43,7 +42,7 @@ with mido.open_output(f"HUMAN SYNC #{id}#", virtual=True) as out:
                 pos_thread.start()
             """
 
-            if last_time == None:
+            if last_time is None:
                 last_time = now
             else:
                 deltas.append(now - last_time)

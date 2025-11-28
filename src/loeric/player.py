@@ -1,13 +1,8 @@
 import time
-import copy
 import threading
-import queue
 import mido
-import music21 as m21
-import muspy as mp
 import numpy as np
 
-from collections import defaultdict
 
 from . import tune as tu
 

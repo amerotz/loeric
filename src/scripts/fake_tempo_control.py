@@ -1,6 +1,5 @@
 import argparse
 import mido
-import math
 import time
 
 # generate a fake control signal

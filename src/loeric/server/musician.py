@@ -2,18 +2,13 @@ import faulthandler
 import time
 import os
 import threading
-from collections import defaultdict
 from enum import Enum
-from os.path import splitext
 from random import randint
-from typing import Optional
 
 import pyaudio as pa
 import mido
-from mido import Message
 from mido.ports import BaseOutput, BaseInput, EchoPort
 
-from loeric import loeric_utils as lu
 from loeric.groover import Groover
 from loeric.player import Player
 import loeric.server as ls
@@ -152,7 +147,7 @@ class Musician:
         self._control_thread = lp.PlayerThread(self._invert)
 
         # go until midi is playing
-        l = threading.Thread(
+        t = threading.Thread(
             target=self._listener_thread.listen,
             args=(audio_monitor, self._responsiveness),
         )
@@ -173,7 +168,7 @@ class Musician:
             args=[audio_monitor, callback],
         )
 
-        l.start()
+        t.start()
         p.start()
 
     @property
@@ -368,7 +363,6 @@ class Musician:
             self._control_thread.stop = True
 
     def ready(self) -> None:
-        global _state
         if _state == State.STOPPED:
             self.thread = threading.Thread(target=self.__play)
             self.thread.start()
@@ -391,7 +385,6 @@ class Musician:
             :param sync_port_out: the MIDI port for synchronization
             :param kwargs: the performance arguments
             """
-            global _play_event, _state
 
             int_value = 0.5
             hi_value = 0.5

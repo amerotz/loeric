@@ -5,8 +5,6 @@ import jsonmerge
 import json
 import os
 
-from os.path import dirname, realpath, isfile
-
 
 def merge_configs(original, new_config):
     base = copy.deepcopy(original)

@@ -1,4 +1,3 @@
-import mido
 import numpy as np
 from scipy.signal import savgol_filter
 
@@ -206,7 +205,6 @@ class HarmonicContour(Contour):
             root = np.random.choice(
                 np.argwhere(chords_filtered == chords_filtered.max())[0]
             )
-            previous_chord = root
 
             # check if the selected chord should be major according to the mode
             chord_quality = np.roll(
@@ -277,8 +275,6 @@ class PhraseContour(Contour):
         """
         # retrieve pitch and time info
         summed_timings = np.array([t.eighth_duration for t in midi.times])
-        pitches = midi.pitches
-        durations = midi.durations
 
         bar_length = midi.time_signature.eighths_per_bar.eighth_duration
 
@@ -519,8 +515,6 @@ class PatternContour(Contour):
 
         # retrieve pitch and time info
         summed_timings = np.array([t.eighth_duration for t in midi.times])
-        pitches = midi.pitches
-        durations = midi.durations
 
         time_period = midi.time_signature.eighths_per_bar.eighth_duration * period
         bar_position = summed_timings / time_period
@@ -548,9 +542,6 @@ class PatternContour(Contour):
             for i in np.unique(bars):
 
                 indexes = np.argwhere(bars == i)
-                min_i = min(indexes)
-                max_i = min(max(indexes) + 1, len(summed_timings) - 1)
-                bar_sum = summed_timings[max_i] - summed_timings[min_i]
                 pattern[indexes] /= pattern[indexes].sum()
                 pattern[indexes] *= len(indexes)
 

@@ -1,4 +1,3 @@
-import argparse
 import json
 import copy
 import random
@@ -709,6 +708,9 @@ class Tune:
                 time_signature.eighths_per_bar / time_signature.beat_count
             )
 
+        self._first_bar_length %= time_signature.eighths_per_bar.eighth_duration
+        print(self._first_bar_length)
+
         if self._verbose > 0:
             print(
                 f"[INFO]\tSynchronizing every:\t{self._sync_interval/2} quarters.",
@@ -805,7 +807,6 @@ class Tune:
         self.maximum_songpos = len(self._position_times) - 1
 
         # divide add songpos in messages that contain a sync interval
-        notes_to_add = []
         should_add_position = np.ones_like(song_positions).astype(bool)
         for note in self._score:
 

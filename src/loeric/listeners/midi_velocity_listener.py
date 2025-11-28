@@ -104,5 +104,6 @@ def main() -> None:
                 print(
                     f"[VLTY]\t{round(velocity_intensity/127, 2)}\t[PRSR]\t{round(pressure_intensity/127, 2)}\t[TMBR]\t{round(timbre_intensity/127, 2)}"
                 )
-    except:
+    except Exception as e:
+        print(e)
         outport.close()

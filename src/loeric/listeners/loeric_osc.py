@@ -1,11 +1,12 @@
 import argparse
 import numpy as np
 import mido
-import math
-import time
 
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
+
+
+args = None
 
 
 def send_control(control, out):
@@ -20,7 +21,6 @@ def send_control(control, out):
                 value=value,
             )
         )
-        global args
         print(args.port, args.control, value, sep="\t")
         # time.sleep(0.25)
 
@@ -33,6 +33,7 @@ def default_handler(address, *args):
 
 
 def main():
+    global args
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--port", type=int, default=None)
     parser.add_argument("-m", "--message", type=str, default="/loeric/control")

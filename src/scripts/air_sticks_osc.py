@@ -1,8 +1,6 @@
 import argparse
 import threading
-import numpy as np
 import mido
-import math
 import time
 
 from pythonosc.dispatcher import Dispatcher
@@ -40,7 +38,6 @@ def default_handler(address, *args):
 
 def send_control(out, args):
     while True:
-        global sensor_value
         value = int(127 * sensor_value)
         out.send(
             mido.Message(

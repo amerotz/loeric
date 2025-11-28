@@ -1,4 +1,3 @@
-import loeric.loeric_utils as lu
 import threading
 import time
 import mido
@@ -23,7 +22,11 @@ def main() -> None:
         "-i2", "--input_2", help="the second input MIDI port.", type=int
     )
     parser.add_argument("-o", "--output", help="the output MIDI port.", type=int)
-    parser.add_argument("--create_output", help="whether a new output MIDI port should be created.", action="store_true")
+    parser.add_argument(
+        "--create_output",
+        help="whether a new output MIDI port should be created.",
+        action="store_true",
+    )
     parser.add_argument(
         "-i1c",
         "--input-1-control",
@@ -74,7 +77,6 @@ def main() -> None:
     input_2 = mido.get_input_names()[args.input_2]
     if not args.create_output:
         output = mido.get_output_names()[args.output]
-    intensity = 64
 
     values[input_1] = 64
     values[input_2] = 64
@@ -86,7 +88,7 @@ def main() -> None:
 
     try:
         if args.create_output:
-            out = mido.open_output(f"HUMAN out COMBINE", virtual=True)
+            out = mido.open_output("HUMAN out COMBINE", virtual=True)
         else:
             out = mido.open_output(output)
         while True:
@@ -94,11 +96,17 @@ def main() -> None:
             v2 = values[input_2]
             if args.mode == "through":
                 message = mido.Message(
-                    "control_change", channel=0, control=int(args.input_1_control), value=int(v1)
+                    "control_change",
+                    channel=0,
+                    control=int(args.input_1_control),
+                    value=int(v1),
                 )
                 out.send(message)
                 message = mido.Message(
-                    "control_change", channel=0, control=int(args.input_2_control), value=int(v2)
+                    "control_change",
+                    channel=0,
+                    control=int(args.input_2_control),
+                    value=int(v2),
                 )
                 out.send(message)
                 print(v1, v2, sep="\t")

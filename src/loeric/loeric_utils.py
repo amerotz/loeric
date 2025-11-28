@@ -1,5 +1,4 @@
 import mido
-import muspy as mp
 import numpy as np
 import music21 as m21
 
@@ -134,7 +133,7 @@ def major_root(root, mode) -> int:
 # 1 = minor
 # 2 = diminished
 # 3 = augmented
-##########################C C#  D Eb  E  F F#  G G#  A A#  B
+# ####################### C C#  D Eb  E  F F#  G G#  A A#  B
 chord_quality = np.array([0, 2, 1, 2, 1, 0, 2, 0, 2, 1, 0, 2])
 
 

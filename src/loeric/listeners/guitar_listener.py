@@ -3,7 +3,6 @@ import mido
 import time
 import argparse
 import numpy as np
-from scipy.fftpack import fft, dct, idct
 import matplotlib.pyplot as plt
 
 
@@ -66,7 +65,7 @@ def main() -> None:
                 magnitude /= max(magnitude)
 
                 # 4. Find dominant frequency
-                dominant_index = np.argsort(magnitude[magnitude > 0.75])
+                # dominant_index = np.argsort(magnitude[magnitude > 0.75])
 
                 plt.plot(1 / frequencies[1:], magnitude[1:])
                 plt.show()

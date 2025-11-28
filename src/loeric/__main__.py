@@ -22,8 +22,6 @@ done_playing = threading.Event()
 
 def player_loop(player, groover):
 
-    global done_playing, play_event
-
     play_event.wait()
     while not done_playing.is_set():
 
@@ -54,17 +52,17 @@ def sync_thread(
             print(f"Received SET TEMPO {tempo}.")
         elif msg.type == "reset":
             groover.reset_clock()
-            print(f"Received RESET.")
+            print("Received RESET.")
         elif msg.type == "clock":
             groover.set_clock()
-            print(f"Received CLOCK.")
+            print("Received CLOCK.")
         elif msg.type == "songpos":
             print(f"Received JUMP {msg.pos}.")
             if groover.stopped.is_set():
                 groover.jump_to_pos(msg.pos)
                 player.set_song_time(groover._tune.position_time(msg.pos))
             else:
-                print(f"Ignoring JUMP because playback is active.")
+                print("Ignoring JUMP because playback is active.")
         elif msg.type == "start":
             play_event.set()
             print("Received START.")
@@ -80,7 +78,6 @@ def sync_thread(
 
 
 def main():
-    global play_event, done_playing
     # args
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -429,7 +426,7 @@ def main():
         if (not args["sync"] and not args["no_prompt"]) and (
             input_defined or output_defined
         ):
-            a = input("Press any key to start playback:")
+            input("Press any key to start playback:")
             print()
 
         if args["sync"]:

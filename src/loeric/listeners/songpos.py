@@ -1,6 +1,5 @@
 import mido
 import argparse
-import time
 
 
 def main():
@@ -28,7 +27,6 @@ def main():
 
     positions = args.positions
 
-    id = int(time.time())
     with mido.open_output(mido.get_output_names()[args.output]) as out:
         with mido.open_input(mido.get_input_names()[args.input]) as in_:
             i = -1

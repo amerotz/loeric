@@ -1,10 +1,6 @@
 import loeric.loeric_utils as lu
 import mido
-import time
-import argparse
 import numpy as np
-from scipy.fftpack import fft, dct, idct
-import matplotlib.pyplot as plt
 
 filename = "/home/marco/git/loeric-align/AMT/COMP_fiddle_reels_aisling_amt.mid"
 midi = mido.MidiFile(filename)
@@ -22,10 +18,8 @@ for msg in midi:
 
 times = np.array(onsets)
 new_times = np.arange()
-"""
 times -= min(times)
 durations = np.diff(times)
-"""
 
 """
 durations = np.round(
@@ -46,13 +40,13 @@ wraps = [2, 3, 4, 6, 8, 9, 12, 16]  # , 18, 24 , 32, 36]
 for i in wraps:
     if i >= len(durations):
         continue
-    l = len(durations)
-    tot = i * (1 + l // i)
+    length = len(durations)
+    tot = i * (1 + length // i)
     # print(i, l, tot, 1 + l // i)
 
     swing = durations.copy()
-    if l % i != 0:
-        swing = np.pad(durations, (0, tot - l))
+    if length % i != 0:
+        swing = np.pad(durations, (0, tot - length))
 
     # print()
 

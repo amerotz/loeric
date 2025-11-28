@@ -8,8 +8,6 @@ import threading
 import time
 import numpy as np
 import music21 as m21
-import threading
-import time
 
 from collections import defaultdict
 from collections.abc import Callable
@@ -278,7 +276,7 @@ class Groover:
                 self._tune, self._config["contours"][c]["recipe"]
             )
             if (
-                not "human_impact_scale" in self._config["contours"][c]
+                "human_impact_scale" not in self._config["contours"][c]
                 or self._config["contours"][c]["human_impact_scale"] is None
             ):
                 self._config["contours"][c]["human_impact_scale"] = 0
@@ -339,7 +337,7 @@ class Groover:
             # update
             for contour in self._config["tempo_control"]["slow_affected_contours"]:
 
-                if not contour in self._config["contours"]:
+                if contour not in self._config["contours"]:
                     pass
 
                 # retrieve original contour
@@ -681,7 +679,8 @@ class Groover:
                 midi_headers.append(
                     mido.MetaMessage("set_tempo", tempo=self.current_tempo, time=0)
                 )
-            except:
+            except Exception as e:
+                print(e)
                 print(self.current_tempo)
 
         # add contour information as MIDI CC
@@ -1126,7 +1125,6 @@ class Groover:
         durations *= ornament_length
 
         ornaments = []
-        first_note = message.pitch
         is_slide = self._config["ornamentation"][ornament_type]["slide"]
         offset = message.time
         for i, (p, v, d) in enumerate(zip(pitches, velocities, durations)):

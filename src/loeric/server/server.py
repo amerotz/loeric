@@ -5,7 +5,7 @@ import tinysoundfont
 import pyaudio as pa
 
 from typing import List
-from bottle import Bottle, run, static_file, request, response, HTTPResponse, abort
+from bottle import Bottle, run, static_file, request, response, HTTPResponse
 from muspy.outputs.midi import PITCH_NAMES
 from nanoid import generate
 from random import shuffle
@@ -16,7 +16,6 @@ from loeric.server.musician import (
     play_all,
     stop_all,
     pause_all,
-    State,
 )
 import loeric.server.synthout as lss
 from loeric.tune import Tune
@@ -38,7 +37,7 @@ soundfonts = []
 
 
 def load_soundfonts():
-    global synth, soundfonts
+    global soundfonts
     default_soundfont_id = synth.sfload("static/sound/FluidR3_GM.sf2")
     soundfonts = {
         "Accordion": lss.SynthSound(
@@ -179,7 +178,7 @@ def list_audio_outputs():
 
 
 def start_synth():
-    global audio_device_index, synth_is_running, synth
+    global synth_is_running
     if not synth_is_running:
         audio = pa.PyAudio()
         info = audio.get_device_info_by_index(audio_device_index)
@@ -191,7 +190,7 @@ def start_synth():
 
 
 def stop_synth():
-    global synth_is_running, synth
+    global synth_is_running
     if synth_is_running:
         synth.stop()
         synth_is_running = False
@@ -223,7 +222,6 @@ def list_custom_tracks() -> List[str]:
 
 @app.get("/api/state")
 def state():
-    global tempo, repetitions
     response.set_header("Access-Control-Allow-Origin", "*")
     return {
         "musicians": list(map(lambda m: m.__json__(), musicians)),
@@ -251,7 +249,7 @@ def state():
 
 
 def __set_track(track: str):
-    global repetitions, current_track
+    global current_track
 
     current_track = track
     track_list = list_tracks()
@@ -316,7 +314,6 @@ def __set_track(track: str):
 
 @app.get("/api/play")
 def play():
-    global synth_is_running, musicians
     for index, musician in enumerate(musicians):
         if musician.midi_out is None or isinstance(musician.midi_out, lss.SynthOutput):
             synth.program_select(
@@ -345,7 +342,6 @@ def pause():
 
 @app.get("/api/stop")
 def stop():
-    global synth_is_running
 
     stop_all()
     stop_synth()
@@ -356,7 +352,6 @@ def stop():
 
 @app.put("/api/instrument")
 def instrument_change():
-    global musicians
     stop()
     musician_id = request.forms.id
     new_instrument = request.forms.instrument
@@ -378,7 +373,6 @@ def instrument_change():
 
 @app.put("/api/control")
 def control_change():
-    global musicians
     musician_id = request.forms.id
     control = int(request.forms.control)
     new_value = float(request.forms.value)
@@ -392,7 +386,6 @@ def control_change():
 
 @app.put("/api/output")
 def output_change():
-    global musicians
     musician_id = request.forms.id
     new_output = request.forms.output
 
@@ -416,7 +409,6 @@ def output_change():
 
 @app.put("/api/input")
 def input_change():
-    global musicians
     musician_id = request.forms.id
     new_input = request.forms.input
 
@@ -439,7 +431,6 @@ def input_change():
 
 @app.get("/api/add_musician")
 def add_musician():
-    global musicians
     """
     loeric_id = generate(
         "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10
@@ -461,7 +452,7 @@ def add_musician():
 
 @app.put("/api/tempo")
 def set_tempo():
-    global tempo, musicians
+    global tempo
     tempo = int(request.forms.tempo)
     for musician in musicians:
         musician.set_tempo(tempo)
@@ -471,7 +462,6 @@ def set_tempo():
 
 @app.put("/api/drones")
 def set_drones():
-    global musicians
     value = request.forms.drones == "true"
     musician_id = request.forms.id
     for musician in musicians:
@@ -484,7 +474,6 @@ def set_drones():
 @app.put("/api/slow_start")
 def set_slow_start():
     stop()
-    global musicians
     value = request.forms.slow_start == "true"
     musician_id = request.forms.id
     for musician in musicians:
@@ -496,7 +485,6 @@ def set_slow_start():
 
 @app.put("/api/slow_end")
 def set_slow_end():
-    global musicians
     stop()
     value = request.forms.slow_end == "true"
     musician_id = request.forms.id
@@ -509,7 +497,6 @@ def set_slow_end():
 
 @app.put("/api/transpose")
 def set_transpose():
-    global musicians
     value = int(request.forms.transpose)
     print(value)
     musician_id = request.forms.id
@@ -532,7 +519,7 @@ def set_repeat():
 
 @app.put("/api/audio_out")
 def set_audio_out():
-    global audio_device_index, synth_is_running
+    global audio_device_index
 
     stop_synth()
     audio_device_index = int(request.forms.device.split(":")[-1])
@@ -613,13 +600,11 @@ def get_static():
 
 
 @app.get("/<filepath:path>")
-def get_static(filepath):
+def get_static_filepath(filepath):
     return static_file(filepath, root="static/site")
 
 
 def init_musician(track):
-    global musicians, synth
-
     loeric_id = generate(
         "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10
     )
@@ -648,7 +633,7 @@ def init_musician(track):
 
 
 def start_server():
-    global audio_device_index, synth, synth_is_running
+    global audio_device_index, synth
 
     synth = tinysoundfont.Synth()
     load_soundfonts()

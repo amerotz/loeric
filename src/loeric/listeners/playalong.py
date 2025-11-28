@@ -3,7 +3,6 @@ import traceback
 import argparse
 import mido
 import pyaudio
-import math
 import time
 import numpy as np
 import faulthandler
@@ -70,7 +69,7 @@ class PlayerThread:
 
             # send the message
             self.outport.send(msg)
-            print(f"{round(perc,2)}\t{msg.value}")
+            print(f"{round(perc, 2)}\t{msg.value}")
 
 
 class AudioMonitor:
@@ -286,16 +285,16 @@ def main():
     player.set_control(args.control)
 
     # go until midi is playing
-    l = threading.Thread(target=listener.listen, args=(audio_monitor, args.responsive))
+    t = threading.Thread(target=listener.listen, args=(audio_monitor, args.responsive))
 
     p = threading.Thread(target=player.send_control, args=[audio_monitor])
 
     try:
-        l.start()
+        t.start()
         p.start()
 
-        while l.is_alive():
-            l.join(1)
+        while t.is_alive():
+            t.join(1)
 
         while p.is_alive():
             p.join(1)

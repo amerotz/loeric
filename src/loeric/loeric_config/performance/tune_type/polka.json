@@ -2,16 +2,16 @@
 	"variables": {
         "var_velocity_weight": [0,-2,1,1,1],
         "var_ornament_pattern": {
-                            "mean": [ 
-								0, 1, 1, 1, 
-								1, 1, 1, 0
-							],
-                            "std":  [ 0, 0, 0, 0,
-									  0, 0, 0, 0 ],
-							"std_scale": 1,
-							"normalize": false,
-							"period": 8
-						}
+			"mean": [
+				0, 1, 1, 1,
+				1, 1, 1, 0
+			],
+			"std":  [ 0, 0, 0, 0,
+				0, 0, 0, 0 ],
+				"std_scale": 1,
+				"normalize": false,
+				"period": 8
+		}
 	},
 	"contours": {
 		"drone": {
@@ -26,9 +26,9 @@
 						},
 						"pattern": {
                             "mean": [ 
-								1, 0, 1, 0, 
-								1, 0, 1, 0, 
-								1, 0, 1, 0, 
+							 0,	1, 0, 1, 
+							 0,	1, 0, 1, 
+							 0,	1, 0, 1, 
 								0, 1, 1, 0
 							],
                             "std":  [ 0, 0, 0, 0,

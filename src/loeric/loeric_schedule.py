@@ -196,7 +196,7 @@ skip_to_next = False
 def get_callback(control):
 
     def check_skips(msg):
-        global skip_to_next, received_start
+        global skip_to_next
 
         if msg.type == "control_change" and msg.control != control:
             return
@@ -226,7 +226,7 @@ def player_loop(player):
 
 
 def play_tunes(player, tunes, groovers, port):
-    global skip_to_next, received_start
+    global skip_to_next
 
     received_start.wait()
     print("Groovers started")
@@ -234,7 +234,7 @@ def play_tunes(player, tunes, groovers, port):
     for tune, groover in zip(tunes, groovers):
 
         ############# PREAMBLE ###############
-        print(f"Playing next tune.")
+        print("Playing next tune.")
         player.init_playback()
         player.reset_song_time(
             song_time=groover._tune.times[0].eighth_duration,

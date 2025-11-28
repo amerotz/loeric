@@ -1,7 +1,6 @@
 import os
 import random
 import argparse
-import subprocess
 from loeric.__main__ import main as loeric
 
 from collections import defaultdict
