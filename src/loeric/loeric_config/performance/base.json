@@ -347,6 +347,8 @@
     "keyswitches": {},
     "ornamentation": {},
     "values": {
+        "bend_up_semitones": 2,
+        "bend_down_semitones": 2,
         "bend_resolution": 32,
         "beat_velocity_increase": 0,
         "min_velocity": 64,
@@ -388,8 +390,8 @@
             69,
             76
         ],
-        "strings_min": 1,
-        "strings_max": 1,
+        "strings_min": 0,
+        "strings_max": 0,
         "free_strings": [
             43,
             38,

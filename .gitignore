@@ -170,3 +170,4 @@ cython_debug/
 /client/node_modules/
 /static/site
 /static/sound
+/configs

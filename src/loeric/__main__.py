@@ -450,7 +450,7 @@ def main():
             lu.play(
                 groover,
                 player,
-                songpos_callback,
+                songpos_callback=songpos_callback,
                 repetition_callback=lambda x: print(x),
                 **args,
             )

@@ -11,8 +11,8 @@ from mido.ports import BaseOutput, BaseInput, EchoPort
 
 from loeric.groover import Groover
 from loeric.player import Player
-import loeric.server as ls
 import loeric.tune as tu
+import loeric.loeric_utils as lu
 import loeric.listeners.playalong as lp
 
 faulthandler.enable()
@@ -225,7 +225,7 @@ class Musician:
 
             additional_configs = [
                 self._synth_sound.config,
-                f"{ls.server.general_configs_path}/tune_type/{tune.tune_type}.json",
+                f"{lu.general_configs_path}/tune_type/{tune.tune_type}.json",
                 tune.config,
             ]
 

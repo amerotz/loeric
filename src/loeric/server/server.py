@@ -22,8 +22,8 @@ from loeric.tune import Tune
 
 track_dir = os.path.join(os.getcwd(), "static/midi")
 temp_dir = os.path.join(os.getcwd(), "static/temp")
-general_configs_path = os.getcwd() + "/src/loeric/loeric_config/performance"
 specific_configs_path = os.path.join(os.getcwd(), "static/webapp_configs")
+
 
 app = Bottle()
 

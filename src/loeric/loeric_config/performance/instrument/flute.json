@@ -1010,7 +1010,7 @@
         "bind": "legato"
     },
     "values": {
-        "pitch_deviation_cents": 10,
+        "pitch_deviation_cents": 5,
         "min_velocity": 1,
         "max_velocity": 127
     },

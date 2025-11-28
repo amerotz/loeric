@@ -720,6 +720,9 @@
         "C4": "B3",
         "C5": "B4"
     },
+    "values": {
+        "pitch_deviation_cents": 5
+    },
     "drone": {
         "threshold": 0.5,
         "velocity_multiplier": 0.8,

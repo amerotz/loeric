@@ -11,6 +11,8 @@ from . import loeric_utils as lu
 ############################# CONSTANTS #########################
 
 MINIMUM_QUARTER_DIVISION = 48
+BEND_UP = 2
+BEND_DOWN = 2
 
 
 def note_list_to_midi(notes):
@@ -519,12 +521,17 @@ class Note(ScoreElement):
             overall_time = TimeDelta(eighth_duration=self._time.eighth_duration)
 
         messages = []
+
+        bend_semitones = np.round(self._pitch) - self._pitch
+        if bend_semitones > 0:
+            bend_percentage = bend_semitones / BEND_UP
+        else:
+            bend_percentage = bend_semitones / BEND_DOWN
+
         messages.append(
             mido.Message(
                 "pitchwheel",
-                pitch=np.round(8192 * (np.round(self._pitch) - self._pitch)).astype(
-                    int
-                ),
+                pitch=np.round(8192 * bend_percentage).astype(int),
                 channel=self.channel,
                 time=overall_time.eighth_duration,
             )
@@ -550,10 +557,12 @@ class Note(ScoreElement):
                     eighth_duration=note.duration.eighth_duration / resolution
                 )
 
-                bend = max(
-                    min(4096.0 * (note.pitch - self._pitch), 8191),
-                    -8192,
-                )
+                bend_semitones = note.pitch - self._pitch
+                if bend_semitones > 0:
+                    bend_percentage = bend_semitones / BEND_UP
+                else:
+                    bend_percentage = bend_semitones / BEND_DOWN
+
                 # print(previous_bend, bend)
 
                 # append messages
@@ -563,7 +572,7 @@ class Note(ScoreElement):
                         overall_time = overall_time + slide_duration
                     perc = j / resolution
                     perc **= mult
-                    pb = (1 - perc) * previous_bend + perc * bend
+                    pb = (1 - perc) * previous_bend + perc * bend_semitones
                     pb = int(pb)
                     messages.append(
                         mido.Message(
@@ -575,7 +584,7 @@ class Note(ScoreElement):
                     )
                     note_duration = note_duration - slide_duration
 
-                previous_bend = bend
+                previous_bend = bend_semitones
 
         if self._duration == 0:
             note_duration += 0.001
@@ -619,7 +628,9 @@ class Tune:
         """
         self._filename = filename
         self._verbose = verbose
-        self._sync_interval = sync_interval
+        self._sync_interval = None
+        if sync_interval is not None:
+            self._sync_interval = TimeDelta(eighth_duration=sync_interval)
         self._first_bar_length = 0
         self._tune_type = None
         self.config = config
@@ -708,9 +719,7 @@ class Tune:
                 time_signature.eighths_per_bar / time_signature.beat_count
             )
 
-        self._first_bar_length %= time_signature.eighths_per_bar.eighth_duration
-        print(self._first_bar_length)
-
+        self._first_bar_length %= self.time_signature.eighths_per_bar.eighth_duration
         if self._verbose > 0:
             print(
                 f"[INFO]\tSynchronizing every:\t{self._sync_interval/2} quarters.",

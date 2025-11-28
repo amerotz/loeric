@@ -1,6 +1,7 @@
 import mido
 import numpy as np
 import music21 as m21
+import os
 
 from . import tune as tu
 
@@ -16,6 +17,7 @@ TRIGGER_DELTA = 0.05
 
 MAX_TEMPO = 2**24 - 1
 
+general_configs_path = os.getcwd() + "/src/loeric/loeric_config/performance"
 
 # key signatures
 number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
@@ -25,6 +27,8 @@ number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
 def play(
     groover,
     player,
+    loop_condition=lambda: True,
+    note_callback=None,
     songpos_callback=None,
     repetition_callback=None,
     **kwargs,
@@ -42,7 +46,7 @@ def play(
     )
 
     # iterate over messages
-    while True:
+    while loop_condition():
 
         if groover.stopped.is_set():
             while groover.stopped.is_set():
@@ -59,12 +63,18 @@ def play(
         if original_message.is_note:
             # make the groover play the messages
             midi_headers, new_messages = groover.perform(original_message)
+            if note_callback is not None:
+                note_callback(original_message)
         # keep meta messages intact
         else:
             if isinstance(original_message, tu.SongPosition):
-                songpos_callback(original_message)
+                if songpos_callback is not None:
+                    songpos_callback(original_message)
             elif isinstance(original_message, tu.Repetition):
-                repetition_callback(original_message)
+                if repetition_callback is not None:
+                    repetition_callback(original_message)
+                if groover.skip_repetition:
+                    break
             elif (
                 isinstance(original_message, tu.KeySignature)
                 and not groover._tune.forced_key

@@ -77,6 +77,7 @@ class Groover:
         self.lock = threading.Lock()
         self.stopped = threading.Event()
         self.playback_resumed = threading.Event()
+        self.skip_repetition = False
         self._previous_note_duration = 0
 
         self._contour_index = 0
@@ -224,6 +225,9 @@ class Groover:
         # random seed
         random.seed(self._config["values"]["seed"])
         np.random.seed(self._config["values"]["seed"])
+
+        tu.BEND_UP = self.max_bend_up
+        tu.BEND_DOWN = self.max_bend_down
 
         # set parameters
         if self._config["tempo_control"]["bpm"] is None:
@@ -405,12 +409,16 @@ class Groover:
 
     def get_control_value(self, control_num):
         """
-        Read the value associated with a given control number.
+        Read the values associated with a given control number.
         """
-        if control_num in self._contour_values:
-            return self._contour_values[control_num]
-        else:
-            return 0.5
+        val = [
+            self._contour_values[c]
+            for c in self._config["contour_2_control"]
+            if self._config["contour_2_control"][c]["control"] == control_num
+        ]
+        if len(val) == 0:
+            val = [0.5]
+        return val
 
     def set_control_value(self, control_num, value):
         """
@@ -418,7 +426,7 @@ class Groover:
         """
 
         # store the raw control
-        self._contour_values[control_num] = value
+        # self._contour_values[control_num] = value
         # traditional control
         for group in self._config["control_2_contour"].values():
             event_number = group["control"]
@@ -427,7 +435,9 @@ class Groover:
                     self.set_contour_value(contour_name, value)
                     # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
                     if self._verbose == 3:
-                        print(f"{contour_name}:\t{round(value, 2)}")
+                        print(
+                            f"[{self.loeric_id[:4]}]\t{contour_name}:\t{round(value, 2)}"
+                        )
 
     def check_midi_control(self) -> Callable[[], None]:
         """
@@ -449,7 +459,7 @@ class Groover:
                 pass
 
             if msg.is_cc():
-                print(msg)
+                # print(msg)
                 self.set_control_value(msg.control, msg.value / 127)
 
         return callback
@@ -704,6 +714,14 @@ class Groover:
         return self._eighth_duration_seconds * self._contour_values["tempo_pattern"]
 
     @property
+    def max_bend_up(self):
+        return self._config["values"]["bend_up_semitones"]
+
+    @property
+    def max_bend_down(self):
+        return self._config["values"]["bend_down_semitones"]
+
+    @property
     def performance_time(self):
         return self._performance_time
 
@@ -751,6 +769,7 @@ class Groover:
 
     def _contours_to_midi(self):
         messages = []
+        values = defaultdict(list)
         for contour_name in self._config["contour_2_control"]:
 
             contour = contour_name.split("#")[0]
@@ -761,13 +780,16 @@ class Groover:
             max_value = self._config["contour_2_control"][contour_name]["max"]
             value = max(0, min(127, round(min_value + value * (max_value - min_value))))
 
+            values[control].append(value)
+
+        for control in values.keys():
             messages.append(
                 mido.Message(
                     "control_change",
                     channel=self._config["values"]["midi_channel"],
                     control=control,
                     time=0,
-                    value=value,
+                    value=np.mean(values[control]).astype(int),
                 )
             )
         return messages

@@ -9,10 +9,12 @@ import numpy as np
 
 from collections import defaultdict
 
-from . import tune as tu
-from . import groover as gr
-from . import player as pl
-from . import loeric_utils as lu
+
+import loeric.tune as tu
+import loeric.loeric_utils as lu
+import loeric.player as pl
+import loeric.groover as gr
+
 
 """
 from loeric import tune as tu
@@ -75,13 +77,11 @@ class Session:
 
     def session_loop(self):
 
-        global all_dead, program_start
-
         all_dead.acquire()
         print("[LOOP] Session loop thread started.")
         while not must_die.is_set():
 
-            now = time.time()
+            # now = time.time()
             # handle sleep/awakening
             with self._sleepers_lock:
 
@@ -108,12 +108,11 @@ class Session:
                             )
 
                         # awake thread
-                        with groover.playback_resumed:
-                            groover.playback_resumed.notify_all()
+                        groover.playback_resumed.set()
 
-                            print(
-                                f"[LOOP] {groover.loeric_id} AWKN at {sleeper_position} ({current_time - program_start})"
-                            )
+                        print(
+                            f"[LOOP] {groover.loeric_id} AWKN at {sleeper_position} ({current_time - program_start})"
+                        )
                     else:
                         # nevermind, keep sleeping
                         new_sleepers.append(s)
@@ -126,13 +125,12 @@ class Session:
         all_dead.release()
 
     def handle_human_pos(self, human_id, position):
-        global program_start
         # don't sync the human
         # but record positions
         now = time.time()
         if (
             # if first time
-            not human_id in self._loeric_positions
+            human_id not in self._loeric_positions
             # or human skipped a beat
             or now - self._loeric_positions[human_id][0] > 2 * self._songpos_wait
         ):
@@ -156,9 +154,11 @@ class Session:
                     self._loeric_positions[human_id][1] + 1,
                 )
 
+        """
         print(
-            f"[SYNC] {human_id} SENT {self._loeric_positions[human_id][1] (self._loeric_positions[human_id][0] - program_start)}"
+            f"[SYNC] {human_id} SENT {self._loeric_positions[human_id][1]} {(self._loeric_positions[human_id][0] - program_start)}"
         )
+        """
 
     def _calculate_position(self, loeric_id):
 
@@ -225,7 +225,7 @@ class Session:
                 )
 
             # tell groover to start at next songpos
-            groover.jump_to_pos(position)
+            groover.jump_to_pos(int(position))
 
     def _calculate_new_tempo(self, now, expected_timestamp):
         Q = self._config["tempo_policy"]["sync_interval_quarters"]
@@ -242,7 +242,6 @@ class Session:
         return w
 
     def handle_loeric_pos(self, groover: gr.Groover, position: int):
-        global program_start
         # obtain timestamp
         now = time.time()
 
@@ -256,7 +255,7 @@ class Session:
         # obtain sync position
         timestamp, calculated_position = self._calculate_position(loeric_id)
 
-        print(f"[SYNC] {loeric_id} SENT {position} ({now-program_start})")
+        # print(f"[SYNC] {loeric_id} SENT {position} ({now-program_start})")
 
         # expected timestamp
         expected_songpos_timestamp = (
@@ -328,9 +327,6 @@ class Session:
 
     def handle_human_intensity(self, human_id, intensity, human_impact):
 
-        # who sent this?
-        loeric_id = re.search("#.*#", port.name)[0]
-
         # keep track of intensity
         self._intensity_dict[human_id] = intensity
 
@@ -345,13 +341,13 @@ class Session:
         loeric_id = groover.loeric_id
 
         # keep track of intensity
-        self._intensity_dict[loeric_id] = groover.get_control_value(
-            self._config["intensity_control_in"]
+        self._intensity_dict[loeric_id] = np.mean(
+            groover.get_control_value(self._config["intensity_control_out"])
         )
 
         # keep track of human_impact
-        self._human_impact_dict[loeric_id] = groover.get_control_value(
-            self._config["human_impact_control_in"]
+        self._human_impact_dict[loeric_id] = np.mean(
+            groover.get_control_value(self._config["human_impact_control_out"])
         )
 
         if loeric_id not in self._action_dict:
@@ -392,7 +388,7 @@ class Session:
             group = random.sample(players, n)
 
             self._action_dict[loeric_id] = (now, action, group)
-            print(loeric_id, action, group)
+            print(f"[SESS]\t{loeric_id:10}\t{action}\t{group}")
 
         _, action, group = self._action_dict[loeric_id]
         if type(group) is not list:
@@ -439,24 +435,20 @@ class Session:
             "human_impact_constant"
         ]
 
-        int_value *= 127
-        int_value = int(int_value)
-        int_value = min(int_value, 127)
+        int_value = min(int_value, 1)
         int_value = max(int_value, 0)
 
-        hi_value *= 127
-        hi_value = int(hi_value)
-        hi_value = min(hi_value, 127)
+        hi_value = min(hi_value, 1)
         hi_value = max(hi_value, 0)
 
-        groover.set_control_value(self._config["intensity_control_out"], int_value)
-        groover.set_control_value(self._config["human_impact_control_out"], hi_value)
+        groover.set_control_value(self._config["intensity_control_in"], int_value)
+
+        groover.set_control_value(self._config["human_impact_control_in"], hi_value)
 
 
 def get_callback(control):
 
     def check_skips(msg):
-        global received_start
 
         if msg.type == "control_change" and msg.control != control:
             return
@@ -478,13 +470,22 @@ def main():
     global all_dead, program_start
     parser = argparse.ArgumentParser()
     parser.add_argument("source", help="the midi file to play.", nargs="?", default="")
-    parser.add_argument(
-        "--players",
-        help="the self._configuration files for each player.",
+    player_args = parser.add_mutually_exclusive_group()
+    player_args.add_argument(
+        "--player_configs",
+        help="the configuration files for each player.",
         nargs="+",
         type=str,
         default=None,
     )
+    player_args.add_argument(
+        "--players",
+        help="the instruments for each player.",
+        nargs="+",
+        type=str,
+        default=None,
+    )
+
     dir_path = os.path.dirname(os.path.realpath(__file__))
     parser.add_argument(
         "--config",
@@ -591,7 +592,7 @@ def main():
         port = mido.open_input(f"LOERIC SESSION in #{loeric_id}#", virtual=True)
 
     if args["create_out"]:
-        out = mido.open_output(f"LOERIC SESSION out", virtual=True)
+        out = mido.open_output(f"LOERIC SESSION out #{loeric_id}#", virtual=True)
 
     if args["create_sync"]:
         scheduler_port = mido.open_input(
@@ -651,9 +652,28 @@ def main():
     )
 
     groovers = []
-    for i, config in enumerate(args["players"]):
+    players = args["players"]
+    using_configs = False
 
-        print(f"[SESSION] Creating {config}")
+    if players is None:
+        players = args["player_configs"]
+        using_configs = True
+
+    for i, setup in enumerate(players):
+
+        print(f"[SESS] Creating {setup}")
+        if using_configs:
+            config = setup
+            additional_configs = []
+        else:
+            config = None
+            additional_configs = [
+                f"{lu.general_configs_path}/instrument/{setup}.json",
+                f"{lu.general_configs_path}/tune_type/{tune.tune_type}.json",
+                f"{lu.general_configs_path}/drone/on.json",
+                f"{lu.general_configs_path}/control/session.json",
+            ]
+
         groover = gr.Groover(
             tune,
             bpm=args["bpm"],
@@ -663,39 +683,42 @@ def main():
             human_impact=1,
             do_end_note=args["do_end_note"],
             verbose=0,
-            # to account for drones
             midi_channel=2 * i,
-            loeric_id=config.split(".json")[0],
+            loeric_id=setup.split(".json")[0],
             syncing=True,
+            seed=int(time.time()),
+            additional_configs=additional_configs,
         )
 
         groovers.append(groover)
 
-    threads = []
+    groover_threads = []
+    player_threads = []
     # create session loop
     session_t = threading.Thread(target=session.session_loop, args=())
 
     # create players
     for g in groovers:
         # create a player per groover
-        player = pl.Player(tempo=g.current_tempo, midi_out=out)
-        player.init_playback()
+        p = pl.Player(tempo=g.current_tempo, midi_out=out)
+        p.init_playback()
 
-        tune_t = threading.Thread(
+        groover_t = threading.Thread(
             target=play_tune,
-            args=(player, tune, g, port, session),
+            args=(p, tune, g, port, session),
         )
-        player_t = threading.Thread(target=player_loop, args=(player, groover))
-        threads.append(tune_t)
-        threads.append(player_t)
+        player_t = threading.Thread(target=player_loop, args=(p, g))
+        groover_threads.append(groover_t)
+        player_threads.append(player_t)
 
     # all threads + session loop
-    all_dead = threading.Semaphore(value=len(threads) + 1)
+    total_threads = 2 * len(groover_threads) + 1
+    all_dead = threading.Semaphore(value=total_threads)
 
     try:
         # set up port and wait
         if scheduler_port is not None:
-            print("[SESSION] Awaiting message...")
+            print("[SESS] Awaiting message...")
 
             scheduler_port.callback = get_callback(args["control"])
 
@@ -707,35 +730,92 @@ def main():
         session_t.start()
 
         # start all threads
-        for thread in threads:
+        for thread in groover_threads:
             thread.start()
 
-        # join all threads
-        for thread in threads:
+        for thread in player_threads:
+            thread.start()
+
+        ##################################################
+
+        import matplotlib.pyplot as plt
+        from matplotlib.animation import FuncAnimation
+        from collections import deque
+
+        WINDOW = 20  # sliding window size
+
+        # Create a deque for each key
+        buffers = {g.loeric_id: deque(maxlen=WINDOW) for g in groovers}
+
+        # Colors for each line (optional)
+        colors = ["r", "g", "b", "m", "c", "y", "k"]
+
+        # --- Plot setup ---
+        fig, ax = plt.subplots()
+
+        lines = {}
+        for i, k in enumerate(session._intensity_dict.keys()):
+            (line,) = ax.plot([], [], label=k, color=colors[i % len(colors)])
+            lines[k] = line
+
+        ax.legend(loc="upper left")
+        ax.set_title("Live Multi-Line Sliding Window")
+        ax.set_xlim(0, WINDOW - 1)
+
+        def animate(frame):
+
+            # Append new value to each buffer
+            for k in session._intensity_dict.keys():
+                buffers[k].append(session._intensity_dict[k])
+                x = range(len(buffers[k]))
+                y = list(buffers[k])
+                lines[k].set_data(x, y)
+
+            # Adjust y-limits based on current values
+            all_vals = [v for buf in buffers.values() for v in buf]
+            if all_vals:
+                ax.set_ylim(min(all_vals) - 0.1, max(all_vals) + 0.1)
+
+            return lines.values()
+
+        anim = FuncAnimation(fig, animate, interval=200, blit=False)  # update rate (ms)
+        plt.show()
+        anim.copy()
+
+        ##################################################
+        # join all groover threads
+        for thread in groover_threads:
             while thread.is_alive():
                 thread.join(1)
 
+        # now kill the others
         must_die.set()
+
+        # join player threads to kill them
+        for thread in player_threads:
+            while thread.is_alive():
+                thread.join(1)
+
         # join session thread to kill it
         while session_t.is_alive():
             session_t.join(1)
 
     except KeyboardInterrupt:
-        print("[SESSION] Playback stopped by user.")
+        print("[SESS] Playback stopped by user.")
         # tell threads to stop
         must_die.set()
 
     # wait for every thread to die
-    for i, t in enumerate(threads):
+    for i in range(total_threads):
         all_dead.acquire()
-        print(f"[SESSION] {i+1}/{len(threads)} threads dead.")
+        print(f"[SESS] {i+1}/{total_threads} threads dead.")
 
     # close midi input
     if port is not None:
         port.close()
-        print("[SESSION] Closing midi ports...")
+        print("[SESS] Closing midi ports...")
         if port.closed:
-            print("[SESSION] Closed MIDI input.")
+            print("[SESS] Closed MIDI input.")
 
     # make sure to turn off all notes
     if out is not None:
@@ -744,12 +824,10 @@ def main():
         out.reset()
         out.close()
         if out.closed:
-            print("[SESSION] Closed MIDI output.")
+            print("[SESS] Closed MIDI output.")
 
 
 def player_loop(player, groover):
-
-    global must_die, all_dead
 
     all_dead.acquire()
     print(f"[PLYR] Started {groover.loeric_id}")
@@ -758,8 +836,7 @@ def player_loop(player, groover):
         while groover.stopped.is_set():
             player.reset()
             print("player waiting play")
-            with groover.playback_resumed:
-                groover.playback_resumed.wait()
+            groover.playback_resumed.wait()
             print("player awake")
             player.init_playback()
 
@@ -770,73 +847,32 @@ def player_loop(player, groover):
 
 
 def play_tune(player, tunes, groover, port, session):
-    global must_die, all_dead
-
-    all_dead.acquire()
-    print(f"[GRVR] Started {groover.loeric_id}")
 
     # set input callback
     if port is not None:
         port.callback = groover.check_midi_control()
 
-    # iterate over messages
-    while not must_die.is_set():
+    def loop_condition():
+        return not must_die.is_set()
 
-        original_message = groover.next_event()
+    def note_callback(message):
+        session.handle_loeric_intensity(groover)
 
-        if original_message is None:
-            groover.reset()
-            break
+    def songpos_callback(message):
+        session.handle_loeric_pos(groover, message.position)
 
-        new_messages = []
-        # perform notes
-        if original_message.is_note:
-            # make the groover play the messages
-            midi_headers, new_messages = groover.perform(original_message)
-            session.handle_loeric_intensity(groover)
-        # keep meta messages intact
-        else:
-            if isinstance(original_message, tu.SongPosition):
-                session.handle_loeric_pos(groover, original_message.position)
-            elif (
-                isinstance(original_message, tu.KeySignature)
-                and not groover._tune.forced_key
-            ):
-                groover._tune.set_key_signature(original_message)
-            midi_headers = [original_message.to_midi()]
-
-        player.set_tempo_scale(groover.tempo_scale)
-        player.add_midi(midi_headers)
-        player.add_notes(new_messages)
-
-        # play
-        player.wake_me_up_at(
-            groover.performance_time - original_message.eighth_duration
-        )
-
-        if groover.stopped.is_set():
-            while groover.stopped.is_set():
-                print("groover waiting continue")
-                with groover.playback_resumed:
-                    groover.playback_resumed.wait()
-                print("groover awake")
-        else:
-            print("groover waiting player")
-            with player.playback_done:
-                player.playback_done.wait()
-            print("groover awake")
-
-    # play an end note
-    if groover.do_end_note:
-        groover.reset()
-        groover.advance_contours()
-        end_notes = groover.get_end_notes()
-        player.add_notes(end_notes)
-
-        player.wake_me_up_at(end_notes[-1].time + end_notes[-1].eighth_duration)
-
-        with player.playback_done:
-            player.playback_done.wait()
+    all_dead.acquire()
+    print(f"[GRVR] Started {groover.loeric_id}")
+    args = {"verbose": True}
+    lu.play(
+        groover,
+        player,
+        loop_condition=loop_condition,
+        note_callback=note_callback,
+        songpos_callback=songpos_callback,
+        repetition_callback=None,
+        **args,
+    )
 
     print(f"[GRVR] Terminated {groover.loeric_id}")
     all_dead.release()

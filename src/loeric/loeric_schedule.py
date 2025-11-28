@@ -190,13 +190,12 @@ def main():
 
 
 received_start = threading.Event()
-skip_to_next = False
+current_groover = None
 
 
 def get_callback(control):
 
     def check_skips(msg):
-        global skip_to_next
 
         if msg.type == "control_change" and msg.control != control:
             return
@@ -208,7 +207,7 @@ def get_callback(control):
             print("received start")
             check_skips.counter += 1
         else:
-            skip_to_next = True
+            current_groover.skip_repetition = True
             print("Skipping at end of repetition.")
 
     check_skips.counter = 0
@@ -226,78 +225,24 @@ def player_loop(player):
 
 
 def play_tunes(player, tunes, groovers, port):
-    global skip_to_next
+    global current_groover
 
     received_start.wait()
     print("Groovers started")
 
     for tune, groover in zip(tunes, groovers):
 
-        ############# PREAMBLE ###############
-        print("Playing next tune.")
-        player.init_playback()
-        player.reset_song_time(
-            song_time=groover._tune.times[0].eighth_duration,
-        )
-
+        current_groover = groover
         # set input callback
         if port is not None:
             port.callback = groover.check_midi_control()
-        ############# PREAMBLE ###############
+        print("Playing next tune.")
 
-        # iterate over messages
-        while True:
-
-            if groover.stopped.is_set():
-                while groover.stopped.is_set():
-                    groover.playback_resumed.wait()
-
-            original_message = groover.next_event()
-
-            if original_message is None:
-                groover.reset()
-                break
-
-            new_messages = []
-            # perform notes
-            if original_message.is_note:
-                # make the groover play the messages
-                midi_headers, new_messages = groover.perform(original_message)
-
-            # keep meta messages intact
-            else:
-                if (
-                    isinstance(original_message, tu.KeySignature)
-                    and not groover._tune.forced_key
-                ):
-                    print(f"[INFO]\tChanging key. {original_message}")
-                    groover._tune.set_key_signature(original_message)
-                elif isinstance(original_message, tu.Repetition):
-
-                    print(original_message)
-                    if skip_to_next:
-                        skip_to_next = False
-                        break
-
-                midi_headers = original_message.to_midi(absolute_time=True)
-
-            player.set_tempo_scale(groover.tempo_scale)
-            player.add_midi(midi_headers)
-            player.add_notes(new_messages)
-
-            player.wake_me_up_at(original_message.time + original_message.duration)
-            player.has_reached_wake_time.wait()
-
-        if groover.do_end_note:
-            groover.reset()
-            groover.advance_contours()
-            end_notes = groover.get_end_notes()
-            player.add_notes(end_notes)
-
-            player.wake_me_up_at(end_notes[-1].time + end_notes[-1].duration)
-        else:
-            player.wake_me_up_at(groover.performance_time)
-
-        player.has_reached_wake_time.wait()
+        lu.play(
+            groover,
+            player,
+            songpos_callback=None,
+            repetition_callback=lambda x: print(x),
+        )
 
         print("Player thread terminated.")
