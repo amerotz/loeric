@@ -52,7 +52,7 @@ class Session:
 
     @property
     def sync_interval(self):
-        return self._config["tempo_policy"]["sync_interval_quarters"]
+        return 2*self._config["tempo_policy"]["sync_interval_quarters"]
 
     def set_tempo(self, tempo):
         self._last_tempo = tempo
@@ -485,6 +485,15 @@ def main():
         type=str,
         default=None,
     )
+    parser.add_argument(
+        "--ireland",
+        action="store_true"
+    )
+    parser.add_argument(
+        "--name",
+        type=str,
+    )
+
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     parser.add_argument(
@@ -586,6 +595,8 @@ def main():
     args = vars(args)
 
     loeric_id = int(time.time())
+    if args.get("name") is not None:
+        loeric_id = args.get("name")
     scheduler_port = None
 
     if args["create_in"]:
@@ -672,7 +683,15 @@ def main():
                 f"{lu.general_configs_path}/tune_type/{tune.tune_type}.json",
                 f"{lu.general_configs_path}/drone/on.json",
                 f"{lu.general_configs_path}/control/session.json",
+                f"{lu.general_configs_path}/ornament/variations.json",
             ]
+            if args.get("ireland"):
+                additional_configs.append(
+                f"{lu.general_configs_path}/synth/kontakt_ireland.json"
+                )
+                additional_configs.append(
+                f"{lu.general_configs_path}/control/velocity_to_modulation.json"
+                )
 
         groover = gr.Groover(
             tune,
@@ -738,6 +757,7 @@ def main():
 
         ##################################################
 
+        """
         import matplotlib.pyplot as plt
         from matplotlib.animation import FuncAnimation
         from collections import deque
@@ -783,6 +803,7 @@ def main():
         anim.copy()
 
         ##################################################
+        """
         # join all groover threads
         for thread in groover_threads:
             while thread.is_alive():
