@@ -1,5 +1,6 @@
 {
     "variables": {
+        "var_notes_per_bar": [8,4],
         "var_barndance_pattern": {
             "mean": [ 0.8, 1.2, 0.8, 1.2, 0.8, 1.2, 1, 1,
                     1.4, 0.6, 1.4, 0.6, 1.4, 0.6, 1, 1 ],
@@ -91,8 +92,5 @@
     },
     "harmony": {
         "chords_per_bar": 2
-    },
-    "drone": {
-        "notes_per_bar": [8,4]
-	}
+    }
 }

@@ -236,34 +236,23 @@
             "slide": false
         }
     },
-
-	"drone": {
+    "drone": {
 		"active": true,
-		"threshold": 0.5,
-		"velocity_multiplier": 0.8, 
-		"strings_min": 0,
-		"strings_max": 0,
-		"free_strings": [
-50,
-51,
-52,
-53,
-54,
-55,
-56,
-57,
-58,
-59,
-60,
-61,
-62,
-63,
-64,
-38,
-45
-		],
-		"free_strings_min": 1,
-		"free_strings_max": 3,
-		"delay_range": 0.05
+		"drone_sets": {
+			"free": {
+				"threshold": 0.5,
+				"velocity_multiplier": 0.9,
+				"bind": "var_drone_bind",
+				"notes": [ 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 38, 45 ],
+				"polyphony_min": 1,
+				"polyphony_max": 3,
+				"notes_per_bar_bind": "var_notes_per_bar_bind",
+				"notes_per_bar": "var_notes_per_bar",
+				"midi_channel": "var_drone_midi_channel",
+				"delay_range": 0.05,
+				"transpose": false,
+				"use_legato": false
+			}
+		}
 	}
 }

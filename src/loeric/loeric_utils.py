@@ -23,6 +23,10 @@ general_configs_path = os.getcwd() + "/src/loeric/loeric_config/performance"
 number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
 
 
+def midi_to_freq(midi):
+    return 440 * 2 ** ((midi - 69) / 12)
+
+
 # play midi file
 def play(
     groover,

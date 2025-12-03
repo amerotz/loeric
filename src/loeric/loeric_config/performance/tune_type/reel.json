@@ -1,5 +1,6 @@
 {
 	"variables": {
+        "var_notes_per_bar": [4,2,1],
         "var_velocity_weight": [0,-1,1,1,1],
 		"var_legato_pattern": {
 			"mean": [
@@ -77,8 +78,5 @@
 	},
 	"harmony": {
         "chords_per_bar": 2
-	},
-	"drone": {
-        "notes_per_bar": [4,2,1]
 	}
 }

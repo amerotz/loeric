@@ -1010,7 +1010,7 @@
         "bind": "legato"
     },
     "values": {
-        "pitch_deviation_cents": 10,
+        "pitch_deviation_cents": 5,
         "transpose": -12
     },
     "approach_from_above": {

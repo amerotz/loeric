@@ -1,25 +1,20 @@
 {
 	"drone": {
-		"threshold": 0.5,
-		"velocity_multiplier": 0.8, 
-		"strings_min": 0,
-		"strings_max": 0,
-		"free_strings": [
-			40,
-			47,
-			49,
-			52,
-			53,
-			54,
-			55,
-			56,
-			57,
-			58,
-			59,
-			60
-		],
-		"free_strings_min": 1,
-		"free_strings_max": 5,
-		"delay_range": 0.02
+		"drone_sets": {
+			"free": {
+				"threshold": 0.5,
+				"velocity_multiplier": 0.9,
+				"bind": "var_drone_bind",
+				"notes": [ 40, 47, 49, 52, 53, 54, 55, 56, 57, 58, 59, 60 ],
+				"polyphony_min": 1,
+				"polyphony_max": 5,
+				"notes_per_bar_bind": "var_notes_per_bar_bind",
+				"notes_per_bar": "var_notes_per_bar",
+				"midi_channel": "var_drone_midi_channel",
+				"delay_range": 0.02,
+				"transpose": false,
+				"use_legato": false
+			}
+		}
 	}
 }

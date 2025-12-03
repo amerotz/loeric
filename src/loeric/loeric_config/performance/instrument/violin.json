@@ -724,18 +724,22 @@
         "pitch_deviation_cents": 5
     },
     "drone": {
-        "threshold": 0.5,
-        "velocity_multiplier": 0.8,
-        "strings": [
-            55,
-            62,
-            69,
-            76
-        ],
-        "strings_min": 1,
-        "strings_max": 2,
-        "free_strings_min": 0,
-        "free_strings_max": 0,
-        "break_ornaments": true
+        "drone_sets": {
+            "bowed": {
+                "threshold": 0.5,
+                "velocity_multiplier": 0.9,
+                "bind": "var_drone_bind",
+                "notes": [ 55, 62, 69, 76 ],
+                "polyphony_min": 1,
+                "polyphony_max": 1,
+                "break_ornaments": true,
+                "notes_per_bar_bind": "var_notes_per_bar_bind",
+                "notes_per_bar": "var_notes_per_bar",
+                "midi_channel": "var_drone_midi_channel",
+                "delay_range": 0.00,
+                "transpose": false,
+                "use_legato": true
+            }
+        }
     }
 }

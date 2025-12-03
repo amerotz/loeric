@@ -4,6 +4,8 @@
         "var_roll_2_prob": 0,
         "var_webapp_human_impact_control": 50,
         "var_velocity_weight": [1,1,1,1,1],
+        "var_drone_bind": "drone",
+        "var_notes_per_bar_bind": "velocity",
         "var_legato_pattern": {
 			"mean": [1],
 			"std": [0],
@@ -12,83 +14,16 @@
 			"normalize": false
 		},
         "var_ornament_pattern": {
-            "mean": [
-                                0,1,
-                                1,1,
-                                1,1,
-                                1,1,
-                                1,1,
-                                1,1,
-                                1,1,
-                                1,0
-                            ],
-                            "std": [
-                                0,0,0,0,
-                                0,0,0,0,
-                                0,0,0,0,
-                                0,0,0,0
-                            ],
-                            "period": 8,
-                            "std_scale": 1,
-                            "normalize": false
-                        },
-
-        "major_allowed_chords": [
-            2,
-            0,
-            0.5,
-            0,
-            0.5,
-            2,
-            0,
-            2,
-            0,
-            1,
-            0,
-            0
-        ],
-        "minor_allowed_chords": [
-            2,
-            0,
-            0.5,
-            2,
-            0,
-            2,
-            0,
-            2,
-            1,
-            0,
-            1,
-            0.5
-        ],
-        "dorian_allowed_chords": [
-            2,
-            0,
-            0.5,
-            2,
-            0,
-            0.5,
-            0,
-            1,
-            0,
-            1,
-            2,
-            0
-        ],
-        "mixolydian_allowed_chords": [
-            2,
-            0,
-            0.5,
-            0,
-            0.5,
-            1,
-            0,
-            0.5,
-            0,
-            0.5,
-            1,
-            0
-        ]
+            "mean": [ 0,1, 1,1, 1,1, 1,1, 1,1, 1,1, 1,1, 1,0 ],
+            "std": [ 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 ],
+            "period": 8,
+            "std_scale": 1,
+            "normalize": false
+        },
+        "major_allowed_chords": [ 2, 0, 0.5, 0, 0.5, 2, 0, 2, 0, 1, 0, 0 ],
+        "minor_allowed_chords": [ 2, 0, 0.5, 2, 0, 2, 0, 2, 1, 0, 1, 0.5 ],
+        "dorian_allowed_chords": [ 2, 0, 0.5, 2, 0, 0.5, 0, 1, 0, 1, 2, 0 ],
+        "mixolydian_allowed_chords": [ 2, 0, 0.5, 0, 0.5, 1, 0, 0.5, 0, 0.5, 1, 0 ]
     },
     "contours": {
         "drone": {
@@ -381,33 +316,8 @@
     },
     "drone": {
         "active": false,
-        "threshold": 0.5,
-        "bind": "drone",
-        "velocity_multiplier": 0.9,
-        "strings": [
-            55,
-            62,
-            69,
-            76
-        ],
-        "strings_min": 0,
-        "strings_max": 0,
-        "free_strings": [
-            43,
-            38,
-            50,
-            57,
-            54,
-            59,
-            48
-        ],
-        "free_strings_min": 0,
-        "free_strings_max": 0,
-        "break_ornaments": false,
-        "transpose": false,
         "allow_root": false,
-        "delay_range": 0.01,
-        "notes_per_bar_bind": "velocity"
+        "drone_sets": {}
     },
     "approach_from_above": {},
     "approach_from_below": {}

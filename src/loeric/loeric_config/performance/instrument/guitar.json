@@ -251,29 +251,36 @@
         "bind": "legato"
     },
     "drone": {
-        "threshold": 0.5,
-        "velocity_multiplier": 0.9,
-        "strings": [
-            64,
-            59,
-            55,
-            50,
-            45,
-            38
-        ],
-        "strings_min": 1,
-        "strings_max": 3,
-        "free_strings_min": 0,
-        "free_strings_max": 0,
-        "free_strings": [
-            64,
-            59,
-            55,
-            50,
-            45,
-            38
-        ],
-        "break_ornaments": false,
-        "delay_range": 0.1
+        "drone_sets": {
+            "bowed": {
+                "threshold": 0.5,
+                "velocity_multiplier": 0.9,
+                "bind": "var_drone_bind",
+                "notes": [ 64, 59, 55, 50, 45, 40],
+                "polyphony_min": 1,
+                "polyphony_max": 3,
+                "break_ornaments": false,
+                "notes_per_bar_bind": "var_notes_per_bar_bind",
+                "notes_per_bar": "var_notes_per_bar",
+                "midi_channel": "var_drone_midi_channel",
+                "delay_range": 0.05,
+                "transpose": false,
+                "use_legato": true
+            },
+            "free": {
+                "threshold": 0.5,
+                "velocity_multiplier": 0.9,
+                "bind": "var_drone_bind",
+                "notes": [ 64, 59, 55, 50, 45, 40 ],
+                "polyphony_min": 1,
+                "polyphony_max": 1,
+                "notes_per_bar": "var_notes_per_bar",
+                "notes_per_bar_bind": "var_notes_per_bar_bind",
+                "midi_channel": "var_drone_midi_channel",
+                "delay_range": 0.1,
+                "transpose": false,
+                "use_legato": false
+            }
+        }
     }
 }

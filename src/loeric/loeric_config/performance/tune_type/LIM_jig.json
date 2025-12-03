@@ -1,5 +1,6 @@
 {
 	"variables": {
+        "var_notes_per_bar": [6,2,1],
         "var_velocity_weight": [0, 1, 0, 0, 0]
 	},
 	"contours": {
@@ -85,9 +86,6 @@
 	},
     "harmony": {
         "chords_per_bar": 2
-    },
-    "drone": {
-        "notes_per_bar": [6,2,1]
     }
 }
 

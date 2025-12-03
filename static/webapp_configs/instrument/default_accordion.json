@@ -493,24 +493,22 @@
         "C5": "B4"
     },
     "drone": {
-        "strings_min": 0,
-        "strings_max": 0,
-        "free_strings_min": 1,
-        "free_strings_max": 2,
-        "break_ornaments": false,
-        "free_strings": [
-            55,
-            50,
-            57,
-            54,
-            52,
-            59,
-            48,
-            49,
-            51,
-            53,
-            56,
-            58
-        ]
+        "active": true,
+        "drone_sets": {
+            "free": {
+                "velocity_multiplier": 0.7,
+                "polyphony_min": 1,
+                "polyphony_max": 2,
+                "notes": [ 55, 50, 57, 54, 52, 59, 48, 49, 51, 53, 56, 58 ],
+                "threshold": 0.5,
+                "bind": "var_drone_bind",
+                "notes_per_bar_bind": "var_notes_per_bar_bind",
+                "notes_per_bar": "var_notes_per_bar",
+                "midi_channel": "var_drone_midi_channel",
+                "delay_range": 0.01,
+                "transpose": false,
+                "use_legato": true
+            }
+        }
     }
 }

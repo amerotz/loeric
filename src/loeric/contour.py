@@ -529,8 +529,8 @@ class PatternContour(Contour):
         for index in index_diff:
             source_index = pattern_indexes[index]
             add_indexes = np.arange(source_index, source_index + diff[index])
-            pattern_means[index] = np.mean(mean[add_indexes])
-            pattern_stds[index] = np.mean(std[add_indexes])
+            pattern_means[index] = np.max(mean[add_indexes])
+            pattern_stds[index] = np.max(std[add_indexes])
 
         pattern = np.random.normal(
             loc=pattern_means, scale=std_scale * pattern_stds, size=len(pattern_means)

@@ -494,12 +494,21 @@
     },
     "drone": {
         "active": true,
-        "strings_min": 0,
-        "strings_max": 0,
-        "velocity_multiplier": 0.7,
-        "free_strings_min": 1,
-        "free_strings_max": 1,
-        "break_ornaments": false,
-        "free_strings": [ 24, 26, 28, 29, 31, 33]
+        "drone_sets": {
+            "free": {
+                "velocity_multiplier": 0.7,
+                "polyphony_min": 1,
+                "polyphony_max": 1,
+                "notes": [ 24, 26, 28, 29, 31, 33],
+                "threshold": 0.5,
+                "bind": "var_drone_bind",
+                "notes_per_bar_bind": "var_notes_per_bar_bind",
+                "notes_per_bar": "var_notes_per_bar",
+                "midi_channel": "var_drone_midi_channel",
+                "delay_range": 0.01,
+                "transpose": false,
+                "use_legato": true
+            }
+        }
     }
 }

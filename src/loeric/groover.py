@@ -102,6 +102,10 @@ class Groover:
         # only define command line values
         # rest is part of loeric_config/base.json
         self._config = {
+            "variables": {
+                "var_drone_midi_channel": midi_channel + 1,
+                "var_notes_per_bar": [self._tune.time_signature.beat_count],
+            },
             "contours": {
                 "drone": {
                     "human_impact_scale": human_impact,
@@ -160,10 +164,7 @@ class Groover:
                 "chords_per_bar": self._tune.time_signature.beat_count,
                 "allowed_chords": f"{self._tune.key_signature.mode}_allowed_chords",
             },
-            "drone": {
-                "midi_channel": midi_channel + 1,
-                "notes_per_bar": [self._tune.time_signature.beat_count],
-            },
+            "drone": {},
         }
 
         # merge base configuration with command line values
@@ -236,7 +237,6 @@ class Groover:
             self._user_tempo = tu.Tempo(qpm=self._config["tempo_control"]["bpm"])
 
         self._midi_channel = self._config["values"]["midi_channel"]
-        self._drone_midi_channel = self._config["drone"]["midi_channel"]
         # table for pitch errors
         self._pitch_errors = defaultdict(int)
 
@@ -252,11 +252,19 @@ class Groover:
         )
 
         # droning
-        self._drone_notes = np.array(self._config["drone"]["strings"])
-        self._free_drone_notes = np.array(self._config["drone"]["free_strings"])
-        self._drone_threshold = float(self._config["drone"]["threshold"])
-        self._drone_bound_contour = self._config["drone"]["bind"]
-        self._last_played_drones = []
+        # self._drone_notes = np.array(self._config["drone"]["strings"])
+        # self._free_drone_notes = np.array(self._config["drone"]["free_strings"])
+        # self._drone_threshold = float(self._config["drone"]["threshold"])
+        # self._drone_bound_contour = self._config["drone"]["bind"]
+        self._active_pedals = []
+        self._all_drones = np.unique(
+            [
+                note
+                for d in self._config["drone"]["drone_sets"]
+                for note in self._config["drone"]["drone_sets"][d]["notes"]
+            ]
+        )
+        self._drone_midi_channel = self._midi_channel + 1
 
         # keyswitches
         self._last_keyswitches = []
@@ -387,7 +395,7 @@ class Groover:
                 ),
                 linestyle=":",
             )
-            plt.step(x, self._contours[self._plot]._contour, marker="x")
+            plt.step(x, self._contours[self._plot]._contour, where="post", marker="x")
             plt.tight_layout()
             plt.show()
 
@@ -634,33 +642,91 @@ class Groover:
                 ]["pitch_deviation_cents"] * 0.01 * np.random.normal(loc=0, scale=0.33)
 
         # add drone
+        non_legato_drones = []
         if self._config["drone"]["active"]:
-            drone_notes = []
-            # if above threshold
-            if self._contour_values[self._drone_bound_contour] >= self._drone_threshold:
-                # change or stop notes depending on input
-                if self._config["drone"]["break_ornaments"]:
-                    for note in notes:
-                        drone_pitches = self._get_drone(note.pitch)
-                        drone_pitches = sorted(drone_pitches)
-                        # get drone
-                        d_notes, delay = self._add_drone(note, drone_pitches)
-                        drone_notes.extend(d_notes)
-                        # add delay
-                        removable_delay = min(delay, note.duration)
-                        note.time += removable_delay
-                        note.duration -= removable_delay
-                # only one note
-                else:
-                    drone_pitches = self._get_drone(current_message.pitch)
-                    drone_pitches = sorted(drone_pitches)
-                    d_notes, delay = self._add_drone(current_message, drone_pitches)
-                    removable_delay = min(delay, notes[0].duration)
-                    notes[0].time += removable_delay
-                    notes[0].duration -= removable_delay
-                    drone_notes.extend(d_notes)
-            notes.extend(drone_notes)
+            for drone_option in self._config["drone"]["drone_sets"]:
 
+                # obtain threshold and contour values
+                drone_bind_contour = self._config["drone"]["drone_sets"][drone_option][
+                    "bind"
+                ]
+                drone_threshold = self._config["drone"]["drone_sets"][drone_option][
+                    "threshold"
+                ]
+
+                # pedals can't be triggered twice
+                if drone_option in self._active_pedals:
+                    continue
+
+                # if should be droning
+                if self._contour_values[drone_bind_contour] > drone_threshold:
+
+                    # keep track of notes
+                    drone_notes = []
+
+                    drone_type = drone_option.split("#")[0]
+
+                    # re-trigger drone for each note
+                    if (
+                        drone_type == "bowed"
+                        and self._config["drone"]["drone_sets"][drone_option][
+                            "break_ornaments"
+                        ]
+                    ):
+                        # for each note separately
+                        for note in notes:
+
+                            # get pitches
+                            drone_pitches = self._get_drone(note.pitch, drone_option)
+                            # create the note events
+                            drone_pitches = sorted(drone_pitches)
+                            d_notes, delay = self._add_drone(
+                                note, drone_pitches, drone_option
+                            )
+                            drone_notes.extend(d_notes)
+
+                            # adjust delay of current note
+                            removable_delay = min(delay, note.duration)
+                            note.time += removable_delay
+                            note.duration -= removable_delay
+                    # only one note
+                    else:
+                        # get pitches
+                        drone_pitches = self._get_drone(
+                            current_message.pitch, drone_option
+                        )
+
+                        # make pedal active if pedal
+                        if drone_type == "pedal" and len(drone_pitches) != 0:
+                            self._active_pedals.append(drone_option)
+
+                        # create the note events
+                        drone_pitches = sorted(drone_pitches)
+                        d_notes, delay = self._add_drone(
+                            current_message, drone_pitches, drone_option
+                        )
+
+                        # adjust delay of original note
+                        removable_delay = min(delay, notes[0].duration)
+                        notes[0].time += removable_delay
+                        notes[0].duration -= removable_delay
+
+                        drone_notes.extend(d_notes)
+
+                    # if not pedal and config, use staccato/legato
+                    # articulation with main note
+                    if (
+                        drone_type != "pedal"
+                        and self._config["drone"]["drone_sets"][drone_option][
+                            "use_legato"
+                        ]
+                    ):
+                        notes.extend(drone_notes)
+                    # store separately not to be affected
+                    else:
+                        non_legato_drones.extend(drone_notes)
+
+        # add staccato/legato through pauses
         pauses = []
         for note in notes:
             # legato
@@ -678,6 +744,9 @@ class Groover:
                 notes.extend(note.metadata)
 
         notes.extend(pauses)
+
+        # add the other drones
+        notes.extend(non_legato_drones)
 
         ################### convert to midi #########################
 
@@ -824,7 +893,7 @@ class Groover:
 
         return multiplier
 
-    def _add_drone(self, note, drones):
+    def _add_drone(self, note, drones, drone_name):
         """
         Add drones to each note in input.
 
@@ -833,32 +902,40 @@ class Groover:
 
         :return: the input notes, with an added drone.
         """
-        options = self._config["drone"]["notes_per_bar"]
-        amount = self._contour_values[self._config["drone"]["notes_per_bar_bind"]]
-        amount_min = self._config["drone"]["threshold"]
-        if len(options) != 1:
-            index = np.round(
-                (len(options) - 1) * (amount - amount_min) / (1 - amount_min)
-            ).astype(int)
-            index = max(0, min(len(options) - 1, index))
-            notes_per_bar = options[index]
+        if drone_name.startswith("pedal"):
+            note_duration = self._tune._score_end_time - self._performance_time
+            should_play = True
         else:
-            notes_per_bar = options[0]
+            options = self._config["drone"]["drone_sets"][drone_name]["notes_per_bar"]
+            amount = self._contour_values[
+                self._config["drone"]["drone_sets"][drone_name]["notes_per_bar_bind"]
+            ]
+            amount_min = self._config["drone"]["drone_sets"][drone_name]["threshold"]
+            if len(options) != 1:
+                index = np.round(
+                    (len(options) - 1) * (amount - amount_min) / (1 - amount_min)
+                ).astype(int)
+                index = max(0, min(len(options) - 1, index))
+                notes_per_bar = options[index]
+            else:
+                notes_per_bar = options[0]
 
-        note_duration = self._tune.time_signature.eighths_per_bar / notes_per_bar
-        should_play = self._performance_time % note_duration == 0
+            note_duration = self._tune.time_signature.eighths_per_bar / notes_per_bar
+            should_play = self._performance_time % note_duration == 0
 
         notes = []
         delay = 0
         if should_play:
 
             for drone in drones:
-                if self._config["drone"]["transpose"]:
+                if self._config["drone"]["drone_sets"][drone_name]["transpose"]:
                     drone += self._config["values"]["transpose"]
 
                 # delay = random.uniform(0, self._config["drone"]["delay_range"])
 
-                multiplier = self._config["drone"]["velocity_multiplier"]
+                multiplier = self._config["drone"]["drone_sets"][drone_name][
+                    "velocity_multiplier"
+                ]
                 velocity = note._velocity
 
                 if multiplier < 0:
@@ -873,93 +950,111 @@ class Groover:
                         eighth_duration=(note_duration - delay).eighth_duration,
                         velocity=velocity,
                         time=(note.time + delay).eighth_duration,
-                        channel=self._config["drone"]["midi_channel"],
+                        channel=self._config["drone"]["drone_sets"][drone_name][
+                            "midi_channel"
+                        ],
                     )
                 )
-                delay += self._config["drone"]["delay_range"]
+                if not drone_name.startswith("pedal"):
+                    delay += self._config["drone"]["drone_sets"][drone_name][
+                        "delay_range"
+                    ]
 
         return notes, delay
 
-    def _get_drone(self, reference: int) -> np.array:
+    def _get_drone(self, reference: int, drone_name) -> np.array:
+
+        drone_threshold = self._config["drone"]["drone_sets"][drone_name]["threshold"]
+        drone = np.array([-1]).astype(int)
+        drone_perc = self._contour_values[
+            self._config["drone"]["drone_sets"][drone_name]["bind"]
+        ]
+        drone_perc = (drone_perc - drone_threshold) / (1 - drone_threshold)
+
         # figure out what note is allowed depending on harmony
         harmony = self._contour_values["harmony"]
-        if not self._config["drone"]["transpose"]:
+        if not self._config["drone"]["drone_sets"][drone_name]["transpose"]:
             harmony += self._config["values"]["transpose"]
 
         harmony = int(harmony % 12)
-
-        # check on what string the note could be played
-        distances = reference - self._drone_notes
-        distances[distances < 0] = 127
-        string = np.argmin(distances)
-        index = []
-
-        # add lower string if there
-        if string > 0:
-            index.append(string - 1)
-
-        # add upper string if there
-        if string < len(self._drone_notes) - 1:
-            index.append(string + 1)
-
         allowed_harmony = lu.get_chord_pitches(int(self._contour_values["harmony"]))
 
         # append root
         if self._config["drone"]["allow_root"]:
             allowed_harmony = np.append(
                 allowed_harmony,
-                (24 + self._tune.root + self._config["values"]["transpose"] - harmony)
+                (
+                    24
+                    + self._tune.key_signature.root
+                    + self._config["values"]["transpose"]
+                    - harmony
+                )
                 % 12,
             )
 
-        index = np.array(index)
-        index = index[
-            np.in1d((12 + self._drone_notes[index] - harmony) % 12, allowed_harmony)
-        ]
-
-        free_index = np.arange(len(self._free_drone_notes))
-        free_index = free_index[
+        drone_type = drone_name.split("#")[0]
+        # check on what string the note could be played
+        available_notes = np.array(
+            self._config["drone"]["drone_sets"][drone_name]["notes"]
+        )
+        available_notes = available_notes[
             np.in1d(
-                (12 + self._free_drone_notes - harmony) % 12,
+                np.round((12 + available_notes - harmony) % 12),
                 allowed_harmony,
             )
         ]
+        index = []
 
-        drone = np.array([-1]).astype(int)
-        drone_perc = self._contour_values[self._config["drone"]["bind"]]
-        drone_perc = (drone_perc - self._drone_threshold) / (1 - self._drone_threshold)
+        if drone_type == "bowed":
+            distances = reference - available_notes
+            distances[distances < 0] = 127
+            string = np.argmin(distances)
+
+            # add lower string if there
+            if string > 0:
+                index.append(string - 1)
+
+            # add upper string if there
+            if string < len(available_notes) - 1:
+                index.append(string + 1)
+
+            index = np.array(index)
+            index = np.argsort(abs(available_notes - reference))
+
+        elif drone_type in ["free", "pedal"]:
+            index = np.arange(len(available_notes))
+
+        else:
+            raise Exception(f"Unknown drone type {drone_type}.")
+
+        # old harmony sort
+        # index = np.argsort(0.1 * np.arange(len(available_notes)) + (7 * (available_notes - harmony)) % 12)
+
+        # sort based on harmony
+        # magic function time
+        options = self._all_drones[self._all_drones % 12 == harmony]
+        if len(options) == 0:
+            base_frequency = harmony
+        else:
+            base_frequency = lu.midi_to_freq(np.min(options))
+        frequencies = lu.midi_to_freq(available_notes)
+        fb_2 = frequencies - base_frequency / 2
+        index = np.argsort(
+            -(fb_2 / abs(fb_2))
+            * (base_frequency / frequencies)
+            * (abs(2 * (frequencies % base_frequency) / base_frequency - 1))
+        )
 
         if len(index) != 0:
-            drone_notes = self._drone_notes[index]
-            index = np.argsort(abs(drone_notes - reference))
-            drone_num = np.round(
-                self._config["drone"]["strings_min"] * (1 - drone_perc)
-                + drone_perc * self._config["drone"]["strings_max"],
-            ).astype(int)
-            drone = np.concatenate(
-                (
-                    drone,
-                    drone_notes[index[:drone_num]].astype(int),
-                )
-            )
-
-        if len(free_index) != 0:
-            free_drone_notes = self._free_drone_notes[free_index]
-            free_index = np.argsort(
-                0.1 * np.arange(len(free_drone_notes))
-                + (7 * (free_drone_notes - harmony)) % 12,
-            )
             # number of strings changes with intensity of signal
             drone_num = np.round(
-                self._config["drone"]["free_strings_min"] * (1 - drone_perc)
-                + drone_perc * self._config["drone"]["free_strings_max"],
+                self._config["drone"]["drone_sets"][drone_name]["polyphony_min"]
+                * (1 - drone_perc)
+                + drone_perc
+                * self._config["drone"]["drone_sets"][drone_name]["polyphony_max"],
             ).astype(int)
-            drone = np.concatenate(
-                (
-                    drone,
-                    free_drone_notes[free_index[:drone_num]].astype(int),
-                )
-            )
+
+            drone = np.concatenate((drone, available_notes[index[:drone_num]]))
 
         return drone[1:]
 

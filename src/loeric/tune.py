@@ -396,38 +396,6 @@ class Repetition(ScoreElement):
         return []
 
 
-"""
-class NoteGroup(ScoreElement):
-
-    def __init__(self, time=0):
-        super().__init__(time)
-
-        self._notes = []
-        self._absolute_duration = 0
-        self._time = None
-
-    def add(self, note):
-        self._notes.append(note)
-        if self._time is None:
-            self._time = note.time
-            self._absolute_duration = note.absolute_duration
-        else:
-            if self._absolute_duration != 0:
-                self._absolute_duration = absolute_add(
-                    self._absolute_duration, note.absolute_duration
-                )
-                self._eighth_duration = 8 / self._absolute_duration
-        self._is_note = self._is_note or note.is_note
-
-    def __repr__(self):
-        s = f"(NoteGroup d={np.round(self._eighth_duration, 4)} t={self._time})"
-        for note in self._notes:
-            s += "\n\t" + str(note)
-        return s
-
-"""
-
-
 class Note(ScoreElement):
 
     def __init__(
@@ -522,7 +490,7 @@ class Note(ScoreElement):
 
         messages = []
 
-        bend_semitones = np.round(self._pitch) - self._pitch
+        bend_semitones = self._pitch - np.round(self._pitch)
         if bend_semitones > 0:
             bend_percentage = bend_semitones / BEND_UP
         else:

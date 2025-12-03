@@ -483,33 +483,23 @@
         "chords_per_bar": 2
     },
     "drone": {
-        "active": true,
-        "strings_min": 0,
-        "strings_max": 0,
-        "velocity_multiplier": 0.5,
-        "free_strings_min": 2,
-        "free_strings_max": 5,
-        "break_ornaments": false,
-        "free_strings": [
-            48,
-            49,
-            50,
-            51,
-            52,
-            53,
-            54,
-            55,
-            56,
-            57,
-            58,
-            59,
-            60,
-            61,
-            62
-        ],
-        "delay_range": 0.02,
-        "notes_per_bar": [1],
-        "notes_per_bar_bind": "notes_per_bar"
+		"active": true,
+		"drone_sets": {
+			"free": {
+				"threshold": 0.5,
+				"velocity_multiplier": 0.9,
+				"bind": "var_drone_bind",
+				"notes": [ 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62 ],
 
-    }
+				"polyphony_min": 2,
+				"polyphony_max": 5,
+				"notes_per_bar_bind": "var_notes_per_bar_bind",
+				"notes_per_bar": "var_notes_per_bar",
+				"midi_channel": "var_drone_midi_channel",
+				"delay_range": 0.00,
+				"transpose": false,
+				"use_legato": true
+			}
+		}
+	}
 }
