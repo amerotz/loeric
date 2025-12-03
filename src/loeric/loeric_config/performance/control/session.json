@@ -14,9 +14,6 @@
 		},
 		"velocity": {
 			"human_impact_scale": 1
-		},
-		"tempo": {
-			"human_impact_scale": 0.1
 		}
 	},
 	"contour_2_control": {
@@ -46,7 +43,6 @@
 			"control":51,
 			"contours":[
 				"velocity_intensity",
-				"tempo_intensity",
 				"ornament_intensity",
 				"drone_intensity"
 			]
@@ -55,7 +51,6 @@
 			"control":52,
 			"contours":[
 				"velocity_human_impact",
-				"tempo_human_impact",
 				"ornament_human_impact",
 				"drone_intensity"
 			]

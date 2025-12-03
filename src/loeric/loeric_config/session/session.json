@@ -4,10 +4,10 @@
 	"intensity_control_in": 51,
 	"human_impact_control_in": 52,
     "tempo_policy": {
-        "fix_sync_quarters": 0.0625,
-        "stop_sync_quarters": 3,
+        "fix_sync_quarters": 0.00625,
+        "stop_sync_quarters": 0.125,
         "position": "max",
-        "sync_interval_quarters": 3
+        "sync_interval_quarters": 6
     },
     "attention_policy": {
         "attention_group_min_size": 1000,
