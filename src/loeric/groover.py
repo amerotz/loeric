@@ -444,7 +444,7 @@ class Groover:
                     # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
                     if self._verbose == 3:
                         print(
-                            f"[{self.loeric_id[:4]}]\t{contour_name}:\t{round(value, 2)}"
+                            f"[{str(self.loeric_id)[:4]}]\t{contour_name}:\t{round(value, 2)}"
                         )
 
     def check_midi_control(self) -> Callable[[], None]:
@@ -495,9 +495,11 @@ class Groover:
 
             self._contour_values[contour_name] *= 1 - hi
             self._contour_values[contour_name] += hi * intensity
+            """
             self._contour_values[contour_name] = np.nan_to_num(
                 self._contour_values[contour_name], nan=0.5
             )
+            """
 
     def set_contour_value(self, contour_name: str, value: float) -> None:
         """
@@ -606,7 +608,7 @@ class Groover:
                 [],
             )
 
-        current_message.velocity = self._current_velocity
+        current_message._velocity = self._current_velocity
         notes = [current_message]
 
         # create ornaments
@@ -1034,16 +1036,18 @@ class Groover:
         # magic function time
         options = self._all_drones[self._all_drones % 12 == harmony]
         if len(options) == 0:
-            base_frequency = harmony
+            base = harmony
         else:
-            base_frequency = lu.midi_to_freq(np.min(options))
+            base = np.min(options)
+        base_frequency = lu.midi_to_freq(base)
         frequencies = lu.midi_to_freq(available_notes)
         fb_2 = frequencies - base_frequency / 2
-        index = np.argsort(
+        score = (
             -(fb_2 / abs(fb_2))
             * (base_frequency / frequencies)
             * (abs(2 * (frequencies % base_frequency) / base_frequency - 1))
         )
+        index = np.argsort(score)
 
         if len(index) != 0:
             # number of strings changes with intensity of signal
@@ -1246,6 +1250,7 @@ class Groover:
         offset = message.time
         for i, (p, v, d) in enumerate(zip(pitches, velocities, durations)):
 
+            print(p, v, d)
             # if a step and diatonic
             if abs(p) == 1 and self._config["ornamentation"][ornament_type]["diatonic"]:
                 if p < 0:
@@ -1254,11 +1259,13 @@ class Groover:
                     new_note = self.approach_from_above(message.pitch, self._tune)
             else:
                 new_note = message.pitch + p
+            print(new_note)
 
             # if not sliding, quantize
             # slides can be microtonal
             if not is_slide:
                 new_note = int(new_note)
+            print(new_note)
 
             # get note position in scale
             note_index = int(self._tune.key_signature.semitones_from_root(new_note))
@@ -1282,7 +1289,9 @@ class Groover:
 
                 new_note = message.pitch + p
 
+            print(new_note)
             new_pitch = min(127, max(0, new_note))
+            print(new_pitch)
 
             # limit velocity in allowed range
             if v != 0:
@@ -1302,15 +1311,18 @@ class Groover:
                 velocity=vel,
                 time=offset.eighth_duration,
                 slide=is_slide and len(ornaments) == 0,
+                channel=self._midi_channel,
             )
+            print(orn_note)
             if is_slide and len(ornaments) != 0:
-                ornaments[-1].duration += d
+                print(ornaments[-1])
                 ornaments[-1].add_slide_target_pitch(orn_note)
 
             else:
                 ornaments.append(orn_note)
 
             offset += orn_note.duration
+            print()
 
         """
         original_message_duration = self._tune.get_note_by_id(
@@ -1545,7 +1557,7 @@ class Groover:
         max_velocity = self._config["values"]["max_velocity"]
         min_velocity = self._config["values"]["min_velocity"]
         velocity_range = max_velocity - min_velocity
-        value = self._contour_values["velocity"] * velocity_range
+        value = min_velocity + self._contour_values["velocity"] * velocity_range
         if self._is_on_a_beat():
             value += self._config["values"]["beat_velocity_increase"]
 

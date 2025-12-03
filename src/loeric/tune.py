@@ -447,15 +447,14 @@ class Note(ScoreElement):
                 "slide not permitted. This note was created with slide=False."
             )
         self._slide_targets.append(note)
-        # print(self._pitch, self._slide_targets, self._eighth_duration)
-        duration = self._slide_targets[0].duration
+        print(self._pitch, self._slide_targets, self._duration)
+        self._duration += note.duration
+        duration = copy.deepcopy(self._slide_targets[0].duration)
         for note in self._slide_targets[1:]:
             duration += note.duration
-        """
         assert (
             duration <= self._duration
         ), f"Duration of targets {duration} exceeds note duration {self._duration}"
-        """
 
     @property
     def duration(self):
@@ -504,6 +503,8 @@ class Note(ScoreElement):
                 time=overall_time.eighth_duration,
             )
         )
+        print(self.pitch)
+        print(self.channel)
         messages.append(
             mido.Message(
                 "note_on",
@@ -540,8 +541,8 @@ class Note(ScoreElement):
                         overall_time = overall_time + slide_duration
                     perc = j / resolution
                     perc **= mult
-                    pb = (1 - perc) * previous_bend + perc * bend_semitones
-                    pb = int(pb)
+                    pb = (1 - perc) * previous_bend + perc * bend_percentage
+                    pb = int(pb * 8192)
                     messages.append(
                         mido.Message(
                             "pitchwheel",
