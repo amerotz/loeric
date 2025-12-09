@@ -422,7 +422,12 @@ class Note(ScoreElement):
         self._metadata = []
 
     def __repr__(self):
-        return f"(Note p={self._pitch} {self._duration} id={self._id} t={self._time.eighth_duration})"
+        s = f"(Note p={self._pitch} {self._duration} id={self._id} t={np.round(self._time.eighth_duration, 2)} c={self.channel}"
+        if self._is_slide:
+            s += f",\n\tslide={self._slide_targets})"
+        else:
+            s += ")"
+        return s
 
     def add_metadata(self, data):
         self._metadata.append(data)
@@ -447,7 +452,6 @@ class Note(ScoreElement):
                 "slide not permitted. This note was created with slide=False."
             )
         self._slide_targets.append(note)
-        print(self._pitch, self._slide_targets, self._duration)
         self._duration += note.duration
         duration = copy.deepcopy(self._slide_targets[0].duration)
         for note in self._slide_targets[1:]:
@@ -503,8 +507,6 @@ class Note(ScoreElement):
                 time=overall_time.eighth_duration,
             )
         )
-        print(self.pitch)
-        print(self.channel)
         messages.append(
             mido.Message(
                 "note_on",
@@ -518,7 +520,7 @@ class Note(ScoreElement):
         note_duration = TimeDelta(eighth_duration=self._duration.eighth_duration)
         if self._is_slide:
 
-            previous_bend = 0
+            previous_bend = bend_percentage
             resolution = 24
 
             for note in self._slide_targets:
@@ -532,17 +534,17 @@ class Note(ScoreElement):
                 else:
                     bend_percentage = bend_semitones / BEND_DOWN
 
-                # print(previous_bend, bend)
-
                 # append messages
                 mult = random.uniform(0.25, 0.5)
                 for j in range(resolution):
+
                     if absolute_time:
                         overall_time = overall_time + slide_duration
+
                     perc = j / resolution
                     perc **= mult
                     pb = (1 - perc) * previous_bend + perc * bend_percentage
-                    pb = int(pb * 8192)
+                    pb = min(8191, max(np.round(pb * 8191).astype(int), -8192))
                     messages.append(
                         mido.Message(
                             "pitchwheel",
@@ -553,7 +555,7 @@ class Note(ScoreElement):
                     )
                     note_duration = note_duration - slide_duration
 
-                previous_bend = bend_semitones
+                previous_bend = bend_percentage
 
         if self._duration == 0:
             note_duration += 0.001

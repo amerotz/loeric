@@ -18,6 +18,7 @@ from loeric.server.musician import (
     pause_all,
 )
 import loeric.server.synthout as lss
+import loeric.loeric_utils as lu
 from loeric.tune import Tune
 
 track_dir = os.path.join(os.getcwd(), "static/midi")
@@ -47,7 +48,7 @@ def load_soundfonts():
             config=f"{specific_configs_path}/instrument/accordion.json",
             default_soundfont_id=default_soundfont_id,
             default_program=21,
-            default_config=f"{specific_configs_path}/instrument/default_accordion.json",
+            default_config=f"{lu.general_configs_path}/instrument/accordion.json",
         ),
         "Guitar": lss.SynthSound(
             name="Guitar",
@@ -56,7 +57,7 @@ def load_soundfonts():
             config=f"{specific_configs_path}/instrument/guitar.json",
             default_soundfont_id=default_soundfont_id,
             default_program=25,
-            default_config=f"{specific_configs_path}/instrument/guitar.json",
+            default_config=f"{lu.general_configs_path}/instrument/guitar.json",
         ),
         "Piano": lss.SynthSound(
             name="Piano",
@@ -74,7 +75,7 @@ def load_soundfonts():
             config=f"{specific_configs_path}/instrument/harp.json",
             default_soundfont_id=default_soundfont_id,
             default_program=46,
-            default_config=f"{specific_configs_path}/instrument/harp.json",
+            default_config=f"{lu.general_configs_path}/instrument/harp.json",
         ),
         "Flute": lss.SynthSound(
             name="Flute",
@@ -83,7 +84,7 @@ def load_soundfonts():
             config=f"{specific_configs_path}/instrument/flute.json",
             default_soundfont_id=default_soundfont_id,
             default_program=73,
-            default_config=f"{specific_configs_path}/instrument/default_flute.json",
+            default_config=f"{lu.general_configs_path}/instrument/flute.json",
         ),
         "Violin": lss.SynthSound(
             name="Violin",
@@ -92,7 +93,7 @@ def load_soundfonts():
             config=f"{specific_configs_path}/instrument/violin.json",
             default_soundfont_id=default_soundfont_id,
             default_program=40,
-            default_config=f"{specific_configs_path}/instrument/violin.json",
+            default_config=f"{lu.general_configs_path}/instrument/violin.json",
         ),
         "Saw": lss.SynthSound(
             name="Saw",

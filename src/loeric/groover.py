@@ -78,26 +78,22 @@ class Groover:
         self.stopped = threading.Event()
         self.playback_resumed = threading.Event()
         self.skip_repetition = False
-        self._previous_note_duration = 0
 
-        self._contour_index = 0
         # tune
         self._tune = tune
         self._tempo = self._tune._tempos[0]
 
         # offset for messages after ornaments
-        # self._offset = 0
         self._eighths_to_skip = 0
-        self._swing_offset = 0
+
         # index to yield note events
         # will be increased before yielding message
         self._note_index = -1
         self._note_index_lock = threading.RLock()
         self._performance_time = tu.TimeDelta(eighth_duration=0)
 
-        # delay to randomize message_length
-        self._message_delay = 0
-        self._delay_max = 0
+        self._initial_human_impact = human_impact
+        self._syncing = syncing
 
         # only define command line values
         # rest is part of loeric_config/base.json
@@ -209,9 +205,6 @@ class Groover:
 
             self._config = json.loads(dict_string)
 
-        self._initial_human_impact = human_impact
-        self._syncing = syncing
-
         with open(f"{dir_path}/last_config.json", "w") as f:
             json.dump(self._config, f)
 
@@ -227,19 +220,15 @@ class Groover:
         random.seed(self._config["values"]["seed"])
         np.random.seed(self._config["values"]["seed"])
 
-        tu.BEND_UP = self.max_bend_up
-        tu.BEND_DOWN = self.max_bend_down
+        tu.BEND_UP = self._config["values"]["bend_up_semitones"]
+        tu.BEND_DOWN = self._config["values"]["bend_down_semitones"]
+        self._midi_channel = self._config["values"]["midi_channel"]
 
         # set parameters
         if self._config["tempo_control"]["bpm"] is None:
             self._user_tempo = self._tune._tempos[0]
         else:
             self._user_tempo = tu.Tempo(qpm=self._config["tempo_control"]["bpm"])
-
-        self._midi_channel = self._config["values"]["midi_channel"]
-        # table for pitch errors
-        self._pitch_errors = defaultdict(int)
-
         self._max_ornament_length = 0
         for o in self._config["ornamentation"]:
             self._max_ornament_length = max(
@@ -252,10 +241,6 @@ class Groover:
         )
 
         # droning
-        # self._drone_notes = np.array(self._config["drone"]["strings"])
-        # self._free_drone_notes = np.array(self._config["drone"]["free_strings"])
-        # self._drone_threshold = float(self._config["drone"]["threshold"])
-        # self._drone_bound_contour = self._config["drone"]["bind"]
         self._active_pedals = []
         self._all_drones = np.unique(
             [
@@ -264,7 +249,6 @@ class Groover:
                 for note in self._config["drone"]["drone_sets"][d]["notes"]
             ]
         )
-        self._drone_midi_channel = self._midi_channel + 1
 
         # keyswitches
         self._last_keyswitches = []
@@ -622,14 +606,7 @@ class Groover:
 
         for note in notes:
             # apply swing
-            swing_multiplier = self._apply_swing(note)
-
-            original_duration = note.duration
-            new_duration = note.duration * swing_multiplier
-
-            if swing_multiplier < 1:
-                note.time = note.time + original_duration - new_duration
-            note.duration = new_duration.eighth_duration
+            note = self._apply_swing(note)
 
             # channel
             note.channel = self._midi_channel
@@ -646,7 +623,12 @@ class Groover:
         # add drone
         non_legato_drones = []
         if self._config["drone"]["active"]:
+
             for drone_option in self._config["drone"]["drone_sets"]:
+                print(drone_option)
+                # pedals can't be triggered twice
+                if drone_option in self._active_pedals:
+                    continue
 
                 # obtain threshold and contour values
                 drone_bind_contour = self._config["drone"]["drone_sets"][drone_option][
@@ -656,47 +638,42 @@ class Groover:
                     "threshold"
                 ]
 
-                # pedals can't be triggered twice
-                if drone_option in self._active_pedals:
-                    continue
+                # keep track of notes
+                drone_notes = []
 
-                # if should be droning
-                if self._contour_values[drone_bind_contour] > drone_threshold:
+                drone_type = drone_option.split("#")[0]
 
-                    # keep track of notes
-                    drone_notes = []
+                # re-trigger drone for each note
+                if (
+                    drone_type == "bowed"
+                    and self._config["drone"]["drone_sets"][drone_option][
+                        "break_ornaments"
+                    ]
+                ):
+                    notes_to_consider = notes
+                else:
+                    notes_to_consider = []
 
-                    drone_type = drone_option.split("#")[0]
+                # TODO make it use the shortest allowed drone duration
+                for i in range(max(1, int(current_message.duration.eighth_duration))):
+                    note = copy.deepcopy(current_message)
+                    note.duration = 1
+                    note.time = self._performance_time + i
+                    notes_to_consider.append(note)
 
-                    # re-trigger drone for each note
-                    if (
-                        drone_type == "bowed"
-                        and self._config["drone"]["drone_sets"][drone_option][
-                            "break_ornaments"
-                        ]
-                    ):
-                        # for each note separately
-                        for note in notes:
+                notes_to_consider.sort(key=lambda x: x.time)
+                print(notes_to_consider)
 
-                            # get pitches
-                            drone_pitches = self._get_drone(note.pitch, drone_option)
-                            # create the note events
-                            drone_pitches = sorted(drone_pitches)
-                            d_notes, delay = self._add_drone(
-                                note, drone_pitches, drone_option
-                            )
-                            drone_notes.extend(d_notes)
+                # for each note
+                for note in notes_to_consider:
 
-                            # adjust delay of current note
-                            removable_delay = min(delay, note.duration)
-                            note.time += removable_delay
-                            note.duration -= removable_delay
-                    # only one note
-                    else:
+                    value = self._contours[drone_bind_contour].at(note.time)
+                    print(value > drone_threshold)
+                    # if should be droning
+                    if value > drone_threshold:
+
                         # get pitches
-                        drone_pitches = self._get_drone(
-                            current_message.pitch, drone_option
-                        )
+                        drone_pitches = self._get_drone(note.pitch, drone_option)
 
                         # make pedal active if pedal
                         if drone_type == "pedal" and len(drone_pitches) != 0:
@@ -705,15 +682,14 @@ class Groover:
                         # create the note events
                         drone_pitches = sorted(drone_pitches)
                         d_notes, delay = self._add_drone(
-                            current_message, drone_pitches, drone_option
+                            note, drone_pitches, drone_option
                         )
-
-                        # adjust delay of original note
-                        removable_delay = min(delay, notes[0].duration)
-                        notes[0].time += removable_delay
-                        notes[0].duration -= removable_delay
-
                         drone_notes.extend(d_notes)
+
+                        # adjust delay of current note
+                        removable_delay = min(delay, note.duration)
+                        note.time += removable_delay
+                        note.duration -= removable_delay
 
                     # if not pedal and config, use staccato/legato
                     # articulation with main note
@@ -783,14 +759,6 @@ class Groover:
     @property
     def tempo_scale(self):
         return self._eighth_duration_seconds * self._contour_values["tempo_pattern"]
-
-    @property
-    def max_bend_up(self):
-        return self._config["values"]["bend_up_semitones"]
-
-    @property
-    def max_bend_down(self):
-        return self._config["values"]["bend_down_semitones"]
 
     @property
     def performance_time(self):
@@ -893,7 +861,14 @@ class Groover:
         else:
             multiplier = 1
 
-        return multiplier
+        original_duration = message.duration
+        new_duration = message.duration * multiplier
+
+        if multiplier < 1:
+            message.time = message.time + original_duration - new_duration
+        message.duration = new_duration.eighth_duration
+
+        return message
 
     def _add_drone(self, note, drones, drone_name):
         """
@@ -909,9 +884,9 @@ class Groover:
             should_play = True
         else:
             options = self._config["drone"]["drone_sets"][drone_name]["notes_per_bar"]
-            amount = self._contour_values[
+            amount = self._contours[
                 self._config["drone"]["drone_sets"][drone_name]["notes_per_bar_bind"]
-            ]
+            ].at(note.time)
             amount_min = self._config["drone"]["drone_sets"][drone_name]["threshold"]
             if len(options) != 1:
                 index = np.round(
@@ -923,10 +898,12 @@ class Groover:
                 notes_per_bar = options[0]
 
             note_duration = self._tune.time_signature.eighths_per_bar / notes_per_bar
-            should_play = self._performance_time % note_duration == 0
+            print(note_duration, note.time)
+            should_play = note.time % note_duration == 0
 
         notes = []
         delay = 0
+        print("\t", should_play)
         if should_play:
 
             for drone in drones:
@@ -975,6 +952,7 @@ class Groover:
 
         # figure out what note is allowed depending on harmony
         harmony = self._contour_values["harmony"]
+
         if not self._config["drone"]["drone_sets"][drone_name]["transpose"]:
             harmony += self._config["values"]["transpose"]
 
@@ -1029,23 +1007,46 @@ class Groover:
         else:
             raise Exception(f"Unknown drone type {drone_type}.")
 
+        available_notes = available_notes[index]
         # old harmony sort
         # index = np.argsort(0.1 * np.arange(len(available_notes)) + (7 * (available_notes - harmony)) % 12)
 
         # sort based on harmony
         # magic function time
-        options = self._all_drones[self._all_drones % 12 == harmony]
+
+        available_frequencies = lu.midi_to_freq(available_notes)
+        """
+        reference_frequency = lu.midi_to_freq(reference)
+        reference_to_notes_ratio = reference_frequency / available_frequencies
+        """
+        harmony_frequency = lu.midi_to_freq(harmony)
+        notes_to_harmony_ratio = available_frequencies / harmony_frequency
+
+        """
+        reference_score = abs(
+            reference_to_notes_ratio - np.round(reference_to_notes_ratio)
+        )
+        """
+        harmony_score = abs(notes_to_harmony_ratio - np.round(notes_to_harmony_ratio))
+        options = harmony_score
+
         if len(options) == 0:
-            base = harmony
+            base = harmony + 12 * np.round(np.min(self._all_drones) / 12)
+            if harmony > 6:
+                base -= 12
         else:
-            base = np.min(options)
+            base = available_notes[np.argmin(options)]
+
+        available_notes = available_notes[available_notes >= base]
+
         base_frequency = lu.midi_to_freq(base)
+
         frequencies = lu.midi_to_freq(available_notes)
         fb_2 = frequencies - base_frequency / 2
         score = (
-            -(fb_2 / abs(fb_2))
-            * (base_frequency / frequencies)
-            * (abs(2 * (frequencies % base_frequency) / base_frequency - 1))
+            -np.nan_to_num(fb_2 / abs(fb_2), nan=1)
+            * (1 / frequencies**0.01)
+            * abs((2 * (2 * frequencies % base_frequency) / base_frequency) - 1)
         )
         index = np.argsort(score)
 
@@ -1250,7 +1251,6 @@ class Groover:
         offset = message.time
         for i, (p, v, d) in enumerate(zip(pitches, velocities, durations)):
 
-            print(p, v, d)
             # if a step and diatonic
             if abs(p) == 1 and self._config["ornamentation"][ornament_type]["diatonic"]:
                 if p < 0:
@@ -1259,13 +1259,11 @@ class Groover:
                     new_note = self.approach_from_above(message.pitch, self._tune)
             else:
                 new_note = message.pitch + p
-            print(new_note)
 
             # if not sliding, quantize
             # slides can be microtonal
             if not is_slide:
                 new_note = int(new_note)
-            print(new_note)
 
             # get note position in scale
             note_index = int(self._tune.key_signature.semitones_from_root(new_note))
@@ -1289,9 +1287,7 @@ class Groover:
 
                 new_note = message.pitch + p
 
-            print(new_note)
             new_pitch = min(127, max(0, new_note))
-            print(new_pitch)
 
             # limit velocity in allowed range
             if v != 0:
@@ -1313,16 +1309,13 @@ class Groover:
                 slide=is_slide and len(ornaments) == 0,
                 channel=self._midi_channel,
             )
-            print(orn_note)
             if is_slide and len(ornaments) != 0:
-                print(ornaments[-1])
                 ornaments[-1].add_slide_target_pitch(orn_note)
 
             else:
                 ornaments.append(orn_note)
 
             offset += orn_note.duration
-            print()
 
         """
         original_message_duration = self._tune.get_note_by_id(
@@ -1471,17 +1464,6 @@ class Groover:
         prob = self._contour_values["ornament"]
         return random.choices([True, False], weights=[prob, 1 - prob], k=1)[0]
 
-    def _duration_of(self, time: float) -> float:
-        """
-        Calculate the duration in seconds in the current tempo of the input duration, given in tune tempo.
-
-        :param time: the input time value in seconds, given the original tempo.
-
-        :return: the new duration of the input time value in seconds.
-        """
-        tempo_ratio = self.current_tempo / self._tune.tempo
-        return max(0, min(tempo_ratio * time, lu.MAX_TEMPO))
-
     def reset(self) -> None:
         """
         Reset all contours so that the next call to `next()` will yield the first value of each contour.
@@ -1496,14 +1478,6 @@ class Groover:
         Decide if we are on a beat or not, given the current cumulative performance time.
 
         :return: True if we are on a beat.
-        """
-        """
-        beat_position = (
-            self._performance_time % self._tune._bar_duration
-        ) / self._tune._beat_duration
-        diff = abs(beat_position - round(beat_position))
-
-        return diff <= lu.TRIGGER_DELTA
         """
         return (
             self._performance_time

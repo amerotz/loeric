@@ -1,12 +1,11 @@
 {
     "variables": {
         "var_webapp_intensity_control": 49,
-        "var_roll_2_prob": 0,
+        "var_roll_2_prob": 1,
         "var_webapp_human_impact_control": 50,
         "var_velocity_weight": [ 0, -1, 1, 1, 1 ],
         "var_drone_bind": "drone",
         "var_notes_per_bar_bind": "velocity",
-        "var_drone_midi_channel": 2,
         "var_legato_pattern": {
             "mean": [ 1, 1, 1, 0.9, 1, 1, 1, 0.8, 1, 1, 1, 0.9, 1, 1, 1, 0.5 ],
             "std": [ 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1 ],
@@ -15,7 +14,7 @@
             "normalize": false
         },
         "var_ornament_pattern": {
-            "mean": [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+            "mean": [ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
             "std": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
             "period": 8,
             "std_scale": 1,
@@ -25,21 +24,13 @@
         "minor_allowed_chords": [ 2, 0, 0.5, 2, 0, 2, 0, 2, 1, 0, 1, 0.5 ],
         "dorian_allowed_chords": [ 2, 0, 0.5, 2, 0, 0.5, 0, 1, 0, 1, 2, 0 ],
         "mixolydian_allowed_chords": [ 2, 0, 0.5, 0, 0.5, 1, 0, 0.5, 0, 0.5, 1, 0 ],
-        "var_notes_per_bar": [4],
-        "var_ones": {
-            "recipe": {
-                "pattern": {
-                    "mean": [ 1],
-                    "std": [ 0],
-                    "period": 1,
-                    "std_scale": 1,
-                    "normalize": false
-                }
-            }
-        }
+        "var_divide_note_1_duration": 1.4,
+        "var_divide_note_2_duration": 0.6,
+        "var_energy_capacity": 8,
+        "var_notes_per_bar": [ 4, 2, 1 ]
     },
     "contours": {
-        "lower_drone": {
+        "drone": {
             "recipe": {
                 "weighted_sum": {
                     "contours": {
@@ -50,8 +41,8 @@
                             "shift": true
                         },
                         "pattern": {
-                            "mean": [1, 0, 1, 0, 1, 0, 1, 0],
-                            "std": [ 0, 0, 0, 0, 0, 0, 0, 0 ],
+                            "mean": [ 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0 ],
+                            "std": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                             "std_scale": 1,
                             "normalize": false,
                             "period": 2
@@ -62,33 +53,6 @@
             },
             "human_impact_scale": 0
         },
-        "upper_drone": {
-            "recipe": {
-                "weighted_sum": {
-                    "contours": {
-                        "o_canainn": {
-                            "weights": [ 1, 2, 1, 1, 2 ],
-                            "savgol": true,
-                            "scale": true,
-                            "shift": true
-                        },
-                        "pattern": {
-                            "mean": [0, 1, 0, 1, 0, 1, 0, 1],
-                            "std": [ 0, 0, 0, 0, 0, 0, 0, 0 ],
-                            "std_scale": 1,
-                            "normalize": false,
-                            "period": 2
-                        }
-                    },
-                    "weights": [ 0.5, 1 ]
-                }
-            },
-            "human_impact_scale": 0
-        },
-        "orn_slide_prob": "var_ones",
-        "orn_slide#2_prob": "var_ones",
-        "orn_slide": "var_ones",
-        "orn_slide#2": "var_ones",
         "velocity": {
             "recipe": {
                 "weighted_sum": {
@@ -218,7 +182,31 @@
                 }
             }
         },
-        "ornament": "var_ones",
+        "ornament": {
+            "recipe": {
+                "multiply": {
+                    "contours": {
+                        "weighted_sum": {
+                            "contours": {
+                                "o_canainn": {
+                                    "weights": [ 1, 1, 1, 1, 1 ],
+                                    "savgol": false,
+                                    "scale": true,
+                                    "shift": false
+                                },
+                                "phrasing": {
+                                    "phrase_exp": 10,
+                                    "phrase_levels": 1.0
+                                }
+                            },
+                            "weights": [ 0.8, 0.2 ]
+                        },
+                        "pattern": "var_ornament_pattern"
+                    }
+                }
+            },
+            "human_impact_scale": 0
+        },
         "legato": {
             "recipe": {
                 "shift": {
@@ -264,7 +252,7 @@
             "velocities_std": [ 0, 0 ],
             "durations_mean": [ 1, 1 ],
             "durations_std": [ 0.01, 0.01 ],
-            "probability": 0,
+            "probability": 1,
             "length": 2,
             "diatonic": true,
             "threshold": 0,
@@ -279,7 +267,7 @@
             "velocities_std": [ 0, 0, 0, 0, 0 ],
             "durations_mean": [ 0.25, 0.25, 0.25, 0.25, 1 ],
             "durations_std": [ 0.01, 0.01, 0.01, 0.01, 0 ],
-            "probability": 0,
+            "probability": 1,
             "length": 2,
             "diatonic": true,
             "threshold": 0,
@@ -299,7 +287,7 @@
             "velocities_std": [ 0, 0, 0, 0, 0 ],
             "durations_mean": [ 1, 0.3, 0.7, 0.3, 0.7 ],
             "durations_std": [ 0, 0.01, 0.01, 0.01, 0.01 ],
-            "probability": 0,
+            "probability": 1,
             "length": 3,
             "diatonic": true,
             "threshold": 0,
@@ -315,7 +303,7 @@
             "velocities_std": [ 0, 0, 0, 0, 0 ],
             "durations_mean": [ 1, 0.33, 0.33, 0.33, 1 ],
             "durations_std": [ 0, 0.01, 0.01, 0.01, 0 ],
-            "probability": 0,
+            "probability": 1,
             "length": 3,
             "diatonic": true,
             "threshold": 0,
@@ -330,7 +318,7 @@
             "velocities_std": [ 0, 0, 0, 0 ],
             "durations_mean": [ 0.25, 0.25, 0.25, 1.75 ],
             "durations_std": [ 0.01, 0.01, 0.01, 0 ],
-            "probability": 0,
+            "probability": 1,
             "length": 3,
             "diatonic": true,
             "threshold": 0,
@@ -345,7 +333,7 @@
             "velocities_std": [ 0, 0, 0 ],
             "durations_mean": [ 0.8, 0.3, 0.9 ],
             "durations_std": [ 0.01, 0.01, 0.01 ],
-            "probability": 0,
+            "probability": 1,
             "length": 2,
             "diatonic": true,
             "threshold": 0,
@@ -360,7 +348,7 @@
             "velocities_std": [ 0, 0 ],
             "durations_mean": [ 0.2, 0.3 ],
             "durations_std": [ 0.01, 0.01 ],
-            "probability": 0,
+            "probability": 1,
             "length": 0.5,
             "diatonic": true,
             "threshold": 0,
@@ -375,11 +363,26 @@
             "velocities_std": [ 0, 0, 0 ],
             "durations_mean": [ 0.8, 0.3, 0.9 ],
             "durations_std": [ 0.01, 0.01, 0.01 ],
-            "probability": 0,
+            "probability": 1,
             "length": 2,
             "diatonic": true,
             "threshold": 0,
             "slide": false
+        },
+        "slide": {
+            "cases": [
+                [ [ 0, 2 ] ] ],
+            "pitches_mean": [ -1, 0 ],
+            "pitches_std": [ 0, 0 ],
+            "velocities_mean": [ 1, 1 ],
+            "velocities_std": [ 0, 0 ],
+            "durations_mean": [ 0.4, 0.6 ],
+            "durations_std": [ 0.01, 0.01 ],
+            "probability": 1,
+            "length": 1,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": true
         },
         "error_chromatic": {
             "cases": [
@@ -390,7 +393,7 @@
             "velocities_std": [ 0.25 ],
             "durations_mean": [ 1 ],
             "durations_std": [ 0.5 ],
-            "probability": 0.0,
+            "probability": 0.01,
             "length": 1,
             "diatonic": false,
             "threshold": 0,
@@ -405,7 +408,7 @@
             "velocities_std": [ 0.25 ],
             "durations_mean": [ 1 ],
             "durations_std": [ 0.5 ],
-            "probability": 0.0,
+            "probability": 0.01,
             "length": 1,
             "diatonic": true,
             "threshold": 0,
@@ -420,7 +423,7 @@
             "velocities_std": [ 0.25 ],
             "durations_mean": [ 1 ],
             "durations_std": [ 0.5 ],
-            "probability": 0.0,
+            "probability": 0.01,
             "length": 1,
             "diatonic": false,
             "threshold": 0,
@@ -435,7 +438,7 @@
             "velocities_std": [ 0 ],
             "durations_mean": [ 0.01 ],
             "durations_std": [ 0 ],
-            "probability": 0.0,
+            "probability": 0.01,
             "length": 1,
             "diatonic": false,
             "threshold": 0,
@@ -451,7 +454,7 @@
             "velocities_std": [ 0, 0, 0, 0 ],
             "durations_mean": [ 0.5, 0.5, 1, 1 ],
             "durations_std": [ 0.01, 0.01, 0.01, 0.01 ],
-            "probability": 0,
+            "probability": 1,
             "length": 3,
             "diatonic": true,
             "threshold": 0,
@@ -467,7 +470,7 @@
             "velocities_std": [ 0, 0, 0 ],
             "durations_mean": [ 0.5, 0.5, 1 ],
             "durations_std": [ 0.01, 0.01, 0.01 ],
-            "probability": 0,
+            "probability": 1,
             "length": 2,
             "diatonic": true,
             "threshold": 0,
@@ -482,7 +485,7 @@
             "velocities_std": [ 0, 0, 0, 0 ],
             "durations_mean": [ 1, 0.5, 0.5, 1 ],
             "durations_std": [ 0.01, 0.01, 0.01, 0.01 ],
-            "probability": 0,
+            "probability": 1,
             "length": 3,
             "diatonic": true,
             "threshold": 0,
@@ -490,11 +493,10 @@
         }
     },
     "values": {
-        "bend_up_semitones": 48,
-        "bend_down_semitones": 48,
+        "bend_up_semitones": 2,
+        "bend_down_semitones": 2,
         "bend_resolution": 32,
         "beat_velocity_increase": -16,
-        "midi_channel": 1,
         "min_velocity": 64,
         "max_velocity": 127,
         "pitch_deviation_cents": 1
@@ -513,28 +515,15 @@
     },
     "drone": {
         "active": true,
-        "allow_root": true,
+        "allow_root": false,
         "drone_sets": {
-            "free#lower": {
+            "free": {
                 "threshold": 0.5,
                 "velocity_multiplier": 0.9,
-                "bind": "lower_drone",
-                "notes": [ 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48 ],
+                "bind": "var_drone_bind",
+                "old_notes": [ 38, 40, 42, 43, 45, 47, 49, 50, 52, 54, 55, 57, 59, 61, 62, 64, 66, 67, 69, 71, 73 ],
+                "notes": [ 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60 ],
                 "polyphony_min": 1,
-                "polyphony_max": 1,
-                "notes_per_bar_bind": "var_notes_per_bar_bind",
-                "notes_per_bar": "var_notes_per_bar",
-                "midi_channel": "var_drone_midi_channel",
-                "delay_range": 0.02,
-                "transpose": false,
-                "use_legato": false
-            },
-            "free#upper": {
-                "threshold": 0.5,
-                "velocity_multiplier": 0.9,
-                "bind": "upper_drone",
-                "notes": [ 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60 ],
-                "polyphony_min": 2,
                 "polyphony_max": 3,
                 "notes_per_bar_bind": "var_notes_per_bar_bind",
                 "notes_per_bar": "var_notes_per_bar",

@@ -27,6 +27,10 @@ def midi_to_freq(midi):
     return 440 * 2 ** ((midi - 69) / 12)
 
 
+def freq_to_midi(freq):
+    return 69 + 12 * np.log2(freq / 440)
+
+
 # play midi file
 def play(
     groover,

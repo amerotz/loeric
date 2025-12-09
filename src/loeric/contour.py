@@ -51,7 +51,7 @@ class Contour:
 
         :param midi: the input tune.
         """
-        pass
+        self._contour_times = np.array([t.eighth_duration for t in midi.times])
 
     def jump(self, index: int) -> None:
         """
@@ -136,6 +136,41 @@ class Contour:
 
         return array
 
+    def at(self, time):
+        """
+        Return the value of the contour at a specific performance time.
+        """
+        lower_limit = time.eighth_duration >= self._contour_times
+        upper_limit = time.eighth_duration < np.roll(self._contour_times, -1)
+
+        # if value is greater than any time, use last one
+        if not upper_limit.any():
+            return self._contour[-1]
+
+        value = self._contour[np.argwhere(lower_limit & upper_limit)[0]][0]
+        return value
+
+
+class CompositeContour(Contour):
+    """A contour holding an aggregation of other contours."""
+
+    def __init__(self, contours, operation):
+        super().__init__()
+        self._member_contours = contours
+        self._operation = operation
+        self._contour = operation([c._contour for c in self._member_contours])
+        self._contour_times = contours[0]._contour_times
+
+    def at(self, time):
+
+        # retrieve the at value of every member
+        values = [[c.at(time)] for c in self._member_contours]
+        values = np.array(values)
+
+        # aggregate
+        res = self._operation(values)
+        return res[0]
+
 
 class HarmonicContour(Contour):
     """A contour holding harmonic information."""
@@ -151,12 +186,10 @@ class HarmonicContour(Contour):
         allowed_chords: np.array = np.zeros(12),
         transpose: int = 0,
     ) -> None:
-        # retrieve pitch and time info
-        # note_events = [msg for msg in midi if "note" in msg.type]
+
+        super().calculate(midi)
 
         pitches = midi.pitches
-        summed_timings = np.array([t.eighth_duration for t in midi.times])
-
         notes = pitches % 12
 
         # message length
@@ -165,12 +198,12 @@ class HarmonicContour(Contour):
         # estimate chord for each bar
         harmony = np.zeros(len(pitches))
 
-        t = summed_timings.min()
+        t = self._contour_times.min()
 
         key_changes = midi._key_signatures
         current_key = key_changes[0]
 
-        while t <= summed_timings.max():
+        while t <= self._contour_times.max():
             start = t
             stop = midi.time_signature.eighths_per_bar / chords_per_bar + t
             if t < 0:
@@ -182,7 +215,9 @@ class HarmonicContour(Contour):
                     key_changes = key_changes[1:]
 
             # select bar range
-            indexes = np.where((summed_timings >= start) & (summed_timings < stop))
+            indexes = np.where(
+                (self._contour_times >= start) & (self._contour_times < stop)
+            )
             bar_notes = notes[indexes].astype(int)
             bar_lengths = lengths[indexes]
 
@@ -224,9 +259,8 @@ class HarmonicContour(Contour):
             # check if the note score suggests diminished chord
             elif note_count[(root + 6) % 12] > note_count[(root + 7) % 12]:
                 chord_quality = 2
-            """
-                print(chords)
 
+            """
             # check if the note score suggests augmented chord
             if chords[(root + 8) % 12] > chords[(root + 7) % 12]:
                 chord_quality = 3
@@ -255,6 +289,8 @@ class RandomContour(Contour):
         :param midi: the input tune.
         :param extremes: the upper and lower bound for the random contour. If None, the range will be (0, 1).
         """
+        super().calculate(midi)
+
         size = len(midi.pitches)
         r_min = min
         r_max = max
@@ -273,14 +309,16 @@ class PhraseContour(Contour):
 
         :param midi: the input tune.
         """
-        # retrieve pitch and time info
-        summed_timings = np.array([t.eighth_duration for t in midi.times])
+
+        super().calculate(midi)
 
         bar_length = midi.time_signature.eighths_per_bar.eighth_duration
 
         self._contour = self.scale_and_savgol(
             1
-            - np.cos((np.pi * summed_timings * 2 ** (phrase_levels - 1)) / bar_length)
+            - np.cos(
+                (np.pi * self._contour_times * 2 ** (phrase_levels - 1)) / bar_length
+            )
             ** phrase_exp,
             savgol=False,
             shift=False,
@@ -311,6 +349,8 @@ class IntensityContour(Contour):
         :param savgol: whether or not to apply a final savgol filtering step (recommended).
         :param shift: whether or not to apply a final shifting step to bring the mean of the array close to 0.5.
         """
+
+        super().calculate(midi)
 
         weights = np.array(weights).astype(float)
 
@@ -359,8 +399,6 @@ class IntensityContour(Contour):
 
         :return: the frequency score, the beat score, the ambitus score, the leap score and the length score.
         """
-        # retrieve pitch and time info
-        summed_timings = np.array([t.eighth_duration for t in midi.times])
         pitches = midi.pitches
         durations = midi.durations
 
@@ -379,7 +417,7 @@ class IntensityContour(Contour):
 
         # strong beat
         indexes = np.where(
-            summed_timings
+            self._contour_times
             % (
                 midi.time_signature.eighths_per_bar.eighth_duration
                 / midi.time_signature.beat_count
@@ -444,6 +482,8 @@ class MessageLengthContour(Contour):
         :param midi: the input tune object.
         """
 
+        super().calculate(midi)
+
         self._contour = midi.durations
 
 
@@ -457,6 +497,9 @@ class PitchDifferenceContour(Contour):
         self,
         midi: tune.Tune,
     ) -> None:
+
+        super().calculate(midi)
+
         pitches = midi.pitches
         diff = np.diff(pitches)
         diff = np.insert(diff, 0, 0)
@@ -476,6 +519,8 @@ class PitchContour(Contour):
         shift: bool = True,
         scale: bool = True,
     ) -> None:
+
+        super().calculate(midi)
 
         self._contour = midi.pitches
 
@@ -508,36 +553,40 @@ class PatternContour(Contour):
         :param std: the std of the pattern to repeat, for every item.
         :param period: the length of the pattern, in bars.
         """
+
+        super().calculate(midi)
+
         assert len(mean) == len(std)
 
         mean = np.array(mean).astype(float)
         std = np.array(std).astype(float)
 
-        # retrieve pitch and time info
-        summed_timings = np.array([t.eighth_duration for t in midi.times])
-
-        time_period = midi.time_signature.eighths_per_bar.eighth_duration * period
-        bar_position = summed_timings / time_period
+        self._time_period = midi.time_signature.eighths_per_bar.eighth_duration * period
+        bar_position = self._contour_times / self._time_period
 
         pattern_indexes = ((len(mean) * bar_position) % len(mean)).astype(int)
         diff = np.diff(pattern_indexes)
         index_diff = np.argwhere(diff > 1)
 
-        pattern_means = mean[pattern_indexes].astype(float)
-        pattern_stds = std[pattern_indexes].astype(float)
+        self._pattern_means = mean[pattern_indexes].astype(float)
+        self._pattern_stds = std[pattern_indexes].astype(float)
+        self._std_scale = std_scale
 
         for index in index_diff:
             source_index = pattern_indexes[index]
             add_indexes = np.arange(source_index, source_index + diff[index])
-            pattern_means[index] = np.max(mean[add_indexes])
-            pattern_stds[index] = np.max(std[add_indexes])
+            self._pattern_means[index] = np.max(mean[add_indexes])
+            self._pattern_stds[index] = np.max(std[add_indexes])
 
         pattern = np.random.normal(
-            loc=pattern_means, scale=std_scale * pattern_stds, size=len(pattern_means)
+            loc=self._pattern_means,
+            scale=std_scale * self._pattern_stds,
+            size=len(self._pattern_means),
         )
 
+        self._normalize = normalize
         if normalize:
-            bars = summed_timings // time_period
+            bars = self._contour_times // self._time_period
 
             for i in np.unique(bars):
 
@@ -546,6 +595,21 @@ class PatternContour(Contour):
                 pattern[indexes] *= len(indexes)
 
         self._contour = pattern
+
+    def at(self, time):
+        if self._normalize:
+            return super().at(time)
+        else:
+            position = time.eighth_duration / self._time_period
+            index = (
+                (len(self._pattern_means) * position) % len(self._pattern_means)
+            ).astype(int)
+            value = np.random.normal(
+                loc=self._pattern_means[index],
+                scale=self._std_scale * self._pattern_stds[index],
+                size=1,
+            )[0]
+            return value
 
 
 def multiply(contours: list[Contour] = []) -> Contour:
@@ -556,11 +620,20 @@ def multiply(contours: list[Contour] = []) -> Contour:
 
     :return: a new contour holding the product of the input contours.
     """
+
+    def mult(contours):
+        result = np.ones(len(contours[0]))
+        for c in contours:
+            result = np.multiply(result, c)
+
+        return result
+
+    new_contour = CompositeContour(contours, lambda cnt_list: mult(cnt_list))
+    """
     new_contour = Contour()
-    result = np.ones(len(contours[0]))
-    for c in contours:
-        result = np.multiply(result, c._contour)
+    new_contour._contour_times = contours[0]._contour_times
     new_contour._contour = result
+    """
 
     return new_contour
 
@@ -576,10 +649,8 @@ def weighted_sum(contours: list[Contour] = [], weights: list = []) -> Contour:
     """
     assert len(contours) == len(weights)
 
-    result = np.zeros(len(contours[0]))
     size = len(contours)
     weights = np.array(weights).astype(float)
-
     if weights is None:
         weights = np.ones((size, 1)) / size
     else:
@@ -589,19 +660,28 @@ def weighted_sum(contours: list[Contour] = [], weights: list = []) -> Contour:
         weights = abs(weights)
         weights /= weights.sum()
 
-    stacked_components = np.stack([c._contour for c in contours])
+    def wsum(contours, weights):
+        result = np.zeros(len(contours[0]))
 
-    # invert negative ones
-    stacked_components[indexes] *= -1
-    stacked_components[indexes] += 1
+        stacked_components = np.stack(contours)
 
-    # weight them
-    stacked_components = np.multiply(stacked_components, weights)
-    # sum them
-    result = stacked_components.sum(axis=0)
+        # invert negative ones
+        stacked_components[indexes] *= -1
+        stacked_components[indexes] += 1
 
+        # weight them
+        stacked_components = np.multiply(stacked_components, weights)
+        # sum them
+        result = stacked_components.sum(axis=0)
+
+        return result
+
+    new_contour = CompositeContour(contours, lambda cnt_list: wsum(cnt_list, weights))
+    """
     new_contour = Contour()
+    new_contour._contour_times = contours[0]._contour_times
     new_contour._contour = result
+    """
 
     return new_contour
 
@@ -617,8 +697,16 @@ def linear_transform(contours: Contour = None, a: float = 1, b: float = 0) -> Co
     :return: the linear transformation of the input contour.
     """
     assert len(contours) == 1
+
+    def lin(x, a, b):
+        return a * x + b
+
+    new_contour = CompositeContour(contours, lambda x: lin(x[0], a, b))
+    """
     new_contour = Contour()
+    new_contour._contour_times = contours[0]._contour_times
     new_contour._contour = a * contours[0]._contour + b
+    """
 
     return new_contour
 
@@ -634,8 +722,14 @@ def clamp(contours: Contour = None, low: float = 0, high: float = 1) -> Contour:
     :return: the clamped input contour.
     """
     assert len(contours) == 1
+    new_contour = CompositeContour(
+        contours, lambda cnt_list: np.clip(cnt_list[0], a_min=low, a_max=high)
+    )
+    """
     new_contour = Contour()
+    new_contour._contour_times = contours[0]._contour_times
     new_contour._contour = np.clip(contours[0]._contour, a_min=low, a_max=high)
+    """
 
     return new_contour
 
@@ -650,8 +744,15 @@ def shift(contours: list[Contour] = None, offset: int = -1) -> Contour:
     :return: the shifted input contour.
     """
     assert len(contours) == 1
+
+    new_contour = CompositeContour(
+        contours, lambda cnt_list: np.roll(cnt_list[0], offset)
+    )
+    """
     new_contour = Contour()
+    new_contour._contour_times = contours[0]._contour_times
     new_contour._contour = np.roll(contours[0]._contour, offset)
+    """
     return new_contour
 
 
@@ -665,9 +766,14 @@ def to_mean(contours: list[Contour] = None, mean: float = 0.5) -> Contour:
     :return: the shifted input contour.
     """
     assert len(contours) == 1
-    new_contour = Contour()
+    new_contour = CompositeContour(
+        contours, lambda cnt_list: cnt_list[0] - cnt_list[0].mean() + mean
+    )
+    """
+    new_contour._contour_times = contours[0]._contour_times
     cnt_mean = contours[0]._contour.mean()
     new_contour._contour = contours[0]._contour - cnt_mean + mean
+    """
     return new_contour
 
 
@@ -681,8 +787,11 @@ def power(contours: list[Contour] = None, exp: float = 1) -> Contour:
     :return: the modified input contour.
     """
     assert len(contours) == 1
-    new_contour = Contour()
+    new_contour = CompositeContour(contours, lambda cnt_list: cnt_list[0] ** exp)
+    """
+    new_contour._contour_times = contours[0]._contour_times
     new_contour._contour = contours[0]._contour ** exp
+    """
     return new_contour
 
 
