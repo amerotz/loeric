@@ -146,6 +146,8 @@ class Contour:
         # if value is greater than any time, use last one
         if not upper_limit.any():
             return self._contour[-1]
+        elif not lower_limit.any():
+            return self._contour[0]
 
         value = self._contour[np.argwhere(lower_limit & upper_limit)[0]][0]
         return value
@@ -556,32 +558,36 @@ class PatternContour(Contour):
 
         super().calculate(midi)
 
+        if std is None:
+            std = np.zeros(len(mean))
         assert len(mean) == len(std)
 
-        mean = np.array(mean).astype(float)
-        std = np.array(std).astype(float)
+        self._mean = np.array(mean).astype(float)
+        self._std = np.array(std).astype(float)
+        self._std_scale = std_scale
 
         self._time_period = midi.time_signature.eighths_per_bar.eighth_duration * period
         bar_position = self._contour_times / self._time_period
 
-        pattern_indexes = ((len(mean) * bar_position) % len(mean)).astype(int)
+        pattern_indexes = ((len(self._mean) * bar_position) % len(self._mean)).astype(
+            int
+        )
         diff = np.diff(pattern_indexes)
         index_diff = np.argwhere(diff > 1)
 
-        self._pattern_means = mean[pattern_indexes].astype(float)
-        self._pattern_stds = std[pattern_indexes].astype(float)
-        self._std_scale = std_scale
+        pattern_means = self._mean[pattern_indexes].astype(float)
+        pattern_stds = self._std[pattern_indexes].astype(float)
 
         for index in index_diff:
             source_index = pattern_indexes[index]
             add_indexes = np.arange(source_index, source_index + diff[index])
-            self._pattern_means[index] = np.max(mean[add_indexes])
-            self._pattern_stds[index] = np.max(std[add_indexes])
+            pattern_means[index] = np.max(self._mean[add_indexes])
+            pattern_stds[index] = np.max(self._std[add_indexes])
 
         pattern = np.random.normal(
-            loc=self._pattern_means,
-            scale=std_scale * self._pattern_stds,
-            size=len(self._pattern_means),
+            loc=pattern_means,
+            scale=self._std_scale * pattern_stds,
+            size=len(pattern_means),
         )
 
         self._normalize = normalize
@@ -601,12 +607,10 @@ class PatternContour(Contour):
             return super().at(time)
         else:
             position = time.eighth_duration / self._time_period
-            index = (
-                (len(self._pattern_means) * position) % len(self._pattern_means)
-            ).astype(int)
+            index = ((len(self._mean) * position) % len(self._mean)).astype(int)
             value = np.random.normal(
-                loc=self._pattern_means[index],
-                scale=self._std_scale * self._pattern_stds[index],
+                loc=self._mean[index],
+                scale=self._std_scale * self._std[index],
                 size=1,
             )[0]
             return value

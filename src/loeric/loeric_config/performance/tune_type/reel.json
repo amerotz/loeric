@@ -18,7 +18,10 @@
 			"std_scale": 1,
 			"period": 2,
 			"normalize": false
-		}
+		},
+        "var_comping_notes_per_bar": [4],
+        "var_upper_comping_pattern": [0,1,0,1,0,1,0,1],
+        "var_lower_comping_pattern": [1,0,1,0,1,0,1,0]
 	},
 	"contours": {
 		"drone": {
