@@ -175,7 +175,7 @@ class Musician:
     def midi_channels(self):
         return [
             self._groovers[self._tune_index]._midi_channel,
-            self._groovers[self._tune_index]._drone_midi_channel,
+            *self._groovers[self._tune_index]._drone_midi_channels,
         ]
 
     @property
@@ -468,6 +468,19 @@ class Musician:
                             self._groovers[self._tune_index]._tune.set_key_signature(
                                 original_message
                             )
+                        elif isinstance(original_message, tu.Chord):
+                            if original_message.is_user:
+                                print(f"[INFO]\tForcing chord: {original_message}")
+                            else:
+                                print(f"[INFO]\tPlaying chord: {original_message}")
+                            self._groovers[self._tune_index]._tune.set_chord(
+                                original_message
+                            )
+                        else:
+                            print(
+                                f"[WARN]\tUnknown message type {type(original_message)}."
+                            )
+
                         midi_headers = original_message.to_midi(absolute_time=True)
 
                     self.player.set_tempo_scale(

@@ -4,46 +4,24 @@
     "contours": {
         "lower_drone": {
             "recipe": {
-                "weighted_sum": {
-                    "contours": {
-                        "o_canainn": {
-                            "weights": [ 1, 2, 1, 1, 2 ],
-                            "savgol": true,
-                            "scale": true,
-                            "shift": true
-                        },
-                         "pattern": {
-                            "mean": "var_lower_comping_pattern",
-                            "std": null,
-                            "std_scale": 1,
-                            "normalize": false,
-                            "period": 2
-                        }
-                    },
-                    "weights": [ 0.5, 1 ]
+                "pattern": {
+                    "mean": "var_lower_comping_pattern",
+                    "std": null,
+                    "std_scale": 1,
+                    "normalize": false,
+                    "period": 2
                 }
             },
             "human_impact_scale": 0
         },
         "upper_drone": {
             "recipe": {
-                "weighted_sum": {
-                    "contours": {
-                        "o_canainn": {
-                            "weights": [ 1, 2, 1, 1, 2 ],
-                            "savgol": true,
-                            "scale": true,
-                            "shift": true
-                        },
-                        "pattern": {
-                            "mean": "var_upper_comping_pattern",
-                            "std": null,
-                            "std_scale": 1,
-                            "normalize": false,
-                            "period": 2
-                        }
-                    },
-                    "weights": [ 0.0, 1 ]
+                "pattern": {
+                    "mean": "var_upper_comping_pattern",
+                    "std": null,
+                    "std_scale": 1,
+                    "normalize": false,
+                    "period": 2
                 }
             },
             "human_impact_scale": 0
@@ -57,7 +35,7 @@
                 "threshold": 0.5,
                 "velocity_multiplier": 0.9,
                 "bind": "lower_drone",
-                "notes": [ 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48 ],
+                "notes": [ 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
                 "polyphony_min": 1,
                 "polyphony_max": 1,
                 "notes_per_bar_bind": "var_notes_per_bar_bind",
@@ -71,8 +49,8 @@
                 "threshold": 0.5,
                 "velocity_multiplier": 0.9,
                 "bind": "upper_drone",
-                "notes": [ 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60 ],
-                "polyphony_min": 2,
+                "notes": [ 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 ],
+                "polyphony_min": 3,
                 "polyphony_max": 3,
                 "notes_per_bar_bind": "var_notes_per_bar_bind",
                 "notes_per_bar": "var_comping_notes_per_bar",

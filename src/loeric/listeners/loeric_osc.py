@@ -11,7 +11,7 @@ args = None
 
 def send_control(control, out):
     def f(address, *osc_args):
-        # print(f"{address}: {osc_args}")
+        print(f"{address}: {osc_args}")
         value = int(127 * np.array(osc_args).mean())
         out.send(
             mido.Message(

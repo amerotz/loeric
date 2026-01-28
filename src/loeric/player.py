@@ -1,10 +1,12 @@
 import time
+import copy
 import threading
 import mido
 import numpy as np
 
 
-from . import tune as tu
+import loeric.tune as tu
+import loeric.loeric_utils as lu
 
 
 class Player:
@@ -36,6 +38,7 @@ class Player:
         self._tempo = tempo
         self._verbose = verbose
         self._message_queue = []
+        self._active_notes = []
         self.has_reached_wake_time = threading.Event()
         self._midi_out_lock = threading.Lock()
         self._tempo_scale = 1
@@ -99,12 +102,31 @@ class Player:
 
         self.add_midi(midi_messages)
 
+    def _message_priority(self, message):
+
+        add_time = time.time()
+        message_priority = ["pitchwheel", "note_off", "note_on", "control_change"]
+        # first time
+        m_time = message.time
+
+        # then pitch (if there)
+        pitch = -1
+        if "note" in message.type:
+            pitch = message.note
+
+        if message.type in message_priority:
+            kind = message_priority.index(message.type)
+        else:
+            kind = len(message_priority)
+
+        return (m_time, kind, pitch, add_time)
+
     def add_midi(self, messages):
 
         if len(messages) == 0:
             return
         self._message_queue.extend(messages)
-        self._message_queue.sort(key=lambda x: (x.time, 1 if "off" in x.type else 0))
+        self._message_queue.sort(key=lambda x: self._message_priority(x))
 
     def wake_me_up_at(self, time):
         self._notify_song_time = time
@@ -137,25 +159,53 @@ class Player:
                 break
 
             msg = self._message_queue.pop(0)
-            if self._verbose == 5:
-                print("[MIDI]\t", msg)
 
             if self._saving:
 
                 # TODO
                 # fix export
-                new_time = np.round(msg.time * 32767 / 2).astype(int)
-                msg.time = new_time
-                self._midi_track.append(msg)
+                save_message = copy.deepcopy(msg)
+                new_time = np.round(save_message.time * 32767 / 2).astype(int)
+                save_message.time = new_time
+                print(save_message)
+                self._midi_track.append(save_message)
 
             if msg.is_meta:
                 continue
 
+            # avoid sending double note on messages
+            # by turning off already sounding notes
+            if lu.is_note_on(msg):
+                key = f"{msg.note}_{msg.channel}"
+
+                if key in self._active_notes:
+
+                    # turn off
+                    off_msg = mido.Message(
+                        "note_off", note=msg.note, channel=msg.channel, velocity=0
+                    )
+                    if self._verbose == 5:
+                        print("[MIDI]\t", off_msg)
+                    self._midi_out.send(off_msg)
+
+                    # remove message
+                    self._active_notes.remove(key)
+
+                self._active_notes.append(f"{msg.note}_{msg.channel}")
+
+            elif lu.is_note_off(msg):
+                key = f"{msg.note}_{msg.channel}"
+
+                if key in self._active_notes:
+                    self._active_notes.remove(key)
+
+            if self._verbose == 5:
+                print("[MIDI]\t", msg)
+
             if self._midi_out is not None:
-                if msg.type != "songpos":
-                    msg.time = 0
-                    with self._midi_out_lock:
-                        self._midi_out.send(msg)
+                msg.time = 0
+                with self._midi_out_lock:
+                    self._midi_out.send(msg)
 
         self._song_time += self._time_division
         if self._midi_out is not None:

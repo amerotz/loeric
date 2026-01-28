@@ -44,16 +44,11 @@
 							"std_scale": 1,
 							"normalize": false,
 							"period": 2
-						},
-                        "phrasing#2": {
-                            "phrase_exp": 1000,
-                            "phrase_levels": -1.0
-                        }
+						}
                     },
                     "weights": [
                         1,
-                        1,
-                        -0.5
+                        1
                     ]
                 }
             }

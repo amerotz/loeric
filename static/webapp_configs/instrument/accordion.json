@@ -1,33 +1,4 @@
 {
-    "contours": {
-        "velocity": {
-            "recipe": {
-                "to_mean": {
-                    "contours": {
-                        "weighted_sum": {
-                            "contours": {
-                                "o_canainn": {
-                                    "weights": "var_velocity_weight",
-                                    "savgol": false,
-                                    "scale": true,
-                                    "shift": false
-                                },
-                                "phrasing": {
-                                    "phrase_exp": 10,
-                                    "phrase_levels": -1.0
-                                }
-                            },
-                            "weights": [
-                                0.5,
-                                0.5
-                            ]
-                        }
-                    },
-                    "mean": 0.5
-                }
-            }
-        }
-    },
     "ornamentation": {
         "divide": {
             "cases": [

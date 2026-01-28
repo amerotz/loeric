@@ -2,9 +2,11 @@ import json
 import copy
 import random
 import os
+import mido
+
 import numpy as np
 import muspy as mp
-import mido
+import music21 as m21
 
 from . import loeric_utils as lu
 
@@ -15,24 +17,28 @@ BEND_UP = 2
 BEND_DOWN = 2
 
 
+NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+CHORDS = {
+    "0_4_7": ("", 0),
+    "0_3_7": ("m", 1),
+    "0_3_6": ("dim", 2),
+    "0_4_8": ("aug", 3),
+    "0_4_7_10": ("7", 4),
+    "0_3_7_10": ("m7", 5),
+    "0_4_7_11": ("M7", 6),
+    "0_3_7_11": ("mM7", 7),
+}
+
+
 def note_list_to_midi(notes):
 
     midi_messages = []
     for note in notes:
-        midi_messages.extend(note.to_midi(absolute_time=True))
+        note_messages = note.to_midi(absolute_time=True)
+        midi_messages.extend(note_messages)
 
     # sort by time
     midi_messages.sort(key=lambda x: x.time)
-
-    """
-    # relative time
-    new_times = np.array([m.time for m in midi_messages])
-    new_times = np.insert(np.diff(new_times), 0, 0)
-
-    # reassign timings
-    for i in range(len(midi_messages)):
-        midi_messages[i].time = new_times[i]
-    """
 
     return midi_messages
 
@@ -219,7 +225,7 @@ class ScoreElement:
             self._duration = TimeDelta(eighth_duration=value)
         if self._duration.eighth_duration < 0:
             self._duration = TimeDelta(eighth_duration=0)
-            print("[WARN] Duration cannot be negative!")
+            print("[WARN]\tDuration cannot be negative!")
             # raise Exception("Duration cannot be negative")
 
 
@@ -243,6 +249,105 @@ class Pause(ScoreElement):
             time += self._time
 
         return [mido.Message("note_off", note=0, time=time.eighth_duration)]
+
+
+class Chord(ScoreElement):
+
+    def __init__(self, pitches: list, time: float = 0, is_user=False):
+
+        super().__init__(time)
+
+        self._number = None
+        self._root = None
+        self._bass = None
+        self._quality = None
+        self._pitches = []
+        self.is_user = is_user
+
+        if len(pitches) != 0:
+
+            # bring into octave
+            pitches = np.array(pitches)
+            pitches %= 12
+            pitches = pitches.reshape(len(pitches), 1).astype(int)
+
+            # check for possible inversions
+            options = np.repeat(pitches, len(pitches), axis=1).T
+            options -= pitches
+            options += 12
+            options %= 12
+
+            found = False
+            for i in range(len(options)):
+
+                # sort it to standard shape
+                options[i] = np.sort(options[i])
+
+                # if present in CHORDS
+                id_string = "_".join(options[i].astype(str))
+                if id_string in CHORDS:
+
+                    # we found it!
+                    self._quality, index = CHORDS[id_string]
+                    self._root = pitches[i][0]
+                    self._pitches = options[i]
+                    self._number = self._root + 12 * index
+                    self._bass = pitches[0][0]
+                    found = True
+
+                    break
+
+            if not found:
+                pitches = pitches.flatten()
+                pitches -= min(pitches)
+                pitches.sort()
+                print(
+                    f"[WARN]\tChord shape {pitches} at time {self._time} not supported."
+                )
+
+    @property
+    def root(self):
+        return self._root
+
+    @property
+    def bass(self):
+        return self._bass
+
+    @property
+    def is_valid(self):
+        return self._number is not None
+
+    @property
+    def chord_number(self):
+        return self._number
+
+    @property
+    def pitches(self):
+        return self._pitches
+
+    @staticmethod
+    def from_harmony(harmony):
+        kind = harmony // 12
+        root = harmony % 12
+        for c in CHORDS:
+            _, number = CHORDS[c]
+            if kind == number:
+                pitches = [(root + int(n)) % 12 for n in c.split("_")]
+                return Chord(pitches=pitches)
+
+        print(f"[WARN]\tUnknown harmony {harmony} (kind = {kind}).")
+
+    def __repr__(self):
+        root = "n/a"
+        if self._root is not None:
+            root = NOTE_NAMES[self._root]
+        bass = ""
+        if self._bass is not None and self._root != self._bass:
+            bass = f"/{NOTE_NAMES[self._bass]} "
+        return f"(Chord {root}{self._quality}{bass} n={self._number} t={self._time})"
+
+    def to_midi(self, absolute_time=False):
+        return []
 
 
 class SongPosition(ScoreElement):
@@ -315,17 +420,20 @@ class KeySignature(ScoreElement):
         return int((pitch - 7 * self._fifths) % 12)
 
     def __repr__(self):
-        return f"(KeySignature k={self._root} m={self._mode} t={self._time})"
+        return (
+            f"(KeySignature k={NOTE_NAMES[self._root]} m={self._mode} t={self._time})"
+        )
 
     def to_midi(self, absolute_time=False):
 
         time = self.duration
         if absolute_time:
             time += self._time
-        names = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
         return [
             mido.MetaMessage(
-                "key_signature", key=names[self.major_root], time=time.eighth_duration
+                "key_signature",
+                key=NOTE_NAMES[self.major_root],
+                time=time.eighth_duration,
             )
         ]
 
@@ -338,6 +446,27 @@ class KeySignature(ScoreElement):
             "mixolydian": 5,
         }
         return (self._root + mode_offset[self._mode]) % 12
+
+    @staticmethod
+    def root_from_string(key_signature: str) -> int:
+        """
+        Return the tonic of a given key signature.
+
+        :param key_signature: the key signature in the following format: [A-G](#|b)?m?
+        :return: the toinc of the key signature.
+        """
+
+        base = int(m21.pitch.Pitch(key_signature[0]).ps)
+
+        if "b" in key_signature:
+            base -= 1
+        elif "#" in key_signature:
+            base += 1
+
+        base += 12
+        base %= 12
+
+        return base
 
 
 class TimeSignature(ScoreElement):
@@ -569,6 +698,11 @@ class Note(ScoreElement):
                 velocity=0,
             )
         )
+
+        if self.has_metadata:
+            for meta in self.metadata:
+                messages.extend(meta.to_midi(absolute_time=absolute_time))
+
         return messages
 
 
@@ -642,7 +776,9 @@ class Tune:
             root, mode = tuple(key.split(" "))
 
             self._key_signatures.append(
-                KeySignature(root=lu.get_root(root), mode=mode, time=0)
+                KeySignature(
+                    root=KeySignature.root_from_string(root), mode=mode, time=0
+                )
             )
 
             self.forced_key = True
@@ -696,6 +832,26 @@ class Tune:
                 f"[INFO]\tSynchronizing every:\t{self._sync_interval/2} quarters.",
             )
 
+        ######################### create the chords ######################
+
+        midi_source_chords = []
+        for i in range(len(midi_source.tracks)):
+            midi_source_chords.extend(midi_source.tracks[i].chords)
+
+        chord_pitches = [msg.pitches for msg in midi_source_chords]
+
+        chord_times = np.array(
+            [
+                self.ticks_to_eighth_notes(msg.time, midi_source.resolution)
+                for msg in midi_source_chords
+            ]
+        )
+
+        self._original_chords = [
+            Chord(pitches=p, time=t, is_user=True)
+            for p, t in zip(chord_pitches, chord_times)
+        ]
+
         ######################### create the notes ######################
 
         midi_source_notes = []
@@ -733,6 +889,7 @@ class Tune:
 
         tmp_score = []
         repetitions = []
+        chords = []
         key_signatures = []
         # add notes and repetitions
         for r in range(repeats):
@@ -752,9 +909,16 @@ class Tune:
                         ).eighth_duration,
                     )
                 )
+            for c in self._original_chords:
+                new_c = copy.deepcopy(c)
+                new_c.time = c.time + score_duration * r - self._first_bar_length
+                chords.append(new_c)
             tmp_score.extend(new_score)
 
         self._score = tmp_score
+        self._original_chords = chords
+        self._chords = []  # will be calculated later
+
         self._key_signatures = key_signatures
         self._score_end_time = self._score[-1].time + self._score[-1].duration
         self._score_end_time -= trim_end_eighths
@@ -788,7 +952,7 @@ class Tune:
 
         # divide add songpos in messages that contain a sync interval
         should_add_position = np.ones_like(song_positions).astype(bool)
-        for note in self._score:
+        for j, note in enumerate(self._score):
 
             note_start = note.time
             note_end = note.time + note.duration
@@ -832,6 +996,126 @@ class Tune:
             / MINIMUM_QUARTER_DIVISION
         )
 
+    def calculate_chords(
+        self,
+        chord_score: np.array,
+        chords_per_bar: int = 2,
+        allowed_chords: np.array = np.zeros(12),
+    ):
+
+        pitches = self.pitches
+        notes = pitches % 12
+
+        # message length
+        lengths = np.array([n.eighth_duration for n in self.durations])
+        times = np.array([t.eighth_duration for t in self.times])
+
+        t = times.min()
+
+        key_changes = self.key_signatures
+        self._chords = copy.deepcopy(self._original_chords)
+        chord_changes = self._chords
+
+        current_key = None
+        current_chord = None
+
+        calculated_chords = []
+
+        while t <= times.max():
+            start = t
+            stop = self.time_signature.eighths_per_bar / chords_per_bar + t
+            if t < 0:
+                stop = 0
+
+            while len(chord_changes) != 0 and t >= chord_changes[0].time:
+                current_chord = chord_changes[0]
+                chord_changes = chord_changes[1:]
+
+            while len(key_changes) != 0 and t >= key_changes[0].time:
+                current_key = key_changes[0]
+                key_changes = key_changes[1:]
+
+            indexes = np.where((times >= start) & (times < stop))
+
+            if current_chord is None or not current_chord.is_valid:
+                # select bar range
+                bar_notes = notes[indexes].astype(int)
+                bar_lengths = lengths[indexes]
+
+                # init counts
+                chords = np.zeros(12)
+                note_count = np.zeros(12)
+
+                # add chord score for each note
+                for i, n in enumerate(bar_notes):
+                    chords += np.roll(chord_score, n) * bar_lengths[i]
+                    note_count[n % 12] += 1
+
+                # filter out chords that are not allowed
+                chords_filtered = np.multiply(
+                    chords,
+                    np.roll(allowed_chords, current_key.root),
+                )
+
+                # choose the chord with the highest score
+                root = np.random.choice(
+                    np.argwhere(chords_filtered == chords_filtered.max())[0]
+                )
+
+                # check if the selected chord should be major according to the mode
+                chord_quality = np.roll(lu.chord_quality, current_key.major_root)[root]
+
+                harmony_value = root
+
+                # check if the note score suggests major chord
+                if note_count[(root + 4) % 12] > note_count[(root + 3) % 12]:
+                    chord_quality = 0
+                # check if the note score suggests minor chord
+                elif note_count[(root + 3) % 12] > note_count[(root + 4) % 12]:
+                    chord_quality = 1
+
+                # check if the note score suggests diminished chord
+                elif note_count[(root + 6) % 12] > note_count[(root + 7) % 12]:
+                    chord_quality = 2
+
+                # check if the note score suggests augmented chord
+                elif note_count[(root + 8) % 12] > note_count[(root + 7) % 12]:
+                    chord_quality = 3
+
+                # check if the note score suggests minor seventh chord
+                if (
+                    note_count[(root + 10) % 12] > 1.5 * np.mean(chords)
+                    and note_count[(root + 10) % 12] > note_count[(root + 11) % 12]
+                ):
+                    chord_quality += 4
+
+                # check if the note score suggests major seventh chord
+                elif (
+                    note_count[(root + 11) % 12] > 1.5 * np.mean(chords)
+                    and note_count[(root + 11) % 12] > note_count[(root + 10) % 12]
+                ):
+                    chord_quality += 6
+
+                harmony_value = root + 12 * chord_quality
+                new_chord = Chord.from_harmony(harmony_value)
+                new_chord.time = start
+                calculated_chords.append(new_chord)
+
+            t = stop
+
+        # add chords
+        calculated_chords.extend([c for c in self._chords if c.is_valid])
+        calculated_chords.sort(key=lambda x: x.time)
+        self._chords = calculated_chords
+
+        # remove all chords from score
+        self._annotated_score = list(
+            filter(lambda x: not isinstance(x, Chord), self._annotated_score)
+        )
+        calculated_chords.extend(self._annotated_score)
+        calculated_chords.sort(key=lambda x: x.time)
+        self._annotated_score = calculated_chords
+
     @property
     def time_signature(self):
         return self._time_signatures[0]
@@ -846,8 +1130,19 @@ class Tune:
     def key_signature(self):
         return self._current_key
 
+    @property
+    def key_signatures(self):
+        return self._key_signatures
+
+    @property
+    def chords(self):
+        return self._chords
+
     def set_key_signature(self, key):
         self._current_key = key
+
+    def set_chord(self, chord):
+        self._current_chord = chord
 
     @property
     def score(self):

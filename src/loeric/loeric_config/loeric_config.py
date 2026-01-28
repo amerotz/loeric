@@ -1,4 +1,5 @@
 import argparse
+import textwrap
 import copy
 import re
 import jsonmerge
@@ -27,6 +28,9 @@ def main():
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--list", help="List options and possible values.", action="store_true"
+    )
     # loeric args
     parser.add_argument(
         "--tune-type",
@@ -87,6 +91,26 @@ def main():
         type=str,
     )
     args = vars(parser.parse_args())
+
+    if args["list"]:
+
+        print("{:=^50}".format(" LOERIC OPTIONS "))
+        print()
+
+        p_path = dir_path + "/performance/"
+        for folder in os.listdir(p_path):
+            if os.path.isdir(p_path + folder):
+                options = []
+                for file in sorted(os.listdir(p_path + folder)):
+                    options.append(file.replace(".json", ""))
+
+                s = " ".join(options)
+                print(
+                    f"--{'{: <10}'.format(folder.replace("_", "-"))}{textwrap.fill(s, width=32, initial_indent="\t", subsequent_indent="\t\t")}"
+                )
+                print()
+
+        return
 
     # if configuring the shell
     if args["shell"]:

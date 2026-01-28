@@ -76,7 +76,6 @@ class AudioMonitor:
     level = 0
     min_level = 10000000000
     max_level = 0
-    it = 0
 
     lock = threading.RLock()
 

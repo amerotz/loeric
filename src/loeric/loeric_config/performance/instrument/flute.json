@@ -1,50 +1,5 @@
 {
     "contours": {
-        "ornament": {
-            "recipe": {
-                "phrasing": {
-                    "phrase_exp": 10,
-                    "phrase_levels": 0.0
-                }
-            }
-        },
-        "velocity": {
-            "recipe": {
-                "to_mean": {
-                    "contours": {
-                        "weighted_sum": {
-                            "contours": {
-                                "o_canainn": {
-                                    "weights": "var_velocity_weight",
-                                    "savgol": true,
-                                    "scale": true,
-                                    "shift": false
-                                },
-                                "shift": {
-                                    "contours": {
-                                        "phrasing": {
-                                            "phrase_exp": 10,
-                                            "phrase_levels": -1.0
-                                        }
-                                    },
-                                    "offset": -1
-                                },
-                                "pitch": {
-                                    "scale": true,
-                                    "shift": true
-                                }
-                            },
-                            "weights": [
-                                0.5,
-                                0.2,
-                                0.3
-                            ]
-                        }
-                    },
-                    "mean": 0.6
-                }
-            }
-        },
         "legato": {
             "recipe": {
                 "clamp": {
@@ -527,10 +482,10 @@
             ],
             "durations_mean": [
                 1,
-                0.1,
-                0.9,
-                0.1,
-                0.9
+                0.3,
+                0.7,
+                0.3,
+                0.7
             ],
             "durations_std": [
                 0,
@@ -684,10 +639,10 @@
             ],
             "durations_mean": [
                 1,
-                0.1,
-                0.9,
-                0.1,
-                0.9
+                0.3,
+                0.7,
+                0.3,
+                0.7
             ],
             "durations_std": [
                 0,
@@ -763,10 +718,10 @@
             ],
             "durations_mean": [
                 1,
-                0.1,
-                0.9,
-                0.1,
-                0.9
+                0.3,
+                0.7,
+                0.3,
+                0.7
             ],
             "durations_std": [
                 0,
@@ -781,14 +736,10 @@
             "threshold": 0,
             "slide": false
         },
-        "roll_3": {
+        "short_roll": {
             "cases": [
-                [
-                    [
-                        0,
-                        3
-                    ]
-                ]
+                [ [0,2] ],
+                [ [0,1], [0,1] ]
             ],
             "pitches_mean": [
                 1,
@@ -803,31 +754,31 @@
                 0
             ],
             "velocities_mean": [
-                0.1,
-                0.5,
-                0.8,
+                0.2,
+                1,
+                0.2,
                 1
             ],
             "velocities_std": [
                 0,
-                0.1,
-                0.1,
+                0,
+                0,
                 0
             ],
             "durations_mean": [
-                0.25,
-                0.25,
-                0.25,
-                0.75
+                0.3,
+                0.7,
+                0.3,
+                0.7
             ],
             "durations_std": [
                 0.01,
+                0,
                 0.01,
-                0.01,
-                0.01
+                0
             ],
             "probability": 1,
-            "length": 3,
+            "length": 2,
             "diatonic": true,
             "threshold": 0,
             "slide": false
@@ -867,8 +818,8 @@
             ],
             "durations_mean": [
                 1,
-                0.1,
-                0.9
+                0.3,
+                0.7
             ],
             "durations_std": [
                 0.01,
@@ -902,8 +853,8 @@
                 0
             ],
             "durations_mean": [
-                0.1,
-                0.4
+                0.2,
+                0.3
             ],
             "durations_std": [
                 0.01,
@@ -950,8 +901,8 @@
             ],
             "durations_mean": [
                 1,
-                0.1,
-                0.9
+                0.3,
+                0.7
             ],
             "durations_std": [
                 0.01,
@@ -1011,7 +962,7 @@
     },
     "values": {
         "pitch_deviation_cents": 5,
-        "min_velocity": 1,
+        "min_velocity": 64,
         "max_velocity": 127
     },
     "approach_from_above": {

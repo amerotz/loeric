@@ -23,7 +23,7 @@ def main() -> None:
     )
     parser.add_argument("-o", "--output", help="the output MIDI port.", type=int)
     parser.add_argument(
-        "--create_output",
+        "--create-out",
         help="whether a new output MIDI port should be created.",
         action="store_true",
     )
@@ -75,7 +75,7 @@ def main() -> None:
 
     input_1 = mido.get_input_names()[args.input_1]
     input_2 = mido.get_input_names()[args.input_2]
-    if not args.create_output:
+    if not args.create_out:
         output = mido.get_output_names()[args.output]
 
     values[input_1] = 64
@@ -87,7 +87,7 @@ def main() -> None:
     t2.start()
 
     try:
-        if args.create_output:
+        if args.create_out:
             out = mido.open_output("HUMAN out COMBINE", virtual=True)
         else:
             out = mido.open_output(output)

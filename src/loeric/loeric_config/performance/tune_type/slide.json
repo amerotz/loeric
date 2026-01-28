@@ -1,6 +1,6 @@
 {
 	"variables": {
-        "var_notes_per_bar": [12,4,2],
+        "var_notes_per_bar": [4,2],
         "var_velocity_weight": [0,1,0,0,0],
 		"var_legato_pattern": {
 			"mean": [1,0.8,1],
@@ -44,14 +44,6 @@
 							"scale": true,
 							"shift": true
 						},
-						"phrasing#1": {
-							"phrase_exp": 10,
-							"phrase_levels": 1.0
-						},
-						"phrasing#2": {
-							"phrase_exp": 1000,
-							"phrase_levels": -1.0
-						},
 						"pattern": {
 							"mean": [1, 0, 1, 0, 0, 1],
 							"std": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
@@ -60,7 +52,7 @@
 							"period": 1
 						}
 					},
-					"weights": [ -0.28, -0.07, -0.3, 0.35]
+					"weights": [ 0.5,  0.5]
 				}
 			}
         },

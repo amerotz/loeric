@@ -1,5 +1,6 @@
 import mido
 import numpy as np
+import time
 import music21 as m21
 import os
 
@@ -53,16 +54,25 @@ def play(
         song_time=groover._tune.times[0].eighth_duration,
     )
 
+    average_loop_time = 0
+    iterations = 0
+    next_event_time = 0
+
     # iterate over messages
     while loop_condition():
+
+        iterations += 1
 
         if groover.stopped.is_set():
             while groover.stopped.is_set():
                 groover.playback_resumed.wait()
 
+        # start measuring loop
+        loop_start_time = time.time()
         original_message = groover.next_event()
 
         if original_message is None:
+            player.wake_me_up_at(next_event_time)
             groover.reset()
             break
 
@@ -83,21 +93,54 @@ def play(
                     repetition_callback(original_message)
                 if groover.skip_repetition:
                     break
-            elif (
-                isinstance(original_message, tu.KeySignature)
-                and not groover._tune.forced_key
-            ):
+            elif isinstance(original_message, tu.KeySignature):
+                if groover._tune.forced_key:
+                    if kwargs["verbose"] > 0:
+                        print(
+                            f"[INFO]\tIgnoring key change (forced key). {original_message}"
+                        )
+                else:
+                    if kwargs["verbose"] > 0:
+                        print(f"[INFO]\tChanging key. {original_message}")
+                    groover._tune.set_key_signature(original_message)
+            elif isinstance(original_message, tu.Chord):
                 if kwargs["verbose"] > 0:
-                    print(f"[INFO]\tChanging key. {original_message}")
-                groover._tune.set_key_signature(original_message)
+                    if original_message.is_user:
+                        print(f"[INFO]\tForcing chord: {original_message}")
+                    else:
+                        print(f"[INFO]\tPlaying chord: {original_message}")
+                groover._tune.set_chord(original_message)
+            else:
+                if kwargs["verbose"] > 0:
+                    print(f"[WARN]\tUnknown message type {type(original_message)}.")
+
             midi_headers = original_message.to_midi(absolute_time=True)
 
         player.set_tempo_scale(groover.tempo_scale)
-        player.add_midi(midi_headers)
         player.add_notes(new_messages)
+        player.add_midi(midi_headers)
 
-        player.wake_me_up_at(original_message.time + original_message.duration)
+        # stop measuring loop
+        loop_end_time = time.time()
+        loop_duration = loop_end_time - loop_start_time
+        average_loop_time *= (iterations - 1) / (iterations)
+        average_loop_time += loop_duration / iterations
 
+        # calculate time to wake up for next message
+        time_to_think = (
+            original_message.time
+            + original_message.duration
+            - 2 * (average_loop_time / groover._eighth_duration_seconds)
+        )
+
+        # sleep remaining time to next event
+        if iterations != 0:
+            player.wake_me_up_at(next_event_time)
+
+        next_event_time = original_message.time + original_message.duration
+
+        # wake up slightly before next note
+        player.wake_me_up_at(time_to_think)
         player.has_reached_wake_time.wait()
 
     if groover.do_end_note:
@@ -111,40 +154,6 @@ def play(
         player.wake_me_up_at(groover.performance_time)
 
     player.has_reached_wake_time.wait()
-
-
-def get_root(key_signature: str) -> int:
-    """
-    Return the tonic of a given key signature.
-
-    :param key_signature: the key signature in the following format: [A-G](#|b)?m?
-    :return: the toinc of the key signature.
-    """
-
-    base = int(m21.pitch.Pitch(key_signature[0]).ps)
-
-    if "b" in key_signature:
-        base -= 1
-    elif "#" in key_signature:
-        base += 1
-
-    base += 12
-    base %= 12
-
-    return base
-
-
-def major_root(root, mode) -> int:
-    """
-    :return: the root of the relative major of the key signature in pitch space.
-    """
-    mode_offset = {
-        "major": 0,
-        "minor": 3,
-        "dorian": 10,
-        "mixolydian": 5,
-    }
-    return (root + mode_offset[mode]) % 12
 
 
 # 0 = major
@@ -170,29 +179,6 @@ needs_pitch_quantization = [
     True,  # A#
     False,  # B
 ]
-
-
-def get_chord_pitches(harmony: int) -> np.array:
-    """
-    Return the pitches of a major or minor chord in semitones from the root.
-
-    :param harmony: the chord. Values 0-11 indicate a major chord. Values 12-23 indicate a minor chord. Values 24-35 indicate a diminished chord. Values 36-48 indicate an augmented chord.
-
-    :return: the pitches that are part of the input chord.
-    """
-    third = 4
-    fifth = 7
-
-    chord_quality = int(harmony / 12)
-    if chord_quality == 1:
-        third = 3
-    elif chord_quality == 2:
-        third = 3
-        fifth = 6
-    elif chord_quality == 3:
-        fifth = 8
-
-    return np.array([0, third, fifth])
 
 
 def is_note_on(msg: mido.Message) -> bool:

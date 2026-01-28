@@ -374,7 +374,7 @@
                 "use_legato": true
             },
             "free": {
-                "threshold": 0.5,
+                "threshold": 0.8,
                 "velocity_multiplier": 0.9,
                 "bind": "var_drone_bind",
                 "notes": [ 64, 59, 55, 50, 45, 38 ],
