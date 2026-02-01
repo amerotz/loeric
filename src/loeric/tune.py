@@ -1084,14 +1084,14 @@ class Tune:
 
                 # check if the note score suggests minor seventh chord
                 if (
-                    note_count[(root + 10) % 12] > 1.5 * np.mean(chords)
+                    note_count[(root + 10) % 12] > 1.5 * np.mean(note_count)
                     and note_count[(root + 10) % 12] > note_count[(root + 11) % 12]
                 ):
                     chord_quality += 4
 
                 # check if the note score suggests major seventh chord
                 elif (
-                    note_count[(root + 11) % 12] > 1.5 * np.mean(chords)
+                    note_count[(root + 11) % 12] > 1.5 * np.mean(note_count)
                     and note_count[(root + 11) % 12] > note_count[(root + 10) % 12]
                 ):
                     chord_quality += 6

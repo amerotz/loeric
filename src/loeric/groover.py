@@ -596,6 +596,7 @@ class Groover:
 
     def perform(self, message) -> list[mido.Message]:
 
+        print()
         # work on a deepcopy to avoid side effects
         current_message = copy.deepcopy(message)
         current_message.time = self._performance_time
@@ -631,8 +632,7 @@ class Groover:
         non_legato_drones = []
         original_notes = copy.deepcopy(notes)
         original_notes = [n for n in original_notes if n.is_note]
-        print()
-        print("a", original_notes)
+
         if self._config["drone"]["active"]:
 
             for drone_option in self._config["drone"]["drone_sets"]:
@@ -656,72 +656,34 @@ class Groover:
                     notes_per_bar = self._current_notes_per_bar(
                         current_message, drone_option
                     )
-                    print(notes_per_bar)
 
                     # over all messages that will be output
                     drone_interval = (
                         self._tune.time_signature.eighths_per_bar / notes_per_bar
                     ).eighth_duration
 
-                """
-                # obtain time interval to check
                 start_time = original_notes[0].time
-                bar_number = int((start_time / drone_interval).eighth_duration)
-                start_time = start_time - (start_time - drone_interval * bar_number)
-                end_time = original_notes[-1].time + original_notes[-1].duration
-                print(start_time, end_time)
-
-                # add notes while in time interval
-                drone_opportunities = []
-                i = 0
-                while i + start_time.eighth_duration < max(1, end_time.eighth_duration):
-                    print(i)
-                    note = copy.deepcopy(current_message)
-                    note.duration = drone_interval
-                    note.time = self._performance_time + i
-                    drone_opportunities.append(note)
-
-                    if drone_type == "pedal":
-                        break
-                    else:
-                        i += drone_interval
-
-                notes_to_consider = copy.deepcopy(drone_opportunities)
-
-                # re-trigger drone for each note
-                if (
-                    drone_type == "bowed"
-                    and self._config["drone"]["drone_sets"][drone_option][
-                        "break_ornaments"
-                    ]
-                ):
-                    notes_to_consider.extend(original_notes)
-
-                notes_to_consider.sort(key=lambda x: x.time)
-                print(notes_to_consider)
                 """
-                start_time = original_notes[0].time
                 diff = start_time.eighth_duration % drone_interval
-
-                if diff != 0:
-                    continue
                 start_time.eighth_duration += (drone_interval - diff) % drone_interval
-                end_time = original_notes[-1].time + original_notes[-1].duration
+                """
 
-                """
-                diff = end_time.eighth_duration % drone_interval
-                end_time.eighth_duration += (drone_interval - diff) % drone_interval
-                """
+                end_time = original_notes[-1].time + original_notes[-1].duration
+                print(original_notes)
+                print(start_time, end_time)
 
                 og_pitches = np.array([n.pitch for n in original_notes])
                 og_times = np.array([n.time.eighth_duration for n in original_notes])
 
                 times = np.arange(
-                    start=start_time.eighth_duration,
-                    stop=end_time.eighth_duration,
+                    start=start_time.eighth_duration - drone_interval,
+                    stop=end_time.eighth_duration + drone_interval,
                     step=drone_interval,
                 )
-                print(start_time, end_time, times)
+                times = times[times % drone_interval == 0]
+                times = times[times >= start_time.eighth_duration]
+                times = times[times <= end_time.eighth_duration]
+                print(times)
                 idx = np.searchsorted(og_times, times, side="right") - 1
                 idx = np.clip(idx, 0, len(og_pitches) - 1)
                 pitches = og_pitches[idx]
@@ -731,7 +693,6 @@ class Groover:
                     for p, t in zip(pitches, times)
                 ]
 
-                print("consider", notes_to_consider)
                 # for each note
                 for note in notes_to_consider:
 
@@ -764,14 +725,13 @@ class Groover:
                     value += hi * intensity
                     #############################
 
-                    print("\t", value, drone_threshold, drone_option)
+                    # print("\t", value, drone_threshold, drone_option)
                     # value = self._contour_values[drone_bind_contour]
                     # if should be droning
                     if value > drone_threshold:
 
                         # get pitches
                         drone_pitches = self._get_drone(note.pitch, drone_option)
-                        print("\t\t", drone_pitches)
 
                         # make pedal active if pedal
                         if drone_type == "pedal" and len(drone_pitches) != 0:
@@ -782,7 +742,6 @@ class Groover:
                         d_notes, delay = self._add_drone(
                             note, drone_pitches, drone_option, notes_per_bar
                         )
-                        print("\t\t", d_notes)
                         drone_notes.extend(d_notes)
 
                         # adjust delay of current note
@@ -1018,50 +977,43 @@ class Groover:
         """
         if drone_name.startswith("pedal"):
             note_duration = self._tune._score_end_time - self._performance_time
-            should_play = True
         else:
 
             note_duration = self._tune.time_signature.eighths_per_bar / notes_per_bar
-            should_play = note.time % note_duration == 0
 
         notes = []
         delay = 0
-        print("\t\t", should_play)
-        should_play = True
-        if should_play:
 
-            for drone in drones:
-                if self._config["drone"]["drone_sets"][drone_name]["transpose"]:
-                    drone += self._config["values"]["transpose"]
+        for drone in drones:
+            if self._config["drone"]["drone_sets"][drone_name]["transpose"]:
+                drone += self._config["values"]["transpose"]
 
-                # delay = random.uniform(0, self._config["drone"]["delay_range"])
+            # delay = random.uniform(0, self._config["drone"]["delay_range"])
 
-                multiplier = self._config["drone"]["drone_sets"][drone_name][
-                    "velocity_multiplier"
-                ]
-                velocity = note._velocity
+            multiplier = self._config["drone"]["drone_sets"][drone_name][
+                "velocity_multiplier"
+            ]
+            velocity = note._velocity
 
-                if multiplier < 0:
-                    velocity = 127 - velocity
-                    multiplier = abs(multiplier)
+            if multiplier < 0:
+                velocity = 127 - velocity
+                multiplier = abs(multiplier)
 
-                velocity = min(int(velocity * multiplier), 127)
+            velocity = min(int(velocity * multiplier), 127)
 
-                notes.append(
-                    tu.Note(
-                        pitch=drone,
-                        eighth_duration=(note_duration - delay).eighth_duration,
-                        velocity=velocity,
-                        time=(note.time + delay).eighth_duration,
-                        channel=self._config["drone"]["drone_sets"][drone_name][
-                            "midi_channel"
-                        ],
-                    )
+            notes.append(
+                tu.Note(
+                    pitch=drone,
+                    eighth_duration=(note_duration - delay).eighth_duration,
+                    velocity=velocity,
+                    time=(note.time + delay).eighth_duration,
+                    channel=self._config["drone"]["drone_sets"][drone_name][
+                        "midi_channel"
+                    ],
                 )
-                if not drone_name.startswith("pedal"):
-                    delay += self._config["drone"]["drone_sets"][drone_name][
-                        "delay_range"
-                    ]
+            )
+            if not drone_name.startswith("pedal"):
+                delay += self._config["drone"]["drone_sets"][drone_name]["delay_range"]
 
         return notes, delay
 
