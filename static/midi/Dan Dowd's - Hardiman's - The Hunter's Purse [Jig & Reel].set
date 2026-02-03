@@ -4,22 +4,30 @@
 		"repetitions": 2,
 		"config": null,
 		"trim_end_eighths": 0,
-		"qpm": 170
+		"qpm": 168
 	},
 	{
 		"file": "Hardiman's Jig.abc",
 		"repetitions": 2,
 		"config": null,
 		"trim_end_eighths": 0,
-		"qpm": 170
+		"qpm": 168
 
 	},
 	{
 		"file": "The Hunter's Purse [Jig].abc",
 		"repetitions": 2,
 		"config": null,
-		"trim_end_eighths": 2,
-		"qpm": 170
+		"trim_end_eighths": 24,
+		"qpm": 168
+
+	},
+	{
+		"file": ".hunters_purse_jig_to_reel.abc",
+		"repetitions": 1,
+		"config": null,
+		"trim_end_eighths": 0,
+		"qpm": 224
 
 	},
 	{
@@ -27,7 +35,7 @@
 		"repetitions": 2,
 		"config": null,
 		"trim_end_eighths": 0,
-		"qpm": 170
+		"qpm": 224
 
 	}
 ]

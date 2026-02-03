@@ -1,43 +1,4 @@
 {
-    "contours": {
-        "velocity": {
-            "recipe": {
-                "to_mean": {
-                    "contours": {
-                        "weighted_sum": {
-                            "contours": {
-                                "o_canainn": {
-                                    "weights": "var_velocity_weight",
-                                    "savgol": true,
-                                    "scale": true,
-                                    "shift": false
-                                },
-                                "shift": {
-                                    "contours": {
-                                        "phrasing": {
-                                            "phrase_exp": 10,
-                                            "phrase_levels": -1.0
-                                        }
-                                    },
-                                    "offset": -1
-                                },
-                                "pitch": {
-                                    "scale": true,
-                                    "shift": true
-                                }
-                            },
-                            "weights": [
-                                0.5,
-                                0.2,
-                                0.3
-                            ]
-                        }
-                    },
-                    "mean": 0.6
-                }
-            }
-        }
-    },
     "ornamentation": {
         "divide": {
             "cases": [
@@ -71,7 +32,7 @@
             ],
             "durations_std": [
                 0.01,
-                0.1,
+                0.01,
                 0.01
             ],
             "probability": 1,
@@ -125,10 +86,10 @@
                 1
             ],
             "durations_std": [
-                0.1,
-                0.1,
-                0.1,
-                0.1,
+                0.01,
+                0.01,
+                0.01,
+                0.01,
                 0
             ],
             "probability": 1,
@@ -245,10 +206,10 @@
             ],
             "durations_std": [
                 0,
-                0.1,
-                0.1,
-                0.1,
-                0.1
+                0.01,
+                0.01,
+                0.01,
+                0.01
             ],
             "probability": 1,
             "length": 3,
@@ -324,9 +285,9 @@
             ],
             "durations_std": [
                 0,
-                0.1,
-                0.1,
-                0.1,
+                0.01,
+                0.01,
+                0.01,
                 0
             ],
             "probability": "var_roll_2_prob",
@@ -335,14 +296,10 @@
             "threshold": 0,
             "slide": false
         },
-        "roll_3": {
+        "short_roll": {
             "cases": [
-                [
-                    [
-                        0,
-                        3
-                    ]
-                ]
+                [ [0,2] ],
+                [ [0,1], [0,1] ]
             ],
             "pitches_mean": [
                 1,
@@ -357,9 +314,9 @@
                 0
             ],
             "velocities_mean": [
+                0.9,
                 1,
-                0.8,
-                0.8,
+                0.9,
                 1
             ],
             "velocities_std": [
@@ -369,19 +326,19 @@
                 0
             ],
             "durations_mean": [
-                0.25,
-                0.25,
-                0.25,
-                1.75
+                0.3,
+                0.7,
+                0.3,
+                0.7
             ],
             "durations_std": [
                 0.1,
-                0.1,
+                0,
                 0.1,
                 0
             ],
             "probability": 1,
-            "length": 3,
+            "length": 2,
             "diatonic": true,
             "threshold": 0,
             "slide": false
@@ -431,9 +388,9 @@
                 0.9
             ],
             "durations_std": [
-                0.1,
-                0.1,
-                0.1
+                0.01,
+                0.01,
+                0.01
             ],
             "probability": 1,
             "length": 2,
@@ -463,14 +420,14 @@
             ],
             "durations_mean": [
                 0.2,
-                0.8
+                0.3
             ],
             "durations_std": [
-                0.1,
-                0.1
+                0.01,
+                0.01
             ],
             "probability": 1,
-            "length": 1,
+            "length": 0.5,
             "diatonic": true,
             "threshold": 0,
             "slide": false
@@ -505,8 +462,8 @@
                 0.6
             ],
             "durations_std": [
-                0.1,
-                0.1
+                0.01,
+                0.01
             ],
             "probability": 1,
             "length": 1,
@@ -537,7 +494,7 @@
                 0.45, 0.05, 0.45, 0.05, 0.95, 0.05, 1
             ],
             "durations_std": [
-                0.01, 0.01, 0.01, 0.01, 0.1, 0.01, 0.1
+                0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01
             ],
             "probability": 1,
             "length": 3,
@@ -602,7 +559,7 @@
                 0.01,
                 0.01,
                 0.01,
-                0.1
+                0.01
             ],
             "probability": 1,
             "length": 2,
@@ -673,11 +630,11 @@
                 1
             ],
             "durations_std": [
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1
+                0.01,
+                0.01,
+                0.01,
+                0.01,
+                0.01
             ],
             "probability": 1,
             "length": 2,
@@ -720,10 +677,13 @@
         "C4": "B3",
         "C5": "B4"
     },
+    "values": {
+        "pitch_deviation_cents": 7
+    },
     "drone": {
         "drone_sets": {
             "bowed": {
-                "threshold": 0.5,
+                "threshold": "var_drone_threshold",
                 "velocity_multiplier": 0.9,
                 "bind": "var_drone_bind",
                 "notes": [ 55, 62, 69, 76 ],

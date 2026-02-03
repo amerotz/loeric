@@ -335,7 +335,7 @@ class Chord(ScoreElement):
                 pitches = [(root + int(n)) % 12 for n in c.split("_")]
                 return Chord(pitches=pitches)
 
-        print(f"[WARN]\tUnknown harmony {harmony} (kind = {kind}).")
+        print(f"[WARN]\tUnknown harmony {harmony} (kind = {kind}, root = {root}).")
 
     def __repr__(self):
         root = "n/a"
@@ -1075,23 +1075,29 @@ class Tune:
                     chord_quality = 1
 
                 # check if the note score suggests diminished chord
-                elif note_count[(root + 6) % 12] > note_count[(root + 7) % 12]:
+                if (
+                    note_count[(root + 6) % 12] > 2 * note_count[(root + 7) % 12]
+                    and chord_quality == 1
+                ):
                     chord_quality = 2
 
                 # check if the note score suggests augmented chord
-                elif note_count[(root + 8) % 12] > note_count[(root + 7) % 12]:
+                elif (
+                    note_count[(root + 8) % 12] > 2 * note_count[(root + 7) % 12]
+                    and chord_quality == 0
+                ):
                     chord_quality = 3
 
                 # check if the note score suggests minor seventh chord
-                if (
-                    note_count[(root + 10) % 12] > 1.5 * np.mean(note_count)
+                elif (
+                    note_count[(root + 10) % 12] > 2 * np.mean(note_count)
                     and note_count[(root + 10) % 12] > note_count[(root + 11) % 12]
                 ):
                     chord_quality += 4
 
                 # check if the note score suggests major seventh chord
                 elif (
-                    note_count[(root + 11) % 12] > 1.5 * np.mean(note_count)
+                    note_count[(root + 11) % 12] > 2 * np.mean(note_count)
                     and note_count[(root + 11) % 12] > note_count[(root + 10) % 12]
                 ):
                     chord_quality += 6

@@ -683,7 +683,7 @@
     "drone": {
         "drone_sets": {
             "bowed": {
-                "threshold": 0.5,
+                "threshold": "var_drone_threshold",
                 "velocity_multiplier": 0.9,
                 "bind": "var_drone_bind",
                 "notes": [ 55, 62, 69, 76 ],

@@ -19,6 +19,15 @@
             "human_impact_scale": 0.0
         },
         "ornament": {
+            "recipe": {
+                "pattern": {
+                    "mean": [1],
+                    "std": null,
+                    "std_scale": 1,
+                    "period": 1,
+                    "normalize": false
+                }
+            },
             "human_impact_scale": 0.0
         },
         "legato": {

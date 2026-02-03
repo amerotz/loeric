@@ -52,8 +52,8 @@ def load_soundfonts():
         ),
         "Guitar": lss.SynthSound(
             name="Guitar",
-            path="static/sound/MusicLab_Acoustic_Guitars.sf2",
-            program=25,
+            path="static/sound/guitar.sf2",
+            program=3,
             config=f"{specific_configs_path}/instrument/guitar.json",
             default_soundfont_id=default_soundfont_id,
             default_program=25,
@@ -67,6 +67,7 @@ def load_soundfonts():
             default_soundfont_id=default_soundfont_id,
             default_program=0,
             default_config=f"{specific_configs_path}/instrument/piano.json",
+            gain=-10,
         ),
         "Harp": lss.SynthSound(
             name="Harp",
@@ -212,6 +213,7 @@ def list_tracks() -> List[str]:
             for f in os.listdir(track_dir)
             if os.path.isfile(os.path.join(track_dir, f))
             and os.path.splitext(f)[1].casefold() in filetypes
+            and not f.startswith(".")
         ]
     )
 

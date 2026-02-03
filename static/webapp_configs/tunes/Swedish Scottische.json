@@ -1,4 +1,8 @@
 {
+    "variables": {
+        "var_notes_per_bar": [4,2],
+        "var_drone_threshold": 0
+    },
     "contours": {
         "drone": {
             "human_impact_scale": 1.0
@@ -302,8 +306,7 @@
         },
         "swing": {
             "control": 82,
-            "contours": [
-                "swing_intensity" ]
+            "contours": [ "swing_intensity" ]
         },
         "tempo": {
             "control": 83,

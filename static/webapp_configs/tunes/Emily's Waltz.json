@@ -1,4 +1,7 @@
 {
+    "variables": {
+        "var_drone_threshold": 0
+    },
     "contours": {
         "drone": {
             "human_impact_scale": 1.0

@@ -1,7 +1,4 @@
 {
-    "variables": {
-        "var_roll_2_prob": 1
-    },
     "ornamentation": {
         "divide": {
             "cases": [
@@ -253,7 +250,7 @@
     "drone": {
         "drone_sets": {
             "bowed": {
-                "threshold": 0.5,
+                "threshold": "var_drone_threshold",
                 "velocity_multiplier": 0.9,
                 "bind": "var_drone_bind",
                 "notes": [ 64, 59, 55, 50, 45, 40],
@@ -268,7 +265,7 @@
                 "use_legato": true
             },
             "free": {
-                "threshold": 0.5,
+                "threshold": "var_drone_threshold",
                 "velocity_multiplier": 0.9,
                 "bind": "var_drone_bind",
                 "notes": [ 64, 59, 55, 50, 45, 40 ],

@@ -2,7 +2,7 @@
 	"drone": {
 		"drone_sets": {
 			"free": {
-				"threshold": 0.5,
+                "threshold": "var_drone_threshold",
 				"velocity_multiplier": 0.9,
 				"bind": "var_drone_bind",
 				"old_notes": [ 38, 40, 42, 43, 45, 47, 49, 50, 52, 54, 55, 57, 59, 61, 62, 64, 66, 67, 69, 71, 73 ],

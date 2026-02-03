@@ -14,6 +14,7 @@ class SynthSound:
         default_soundfont_id=0,
         default_program=0,
         default_config=None,
+        gain=0,
     ):
 
         self._name = name
@@ -27,12 +28,14 @@ class SynthSound:
         self._default_program = default_program
         self._default_config = default_config
 
+        self._gain = gain
+
     def load(self, synth):
         if not os.path.isfile(self._path):
             self._is_default = True
         else:
             self._is_default = False
-            self._soundfont_id = synth.sfload(self._path)
+            self._soundfont_id = synth.sfload(self._path, gain=self._gain)
 
     def unload(self, synth):
         if self._soundfont_id is not None:
@@ -79,4 +82,4 @@ class SynthOutput(BaseOutput):
         elif msg.type == "control_change":
             self._synth.control_change(msg.channel, msg.control, msg.value)
         else:
-            print("Unknown message type: ", msg.type)
+            print("[WARN]\tUnknown MIDI message type: ", msg.type)

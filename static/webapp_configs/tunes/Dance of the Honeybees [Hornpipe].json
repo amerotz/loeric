@@ -1,4 +1,7 @@
 {
+    "variables": {
+		"var_notes_per_bar": [4,4,2]
+	},
     "contours": {
         "drone": {
             "human_impact_scale": 0.0

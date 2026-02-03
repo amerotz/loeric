@@ -460,22 +460,20 @@ class Musician:
                             )
                         elif isinstance(original_message, tu.Repetition):
                             print(original_message)
-                        elif (
-                            isinstance(original_message, tu.KeySignature)
-                            and not self._tunes[self._tune_index].forced_key
-                        ):
-                            print(f"[INFO]\tChanging key. {original_message}")
-                            self._groovers[self._tune_index]._tune.set_key_signature(
-                                original_message
-                            )
+                        elif isinstance(original_message, tu.KeySignature):
+                            if self.groover._tune.forced_key:
+                                print(
+                                    f"[INFO]\tIgnoring key change (forced key). {original_message}"
+                                )
+                            else:
+                                print(f"[INFO]\tChanging key. {original_message}")
+                                self.groover._tune.set_key_signature(original_message)
                         elif isinstance(original_message, tu.Chord):
                             if original_message.is_user:
                                 print(f"[INFO]\tForcing chord: {original_message}")
                             else:
                                 print(f"[INFO]\tPlaying chord: {original_message}")
-                            self._groovers[self._tune_index]._tune.set_chord(
-                                original_message
-                            )
+                            self.groover._tune.set_chord(original_message)
                         else:
                             print(
                                 f"[WARN]\tUnknown message type {type(original_message)}."

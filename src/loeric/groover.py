@@ -217,6 +217,9 @@ class Groover:
         tu.BEND_UP = self._config["values"]["bend_up_semitones"]
         tu.BEND_DOWN = self._config["values"]["bend_down_semitones"]
 
+        tu.BEND_UP = self._config["values"]["bend_up_semitones"]
+        tu.BEND_DOWN = self._config["values"]["bend_down_semitones"]
+
         self._midi_channel = self._config["values"]["midi_channel"]
         # collect all drone midi channels
         self._drone_midi_channels = []
@@ -596,7 +599,6 @@ class Groover:
 
     def perform(self, message) -> list[mido.Message]:
 
-        print()
         # work on a deepcopy to avoid side effects
         current_message = copy.deepcopy(message)
         current_message.time = self._performance_time
@@ -652,6 +654,7 @@ class Groover:
 
                 notes_per_bar = None
                 drone_interval = current_message.duration
+
                 if drone_type != "pedal":
                     notes_per_bar = self._current_notes_per_bar(
                         current_message, drone_option
@@ -663,34 +666,31 @@ class Groover:
                     ).eighth_duration
 
                 start_time = original_notes[0].time
-                """
-                diff = start_time.eighth_duration % drone_interval
-                start_time.eighth_duration += (drone_interval - diff) % drone_interval
-                """
 
                 end_time = original_notes[-1].time + original_notes[-1].duration
-                print(original_notes)
-                print(start_time, end_time)
 
                 og_pitches = np.array([n.pitch for n in original_notes])
                 og_times = np.array([n.time.eighth_duration for n in original_notes])
+                og_velocity = np.array([n._velocity for n in original_notes])
 
+                diff = start_time.eighth_duration % drone_interval
                 times = np.arange(
-                    start=start_time.eighth_duration - drone_interval,
-                    stop=end_time.eighth_duration + drone_interval,
+                    start=start_time.eighth_duration - diff,
+                    stop=end_time.eighth_duration,
                     step=drone_interval,
                 )
                 times = times[times % drone_interval == 0]
                 times = times[times >= start_time.eighth_duration]
                 times = times[times <= end_time.eighth_duration]
-                print(times)
+
                 idx = np.searchsorted(og_times, times, side="right") - 1
-                idx = np.clip(idx, 0, len(og_pitches) - 1)
+                idx = np.clip(idx, 0, len(og_times) - 1)
                 pitches = og_pitches[idx]
+                velocities = og_velocity[idx]
 
                 notes_to_consider = [
-                    tu.Note(pitch=p, eighth_duration=drone_interval, time=t)
-                    for p, t in zip(pitches, times)
+                    tu.Note(pitch=p, eighth_duration=drone_interval, time=t, velocity=v)
+                    for p, t, v in zip(pitches, times, velocities)
                 ]
 
                 # for each note
@@ -699,7 +699,7 @@ class Groover:
                     # keep track of notes
                     drone_notes = []
 
-                    value = self._contours[drone_bind_contour].at(note.time)
+                    prob = self._contours[drone_bind_contour].at(note.time)
 
                     # TODO remove duplicate code
                     # same as advance_contours()
@@ -721,14 +721,24 @@ class Groover:
                         intensity = 1 - intensity
                         hi = abs(hi)
 
-                    value *= 1 - hi
-                    value += hi * intensity
+                    prob *= 1 - hi
+                    prob += hi * intensity
+
                     #############################
 
                     # print("\t", value, drone_threshold, drone_option)
                     # value = self._contour_values[drone_bind_contour]
                     # if should be droning
-                    if value > drone_threshold:
+
+                    if self._config["drone"]["probability_scale"]:
+                        prob = max((prob - drone_threshold) / (1 - drone_threshold), 0)
+                        can_drone = random.choices(
+                            [True, False], weights=[prob, 1 - prob], k=1
+                        )[0]
+                    else:
+                        can_drone = prob >= drone_threshold
+
+                    if can_drone:
 
                         # get pitches
                         drone_pitches = self._get_drone(note.pitch, drone_option)
@@ -999,7 +1009,13 @@ class Groover:
                 velocity = 127 - velocity
                 multiplier = abs(multiplier)
 
-            velocity = min(int(velocity * multiplier), 127)
+            velocity = min(
+                max(
+                    self._config["values"]["min_velocity"],
+                    min(int(velocity * multiplier), 127),
+                ),
+                self._config["values"]["max_velocity"],
+            )
 
             notes.append(
                 tu.Note(

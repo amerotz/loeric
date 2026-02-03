@@ -236,14 +236,10 @@
             "threshold": 0,
             "slide": false
         },
-        "roll_3": {
+        "short_roll": {
             "cases": [
-                [
-                    [
-                        0,
-                        3
-                    ]
-                ]
+                [ [0,2] ],
+                [ [0,1], [0,1] ]
             ],
             "pitches_mean": [
                 1,
@@ -259,7 +255,7 @@
             ],
             "velocities_mean": [
                 0.9,
-                0.9,
+                1,
                 0.9,
                 1
             ],
@@ -270,19 +266,19 @@
                 0
             ],
             "durations_mean": [
-                0.25,
-                0.25,
-                0.25,
-                1.75
+                0.3,
+                0.7,
+                0.3,
+                0.7
             ],
             "durations_std": [
                 0.1,
-                0.1,
+                0,
                 0.1,
                 0
             ],
             "probability": 1,
-            "length": 3,
+            "length": 2,
             "diatonic": true,
             "threshold": 0,
             "slide": false
@@ -357,14 +353,14 @@
             ],
             "durations_mean": [
                 0.2,
-                0.8
+                0.3
             ],
             "durations_std": [
-                0.00,
-                0.0
+                0.01,
+                0.01
             ],
             "probability": 1,
-            "length": 1,
+            "length": 0.5,
             "diatonic": true,
             "threshold": 0,
             "slide": false
@@ -428,7 +424,7 @@
     },
     "legato": {
         "min": 0.1,
-        "max": 1
+        "max": 0.95
     },
     "approach_from_above": {
         "D4": "E4",
@@ -464,14 +460,14 @@
         "C5": "B4"
     },
     "drone": {
-        "active": true,
+        "probability_scale": false,
         "drone_sets": {
             "free": {
-                "velocity_multiplier": 0.7,
+                "velocity_multiplier": 0.9,
                 "polyphony_min": 1,
-                "polyphony_max": 1,
+                "polyphony_max": 2,
                 "notes": [ 24, 26, 28, 29, 31, 33],
-                "threshold": 0.5,
+                "threshold": "var_drone_threshold",
                 "bind": "var_drone_bind",
                 "notes_per_bar_bind": "var_notes_per_bar_bind",
                 "notes_per_bar": "var_notes_per_bar",

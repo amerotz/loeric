@@ -466,7 +466,7 @@
                 "polyphony_min": 1,
                 "polyphony_max": 2,
                 "notes": [ 55, 50, 57, 54, 52, 59, 48, 49, 51, 53, 56, 58 ],
-                "threshold": 0.5,
+                "threshold": "var_drone_threshold",
                 "bind": "var_drone_bind",
                 "notes_per_bar_bind": "var_notes_per_bar_bind",
                 "notes_per_bar": "var_notes_per_bar",
