@@ -38,6 +38,7 @@ class Player:
         self._tempo = tempo
         self._verbose = verbose
         self._message_queue = []
+        self._message_queue_lock = threading.Lock()
         self._active_notes = []
         self.has_reached_wake_time = threading.Event()
         self._midi_out_lock = threading.Lock()
@@ -125,8 +126,9 @@ class Player:
 
         if len(messages) == 0:
             return
-        self._message_queue.extend(messages)
-        self._message_queue.sort(key=lambda x: self._message_priority(x))
+        with self._message_queue_lock:
+            self._message_queue.extend(messages)
+            self._message_queue.sort(key=lambda x: self._message_priority(x))
 
     def wake_me_up_at(self, time):
         self._notify_song_time = time
@@ -150,15 +152,16 @@ class Player:
 
         while True:
 
-            if len(self._message_queue) == 0:
-                break
+            with self._message_queue_lock:
+                if len(self._message_queue) == 0:
+                    break
 
-            delta = self._song_time - self._message_queue[0].time
+                delta = self._song_time - self._message_queue[0].time
 
-            if delta < 0:
-                break
+                if delta < 0:
+                    break
 
-            msg = self._message_queue.pop(0)
+                msg = self._message_queue.pop(0)
 
             if self._saving:
 

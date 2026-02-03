@@ -10,13 +10,7 @@ from muspy.outputs.midi import PITCH_NAMES
 from nanoid import generate
 from random import shuffle
 
-from loeric.server.musician import (
-    Musician,
-    get_state,
-    play_all,
-    stop_all,
-    pause_all,
-)
+import loeric.server.musician as lsm
 import loeric.server.synthout as lss
 import loeric.loeric_utils as lu
 from loeric.tune import Tune
@@ -28,7 +22,7 @@ specific_configs_path = os.path.join(os.getcwd(), "static/webapp_configs")
 
 app = Bottle()
 
-musicians: list[Musician] = []
+musicians: list[lsm.Musician] = []
 names = ["LOERIC"]
 shuffle(names)
 
@@ -228,7 +222,7 @@ def state():
     response.set_header("Access-Control-Allow-Origin", "*")
     return {
         "musicians": list(map(lambda m: m.__json__(), musicians)),
-        "state": get_state().name,
+        "state": lsm.get_state().name,
         "track": {
             "name": current_track,
             "type": current_track.split(".")[-1],
@@ -317,36 +311,45 @@ def __set_track(track: str):
 
 @app.get("/api/play")
 def play():
-    for index, musician in enumerate(musicians):
-        if musician.midi_out is None or isinstance(musician.midi_out, lss.SynthOutput):
-            synth.program_select(
-                musician.groover._midi_channel,
-                soundfonts[musician.instrument].soundfont_id,
-                0,
-                soundfonts[musician.instrument].program,
-            )
-            if musician.midi_out is None:
-                musician.midi_out = lss.SynthOutput(
-                    f"LOERIC out #{musician.id}#", synth, index
+    if lsm.get_state() == lsm.State.STOPPED:
+        for index, musician in enumerate(musicians):
+            if musician.midi_out is None or isinstance(
+                musician.midi_out, lss.SynthOutput
+            ):
+                synth.program_select(
+                    musician.groover._midi_channel,
+                    soundfonts[musician.instrument].soundfont_id,
+                    0,
+                    soundfonts[musician.instrument].program,
                 )
-            else:
-                musician.midi_out.channel = index
-        musician.ready()
-    start_synth()
-    play_all()
+                if musician.midi_out is None:
+                    musician.midi_out = lss.SynthOutput(
+                        f"LOERIC out #{musician.id}#", synth, index
+                    )
+                else:
+                    musician.midi_out.channel = index
+            musician.ready()
+        start_synth()
+    if lsm.get_state() == lsm.State.PAUSED:
+        for musician in musicians:
+            musician.unpause()
+
+    lsm.update_state(lsm.State.PLAYING)
     return state()
 
 
 @app.get("/api/pause")
 def pause():
-    pause_all()
+    lsm.update_state(lsm.State.PAUSED)
+    for musician in musicians:
+        musician.pause()
     return state()
 
 
 @app.get("/api/stop")
 def stop():
 
-    stop_all()
+    lsm.update_state(lsm.State.STOPPED)
     stop_synth()
     for musician in musicians:
         musician.stop()
@@ -443,7 +446,7 @@ def add_musician():
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
     instrument_key = next(iter(soundfonts))
-    musician = Musician(
+    musician = lsm.Musician(
         name=unused[0],
         loeric_id=loeric_id,
         synth_sound=soundfonts[instrument_key],
@@ -614,7 +617,7 @@ def init_musician(track):
     existing = map(lambda m: m.name, musicians)
     unused = list(set(names) - set(existing))
     instrument_key = next(iter(soundfonts))
-    musician = Musician(
+    musician = lsm.Musician(
         name=unused[0],
         loeric_id=loeric_id,
         synth_sound=soundfonts[instrument_key],

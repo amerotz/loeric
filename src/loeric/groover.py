@@ -410,7 +410,7 @@ class Groover:
                     self._contour_values[contour_name] = 0.5
                 else:
                     print(
-                        f"[WARN] Contour '{contour_name}' is useless and will not be initialised."
+                        f"\033[38;2;255;255;0m[WARN] Contour '{contour_name}' is useless and will not be initialised.\033[0m"
                     )
         for contour_name in self._config["contour_2_control"]:
             if contour_name.split("#")[0] not in self._contour_values:
@@ -1328,7 +1328,7 @@ class Groover:
         """
 
         if self._verbose >= 2:
-            print(f"[ORNT]\t{ornament_type}")
+            print(f"\033[38;2;255;0;255m[ORNT]\t{ornament_type}\033[0m")
 
         ornament_length = self._config["ornamentation"][ornament_type]["length"]
         # sample pitches

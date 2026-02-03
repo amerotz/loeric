@@ -46,6 +46,11 @@ def play(
     Play the given tune with the given groover.
 
     :param groover: the groover object
+    :param player: the player object
+    :param loop_condition: a function evaluating when to stop
+    :param note_callback: callback on a note message
+    :param songpos_callback: callback on a song position message
+    :param repetition_callback: callback on a repetition message
     :param kwargs: the performance arguments
     """
 
@@ -112,7 +117,9 @@ def play(
                 groover._tune.set_chord(original_message)
             else:
                 if kwargs["verbose"] > 0:
-                    print(f"[WARN]\tUnknown message type {type(original_message)}.")
+                    print(
+                        f"\033[38;2;255;255;0m[WARN]\tUnknown message type {type(original_message)}.\033[0m"
+                    )
 
             midi_headers = original_message.to_midi(absolute_time=True)
 
@@ -123,21 +130,30 @@ def play(
         # stop measuring loop
         loop_end_time = time.time()
         loop_duration = loop_end_time - loop_start_time
-        average_loop_time *= (iterations - 1) / (iterations)
-        average_loop_time += loop_duration / iterations
+        average_loop_time *= 0.2
+        average_loop_time += 0.8 * loop_duration
 
-        # calculate time to wake up for next message
-        time_to_think = (
-            original_message.time
-            + original_message.duration
-            - 2 * (average_loop_time / groover._eighth_duration_seconds)
+        message_duration_seconds = (
+            original_message.duration.eighth_duration * groover._eighth_duration_seconds
         )
 
-        # sleep remaining time to next event
-        if iterations != 0:
+        # calculate time to wake up for next message
+        next_event_time = original_message.time + original_message.duration
+        time_to_think = next_event_time - 2 * (
+            average_loop_time / groover._eighth_duration_seconds
+        )
+
+        if iterations == 0:
             player.wake_me_up_at(next_event_time)
 
-        next_event_time = original_message.time + original_message.duration
+        if (
+            average_loop_time > message_duration_seconds
+            and original_message.duration != 0
+        ):
+            if kwargs["verbose"]:
+                print(
+                    f"\033[38;2;255;255;0m[WARN] Intra-note computations are taking too much time ({np.round(average_loop_time, 3)} vs {np.round(message_duration_seconds, 3)}). Free your CPU!\033[0m"
+                )
 
         # wake up slightly before next note
         player.wake_me_up_at(time_to_think)

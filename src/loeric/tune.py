@@ -225,7 +225,7 @@ class ScoreElement:
             self._duration = TimeDelta(eighth_duration=value)
         if self._duration.eighth_duration < 0:
             self._duration = TimeDelta(eighth_duration=0)
-            print("[WARN]\tDuration cannot be negative!")
+            print("\033[38;2;255;255;0m[WARN]\tDuration cannot be negative!\033[0m")
             # raise Exception("Duration cannot be negative")
 
 
@@ -302,7 +302,7 @@ class Chord(ScoreElement):
                 pitches -= min(pitches)
                 pitches.sort()
                 print(
-                    f"[WARN]\tChord shape {pitches} at time {self._time} not supported."
+                    f"\033[38;2;255;255;0m[WARN]\tChord shape {pitches} at time {self._time} not supported.\033[0m"
                 )
 
     @property

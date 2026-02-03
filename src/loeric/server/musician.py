@@ -36,19 +36,7 @@ def get_state() -> State:
     return _state
 
 
-def play_all():
-    _update(State.PLAYING)
-
-
-def pause_all():
-    _update(State.PAUSED)
-
-
-def stop_all():
-    _update(State.STOPPED)
-
-
-def _update(state: State):
+def update_state(state: State):
     global _state
     _lock.acquire()
     _state = state
@@ -103,20 +91,23 @@ class Musician:
         self._tempos = []
         self._tune_index = 0
 
-    def player_loop(self, player, groover):
+    def player_loop(self):
 
         _play_event.wait()
         while True:
 
-            if _state == State.PAUSED:
-                player.reset()
-                _play_event.wait()
-                player.init_playback()
-            elif _state == State.STOPPED:
-                player.reset()
+            while self._groovers[self._tune_index].stopped.is_set():
+                self.player.reset()
+                # print("player waiting play")
+                self._groovers[self._tune_index].playback_resumed.wait()
+                # print("player awake")
+                self.player.init_playback()
+
+            if _state == State.STOPPED:
+                self.player.reset()
                 break
 
-            player.play_next()
+            self.player.play_next()
 
     def set_input_audio_device(self, device_index):
         self._device_index = device_index
@@ -356,6 +347,15 @@ class Musician:
         if self._midi_out is not None:
             self._midi_out.panic()
 
+    def pause(self):
+        self._groovers[self._tune_index].stopped.set()
+        if self._midi_out is not None:
+            self._midi_out.panic()
+
+    def unpause(self):
+        self._groovers[self._tune_index].playback_resumed.set()
+        self._groovers[self._tune_index].stopped.clear()
+
     def stop_threads(self):
         if self._listener_thread is not None:
             self._listener_thread.stop = True
@@ -367,10 +367,7 @@ class Musician:
             self.thread = threading.Thread(target=self.__play)
             self.thread.start()
 
-            self.player_t = threading.Thread(
-                target=self.player_loop,
-                args=[self.player, self._groovers[self._tune_index]],
-            )
+            self.player_t = threading.Thread(target=self.player_loop, args=[])
             self.player_t.start()
 
     def __play(
@@ -419,98 +416,18 @@ class Musician:
                 self._tune_index = i
                 self.tempo = self._groovers[self._tune_index]
 
-                ############# PREAMBLE ###############
-                self.player.init_playback()
-                self.player.reset_song_time(
-                    song_time=self._groovers[self._tune_index]
-                    ._tune.times[0]
-                    .eighth_duration,
+                args = {"verbose": True}
+                lu.play(
+                    groover=self._groovers[self._tune_index],
+                    player=self.player,
+                    loop_condition=lambda: _state != State.STOPPED,
+                    note_callback=None,
+                    songpos_callback=None,
+                    repetition_callback=None,
+                    **args,
                 )
-                ############# PREAMBLE ###############
 
-                while True:
-
-                    if _state == State.PAUSED:
-                        self.player.reset()
-                        _play_event.wait()
-                        self.player.init_playback()
-                    elif _state == State.STOPPED:
-                        break
-
-                    original_message = self._groovers[self._tune_index].next_event()
-
-                    if original_message is None:
-                        self._groovers[self._tune_index].reset()
-                        break
-
-                    new_messages = []
-                    # perform notes
-                    if original_message.is_note:
-                        # make the groover play the messages
-                        midi_headers, new_messages = self._groovers[
-                            self._tune_index
-                        ].perform(original_message)
-                    # keep meta messages intact
-                    else:
-                        if isinstance(original_message, tu.SongPosition):
-                            for msg in original_message.to_midi():
-                                self.sync.send(msg)
-                            print(
-                                f"[INFO]\t{self._groovers[self._tune_index].loeric_id} SENT {original_message.position} ({time.time()})"
-                            )
-                        elif isinstance(original_message, tu.Repetition):
-                            print(original_message)
-                        elif isinstance(original_message, tu.KeySignature):
-                            if self.groover._tune.forced_key:
-                                print(
-                                    f"[INFO]\tIgnoring key change (forced key). {original_message}"
-                                )
-                            else:
-                                print(f"[INFO]\tChanging key. {original_message}")
-                                self.groover._tune.set_key_signature(original_message)
-                        elif isinstance(original_message, tu.Chord):
-                            if original_message.is_user:
-                                print(f"[INFO]\tForcing chord: {original_message}")
-                            else:
-                                print(f"[INFO]\tPlaying chord: {original_message}")
-                            self.groover._tune.set_chord(original_message)
-                        else:
-                            print(
-                                f"[WARN]\tUnknown message type {type(original_message)}."
-                            )
-
-                        midi_headers = original_message.to_midi(absolute_time=True)
-
-                    self.player.set_tempo_scale(
-                        self._groovers[self._tune_index].tempo_scale
-                    )
-                    self.player.add_midi(midi_headers)
-                    self.player.add_notes(new_messages)
-
-                    self.player.wake_me_up_at(
-                        original_message.time + original_message.duration
-                    )
-
-                    self.player.has_reached_wake_time.wait()
-
-                if self._groovers[self._tune_index].do_end_note:
-                    self._groovers[self._tune_index].reset()
-                    self._groovers[self._tune_index].advance_contours()
-                    end_notes = self._groovers[self._tune_index].get_end_notes()
-                    self.player.add_notes(end_notes)
-
-                    self.player.wake_me_up_at(
-                        end_notes[-1].time + end_notes[-1].duration
-                    )
-                else:
-                    self.player.wake_me_up_at(
-                        self._groovers[self._tune_index].performance_time
-                    )
-
-                self.player.has_reached_wake_time.wait()
-                self.player.reset()
-
-            _update(State.STOPPED)
+            update_state(State.STOPPED)
 
             while self.player_t.is_alive():
                 self.player_t.join(1)
@@ -519,7 +436,7 @@ class Musician:
 
         except Exception as e:
             # stop sync thread
-            _update(State.STOPPED)
+            update_state(State.STOPPED)
             print("Player thread terminated.")
             raise e
 

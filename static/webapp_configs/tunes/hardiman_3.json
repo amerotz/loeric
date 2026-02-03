@@ -161,7 +161,7 @@
         "velocity_pattern": {
             "recipe": {
                 "pattern": {
-                    "mean": [ 0.999, 0.999, 1.012, 0.997, 1.003, 0.99 ],
+                    "mean": [ 1.06, 0.999, 1.012, 0.997, 1.003, 0.99 ],
                     "std": [ 0.14, 0.092, 0.096, 0.097, 0.092, 0.161 ],
                     "std_scale": 1,
                     "normalize": false,
@@ -248,8 +248,8 @@
         "tempo_pattern": {
             "recipe": {
                 "pattern": {
-                    "mean": [ 1.14, 0.85, 1.14 ],
-                    "std": [ 0.05, 0.05, 0.05 ],
+                    "mean": [ 1, 0.9, 1 ],
+                    "std": [ 0.02, 0.02, 0.02 ],
                     "std_scale": 1,
                     "normalize": true,
                     "period": 0.5

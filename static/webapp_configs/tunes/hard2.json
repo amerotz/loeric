@@ -1,0 +1,80 @@
+{
+    "contours": {
+        "drone": {
+            "human_impact_scale": 0.0
+        },
+        "velocity": {
+            "human_impact_scale": 0.0
+        },
+        "velocity_pattern": {
+            "human_impact_scale": 0.0
+        },
+        "tempo": {
+            "human_impact_scale": 0
+        },
+        "swing": {
+            "human_impact_scale": 0
+        },
+        "tempo_pattern": {
+            "human_impact_scale": 0.0
+        },
+        "ornament": {
+            "recipe": {
+                "pattern": {
+                    "mean": [1],
+                    "std": null,
+                    "std_scale": 1,
+                    "period": 1,
+                    "normalize": false
+                }
+            },
+            "human_impact_scale": 0.0
+        },
+        "legato": {
+            "human_impact_scale": 0.0
+        }
+    },
+    "ornamentation": {
+        "error_chromatic": {
+            "cases": [
+                "not beat" ],
+                "pitches_mean": [ 0 ],
+                "pitches_std": [ 4 ],
+                "velocities_mean": [ 1 ],
+                "velocities_std": [ 0.25 ],
+                "durations_mean": [ 1 ],
+                "durations_std": [ 0.5 ],
+                "probability": 0.01,
+                "length": 1,
+                "diatonic": false,
+                "threshold": 0,
+                "slide": false
+        },
+        "error_diatonic": {
+            "cases": [
+                "not beat" ],
+                "pitches_mean": [ 0 ],
+                "pitches_std": [ 4 ],
+                "velocities_mean": [ 1 ],
+                "velocities_std": [ 0.25 ],
+                "durations_mean": [ 1 ],
+                "durations_std": [ 0.5 ],
+                "probability": 0.01,
+                "length": 1,
+                "diatonic": true,
+                "threshold": 0,
+                "slide": false
+        }
+    },
+    "control_2_contour": {
+        "errors": {
+            "control": 49,
+            "contours": [
+                "orn_error_diatonic",
+                "orn_error_diatonic_prob",
+                "orn_error_chromatic",
+                "orn_error_chromatic_prob"
+            ]
+        }
+    }
+}
