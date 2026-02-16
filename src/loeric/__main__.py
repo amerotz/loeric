@@ -4,6 +4,7 @@ import threading
 import time
 import os
 import faulthandler
+import importlib.resources as ir
 
 
 from . import tune as tu
@@ -67,6 +68,7 @@ def sync_thread(
             play_event.set()
             print("Received START.")
         elif msg.type == "stop":
+            groover.playback_resumed.clear()
             groover.stopped.set()
             print("Received STOP.")
         elif msg.type == "continue":
@@ -179,12 +181,11 @@ def main():
         type=str,
         default=None,
     )
-    dir_path = os.path.dirname(os.path.realpath(__file__))
     parser.add_argument(
         "--config",
         help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
         type=str,
-        default=f"{dir_path}/loeric_config/performance/config.json",
+        default=ir.files("loeric.loeric_config.performance").joinpath("config.json"),
     )
     parser.add_argument(
         "-v",

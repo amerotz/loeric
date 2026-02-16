@@ -1,16 +1,16 @@
 [
 	{
-		"file": "Emily's Waltz.abc",
-		"repetitions": 2,
+		"file": "Emily's Waltz [Set Version].abc",
+		"repetitions": 1,
 		"config": null,
 		"trim_end_eighths": 0,
-		"qpm": 140
+		"qpm": 105
 	},
 	{
-		"file": "The Home Ruler.abc",
-		"repetitions": 2,
+		"file": "The Home Ruler [Set Version].abc",
+		"repetitions": 1,
 		"config": null,
 		"trim_end_eighths": 0,
-		"qpm": 140
+		"qpm": 160
 	}
 ]

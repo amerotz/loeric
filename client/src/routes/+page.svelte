@@ -1,7 +1,8 @@
 <script lang="ts">
 	import FileUpload from "./FileUpload.svelte";
 	import JSONEditorBar from "./JSONEditorBar.svelte";
-	import {LoericPlayingState, type LoericState} from "$lib/types";
+    //import {LoericPlayingState, type LoericState} from "$lib/types";
+	import {type LoericState} from "$lib/types";
 	import {onMount} from "svelte"
 	import Musician from "./Musician.svelte";
 
@@ -10,11 +11,12 @@
 	let base = "http://localhost:8080"
 
 	onMount(refresh)
-	let poller = 0
 
 	async function refresh() {
 		await apiGet('state')
+		console.log("a")
 	}
+	let poller = 0
 
 	async function trackChange(event: Event) {
 		const select = event.target as HTMLSelectElement
@@ -35,7 +37,7 @@
 		const response = await fetch(base + '/api/' + call)
 		data = await response.json()
 		clearTimeout(poller)
-		if (data.state === LoericPlayingState.PLAYING) {
+		if (data.playing) {
 			poller = setTimeout(refresh, 50)
 		}
 	}
@@ -94,7 +96,7 @@
 					{#each data.options.trackList as file}
 						<el-option value={file} class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
 
-							<div class="flex items-center justify-between  flex justify-between items-center gap-3 pr-6">
+							<div class="flex items-center justify-between gap-3 pr-6">
 								<div class="text-3xl {data.track.name == file ? "text-green-200" : ''}">{file.split(".")[0]}</div>
 								<div class="flex gap-3 items-center">
 								{#if data.options.customized_tracks.includes(file)}
@@ -131,7 +133,7 @@
 			</div>
 			<FileUpload accepted="mid, midi, audio/rtp-midi" onUpload={(file) => apiUpload('track', file)}/>
 			<div>
-				{#if data.state !== LoericPlayingState.PLAYING}
+				{#if !data.playing}
 					<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('play')}>
 						play_arrow
 					</button>

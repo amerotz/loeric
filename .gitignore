@@ -12,6 +12,10 @@ paper-examples/
 cc-test/
 mini_session.sh
 generate.sh
+.flake8
+.idea
+.DS_Store
+
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/

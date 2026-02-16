@@ -1,5 +1,6 @@
 import argparse
 import random
+import importlib.resources as ir
 import os
 import threading
 import time
@@ -52,7 +53,7 @@ class Session:
 
     @property
     def sync_interval(self):
-        return 2*self._config["tempo_policy"]["sync_interval_quarters"]
+        return 2 * self._config["tempo_policy"]["sync_interval_quarters"]
 
     def set_tempo(self, tempo):
         self._last_tempo = tempo
@@ -485,22 +486,18 @@ def main():
         type=str,
         default=None,
     )
-    parser.add_argument(
-        "--ireland",
-        action="store_true"
-    )
+    parser.add_argument("--ireland", action="store_true")
     parser.add_argument(
         "--name",
         type=str,
     )
-
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     parser.add_argument(
         "--config",
         help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
         type=str,
-        default=f"{dir_path}/loeric_config/session/session.json",
+        default=ir.files("loeric.loeric_config.session").joinpath("session.json"),
     )
     input_args = parser.add_mutually_exclusive_group()
     input_args.add_argument(
@@ -679,18 +676,18 @@ def main():
         else:
             config = None
             additional_configs = [
-                f"{lu.general_configs_path}/instrument/{setup}.json",
-                f"{lu.general_configs_path}/tune_type/{tune.tune_type}.json",
-                f"{lu.general_configs_path}/drone/on.json",
-                f"{lu.general_configs_path}/control/session.json",
-                f"{lu.general_configs_path}/ornament/variations.json",
+                lu.general_configs_path / "instrument" / f"{setup}.json",
+                lu.general_configs_path / "tune_type" / f"{tune.tune_type}.json",
+                lu.general_configs_path / "drone" / "on.json",
+                lu.general_configs_path / "control" / "session.json",
+                lu.general_configs_path / "ornament" / "variations.json",
             ]
             if args.get("ireland"):
                 additional_configs.append(
-                f"{lu.general_configs_path}/synth/kontakt_ireland.json"
+                    lu.general_configs_path / "synth" / "kontakt_ireland.json"
                 )
                 additional_configs.append(
-                f"{lu.general_configs_path}/control/velocity_to_modulation.json"
+                    lu.general_configs_path / "control" / "velocity_to_modulation.json"
                 )
 
         groover = gr.Groover(

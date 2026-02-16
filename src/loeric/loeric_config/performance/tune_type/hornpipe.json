@@ -1,6 +1,6 @@
 {
 	"variables": {
-		"var_notes_per_bar": [2,4,4,8],
+		"var_notes_per_bar": [2,4,4],
 		"var_roll_2_prob": 1,
         "var_velocity_weight": [0,1,0,1,1],
         "var_comping_notes_per_bar": [4],

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type {Musician, Options} from "$lib/types";
 	import JSONEditorBar from "./JSONEditorBar.svelte";
+	import Graph from "./Graph.svelte";
+
 
 	export let musician: Musician
 	export let options: Options
@@ -10,6 +12,20 @@
 	export let slow_start = musician.slow_start
 	export let slow_end = musician.slow_end
 	export let transpose = musician.transpose
+
+	let controlHistories: Record<string, number[]> = {};
+
+	$: if (musician?.controls) {
+		musician.controls.forEach(control => {
+			const prev = controlHistories[control.control] || [];
+
+			// only append if value actually changed
+			const next = [...prev, control.value];
+			if (next.length > 60) next.shift(); // ~3s @ 50ms polling
+			controlHistories[control.control] = next; 
+		});
+	}
+
 
 	async function inputChange(event: Event) {
 		const select = event.target as HTMLSelectElement
@@ -88,56 +104,54 @@
 		<div class="flex-1 font-semibold">{musician.name}</div> <!--<div class="opacity-60 font-light">Musician</div>-->
 	</div>
 	<div class="flex text-lg justify-start gap-5">
-		<div class="bg-gray-700 rounded-2xl w-2/3 h-full">
+		<div class="bg-gray-700 rounded-2xl w-2/3 ">
 			<!--<JSONEditorBar json={musician.config} onUpload={uploadConfig}></JSONEditorBar>-->
-			<div class="flex flex-col p-5 gap-5">
-				<div class="flex flex-col justify-between gap-5">
-					<label class="flex flex-col">
-						<span class="opacity-60 font-bold">INSTRUMENT</span>
-						<span class="opacity-80">Change LOERIC's sound and instrument model.</span>
-						<select class="" onchange={instrumentChange}>
-							{#each options.instruments as instrument}
-								<option value={instrument} selected={musician.instrument === instrument}>{instrument}</option>
-							{/each}
-						</select>
-					</label>
+			<div class="flex flex-col justify-between p-5 gap-3">
+				<label class="flex flex-col">
+					<span class="opacity-60 font-bold">INSTRUMENT</span>
+					<span class="opacity-80">Change LOERIC's sound and instrument model.</span>
+					<select class="" onchange={instrumentChange}>
+						{#each options.instruments as instrument}
+							<option value={instrument} selected={musician.instrument === instrument}>{instrument}</option>
+						{/each}
+					</select>
+				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-					<label class="flex gap-3 justify-between">
-						<div class="flex flex-col">
-							<span class="opacity-60 font-bold">DRONES</span>
-							<span class="opacity-80">Toggle LOERIC's accompanying system.</span>
-						</div>
-						<input class="col-span-1" type="checkbox" bind:checked={droning} onchange={droningChange}>
-					</label>
+				<label class="flex gap-3 justify-between">
+					<div class="flex flex-col">
+						<span class="opacity-60 font-bold">DRONES</span>
+						<span class="opacity-80">Toggle LOERIC's accompanying system.</span>
+					</div>
+					<input class="col-span-1" type="checkbox" bind:checked={droning} onchange={droningChange}>
+				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-					<label class="flex gap-3 justify-between">
-						<div class="flex flex-col">
-							<span class="opacity-60 font-bold ">TRANSPOSE</span>
-							<span class="opacity-80">Transpose LOERIC's performance (semitones).</span>
-						</div>
-						<input class="col-span-1" type="number" onchange={transposeChange} bind:value={transpose} min="-12" max="12"/>
-					</label>
+				<label class="flex gap-3 justify-between">
+					<div class="flex flex-col">
+						<span class="opacity-60 font-bold ">TRANSPOSE</span>
+						<span class="opacity-80">Transpose LOERIC's performance (semitones).</span>
+					</div>
+					<input class="col-span-1" type="number" onchange={transposeChange} bind:value={transpose} min="-12" max="12"/>
+				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-					<label class="flex gap-3 justify-between">
-						<div class="flex flex-col">
-							<span class="opacity-60 font-bold ">SLOW START</span>
-							<span class="opacity-80">Build up speed to selected tempo at performance start.</span>
-						</div>
-						<input class="col-span-1"type="checkbox" bind:checked={slow_start} onchange={startChange}>
-					</label>
+				<label class="flex gap-3 justify-between">
+					<div class="flex flex-col">
+						<span class="opacity-60 font-bold ">SLOW START</span>
+						<span class="opacity-80">Build up speed to selected tempo at performance start.</span>
+					</div>
+					<input class="col-span-1"type="checkbox" bind:checked={slow_start} onchange={startChange}>
+				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-					<label class="flex gap-3 justify-between">
-						<div class="flex flex-col">
-							<span class="opacity-60 font-bold ">SLOW END</span>
-							<span class="opacity-80">Slow down from selected tempo at performance end.</span>
-						</div>
-						<input class="col-span-1"type="checkbox" bind:checked={slow_end} onchange={endChange}>
-					</label>
-				</div>
+				<label class="flex gap-3 justify-between">
+					<div class="flex flex-col">
+						<span class="opacity-60 font-bold ">SLOW END</span>
+						<span class="opacity-80">Slow down from selected tempo at performance end.</span>
+					</div>
+					<input class="col-span-1"type="checkbox" bind:checked={slow_end} onchange={endChange}>
+				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-				<div class="flex flex-col justify-between">
-						<span class="opacity-60 font-bold">OUTPUT</span>
-						<span class="opacity-80">Choose between built-in sounds or MIDI for external sounds.</span>
+				<label class="flex flex-col justify-between">
+					<span class="opacity-60 font-bold">OUTPUT</span>
+					<span class="opacity-80">Choose between built-in sounds or MIDI for external sounds.</span>
 					<select class="mt-3" onchange={outputChange}>
 						<option value="synth" selected={musician.midiOut?.startsWith("LOERIC Synth ")}>LOERIC Built-In Synth</option>
 						<option value="create_out" selected={musician.midiOut?.startsWith("LOERIC out ")}>LOERIC MIDI Output</option>
@@ -145,26 +159,57 @@
 							<option value={output} selected={musician.midiOut === output}>{output}</option>
 						{/each}
 					</select>
-				</div>
+				</label>
 			</div>
-
 		</div>
 		<div class="flex gap-3 justify-start w-full p-5 shadow-lg rounded-2xl bg-gray-700 overflow-auto">
-			<label class="flex flex-col w-1/5 gap-3">
+			<label class="flex flex-col w-1/4 gap-3">
 				<span class="opacity-60 font-bold">INTERACTION</span>
 				<span class="opacity-80">Choose how to interact with LOERIC (sliders, audio input, MIDI).</span>
-				<select onchange={inputChange}>
-					<option value="no_in" selected={musician.midiIn === undefined}>Sliders</option>
-					{#each Object.keys(options.audio_inputs) as input}
-						<option value={"audioIn:" + options.audio_inputs[input]}
-							selected={musician.audioIn === "audioIn:" + options.audio_inputs[input]}>{input}</option>
-					{/each}
-					{#each options.inputs as input}
-						<option value={input} selected={musician.midiIn === input}>{input}</option>
-					{/each}
-				</select>
+				<el-select onchange={inputChange}>
+					<button type="button" class="grid w-full cursor-default grid-cols-1 rounded-md bg-transparent py-1.5 pr-2 pl-3 text-left text-white">
+						<el-selectedcontent value="no_in" selected={musician.midiIn === "no_in"}>Mouse</el-selectedcontent>
+					</button>
+					<el-options anchor="bottom start" popover class="max-h-110 w-(--button-width) overflow-auto rounded-md bg-gray-950 py-1 text-white shadow-lg [--anchor-gap:--spacing(1)] data-leave:transition data-leave:transition-discrete data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0">
+						<el-option value="no_in" class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
+
+							<div class="flex gap-3 pr-6">
+								<div>
+									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 12.586 19 19"></path><path d="M3.688 3.037a.497.497 0 0 0-.651.651l6.5 15.999a.501.501 0 0 0 .947-.062l1.569-6.083a2 2 0 0 1 1.448-1.479l6.124-1.579a.5.5 0 0 0 .063-.947z"></path></svg>
+								</div>
+								<div class="text-m">Mouse</div>
+							</div>
+						</el-option>
+						{#each Object.keys(options.audio_inputs) as input}
+							<el-option value={"audioIn:" + options.audio_inputs[input]}
+								class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
+
+
+								<div class="flex gap-3 pr-6">
+									<div>
+										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
+									</div>
+									<div class="text-m">{input}</div>
+								</div>
+							</el-option>
+						{/each}
+						{#each options.inputs as input}
+							<el-option value={input}
+
+								class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
+
+								<div class="flex gap-3 pr-6">
+									<div>
+										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="M6 8h4"></path><path d="M14 8h.01"></path><path d="M18 8h.01"></path><path d="M2 12h20"></path><path d="M6 12v4"></path><path d="M10 12v4"></path><path d="M14 12v4"></path><path d="M18 12v4"></path></svg>
+									</div>
+									<div class="text-m">{input}</div>
+								</div>
+							</el-option>
+						{/each}
+					</el-options>
+				</el-select>
 			</label>
-  			<div class="inline-block h-full w-0.5 self-stretch bg-gray-600"></div>
+			<div class="inline-block h-full w-0.5 self-stretch bg-gray-600"></div>
 			{#if musician.controls.length != 0}
 				<div class="flex w-auto justify-evenly">
 					{#each musician.controls as control}

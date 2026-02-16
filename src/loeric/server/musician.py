@@ -1,8 +1,6 @@
 import faulthandler
-import time
 import os
 import threading
-from enum import Enum
 from random import randint
 
 import pyaudio as pa
@@ -11,7 +9,6 @@ from mido.ports import BaseOutput, BaseInput, EchoPort
 
 from loeric.groover import Groover
 from loeric.player import Player
-import loeric.tune as tu
 import loeric.loeric_utils as lu
 import loeric.listeners.playalong as lp
 
@@ -21,6 +18,7 @@ faulthandler.enable()
 # bad code goes here
 
 
+"""
 class State(Enum):
     STOPPED = 0
     PAUSED = 1
@@ -45,6 +43,8 @@ def update_state(state: State):
         _play_event.set()
     else:
         _play_event.clear()
+
+"""
 
 
 class Control:
@@ -90,10 +90,11 @@ class Musician:
         self._controls = []
         self._tempos = []
         self._tune_index = 0
+        self.playing = False
 
     def player_loop(self):
 
-        _play_event.wait()
+        # _play_event.wait()
         while True:
 
             while self._groovers[self._tune_index].stopped.is_set():
@@ -103,9 +104,13 @@ class Musician:
                 # print("player awake")
                 self.player.init_playback()
 
+            """
             if _state == State.STOPPED:
                 self.player.reset()
                 break
+            if not self.thread.is_alive():
+                break
+            """
 
             self.player.play_next()
 
@@ -216,7 +221,7 @@ class Musician:
 
             additional_configs = [
                 self._synth_sound.config,
-                f"{lu.general_configs_path}/tune_type/{tune.tune_type}.json",
+                lu.general_configs_path / "tune_type" / f"{tune.tune_type}.json",
                 tune.config,
             ]
 
@@ -298,6 +303,10 @@ class Musician:
             song_start_time=self._tunes[self._tune_index].times[0].eighth_duration,
         )
 
+        # create grover and player threads
+        # and start them
+        self.ready()
+
     @property
     def groover(self):
         return self._groovers[self._tune_index]
@@ -339,22 +348,30 @@ class Musician:
         self.player.set_midi_out(out)
 
     def stop(self):
+        # stop groover and player
+        self.pause()
+
+        # reset their position
+        self._groovers[self._tune_index].jump_to_pos(0)
+        self.player.set_song_time(
+            self._groovers[self._tune_index]._tune.position_time(0)
+        )
+        """
+        self.pause()
         self._groovers[self._tune_index].jump_to_pos(0)
         if self.player is not None:
             self.player.set_song_time(
                 self._groovers[self._tune_index]._tune.position_time(0)
             )
-        if self._midi_out is not None:
-            self._midi_out.panic()
+        # update_state(State.STOPPED)
+        """
 
     def pause(self):
+        self._groovers[self._tune_index].playback_resumed.clear()
         self._groovers[self._tune_index].stopped.set()
         if self._midi_out is not None:
             self._midi_out.panic()
-
-    def unpause(self):
-        self._groovers[self._tune_index].playback_resumed.set()
-        self._groovers[self._tune_index].stopped.clear()
+        self.playing = False
 
     def stop_threads(self):
         if self._listener_thread is not None:
@@ -363,14 +380,38 @@ class Musician:
             self._control_thread.stop = True
 
     def ready(self) -> None:
+        """
+        self.unpause()
         if _state == State.STOPPED:
             self.thread = threading.Thread(target=self.__play)
             self.thread.start()
 
             self.player_t = threading.Thread(target=self.player_loop, args=[])
             self.player_t.start()
+        """
+        # make sure that groover and player
+        # are stopped
+        self._groovers[self._tune_index].stopped.set()
+        self._groovers[self._tune_index].playback_resumed.clear()
 
-    def __play(
+        # create threads
+        self.thread = threading.Thread(target=self._play)
+        self.player_t = threading.Thread(target=self.player_loop, args=[])
+
+        # start threads
+        # groover and player will stop
+        # because stopped is set
+        self.thread.start()
+        self.player_t.start()
+
+    def start(self) -> None:
+        # unstop the groover and player
+        self._groovers[self._tune_index].stopped.clear()
+        self._groovers[self._tune_index].playback_resumed.set()
+
+        self.playing = True
+
+    def _play(
         self,
     ) -> None:
         try:
@@ -408,7 +449,7 @@ class Musician:
                     )
 
             # wait for start
-            _play_event.wait()
+            # _play_event.wait()
 
             # iterate over messages
             for i in range(len(self._tunes)):
@@ -420,14 +461,13 @@ class Musician:
                 lu.play(
                     groover=self._groovers[self._tune_index],
                     player=self.player,
-                    loop_condition=lambda: _state != State.STOPPED,
                     note_callback=None,
                     songpos_callback=None,
                     repetition_callback=None,
                     **args,
                 )
 
-            update_state(State.STOPPED)
+            # update_state(State.STOPPED)
 
             while self.player_t.is_alive():
                 self.player_t.join(1)
@@ -436,7 +476,7 @@ class Musician:
 
         except Exception as e:
             # stop sync thread
-            update_state(State.STOPPED)
+            # update_state(State.STOPPED)
             print("Player thread terminated.")
             raise e
 

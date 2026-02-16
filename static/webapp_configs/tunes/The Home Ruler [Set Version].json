@@ -1,4 +1,7 @@
 {
+    "variables": {
+        "var_notes_per_bar": [2]
+    },
     "contours": {
         "drone": {
             "human_impact_scale": 1.0
@@ -38,7 +41,10 @@
         "tempo_warp_bpms": 1,
         "slow_start_percentage": 0.2,
         "slow_end_percentage": 0.8,
-        "slow_start_bars": 1
-
+        "slow_start_bars": 1,
+        "slow_start": true
+    },
+    "drone": {
+        "active": true
     }
 }

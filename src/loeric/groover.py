@@ -8,6 +8,7 @@ import threading
 import time
 import numpy as np
 import music21 as m21
+import importlib.resources as ir
 
 from collections import defaultdict
 from collections.abc import Callable
@@ -158,8 +159,7 @@ class Groover:
         }
 
         # merge base configuration with command line values
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        with open(f"{dir_path}/loeric_config/performance/base.json", "r") as f:
+        with open(lu.general_configs_path / "base.json", "r") as f:
             base_config = json.load(f)
             self._config = jsonmerge.merge(base_config, self._config)
 
@@ -199,7 +199,7 @@ class Groover:
 
             self._config = json.loads(dict_string)
 
-        with open(f"{dir_path}/last_config.json", "w") as f:
+        with open(ir.files("loeric").joinpath("last_config.json"), "w") as f:
             json.dump(self._config, f)
 
         # generate all parameter settings and contours

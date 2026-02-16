@@ -1,8 +1,9 @@
 import mido
+import importlib.resources as ir
 import numpy as np
 import time
-import music21 as m21
-import os
+import sys
+import pathlib
 
 from . import tune as tu
 
@@ -18,7 +19,14 @@ TRIGGER_DELTA = 0.05
 
 MAX_TEMPO = 2**24 - 1
 
-general_configs_path = os.getcwd() + "/src/loeric/loeric_config/performance"
+# to handle builds
+if hasattr(sys, "_MEIPASS"):
+    general_configs_path = pathlib.Path(sys._MEIPASS) / "loeric"
+else:
+    general_configs_path = pathlib.Path(__file__).parent
+
+general_configs_path = general_configs_path / "loeric_config" / "performance"
+# general_configs_path = ir.files("loeric.loeric_config.performance")
 
 # key signatures
 number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]

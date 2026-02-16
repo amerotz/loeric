@@ -1,4 +1,5 @@
 import mido
+import importlib.resources as ir
 import os
 import pandas as pd
 import numpy as np
@@ -432,11 +433,13 @@ def load_sync_config(path: str):
 
 def main():
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
+    # dir_path = os.path.dirname(os.path.realpath(__file__))
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--config", default=f"{dir_path}/loeric_config/shell/config.json", type=str
+        "--config",
+        default=ir.files("loeric_config.shell").joinpath("config.json"),
+        type=str,
     )
     args = parser.parse_args()
     args = vars(args)

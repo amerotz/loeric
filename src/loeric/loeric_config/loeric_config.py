@@ -1,4 +1,5 @@
 import argparse
+import importlib.resources as ir
 import textwrap
 import copy
 import re
@@ -25,7 +26,9 @@ def merge_configs(original, new_config):
 
 
 def main():
-    dir_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = ir.files(
+        "loeric.loeric_config"
+    )  # os.path.dirname(os.path.realpath(__file__))
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -97,11 +100,11 @@ def main():
         print("{:=^50}".format(" LOERIC OPTIONS "))
         print()
 
-        p_path = dir_path + "/performance/"
+        p_path = dir_path / "performance"
         for folder in os.listdir(p_path):
-            if os.path.isdir(p_path + folder):
+            if os.path.isdir(p_path / folder):
                 options = []
-                for file in sorted(os.listdir(p_path + folder)):
+                for file in sorted(os.listdir(p_path / folder)):
                     options.append(file.replace(".json", ""))
 
                 s = " ".join(options)
@@ -114,12 +117,12 @@ def main():
 
     # if configuring the shell
     if args["shell"]:
-        dir_path += "/shell"
+        dir_path = dir_path / "shell"
     else:
-        dir_path += "/performance"
+        dir_path = dir_path / "performance"
 
     # load base config
-    with open(f"{dir_path}/base.json", "r") as f:
+    with open(dir_path / "base.json", "r") as f:
         base = json.load(f)
 
     # which args?
@@ -142,7 +145,7 @@ def main():
             continue
         else:
             for option in args[a].split("-"):
-                name = f"{dir_path}/{a}/{option}.json"
+                name = dir_path / f"{a}" / f"{option}.json"
                 print("Using", f"{a}/{option}.json")
                 config_name.append(args[a])
 
@@ -159,7 +162,7 @@ def main():
     config_name = "_".join(config_name) + ".json"
 
     if args["output"] is None:
-        config_name = f"{dir_path}/config.json"
+        config_name = dir_path / "config.json"
     else:
         config_name = args["output"]
 

@@ -31,6 +31,14 @@ synth_is_running = False
 soundfonts = []
 
 
+def is_playing():
+    playing = False
+    for musician in musicians:
+        print(musician.playing)
+        playing = playing or musician.playing
+    return playing
+
+
 def load_soundfonts():
     global soundfonts
     default_soundfont_id = synth.sfload("static/sound/FluidR3_GM.sf2")
@@ -222,7 +230,7 @@ def state():
     response.set_header("Access-Control-Allow-Origin", "*")
     return {
         "musicians": list(map(lambda m: m.__json__(), musicians)),
-        "state": lsm.get_state().name,
+        "playing": is_playing(),  # lsm.get_state().name,
         "track": {
             "name": current_track,
             "type": current_track.split(".")[-1],
@@ -311,6 +319,7 @@ def __set_track(track: str):
 
 @app.get("/api/play")
 def play():
+    """
     if lsm.get_state() == lsm.State.STOPPED:
         for index, musician in enumerate(musicians):
             if musician.midi_out is None or isinstance(
@@ -335,24 +344,39 @@ def play():
             musician.unpause()
 
     lsm.update_state(lsm.State.PLAYING)
+    """
+    start_synth()
+    for musician in musicians:
+        musician.start()
     return state()
 
 
 @app.get("/api/pause")
 def pause():
+    stop_synth()
+    for musician in musicians:
+        musician.pause()
+    """
     lsm.update_state(lsm.State.PAUSED)
     for musician in musicians:
         musician.pause()
+    """
     return state()
 
 
 @app.get("/api/stop")
 def stop():
-
-    lsm.update_state(lsm.State.STOPPED)
     stop_synth()
     for musician in musicians:
         musician.stop()
+
+    """
+    lsm.update_state(lsm.State.STOPPED)
+    for musician in musicians:
+        musician.stop()
+        # musician.create_all()
+    lsm.update_state(lsm.State.STOPPED)
+    """
     return state()
 
 

@@ -4,29 +4,31 @@
 		"repetitions": 3,
 		"config": null,
 		"trim_end_eighths": 0,
-		"qpm": 175
-	},
-	{
-		"file": "dowds_to_hard.abc",
-		"repetitions": 1,
-		"config": null,
-		"trim_end_eighths": 0,
-		"qpm": 175
-	},
-	{
-		"file": "hardiman_3.abc",
-		"repetitions": 3,
-		"config": null,
-		"trim_end_eighths": 0,
-		"qpm": 175
+		"qpm": 174
 
 	},
 	{
-		"file": "The Hunter's Purse [Jig].abc",
-		"repetitions": 2,
+		"file": ".dowds_to_hard.abc",
+		"repetitions": 1,
 		"config": null,
-		"trim_end_eighths": 24,
-		"qpm": 175
+		"trim_end_eighths": 0,
+		"qpm": 174
+
+	},
+	{
+		"file": "Hardiman's Jig [Set Version].abc",
+		"repetitions": 3,
+		"config": null,
+		"trim_end_eighths": 0,
+		"qpm": 174
+
+	},
+	{
+		"file": "The Hunter's Purse [Jig - Set Version].abc",
+		"repetitions": 1,
+		"config": null,
+		"trim_end_eighths": 0,
+		"qpm": 174
 
 	},
 	{
@@ -34,15 +36,15 @@
 		"repetitions": 1,
 		"config": null,
 		"trim_end_eighths": 0,
-		"qpm": 224
+		"qpm": 232
 
 	},
 	{
 		"file": "The Hunter's Purse [Reel].abc",
-		"repetitions": 2,
+		"repetitions": 1,
 		"config": null,
 		"trim_end_eighths": 0,
-		"qpm": 233.333
+		"qpm": 232
 
 	}
 ]
