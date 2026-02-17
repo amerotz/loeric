@@ -40,6 +40,8 @@ sound_dir = Path(__file__).resolve().parent / "static" / "sound"
 # specific_configs_path = os.path.join(os.getcwd(), "static/webapp_configs")
 specific_configs_path = Path(__file__).resolve().parent / "static" / "webapp_configs"
 """
+_last_heartbeat = time.time()
+HEARTBEAT_TIMEOUT = 5  # seconds
 
 app = Bottle()
 
@@ -49,6 +51,21 @@ names = ["LOERIC"]
 synth = None  # , tinysoundfont.Synth()
 synth_is_running = False
 soundfonts = []
+
+
+def _monitor_browser():
+    while True:
+        time.sleep(2)
+        if time.time() - _last_heartbeat > HEARTBEAT_TIMEOUT:
+            print("Browser closed. Shutting down LOERIC...")
+            os._exit(0)
+
+
+@app.post("/api/heartbeat")
+def _heartbeat():
+    global _last_heartbeat
+    _last_heartbeat = time.time()
+    return {"status": "alive"}
 
 
 def _is_playing():
@@ -716,6 +733,8 @@ def start_server():
 
     if getattr(sys, "frozen", False):
         threading.Thread(target=_open_browser, daemon=True).start()
+
+    threading.Thread(target=_monitor_browser, daemon=True).start()
 
     run(app, host="localhost", port=8080, quiet=True)
     _stop_synth()

@@ -18,6 +18,11 @@
 	}
 	let poller = 0
 
+	setInterval(() => {
+	  fetch("/api/heartbeat", { method: "POST" });
+	}, 3000);
+
+
 	async function trackChange(event: Event) {
 		const select = event.target as HTMLSelectElement
 		await apiPut("track", {track: select.value})
