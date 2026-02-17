@@ -34,7 +34,7 @@ soundfonts = []
 def is_playing():
     playing = False
     for musician in musicians:
-        print(musician.playing)
+        # print(musician.playing)
         playing = playing or musician.playing
     return playing
 
@@ -150,7 +150,7 @@ def load_soundfonts():
 
 
 audio_device_index = 0
-tempo = 140
+tempo = 160
 repetitions = 2
 current_track = None
 filetypes = [".mid", ".abc", ".set"]

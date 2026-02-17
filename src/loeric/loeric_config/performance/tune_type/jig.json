@@ -56,7 +56,7 @@
 		"tempo_pattern": {
 			"recipe": {
 				"pattern": {
-					"mean":[1.14,0.72,1.14],
+					"mean":[1,0.9,1],
 					"std": [0.01, 0.01, 0.01],
 					"std_scale": 1,
 					"normalize": true,
