@@ -1096,7 +1096,7 @@ class Groover:
 
         available_notes = available_notes[index]
         available_notes = available_notes[
-            np.in1d(
+            np.isin(
                 np.round((12 + available_notes - harmony) % 12),
                 allowed_harmony,
             )

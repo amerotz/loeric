@@ -21,7 +21,7 @@ Features
 Installation
 ------------
 
-Create a virtual Python environment:
+Create a virtual Python environment with Python 3.13.7:
 
 ``python3 -m venv ~/loeric-env``
 
@@ -35,7 +35,11 @@ Install the library `portaudio`:
 
 ``sudo dnf install portaudio # fedora``
 
-``brew install portaudio #mac``
+``brew install portaudio # mac``
+
+Install requirements:
+
+``pip install -r requirements.txt``
 
 Build and install:
 
