@@ -22,7 +22,7 @@
 			// only append if value actually changed
 			const next = [...prev, control.value];
 			if (next.length > 60) next.shift(); // ~3s @ 50ms polling
-			controlHistories[control.control] = next; 
+			controlHistories[control.control] = next;
 		});
 	}
 
@@ -168,7 +168,14 @@
 				<span class="opacity-80">Choose how to interact with LOERIC (sliders, audio input, MIDI).</span>
 				<el-select onchange={inputChange}>
 					<button type="button" class="grid w-full cursor-default grid-cols-1 rounded-md bg-transparent py-1.5 pr-2 pl-3 text-left text-white">
-						<el-selectedcontent value="no_in" selected={musician.midiIn === "no_in"}>Mouse</el-selectedcontent>
+						<el-selectedcontent value="no_in" selected={musician.midiIn === "no_in"}>
+							<div class="flex gap-3 pr-6">
+								<div>
+									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 12.586 19 19"></path><path d="M3.688 3.037a.497.497 0 0 0-.651.651l6.5 15.999a.501.501 0 0 0 .947-.062l1.569-6.083a2 2 0 0 1 1.448-1.479l6.124-1.579a.5.5 0 0 0 .063-.947z"></path></svg>
+								</div>
+								<div class="text-m">Mouse</div>
+							</div>
+						</el-selectedcontent>
 					</button>
 					<el-options anchor="bottom start" popover class="max-h-110 w-(--button-width) overflow-auto rounded-md bg-gray-950 py-1 text-white shadow-lg [--anchor-gap:--spacing(1)] data-leave:transition data-leave:transition-discrete data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0">
 						<el-option value="no_in" class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">

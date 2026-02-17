@@ -1,11 +1,12 @@
-import threading
-import traceback
 import argparse
-import mido
-import pyaudio
-import time
-import numpy as np
 import faulthandler
+import threading
+import time
+import traceback
+
+import mido
+import numpy as np
+import pyaudio
 
 
 faulthandler.enable()

@@ -1,12 +1,12 @@
-import time
 import copy
 import threading
+import time
+
 import mido
 import numpy as np
 
-
-import loeric.tune as tu
 import loeric.loeric_utils as lu
+import loeric.tune as tu
 
 
 class Player:

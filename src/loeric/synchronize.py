@@ -1,16 +1,17 @@
-import mido
+import argparse
 import importlib.resources as ir
+import json
 import os
-import pandas as pd
-import numpy as np
+import random
 import re
 import threading
-import random
 import time
 import traceback
-import json
-import argparse
 from collections import defaultdict
+
+import mido
+import numpy as np
+import pandas as pd
 
 
 songpos_wait = 0

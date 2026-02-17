@@ -1,22 +1,19 @@
-import mido
-import os
-import jsonmerge
 import copy
-import random
+import importlib.resources as ir
 import json
+import os
+import random
 import threading
 import time
-import numpy as np
-import music21 as m21
-import importlib.resources as ir
-
 from collections import defaultdict
 from collections.abc import Callable
 
+import jsonmerge
+import mido
+import music21 as m21
+import numpy as np
 
-from loeric import tune as tu
-from loeric import contour as cnt
-from loeric import loeric_utils as lu
+from loeric import contour as cnt, loeric_utils as lu, tune as tu
 from loeric.loeric_config import loeric_config as lc
 
 

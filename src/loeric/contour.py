@@ -1,8 +1,7 @@
 import numpy as np
 from scipy.signal import savgol_filter
 
-from . import tune
-from . import loeric_utils as lu
+from . import loeric_utils as lu, tune
 
 
 class UncomputedContourError(Exception):

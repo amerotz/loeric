@@ -1,7 +1,9 @@
-import loeric.loeric_utils as lu
-import time
-import mido
 import argparse
+import time
+
+import mido
+
+import loeric.loeric_utils as lu
 
 
 def main() -> None:

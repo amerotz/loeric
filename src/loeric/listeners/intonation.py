@@ -1,9 +1,11 @@
-import sounddevice as sd
-import time
 import argparse
-import mido
+import time
+
 import aubio
+import mido
 import numpy as np
+import sounddevice as sd
+
 
 hop_size = None
 onsets = []

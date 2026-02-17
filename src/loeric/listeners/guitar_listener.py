@@ -1,9 +1,11 @@
-import loeric.loeric_utils as lu
-import mido
-import time
 import argparse
-import numpy as np
+import time
+
 import matplotlib.pyplot as plt
+import mido
+import numpy as np
+
+import loeric.loeric_utils as lu
 
 
 def main() -> None:

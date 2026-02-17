@@ -1,20 +1,19 @@
 import argparse
-import random
 import importlib.resources as ir
+import json
 import os
+import random
 import threading
 import time
-import mido
-import json
-import numpy as np
-
 from collections import defaultdict
 
+import mido
+import numpy as np
 
-import loeric.tune as tu
+import loeric.groover as gr
 import loeric.loeric_utils as lu
 import loeric.player as pl
-import loeric.groover as gr
+import loeric.tune as tu
 
 
 """

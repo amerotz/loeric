@@ -1,6 +1,7 @@
+import os
+
 import tinysoundfont
 from mido.ports import BaseOutput
-import os
 
 
 class SynthSound:

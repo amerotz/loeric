@@ -1,6 +1,7 @@
-from pythonosc.udp_client import SimpleUDPClient
 import argparse
+
 import mido
+from pythonosc.udp_client import SimpleUDPClient
 
 
 def main(args):

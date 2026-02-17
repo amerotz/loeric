@@ -1,14 +1,15 @@
-import json
 import copy
-import random
+import json
 import os
-import mido
+import random
 
-import numpy as np
-import muspy as mp
+import mido
 import music21 as m21
+import muspy as mp
+import numpy as np
 
 from . import loeric_utils as lu
+
 
 ############################# CONSTANTS #########################
 

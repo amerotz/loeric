@@ -1,10 +1,11 @@
 import argparse
 import threading
-import mido
 import time
 
+import mido
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
+
 
 sensor_min = 100000000
 sensor_max = -100000000

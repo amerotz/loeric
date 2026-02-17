@@ -1,12 +1,11 @@
-import pandas as pd
-import mido
 import argparse
-import time
 import threading
-from . import tune as tu
-from . import groover as gr
-from . import player as pl
-from . import loeric_utils as lu
+import time
+
+import mido
+import pandas as pd
+
+from . import groover as gr, loeric_utils as lu, player as pl, tune as tu
 
 
 def main():

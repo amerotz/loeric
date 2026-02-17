@@ -3,14 +3,15 @@ import os
 import threading
 from random import randint
 
-import pyaudio as pa
 import mido
-from mido.ports import BaseOutput, BaseInput, EchoPort
+import pyaudio as pa
+from mido.ports import BaseInput, BaseOutput, EchoPort
 
+import loeric.listeners.playalong as lp
+import loeric.loeric_utils as lu
 from loeric.groover import Groover
 from loeric.player import Player
-import loeric.loeric_utils as lu
-import loeric.listeners.playalong as lp
+
 
 faulthandler.enable()
 

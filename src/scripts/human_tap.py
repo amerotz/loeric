@@ -1,7 +1,9 @@
-import mido
 import threading
-import numpy as np
 import time
+
+import mido
+import numpy as np
+
 
 inport = mido.get_input_names()[2]
 outport = mido.get_output_names()[0]

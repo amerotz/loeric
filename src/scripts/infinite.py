@@ -1,9 +1,10 @@
+import argparse
 import os
 import random
-import argparse
+from collections import defaultdict
+
 from loeric.__main__ import main as loeric
 
-from collections import defaultdict
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--data-dir")

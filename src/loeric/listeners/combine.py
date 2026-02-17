@@ -1,7 +1,8 @@
+import argparse
 import threading
 import time
+
 import mido
-import argparse
 
 
 def main() -> None:

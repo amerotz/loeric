@@ -1,16 +1,17 @@
 import argparse
-import mido
-import threading
-import time
-import os
 import faulthandler
 import importlib.resources as ir
+import os
+import threading
+import time
 
+import mido
 
-from . import tune as tu
-from . import groover as gr
-from . import player as pl
-from . import loeric_utils as lu
+import loeric.groover as gr
+import loeric.loeric_utils as lu
+import loeric.player as pl
+import loeric.tune as tu
+
 from .server.server import start_server
 
 

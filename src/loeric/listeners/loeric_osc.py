@@ -1,7 +1,7 @@
 import argparse
-import numpy as np
-import mido
 
+import mido
+import numpy as np
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
 

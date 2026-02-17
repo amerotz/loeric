@@ -1,11 +1,12 @@
 import argparse
-import importlib.resources as ir
-import textwrap
 import copy
-import re
-import jsonmerge
+import importlib.resources as ir
 import json
 import os
+import re
+import textwrap
+
+import jsonmerge
 
 
 def merge_configs(original, new_config):

@@ -1,6 +1,8 @@
-import loeric.loeric_utils as lu
 import mido
 import numpy as np
+
+import loeric.loeric_utils as lu
+
 
 filename = "/home/marco/git/loeric-align/AMT/COMP_fiddle_reels_aisling_amt.mid"
 midi = mido.MidiFile(filename)

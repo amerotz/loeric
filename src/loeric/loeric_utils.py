@@ -1,9 +1,10 @@
-import mido
 import importlib.resources as ir
-import numpy as np
-import time
-import sys
 import pathlib
+import sys
+import time
+
+import mido
+import numpy as np
 
 from . import tune as tu
 

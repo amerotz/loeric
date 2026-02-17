@@ -1,8 +1,9 @@
 import argparse
-import numpy as np
-import mido
 import math
 import time
+
+import mido
+import numpy as np
 
 
 # generate a fake control signal

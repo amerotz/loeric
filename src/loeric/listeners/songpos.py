@@ -1,5 +1,6 @@
-import mido
 import argparse
+
+import mido
 
 
 def main():
