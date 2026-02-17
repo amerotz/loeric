@@ -1,6 +1,9 @@
 import json
 import os
 import sys
+import threading
+import time
+import webbrowser
 from pathlib import Path
 from typing import List
 
@@ -692,6 +695,12 @@ def _init_musician(track):
     _start_synth()
 
 
+def _open_browser():
+    # Wait a bit to ensure server is ready
+    time.sleep(1)
+    webbrowser.open("http://localhost:8080")
+
+
 def start_server():
     """Start the server by loading soundfonts, opening audio devices and initialising a musician."""
     global audio_device_index, synth
@@ -704,6 +713,9 @@ def start_server():
     if len(track_list) > 0:
         track = track_list[0]
         _init_musician(track)
+
+    if getattr(sys, "frozen", False):
+        threading.Thread(target=_open_browser, daemon=True).start()
 
     run(app, host="localhost", port=8080, quiet=True)
     _stop_synth()
