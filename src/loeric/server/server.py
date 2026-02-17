@@ -652,14 +652,6 @@ def _get_static_filepath(filepath):
     return static_file(filepath, root=str(FRONTEND_ROOT))
 
 
-@app.get("/favicon.ico")
-def _favicon():
-    path = FRONTEND_ROOT / "favicon.ico"
-    if path.exists():
-        return static_file("favicon.ico", root=str(FRONTEND_ROOT))
-    return "", 204
-
-
 @app.get("/api/add_musician")
 def _add_musician_api():
     _add_musician()
