@@ -183,9 +183,9 @@
 				{#if !data.playing}
 					<button class="material-symbols-outlined !text-5xl" onclick={() => {apiGet('play'); update_controls() }}> play_arrow </button>
 				{:else}
-					<!--<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('pause')}>
+					<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('pause')}>
 						pause
-					</button>-->
+					</button>
 					<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('stop')}>
 						stop
 					</button>

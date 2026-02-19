@@ -61,8 +61,13 @@ def sync_thread(
         elif msg.type == "songpos":
             print(f"Received JUMP {msg.pos}.")
             if groover.stopped.is_set():
-                groover.jump_to_pos(msg.pos)
-                player.set_song_time(groover._tune.position_time(msg.pos))
+                if msg.pos > groover._tune.maximum_songpos:
+                    print(
+                        f"Ignoring JUMP because position {msg.pos} is greater than maximum position {groover._tune.maximum_songpos}."
+                    )
+                else:
+                    groover.jump_to_pos(msg.pos)
+                    player.set_song_time(groover._tune.position_time(msg.pos))
             else:
                 print("Ignoring JUMP because playback is active.")
         elif msg.type == "start":

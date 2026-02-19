@@ -132,9 +132,10 @@ class Player:
 
     def wake_me_up_at(self, time):
         self._notify_song_time = time
-        self.has_reached_wake_time.clear()
 
     def set_song_time(self, value):
+        if value is None:
+            return
         self._song_time = tu.TimeDelta(eighth_duration=value)
         self._notify_song_time = tu.TimeDelta(eighth_duration=value)
 

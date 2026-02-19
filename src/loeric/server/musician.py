@@ -68,6 +68,38 @@ class Musician:
         self._transpose = 0
         self.playing = False
 
+        self._stop_event = threading.Event()
+        self._pause_event = threading.Event()
+        self._pause_event.set()  # start unpaused
+
+        self.thread = None
+        self.player_t = None
+
+    def player_loop(self):
+        try:
+            while not self._stop_event.is_set():
+
+                # If paused → block indefinitely
+                while (
+                    self.current_groover.stopped.is_set()
+                    and not self._stop_event.is_set()
+                ):
+                    self.player.reset()
+                    self.current_groover.playback_resumed.wait()
+
+                    # If stop happened while paused → exit
+                    if self._stop_event.is_set():
+                        break
+
+                    self.player.init_playback()
+
+                # Normal playback
+                self.player.play_next()
+
+        finally:
+            print("[INFO]\tPlayer thread terminated.")
+
+    """
     def player_loop(self):
 
         # _play_event.wait()
@@ -84,6 +116,7 @@ class Musician:
             self.player.play_next()
         self._all_dead.release()
         print("[INFO]\tPlayer thread terminated.")
+    """
 
     def set_input_audio_device(self, device_index):
         self._device_index = device_index
@@ -320,6 +353,28 @@ class Musician:
         self.player.set_midi_out(out)
 
     def stop(self):
+        if self._stop_event.is_set():
+            return
+
+        self._stop_event.set()
+
+        # Force-unblock pause state
+        self.current_groover.stopped.clear()
+        self.current_groover.playback_resumed.set()
+
+        # Unblock player timing wait if needed
+        self.player.has_reached_wake_time.set()
+
+        if self.thread and self.thread.is_alive():
+            self.thread.join()
+
+        if self.player_t and self.player_t.is_alive():
+            self.player_t.join()
+
+        self.playing = False
+
+    """
+    def stop(self):
         # kills both processes
         self._must_die.set()
 
@@ -333,13 +388,28 @@ class Musician:
 
         self._all_dead.release()
         self._all_dead.release()
+    """
 
+    def pause(self):
+        if not self.playing:
+            return
+
+        self.current_groover.playback_resumed.clear()
+        self.current_groover.stopped.set()
+
+        if self._midi_out:
+            self._midi_out.panic()
+
+        self.playing = False
+
+    """
     def pause(self):
         self.current_groover.playback_resumed.clear()
         self.current_groover.stopped.set()
         if self._midi_out is not None:
             self._midi_out.panic()
         self.playing = False
+    """
 
     def stop_threads(self):
         if self._listener_thread is not None:
@@ -348,6 +418,17 @@ class Musician:
             self._control_thread.stop = True
 
     def ready(self) -> None:
+        if self.thread and self.thread.is_alive():
+            return
+
+        self._stop_event.clear()
+        self._pause_event.set()
+
+        self.thread = threading.Thread(target=self._play, daemon=True)
+        self.player_t = threading.Thread(target=self.player_loop, daemon=True)
+
+    """
+    def ready(self) -> None:
         # make sure that groover and player
         # are stopped
         self.pause()
@@ -355,7 +436,29 @@ class Musician:
         # create threads
         self.thread = threading.Thread(target=self._play)
         self.player_t = threading.Thread(target=self.player_loop, args=[])
+    """
 
+    def start(self) -> None:
+        if self.playing:
+            return
+
+        if not self.thread or not self.thread.is_alive():
+            self.ready()
+
+            self.current_groover.jump_to_pos(0)
+            self.player.set_song_time(self.current_groover._tune.position_time(0))
+            self._tune_index = 0
+
+            self.thread.start()
+            self.player_t.start()
+
+        self._pause_event.set()
+        self.current_groover.stopped.clear()
+        self.current_groover.playback_resumed.set()
+
+        self.playing = True
+
+    """
     def start(self) -> None:
 
         # stop groover and player
@@ -376,6 +479,7 @@ class Musician:
         self.current_groover.playback_resumed.set()
 
         self.playing = True
+    """
 
     def _play(
         self,

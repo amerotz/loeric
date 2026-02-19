@@ -529,6 +529,8 @@ class Groover:
                 # advance contours
                 self.advance_contours()
 
+            print(self._note_index, self._contours["velocity"]._index)
+
             # update performance time
             self._performance_time = event.time
 
@@ -545,10 +547,11 @@ class Groover:
             if pos > self._tune.maximum_songpos:
                 if self._verbose > 0:
                     print(
-                        f"Cannot jump to position {pos} with max pos {self._tune.maximum_songpos}"
+                        f"[GRVR]\tCannot jump to position {pos} with max pos {self._tune.maximum_songpos}"
                     )
                 return
             self._note_index, contour_index = self._tune.index_map[pos]
+            print(self._note_index, contour_index)
             # update performance time
             # self._performance_time = self._tune.duration_map[pos]
             # update all contours
@@ -1202,7 +1205,7 @@ class Groover:
         pitches = pitches[abs(pitches - last_note) < 7]
 
         # select suitable pitches (e.g. any root, third, fifth within range)
-        pitches = pitches[np.in1d((12 + pitches - root) % 12, chord_pitches)]
+        pitches = pitches[np.isin((12 + pitches - root) % 12, chord_pitches)]
 
         if len(pitches) == 0:
             pitches = np.append(pitches, root + (high // 12 + low // 12) / 2)

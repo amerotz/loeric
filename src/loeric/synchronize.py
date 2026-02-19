@@ -1,7 +1,6 @@
 import argparse
 import importlib.resources as ir
 import json
-import os
 import random
 import re
 import threading
@@ -439,7 +438,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
-        default=ir.files("loeric_config.shell").joinpath("config.json"),
+        default=ir.files("loeric.loeric_config.shell").joinpath("config.json"),
         type=str,
     )
     args = parser.parse_args()

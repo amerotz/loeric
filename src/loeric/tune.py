@@ -970,16 +970,7 @@ class Tune:
 
         self._annotated_score.sort(key=lambda x: x.time)
 
-        # create index map to jump
-        self.index_map = {}
-        contour_index = -1
-        for i, el in enumerate(self._annotated_score):
-
-            if isinstance(el, SongPosition):
-                self.index_map[el.position] = (i, contour_index)
-
-            if el.is_note:
-                contour_index += 1
+        self.create_index_map()
 
         if self._verbose > 0:
             print(f"[INFO]\tPlaying:\t\t{os.path.basename(filename)}")
@@ -989,6 +980,21 @@ class Tune:
             print(
                 f"[INFO]\tKey:\t\t\t{self._key_signatures[0].root} {self._key_signatures[0].mode}"
             )
+
+    def create_index_map(self):
+        # create index map to jump
+        self.index_map = {}
+        contour_index = -1
+        for i, el in enumerate(self._annotated_score):
+
+            print(i, el)
+            if isinstance(el, SongPosition):
+                self.index_map[el.position] = (i, contour_index)
+                print(i, contour_index)
+            print()
+
+            if el.is_note:
+                contour_index += 1
 
     def ticks_to_eighth_notes(self, duration: int, ticks_per_quarter: int):
         return (
@@ -1122,6 +1128,9 @@ class Tune:
         calculated_chords.extend(self._annotated_score)
         calculated_chords.sort(key=lambda x: x.time)
         self._annotated_score = calculated_chords
+
+        # update map
+        self.create_index_map()
 
     @property
     def time_signature(self):

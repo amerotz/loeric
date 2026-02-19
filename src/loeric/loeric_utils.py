@@ -68,22 +68,19 @@ def play(
     )
 
     average_loop_time = 0
-    iterations = 0
     next_event_time = 0
 
     # iterate over messages
     while loop_condition():
 
-        iterations += 1
-
-        if groover.stopped.is_set():
-            while groover.stopped.is_set():
-                groover.playback_resumed.wait()
+        while groover.stopped.is_set() and loop_condition():
+            groover.playback_resumed.wait()
 
         # start measuring loop
         loop_start_time = time.time()
         original_message = groover.next_event()
 
+        # no more messages to perform, exit
         if original_message is None:
             player.wake_me_up_at(next_event_time)
             groover.reset()
@@ -151,9 +148,6 @@ def play(
             average_loop_time / groover._eighth_duration_seconds
         )
 
-        if iterations == 0:
-            player.wake_me_up_at(next_event_time)
-
         if (
             average_loop_time > message_duration_seconds
             and original_message.duration != 0
@@ -165,7 +159,9 @@ def play(
 
         # wake up slightly before next note
         player.wake_me_up_at(time_to_think)
-        player.has_reached_wake_time.wait()
+        while loop_condition() and not player.has_reached_wake_time.is_set():
+            player.has_reached_wake_time.wait()
+        player.has_reached_wake_time.clear()
 
     if groover.do_end_note:
         groover.reset()
@@ -173,11 +169,14 @@ def play(
         end_notes = groover.get_end_notes()
         player.add_notes(end_notes)
 
-        player.wake_me_up_at(end_notes[-1].time + end_notes[-1].duration)
+        final_wake_time = end_notes[-1].time + end_notes[-1].duration
     else:
-        player.wake_me_up_at(groover.performance_time)
+        final_wake_time = groover.performance_time
 
-    player.has_reached_wake_time.wait()
+    player.wake_me_up_at(final_wake_time)
+    while loop_condition() and not player.has_reached_wake_time.is_set():
+        player.has_reached_wake_time.wait()
+    player.has_reached_wake_time.clear()
 
 
 # 0 = major
