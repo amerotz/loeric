@@ -19,35 +19,6 @@ faulthandler.enable()
 # bad code goes here
 
 
-"""
-class State(Enum):
-    STOPPED = 0
-    PAUSED = 1
-    PLAYING = 2
-
-
-_state = State.STOPPED
-_lock = threading.Lock()
-_play_event = threading.Event()
-
-
-def get_state() -> State:
-    return _state
-
-
-def update_state(state: State):
-    global _state
-    _lock.acquire()
-    _state = state
-    _lock.release()
-    if state == State.PLAYING:
-        _play_event.set()
-    else:
-        _play_event.clear()
-
-"""
-
-
 class Control:
     def __init__(self, name: str, control: int, value: int):
         self.name = name
@@ -75,6 +46,9 @@ class Musician:
         self.sync = EchoPort(f"LOERIC Sync #{loeric_id}#")
         self.seed = randint(0, 1000000)
         self.thread = threading.Thread()
+        self.player_t = threading.Thread()
+        self._must_die = threading.Event()
+        self._all_dead = threading.Semaphore(value=2)
 
         self._intensity_control = 49
         self._human_impact_control = 50
@@ -91,29 +65,25 @@ class Musician:
         self._controls = []
         self._tempos = []
         self._tune_index = 0
+        self._transpose = 0
         self.playing = False
 
     def player_loop(self):
 
         # _play_event.wait()
-        while True:
+        self._all_dead.acquire()
+        while not self._must_die.is_set():
 
-            while self._groovers[self._tune_index].stopped.is_set():
+            while self.current_groover.stopped.is_set():
                 self.player.reset()
                 # print("player waiting play")
-                self._groovers[self._tune_index].playback_resumed.wait()
+                self.current_groover.playback_resumed.wait()
                 # print("player awake")
                 self.player.init_playback()
 
-            """
-            if _state == State.STOPPED:
-                self.player.reset()
-                break
-            if not self.thread.is_alive():
-                break
-            """
-
             self.player.play_next()
+        self._all_dead.release()
+        print("[INFO]\tPlayer thread terminated.")
 
     def set_input_audio_device(self, device_index):
         self._device_index = device_index
@@ -150,15 +120,10 @@ class Musician:
         )
 
         def callback(perc):
-            self._groovers[self._tune_index].set_control_value(
-                self._intensity_control, perc
-            )
-            for i in range(len(self._controls[self._tune_index])):
-                if (
-                    self._controls[self._tune_index][i]["control"]
-                    == self._intensity_control
-                ):
-                    self._controls[self._tune_index][i]["value"] = perc
+            self.current_groover.set_control_value(self._intensity_control, perc)
+            for i in range(len(self.current_controls)):
+                if self.current_controls[i]["control"] == self._intensity_control:
+                    self.current_controls[i]["value"] = perc
 
         p = threading.Thread(
             target=self._control_thread.send_control_loop,
@@ -171,8 +136,8 @@ class Musician:
     @property
     def midi_channels(self):
         return [
-            self._groovers[self._tune_index]._midi_channel,
-            *self._groovers[self._tune_index]._drone_midi_channels,
+            self.current_groover._midi_channel,
+            *self.current_groover._drone_midi_channels,
         ]
 
     @property
@@ -213,10 +178,12 @@ class Musician:
 
         self._listener_thread = None
         self._control_thread = None
+        self._transpose = 0
         ################### configs ###########################
 
         self._groovers = []
         self._controls = []
+        self._groover_transposes = []
         self._tune_index = 0
         for i, tune in enumerate(self._tunes):
 
@@ -249,6 +216,7 @@ class Musician:
                 verbose=3,
             )
             self._groovers.append(groover)
+            self._groover_transposes.append(groover.transpose)
             ################### controls ###########################
 
             self._controls.append(
@@ -278,30 +246,25 @@ class Musician:
 
             def callback(msg):
                 if msg.is_cc():
-                    for i in range(len(self._controls[self._tune_index])):
-                        if (
-                            self._controls[self._tune_index][i]["control"]
-                            == msg.control
-                        ):
-                            self._controls[self._tune_index][i]["value"] = (
-                                msg.value / 127
-                            )
+                    for i in range(len(self.current_controls)):
+                        if self.current_controls[i]["control"] == msg.control:
+                            self.current_controls[i]["value"] = msg.value / 127
 
                 callback.handle_midi(msg)
 
-            callback.handle_midi = self._groovers[self._tune_index].check_midi_control()
+            callback.handle_midi = self.current_groover.check_midi_control()
             self._midi_in.callback = callback
 
         ################### player ###########################
 
         # create player
         self.player = Player(
-            tempo=self._groovers[self._tune_index].tempo,
-            key_signature=self._tunes[self._tune_index].key_signature,
-            time_signature=self._tunes[self._tune_index].time_signature,
+            tempo=self.current_groover.tempo,
+            key_signature=self.current_tune.key_signature,
+            time_signature=self.current_tune.time_signature,
             save=False,
             midi_out=midi_output,
-            song_start_time=self._tunes[self._tune_index].times[0].eighth_duration,
+            song_start_time=self.current_tune.times[0].eighth_duration,
         )
 
         # create grover and player threads
@@ -309,12 +272,20 @@ class Musician:
         self.ready()
 
     @property
-    def groover(self):
+    def current_groover(self):
         return self._groovers[self._tune_index]
 
     @property
-    def tune(self):
+    def current_tune(self):
         return self._tunes[self._tune_index]
+
+    @property
+    def current_controls(self):
+        return self._controls[self._tune_index]
+
+    @property
+    def current_transpose(self):
+        return self._groover_transposes[self._tune_index]
 
     @property
     def midi_in(self):
@@ -329,13 +300,13 @@ class Musician:
 
         def callback(msg):
             if msg.is_cc():
-                for i in range(len(self._controls[self._tune_index])):
-                    if self._controls[self._tune_index][i]["control"] == msg.control:
-                        self._controls[self._tune_index][i]["value"] = msg.value / 127
+                for i in range(len(self.current_controls)):
+                    if self.current_controls[i]["control"] == msg.control:
+                        self.current_controls[i]["value"] = msg.value / 127
 
             callback.handle_midi(msg)
 
-        callback.handle_midi = self._groovers[self._tune_index].check_midi_control()
+        callback.handle_midi = self.current_groover.check_midi_control()
 
         self._midi_in.callback = callback
 
@@ -349,27 +320,23 @@ class Musician:
         self.player.set_midi_out(out)
 
     def stop(self):
-        # stop groover and player
-        self.pause()
+        # kills both processes
+        self._must_die.set()
 
-        # reset their position
-        self._groovers[self._tune_index].jump_to_pos(0)
-        self.player.set_song_time(
-            self._groovers[self._tune_index]._tune.position_time(0)
-        )
-        """
-        self.pause()
-        self._groovers[self._tune_index].jump_to_pos(0)
-        if self.player is not None:
-            self.player.set_song_time(
-                self._groovers[self._tune_index]._tune.position_time(0)
-            )
-        # update_state(State.STOPPED)
-        """
+        self.current_groover.stopped.clear()
+        all_dead_counter = 0
+        while all_dead_counter < 2:
+            self.player.has_reached_wake_time.set()
+            self.current_groover.playback_resumed.set()
+            self._all_dead.acquire()
+            all_dead_counter += 1
+
+        self._all_dead.release()
+        self._all_dead.release()
 
     def pause(self):
-        self._groovers[self._tune_index].playback_resumed.clear()
-        self._groovers[self._tune_index].stopped.set()
+        self.current_groover.playback_resumed.clear()
+        self.current_groover.stopped.set()
         if self._midi_out is not None:
             self._midi_out.panic()
         self.playing = False
@@ -381,23 +348,22 @@ class Musician:
             self._control_thread.stop = True
 
     def ready(self) -> None:
-        """
-        self.unpause()
-        if _state == State.STOPPED:
-            self.thread = threading.Thread(target=self.__play)
-            self.thread.start()
-
-            self.player_t = threading.Thread(target=self.player_loop, args=[])
-            self.player_t.start()
-        """
         # make sure that groover and player
         # are stopped
-        self._groovers[self._tune_index].stopped.set()
-        self._groovers[self._tune_index].playback_resumed.clear()
+        self.pause()
 
         # create threads
         self.thread = threading.Thread(target=self._play)
         self.player_t = threading.Thread(target=self.player_loop, args=[])
+
+    def start(self) -> None:
+
+        # stop groover and player
+        self._must_die.clear()
+        self.ready()
+        self.current_groover.jump_to_pos(0)
+        self.player.set_song_time(self.current_groover._tune.position_time(0))
+        self._tune_index = 0
 
         # start threads
         # groover and player will stop
@@ -405,10 +371,9 @@ class Musician:
         self.thread.start()
         self.player_t.start()
 
-    def start(self) -> None:
         # unstop the groover and player
-        self._groovers[self._tune_index].stopped.clear()
-        self._groovers[self._tune_index].playback_resumed.set()
+        self.current_groover.stopped.clear()
+        self.current_groover.playback_resumed.set()
 
         self.playing = True
 
@@ -424,6 +389,7 @@ class Musician:
             :param sync_port_out: the MIDI port for synchronization
             :param kwargs: the performance arguments
             """
+            self._all_dead.acquire()
 
             int_value = 0.5
             hi_value = 0.5
@@ -431,21 +397,15 @@ class Musician:
             if self._midi_in is None and self._device_index is None:
                 hi_value = 0
 
-            for i in range(len(self._controls[self._tune_index])):
-                if (
-                    self._controls[self._tune_index][i]["control"]
-                    == self._intensity_control
-                ):
-                    self._controls[self._tune_index][i]["value"] = int_value
-                    self._groovers[self._tune_index].set_control_value(
+            for i in range(len(self.current_controls)):
+                if self.current_controls[i]["control"] == self._intensity_control:
+                    self.current_controls[i]["value"] = int_value
+                    self.current_groover.set_control_value(
                         self._intensity_control, int_value
                     )
-                elif (
-                    self._controls[self._tune_index][i]["control"]
-                    == self._human_impact_control
-                ):
-                    self._controls[self._tune_index][i]["value"] = hi_value
-                    self._groovers[self._tune_index].set_control_value(
+                elif self.current_controls[i]["control"] == self._human_impact_control:
+                    self.current_controls[i]["value"] = hi_value
+                    self.current_groover.set_control_value(
                         self._human_impact_control, hi_value
                     )
 
@@ -456,11 +416,11 @@ class Musician:
             for i in range(len(self._tunes)):
 
                 self._tune_index = i
-                self.tempo = self._groovers[self._tune_index]
 
                 args = {"verbose": True}
                 lu.play(
-                    groover=self._groovers[self._tune_index],
+                    loop_condition=lambda: not self._must_die.is_set(),
+                    groover=self.current_groover,
                     player=self.player,
                     note_callback=None,
                     songpos_callback=None,
@@ -468,22 +428,22 @@ class Musician:
                     **args,
                 )
 
-            # update_state(State.STOPPED)
-
-            while self.player_t.is_alive():
-                self.player_t.join(1)
-
-            print("Player thread terminated.")
+                # update_state(State.STOPPED)
 
         except Exception as e:
             # stop sync thread
             # update_state(State.STOPPED)
-            print("Player thread terminated.")
             raise e
+        finally:
+            self._must_die.set()
+            self.playing = False
+            self._all_dead.release()
+            print("[INFO]\tGroover thread terminated.")
 
     def set_transpose(self, semitones):
+        self._transpose = semitones
         for i in range(len(self._groovers)):
-            self._groovers[i].set_transpose(semitones)
+            self._groovers[i].transpose = self.current_transpose + semitones
 
     def set_control_value(self, control, value):
         for i in range(len(self._groovers)):
@@ -506,15 +466,9 @@ class Musician:
             "midiIn": midi_in,
             "audioIn": f"audioIn:{self._device_index}",
             "instrument": self.instrument,
-            "controls": self._controls[self._tune_index],
-            "droning": self._groovers[self._tune_index]._config["drone"]["active"],
-            "slow_start": self._groovers[self._tune_index]._config["tempo_control"][
-                "slow_start"
-            ],
-            "slow_end": self._groovers[self._tune_index]._config["tempo_control"][
-                "slow_end"
-            ],
-            "transpose": self._groovers[self._tune_index]._config["values"][
-                "transpose"
-            ],
+            "controls": self.current_controls,
+            "droning": self.current_groover._config["drone"]["active"],
+            "slow_start": self.current_groover._config["tempo_control"]["slow_start"],
+            "slow_end": self.current_groover._config["tempo_control"]["slow_end"],
+            "transpose": self._transpose,
         }

@@ -1,31 +1,20 @@
 <script lang="ts">
 	import type {Musician, Options} from "$lib/types";
 	import JSONEditorBar from "./JSONEditorBar.svelte";
-	import Graph from "./Graph.svelte";
 
 
 	export let musician: Musician
 	export let options: Options
 	export let apiPut: (action: string, data: any) => Promise<void> = async (_1, _2) => {}
 	export let apiUpload: (action: string, form: FormData) => Promise<void> = async (_1, _2) => {}
-	export let droning = musician.droning
-	export let slow_start = musician.slow_start
-	export let slow_end = musician.slow_end
 	export let transpose = musician.transpose
+	export let control_values = {}
 
-	let controlHistories: Record<string, number[]> = {};
+	$: transpose = musician.transpose
 
-	$: if (musician?.controls) {
-		musician.controls.forEach(control => {
-			const prev = controlHistories[control.control] || [];
-
-			// only append if value actually changed
-			const next = [...prev, control.value];
-			if (next.length > 60) next.shift(); // ~3s @ 50ms polling
-			controlHistories[control.control] = next;
-		});
-	}
-
+	$: musician.controls.forEach(c => {
+		control_values[c.name] = c.value
+	});
 
 	async function inputChange(event: Event) {
 		const select = event.target as HTMLSelectElement
@@ -42,15 +31,27 @@
 		await apiPut("instrument", {id: musician.id, instrument: select.value})
 	}
 
-	async function droningChange(event: Event) {
-		await apiPut("drones", {id: musician.id, drones: droning})
+	async function droningChange() {
+		await apiPut("droning", {
+			id: musician.id,
+			droning: musician.droning
+		})
 	}
-	async function startChange(event: Event) {
-		await apiPut("slow_start", {id: musician.id, slow_start: slow_start})
+
+	async function slowStartChange() {
+		await apiPut("slow_start", {
+			id: musician.id,
+			slow_start: musician.slow_start
+		})
 	}
-	async function endChange(event: Event) {
-		await apiPut("slow_end", {id: musician.id, slow_end: slow_end})
+
+	async function slowEndChange() {
+		await apiPut("slow_end", {
+			id: musician.id,
+			slow_end: musician.slow_end
+		})
 	}
+
 	async function transposeChange(event: Event) {
 		await apiPut("transpose", {id: musician.id, transpose: transpose})
 	}
@@ -107,30 +108,33 @@
 		<div class="bg-gray-700 rounded-2xl w-2/3 ">
 			<!--<JSONEditorBar json={musician.config} onUpload={uploadConfig}></JSONEditorBar>-->
 			<div class="flex flex-col justify-between p-5 gap-3">
-				<label class="flex flex-col">
-					<span class="opacity-60 font-bold">INSTRUMENT</span>
-					<span class="opacity-80">Change LOERIC's sound and instrument model.</span>
-					<select class="" onchange={instrumentChange}>
-						{#each options.instruments as instrument}
-							<option value={instrument} selected={musician.instrument === instrument}>{instrument}</option>
-						{/each}
-					</select>
-				</label>
+			<label class="flex flex-col">
+				<span class="opacity-60 font-bold">INSTRUMENT</span>
+				<span class="opacity-80">Change LOERIC's sound and instrument model.</span>
+
+				<select class="" bind:value={musician.instrument} onchange={instrumentChange}>
+					{#each options.instruments as instrument}
+						<option value={instrument}>
+							{instrument}
+						</option>
+					{/each}
+				</select>
+			</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<label class="flex gap-3 justify-between">
 					<div class="flex flex-col">
 						<span class="opacity-60 font-bold">DRONES</span>
 						<span class="opacity-80">Toggle LOERIC's accompanying system.</span>
 					</div>
-					<input class="col-span-1" type="checkbox" bind:checked={droning} onchange={droningChange}>
+					<input class="col-span-1" type="checkbox" bind:checked={musician.droning} onchange={() => apiPut("drones", { id: musician.id, drones: musician.droning })} />
 				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<label class="flex gap-3 justify-between">
-					<div class="flex flex-col">
-						<span class="opacity-60 font-bold ">TRANSPOSE</span>
-						<span class="opacity-80">Transpose LOERIC's performance (semitones).</span>
-					</div>
-					<input class="col-span-1" type="number" onchange={transposeChange} bind:value={transpose} min="-12" max="12"/>
+				<div class="flex flex-col">
+					<span class="opacity-60 font-bold">TRANSPOSE</span>
+					<span class="opacity-80">Transpose LOERIC's performance (semitones).</span>
+				  </div>
+				  <input class="col-span-1" type="number" min="-12" max="12" bind:value={transpose} onchange={transposeChange}/>
 				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<label class="flex gap-3 justify-between">
@@ -138,7 +142,7 @@
 						<span class="opacity-60 font-bold ">SLOW START</span>
 						<span class="opacity-80">Build up speed to selected tempo at performance start.</span>
 					</div>
-					<input class="col-span-1"type="checkbox" bind:checked={slow_start} onchange={startChange}>
+					<input class="col-span-1" type="checkbox" bind:checked={musician.slow_start} onchange={slowStartChange} />
 				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<label class="flex gap-3 justify-between">
@@ -146,7 +150,8 @@
 						<span class="opacity-60 font-bold ">SLOW END</span>
 						<span class="opacity-80">Slow down from selected tempo at performance end.</span>
 					</div>
-					<input class="col-span-1"type="checkbox" bind:checked={slow_end} onchange={endChange}>
+					<input class="col-span-1" type="checkbox" bind:checked={musician.slow_end} onchange={slowEndChange} />
+
 				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<label class="flex flex-col justify-between">
@@ -222,7 +227,9 @@
 					{#each musician.controls as control}
 						<label class="flex flex-col w-24 gap-5">
 							<span class="text-center h-12">{control.name}</span>
-							<input class="place-self-center" type="range" step="0.01" max="1" min="0" data-control={control.control} value={control.value} onchange={controlChange}/>
+							<input class="place-self-center" type="range" step="0.01" max="1" min="0"
+							data-control={control.control}
+							bind:value={control_values[control.name]} oninput={controlChange}/>
 						</label>
 					{/each}
 				</div>

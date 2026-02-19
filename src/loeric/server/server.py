@@ -20,6 +20,8 @@ import loeric.server.synthout as lss
 import loeric.tune as tu
 
 
+PORT = int(os.getenv("LOERIC_WEBAPP_PORT", 8080))
+
 if getattr(sys, "frozen", False):
     BASE_DIR = Path(sys._MEIPASS)
 else:
@@ -33,15 +35,8 @@ SPECIFIC_CONFIGS_PATH = STATIC_ROOT / "webapp_configs"
 SOUND_ROOT = STATIC_ROOT / "sound"
 FRONTEND_ROOT = STATIC_ROOT / "site"
 
-"""
-# track_dir = os.path.join(os.getcwd(), "static/midi")
-track_dir = Path(__file__).resolve().parent / "static" / "midi"
-sound_dir = Path(__file__).resolve().parent / "static" / "sound"
-# specific_configs_path = os.path.join(os.getcwd(), "static/webapp_configs")
-specific_configs_path = Path(__file__).resolve().parent / "static" / "webapp_configs"
-"""
 _last_heartbeat = time.time()
-HEARTBEAT_TIMEOUT = 5  # seconds
+HEARTBEAT_TIMEOUT = 6  # seconds
 
 app = Bottle()
 
@@ -271,11 +266,11 @@ def _state():
         "track": {
             "name": current_track,
             "type": current_track.split(".")[-1],
-            "time": f"{musicians[0].tune.time_signature.numerator}/{musicians[0].tune.time_signature.denominator}",
-            "config": musicians[0].tune.get_config(),
-            "key": _key_to_str(musicians[0].tune.key_signature),
-            "tempo": musicians[0].groover.tempo.qpm,
-            "repeats": musicians[0].tune.repeats,
+            "time": f"{musicians[0].current_tune.time_signature.numerator}/{musicians[0].current_tune.time_signature.denominator}",
+            "config": musicians[0].current_tune.get_config(),
+            "key": _key_to_str(musicians[0].current_tune.key_signature),
+            "tempo": musicians[0].current_groover.tempo.qpm,
+            "repeats": musicians[0].current_tune.repeats,
         },
         "options": {
             "inputs": mido.get_input_names(),
@@ -287,6 +282,15 @@ def _state():
             "audio_outputs": _list_audio_outputs(),
             "selected_audio_out": audio_device_index,
         },
+    }
+
+
+@app.get("/api/controls")
+def _controls():
+    response.set_header("Access-Control-Allow-Origin", "*")
+    return {
+        "playing": _is_playing(),
+        "musicians": {m.id: m.current_controls for m in musicians},
     }
 
 
@@ -369,7 +373,7 @@ def _play():
                 musician.midi_out, lss.SynthOutput
             ):
                 synth.program_select(
-                    musician.groover._midi_channel,
+                    musician.current_groover._midi_channel,
                     soundfonts[musician.instrument].soundfont_id,
                     0,
                     soundfonts[musician.instrument].program,
@@ -409,6 +413,8 @@ def _pause():
 
 @app.get("/api/stop")
 def _stop():
+    if not _is_playing():
+        return _state()
     _stop_synth()
     for musician in musicians:
         musician.stop()
@@ -522,7 +528,7 @@ def _set_drones():
     musician_id = request.forms.id
     for musician in musicians:
         if musician.id == musician_id:
-            musician.groover.set_droning(value)
+            musician.current_groover.set_droning(value)
 
     return _state()
 
@@ -674,7 +680,9 @@ def _get_static_filepath(filepath):
 
 @app.get("/api/add_musician")
 def _add_musician_api():
+    _stop()
     _add_musician()
+    __set_track(current_track)
     return _state()
 
 
@@ -715,7 +723,7 @@ def _init_musician(track):
 def _open_browser():
     # Wait a bit to ensure server is ready
     time.sleep(1)
-    webbrowser.open("http://localhost:8080")
+    webbrowser.open(f"http://localhost:{PORT}")
 
 
 def start_server():
@@ -736,5 +744,6 @@ def start_server():
 
     threading.Thread(target=_monitor_browser, daemon=True).start()
 
-    run(app, host="localhost", port=8080, quiet=True)
+    run(app, host="localhost", port=PORT, quiet=True)
+    print("Lol")
     _stop_synth()

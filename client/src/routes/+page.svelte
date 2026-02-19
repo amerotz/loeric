@@ -2,26 +2,61 @@
 	import FileUpload from "./FileUpload.svelte";
 	import JSONEditorBar from "./JSONEditorBar.svelte";
     //import {LoericPlayingState, type LoericState} from "$lib/types";
+	import { onMount, onDestroy } from "svelte";
 	import {type LoericState} from "$lib/types";
-	import {onMount} from "svelte"
 	import Musician from "./Musician.svelte";
 
 	let data: LoericState
+	let controls = {}
 
-	let base = "http://localhost:8080"
 
-	onMount(refresh)
+	let heartbeat: ReturnType<typeof setInterval>;
+
+
+	onMount(() => {
+		refresh();
+		heartbeat = setInterval(() => {
+			fetch("/api/heartbeat", { method: "POST" });
+		}, 3000);
+	});
+
+	onDestroy(() => {
+		clearInterval(heartbeat);
+	});
+
 
 	async function refresh() {
 		await apiGet('state')
-		console.log("a")
 	}
+
+	async function update_controls() {
+		try {
+			const response = await fetch("/api/controls");
+
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}`);
+			}
+
+			controls = await response.json();
+			Object.keys(controls.musicians).forEach(c => {
+				for (const m in data.musicians) {
+					if (c == data.musicians[m].id) {
+						data.musicians[m].controls = controls.musicians[c]
+						break
+					}
+				}
+			})
+			data.playing = controls.playing
+
+			if (poller) clearTimeout(poller);
+			if (controls.playing) poller = setTimeout(update_controls, 50);
+
+		} catch (err) {
+			console.error("API error:", err);
+		}
+	}
+
 	let poller = 0
-
-	setInterval(() => {
-	  fetch("/api/heartbeat", { method: "POST" });
-	}, 3000);
-
 
 	async function trackChange(event: Event) {
 		const select = event.target as HTMLSelectElement
@@ -29,26 +64,33 @@
 		await apiGet("state")
 	}
 
-	async function apiPut(call: string, data: any) {
-		const response = await fetch(base + "/api/" + call, {
+	async function apiPut(call: string, payload: any) {
+		const response = await fetch("/api/" + call, {
 			method: 'PUT',
 			headers: {"Content-Type": "application/x-www-form-urlencoded"},
-			body: new URLSearchParams(data),
+			body: new URLSearchParams(payload),
 		})
 		data = await response.json()
 	}
 
 	async function apiGet(call: string) {
-		const response = await fetch(base + '/api/' + call)
-		data = await response.json()
-		clearTimeout(poller)
-		if (data.playing) {
-			poller = setTimeout(refresh, 50)
+		try {
+			const response = await fetch('/api/' + call);
+
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}`);
+			}
+
+			data = await response.json();
+
+
+		} catch (err) {
+			console.error("API error:", err);
 		}
 	}
 
 	async function apiUpload(call: string, form: FormData) {
-		const response = await fetch(base + "/api/" + call, {
+		const response = await fetch("/api/" + call, {
 			method: 'POST',
 			body: form
 		})
@@ -139,13 +181,11 @@
 			<FileUpload accepted="mid, midi, audio/rtp-midi" onUpload={(file) => apiUpload('track', file)}/>
 			<div>
 				{#if !data.playing}
-					<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('play')}>
-						play_arrow
-					</button>
+					<button class="material-symbols-outlined !text-5xl" onclick={() => {apiGet('play'); update_controls() }}> play_arrow </button>
 				{:else}
-					<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('pause')}>
+					<!--<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('pause')}>
 						pause
-					</button>
+					</button>-->
 					<button class="material-symbols-outlined !text-5xl" onclick={() => apiGet('stop')}>
 						stop
 					</button>

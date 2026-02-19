@@ -1,4 +1,3 @@
-import importlib.resources as ir
 import pathlib
 import sys
 import time

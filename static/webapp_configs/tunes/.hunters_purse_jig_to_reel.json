@@ -67,5 +67,8 @@
                 "orn_error_chromatic_prob"
             ]
         }
+    },
+    "drone": {
+        "active": false
     }
 }

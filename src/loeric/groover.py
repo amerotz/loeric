@@ -20,8 +20,6 @@ from loeric.loeric_config import loeric_config as lc
 class UnknownContourError(Exception):
     """Raised if trying to set a contour whose name does not correspond to any of the Groover's contours."""
 
-    pass
-
 
 class Groover:
     """The class responsible for playback, ornamentation and human interaction."""
@@ -1612,7 +1610,12 @@ class Groover:
     def _eighth_duration_seconds(self) -> float:
         return 30 / mido.tempo2bpm(self.current_tempo)
 
-    def set_transpose(self, value):
+    @property
+    def transpose(self):
+        return self._config["values"]["transpose"]
+
+    @transpose.setter
+    def transpose(self, value):
         self._config["values"]["transpose"] = value
 
     def set_droning(self, value):

@@ -83,4 +83,8 @@ class SynthOutput(BaseOutput):
         elif msg.type == "control_change":
             self._synth.control_change(msg.channel, msg.control, msg.value)
         else:
-            print("[WARN]\tUnknown MIDI message type: ", msg.type)
+            print(
+                f"\033[38;2;255;255;0m[WARN]\tUnknown MIDI message type: ",
+                msg.type,
+                "\033[0m",
+            )
