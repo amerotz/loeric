@@ -1,16 +1,18 @@
+import asyncio
 import faulthandler
+import json
 import os
+import random
 import threading
-from random import randint
 
 import mido
 import pyaudio as pa
-from mido.ports import BaseInput, BaseOutput, EchoPort
 
+import loeric.groover as gr
 import loeric.listeners.playalong as lp
 import loeric.loeric_utils as lu
-from loeric.groover import Groover
-from loeric.player import Player
+import loeric.player as pl
+import loeric.server.server as lss
 
 
 faulthandler.enable()
@@ -35,7 +37,7 @@ class Musician:
         name: str,
         loeric_id: str,
         synth_sound: str,
-        midi_out: BaseOutput | None = None,
+        midi_out: mido.ports.BaseOutput | None = None,
     ):
         self.name = name
         self.id = loeric_id
@@ -43,17 +45,19 @@ class Musician:
         self._midi_out = midi_out
         self._droning = True
 
-        self.sync = EchoPort(f"LOERIC Sync #{loeric_id}#")
-        self.seed = randint(0, 1000000)
+        self.seed = random.randint(0, 1000000)
         self.thread = threading.Thread()
+        self._listener_thread = threading.Thread()
+        self._listener = None
+        self._controller = None
+        self._controller_thread = threading.Thread()
         self.player_t = threading.Thread()
-        self._must_die = threading.Event()
-        self._all_dead = threading.Semaphore(value=2)
 
         self._intensity_control = 49
         self._human_impact_control = 50
         self._invert = False
         self._responsiveness = 0.8
+        self.connected_clients = set()
 
         self._midi_in = None
         self._device_index = None
@@ -77,6 +81,7 @@ class Musician:
 
     def player_loop(self):
         try:
+            print("[INFO]\tPlayer thread started.")
             while not self._stop_event.is_set():
 
                 # If paused → block indefinitely
@@ -99,29 +104,10 @@ class Musician:
         finally:
             print("[INFO]\tPlayer thread terminated.")
 
-    """
-    def player_loop(self):
-
-        # _play_event.wait()
-        self._all_dead.acquire()
-        while not self._must_die.is_set():
-
-            while self.current_groover.stopped.is_set():
-                self.player.reset()
-                # print("player waiting play")
-                self.current_groover.playback_resumed.wait()
-                # print("player awake")
-                self.player.init_playback()
-
-            self.player.play_next()
-        self._all_dead.release()
-        print("[INFO]\tPlayer thread terminated.")
-    """
-
     def set_input_audio_device(self, device_index):
+        self.stop_threads()
         self._device_index = device_index
         if self._device_index is not None:
-            self.stop_threads()
             self.start_listener()
 
     def start_listener(self):
@@ -131,40 +117,52 @@ class Musician:
         print(f"Connecting to device {self._device_index}: {name}")
 
         # create listening thread
-        self._listener_thread = lp.ListenerThread(
+        self._listener = lp.ListenerThread(
             sample_rate=int(info["defaultSampleRate"]),
             chunk_per_sec=10,
             device_index=self._device_index,
             num_channels=1,
             selected_channels=[1],
         )
-        self._listener_thread.open_stream()
+        self._listener.open_stream()
 
         # create audio monitor
         audio_monitor = lp.AudioMonitor()
 
         # create playback thread
-        self._control_thread = lp.PlayerThread(self._invert)
+        self._controller = lp.PlayerThread(self._invert)
 
         # go until midi is playing
-        t = threading.Thread(
-            target=self._listener_thread.listen,
+        self._listener_thread = threading.Thread(
+            target=self._listener.listen,
             args=(audio_monitor, self._responsiveness),
         )
 
-        def callback(perc):
-            self.current_groover.set_control_value(self._intensity_control, perc)
-            for i in range(len(self.current_controls)):
-                if self.current_controls[i]["control"] == self._intensity_control:
-                    self.current_controls[i]["value"] = perc
+        self._async_loop = asyncio.get_event_loop()
 
-        p = threading.Thread(
-            target=self._control_thread.send_control_loop,
+        def callback(perc):
+            message = {"controls": {}}
+            if self.current_groover is not None:
+                self.current_groover.set_control_value(self._intensity_control, perc)
+                for i in range(len(self.current_controls)):
+                    number = self.current_controls[i]["control"]
+                    name = self.current_controls[i]["name"]
+                    if number == self._intensity_control:
+                        self.current_controls[i]["value"] = perc
+                        message["controls"][name] = perc
+            message["intensity"] = float(perc)
+            for ws in self.connected_clients:
+                asyncio.run_coroutine_threadsafe(
+                    ws.send_text(json.dumps(message)), self._async_loop
+                )
+
+        self._controller_thread = threading.Thread(
+            target=self._controller.send_control_loop,
             args=[audio_monitor, callback],
         )
 
-        t.start()
-        p.start()
+        self._listener_thread.start()
+        self._controller_thread.start()
 
     @property
     def midi_channels(self):
@@ -192,6 +190,15 @@ class Musician:
         self.create_all()
 
     @property
+    def invert(self):
+        return self._invert
+
+    @invert.setter
+    def invert(self, value):
+        self._invert = value
+        self._controller.invert = value
+
+    @property
     def slow_end(self):
         return self._slow_end
 
@@ -209,8 +216,6 @@ class Musician:
 
     def create_all(self):
 
-        self._listener_thread = None
-        self._control_thread = None
         self._transpose = 0
         ################### configs ###########################
 
@@ -232,7 +237,7 @@ class Musician:
 
             ################### groover ###########################
 
-            groover = Groover(
+            groover = gr.Groover(
                 tune,
                 seed=self.seed,
                 config_file=None,
@@ -250,6 +255,7 @@ class Musician:
             )
             self._groovers.append(groover)
             self._groover_transposes.append(groover.transpose)
+
             ################### controls ###########################
 
             self._controls.append(
@@ -275,23 +281,14 @@ class Musician:
 
         ################### input ###########################
 
+        self._async_loop = asyncio.get_event_loop()
         if self._midi_in is not None:
-
-            def callback(msg):
-                if msg.is_cc():
-                    for i in range(len(self.current_controls)):
-                        if self.current_controls[i]["control"] == msg.control:
-                            self.current_controls[i]["value"] = msg.value / 127
-
-                callback.handle_midi(msg)
-
-            callback.handle_midi = self.current_groover.check_midi_control()
-            self._midi_in.callback = callback
+            self._midi_in.callback = self._midi_callback
 
         ################### player ###########################
 
         # create player
-        self.player = Player(
+        self.player = pl.Player(
             tempo=self.current_groover.tempo,
             key_signature=self.current_tune.key_signature,
             time_signature=self.current_tune.time_signature,
@@ -304,20 +301,46 @@ class Musician:
         # and start them
         self.ready()
 
+    def _midi_callback(self, msg):
+        if msg.is_cc():
+            value = msg.value / 127
+            message = {"controls": {}}
+            for i in range(len(self.current_controls)):
+                number = self.current_controls[i]["control"]
+                name = self.current_controls[i]["name"]
+                if number == msg.control:
+                    self.current_controls[i]["value"] = value
+                    message["controls"][name] = value
+            # send ws to client
+            for ws in self.connected_clients:
+                asyncio.run_coroutine_threadsafe(
+                    ws.send_text(json.dumps(message)), self._async_loop
+                )
+
+            self.current_groover.check_midi_control()(msg)
+
     @property
     def current_groover(self):
+        if len(self._groovers) == 0:
+            return None
         return self._groovers[self._tune_index]
 
     @property
     def current_tune(self):
+        if len(self._tunes) == 0:
+            return None
         return self._tunes[self._tune_index]
 
     @property
     def current_controls(self):
+        if len(self._controls) == 0:
+            return None
         return self._controls[self._tune_index]
 
     @property
     def current_transpose(self):
+        if len(self._groover_transposes) == 0:
+            return None
         return self._groover_transposes[self._tune_index]
 
     @property
@@ -326,22 +349,17 @@ class Musician:
 
     @midi_in.setter
     def midi_in(self, midi_in):
+        self.stop_threads()
+        if self._midi_in is not None:
+            self._midi_in.callback = None
+            self._midi_in.close()
         self._midi_in = midi_in
 
         if midi_in is None:
             return
 
-        def callback(msg):
-            if msg.is_cc():
-                for i in range(len(self.current_controls)):
-                    if self.current_controls[i]["control"] == msg.control:
-                        self.current_controls[i]["value"] = msg.value / 127
-
-            callback.handle_midi(msg)
-
-        callback.handle_midi = self.current_groover.check_midi_control()
-
-        self._midi_in.callback = callback
+        self._async_loop = asyncio.get_event_loop()
+        self._midi_in.callback = self._midi_callback
 
     @property
     def midi_out(self):
@@ -371,24 +389,10 @@ class Musician:
         if self.player_t and self.player_t.is_alive():
             self.player_t.join()
 
+        if self._midi_out:
+            self._midi_out.panic()
+
         self.playing = False
-
-    """
-    def stop(self):
-        # kills both processes
-        self._must_die.set()
-
-        self.current_groover.stopped.clear()
-        all_dead_counter = 0
-        while all_dead_counter < 2:
-            self.player.has_reached_wake_time.set()
-            self.current_groover.playback_resumed.set()
-            self._all_dead.acquire()
-            all_dead_counter += 1
-
-        self._all_dead.release()
-        self._all_dead.release()
-    """
 
     def pause(self):
         if not self.playing:
@@ -402,20 +406,19 @@ class Musician:
 
         self.playing = False
 
-    """
-    def pause(self):
-        self.current_groover.playback_resumed.clear()
-        self.current_groover.stopped.set()
-        if self._midi_out is not None:
-            self._midi_out.panic()
-        self.playing = False
-    """
-
     def stop_threads(self):
-        if self._listener_thread is not None:
-            self._listener_thread.stop = True
-        if self._control_thread is not None:
-            self._control_thread.stop = True
+        if self._listener is not None:
+            self._listener.stop = True
+
+        if self._controller is not None:
+            self._controller.stop = True
+
+        if self._listener_thread and self._listener_thread.is_alive():
+            self._listener_thread.join()
+            self._listener.close_stream()
+
+        if self._controller_thread and self._controller_thread.is_alive():
+            self._controller_thread.join()
 
     def ready(self) -> None:
         if self.thread and self.thread.is_alive():
@@ -426,17 +429,6 @@ class Musician:
 
         self.thread = threading.Thread(target=self._play, daemon=True)
         self.player_t = threading.Thread(target=self.player_loop, daemon=True)
-
-    """
-    def ready(self) -> None:
-        # make sure that groover and player
-        # are stopped
-        self.pause()
-
-        # create threads
-        self.thread = threading.Thread(target=self._play)
-        self.player_t = threading.Thread(target=self.player_loop, args=[])
-    """
 
     def start(self) -> None:
         if self.playing:
@@ -458,42 +450,19 @@ class Musician:
 
         self.playing = True
 
-    """
-    def start(self) -> None:
-
-        # stop groover and player
-        self._must_die.clear()
-        self.ready()
-        self.current_groover.jump_to_pos(0)
-        self.player.set_song_time(self.current_groover._tune.position_time(0))
-        self._tune_index = 0
-
-        # start threads
-        # groover and player will stop
-        # because stopped is set
-        self.thread.start()
-        self.player_t.start()
-
-        # unstop the groover and player
-        self.current_groover.stopped.clear()
-        self.current_groover.playback_resumed.set()
-
-        self.playing = True
-    """
-
     def _play(
         self,
     ) -> None:
+        """
+        Play the given tune with the given groover.
+        :param loeric_id: the id of the current LOERIC instance
+        :param groover: the groover object
+        :param tune: the tune object
+        :param sync_port_out: the MIDI port for synchronization
+        :param kwargs: the performance arguments
+        """
         try:
-            """
-            Play the given tune with the given groover.
-            :param loeric_id: the id of the current LOERIC instance
-            :param groover: the groover object
-            :param tune: the tune object
-            :param sync_port_out: the MIDI port for synchronization
-            :param kwargs: the performance arguments
-            """
-            self._all_dead.acquire()
+            print("[INFO]\tGroover thread started.")
 
             int_value = 0.5
             hi_value = 0.5
@@ -513,9 +482,6 @@ class Musician:
                         self._human_impact_control, hi_value
                     )
 
-            # wait for start
-            # _play_event.wait()
-
             # iterate over messages
             for i in range(len(self._tunes)):
 
@@ -523,7 +489,7 @@ class Musician:
 
                 args = {"verbose": True}
                 lu.play(
-                    loop_condition=lambda: not self._must_die.is_set(),
+                    loop_condition=lambda: not self._stop_event.is_set(),
                     groover=self.current_groover,
                     player=self.player,
                     note_callback=None,
@@ -532,16 +498,11 @@ class Musician:
                     **args,
                 )
 
-                # update_state(State.STOPPED)
-
         except Exception as e:
-            # stop sync thread
-            # update_state(State.STOPPED)
             raise e
         finally:
-            self._must_die.set()
             self.playing = False
-            self._all_dead.release()
+            self._stop_event.set()
             print("[INFO]\tGroover thread terminated.")
 
     def set_transpose(self, semitones):
@@ -558,10 +519,10 @@ class Musician:
 
     def __json__(self):
         out = self._midi_out
-        if isinstance(self._midi_out, BaseOutput):
+        if isinstance(self._midi_out, mido.ports.BaseOutput):
             out = self._midi_out.name
         midi_in = None
-        if isinstance(self._midi_in, BaseInput):
+        if isinstance(self._midi_in, mido.ports.BaseInput):
             midi_in = self._midi_in.name
         return {
             "id": self.id,
@@ -570,6 +531,7 @@ class Musician:
             "midiIn": midi_in,
             "audioIn": f"audioIn:{self._device_index}",
             "instrument": self.instrument,
+            "invert": self._invert,
             "controls": self.current_controls,
             "droning": self.current_groover._config["drone"]["active"],
             "slow_start": self.current_groover._config["tempo_control"]["slow_start"],

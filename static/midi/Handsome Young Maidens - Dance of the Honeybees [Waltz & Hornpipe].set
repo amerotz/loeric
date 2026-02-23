@@ -1,8 +1,24 @@
 [
 	{
+		"file": ".handsome_young_maidens_intro.abc",
+		"repetitions": 1,
+		"config": null,
+		"trim_end_eighths": 1,
+		"qpm": 170
+
+	},
+	{
 		"file": "Handsome Young Maidens [Set Version].abc",
 		"repetitions": 1,
-		"config": "",
+		"config": null,
+		"trim_end_eighths": 11,
+		"qpm": 170
+
+	},
+	{
+		"file": ".handsome_to_honeybee_waltz.abc",
+		"repetitions": 1,
+		"config": null,
 		"trim_end_eighths": 0,
 		"qpm": 170
 
@@ -10,7 +26,7 @@
 	{
 		"file": "Dance of the Honeybees [Waltz - Set Version].abc",
 		"repetitions": 1,
-		"config": "",
+		"config": null,
 		"trim_end_eighths": 0,
 		"qpm": 170
 
@@ -18,9 +34,9 @@
 	{
 		"file": "Dance of the Honeybees [Hornpipe - Set Version].abc",
 		"repetitions": 2,
-		"config": "",
+		"config": null,
 		"trim_end_eighths": 0,
 		"qpm": 170
 	}
-	
+
 ]

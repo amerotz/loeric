@@ -1,5 +1,4 @@
 import copy
-import json
 import os
 import random
 
@@ -921,8 +920,16 @@ class Tune:
         self._chords = []  # will be calculated later
 
         self._key_signatures = key_signatures
+
+        print(self._score[-1])
+        self._score_end_time = (
+            self._score[-1].time + self._score[-1].duration - trim_end_eighths
+        )
+        self._score = [el for el in self._score if el.time < self._score_end_time]
+        print(self._score[-1])
+        print(self._score_end_time)
         self._score_end_time = self._score[-1].time + self._score[-1].duration
-        self._score_end_time -= trim_end_eighths
+        print(self._score_end_time)
 
         self._score = [el for el in self._score if el.time <= self._score_end_time]
 
@@ -987,11 +994,8 @@ class Tune:
         contour_index = -1
         for i, el in enumerate(self._annotated_score):
 
-            print(i, el)
             if isinstance(el, SongPosition):
                 self.index_map[el.position] = (i, contour_index)
-                print(i, contour_index)
-            print()
 
             if el.is_note:
                 contour_index += 1
@@ -1129,18 +1133,14 @@ class Tune:
         calculated_chords.sort(key=lambda x: x.time)
         self._annotated_score = calculated_chords
 
+        self._current_chord = self._chords[0]
+
         # update map
         self.create_index_map()
 
     @property
     def time_signature(self):
         return self._time_signatures[0]
-
-    def get_config(self):
-        if self.config is None or not os.path.isfile(self.config):
-            return ""
-        with open(self.config, "r") as f:
-            return json.load(f)
 
     @property
     def key_signature(self):

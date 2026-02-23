@@ -439,8 +439,8 @@ class Groover:
             if control_num == event_number:
                 for contour_name in group["contours"]:
                     self.set_contour_value(contour_name, value)
-                    # print(f'"\x1B[0K"{contour_name}:\t{round(value, 2)}', end="\r")
-                    if self._verbose == 3:
+                    print(f'"\x1b[0K"{contour_name}:\t{round(value, 2)}', end="\r")
+                    if self._verbose == 4:
                         print(
                             f"[{str(self.loeric_id)[:4]}]\t{contour_name}:\t{round(value, 2)}"
                         )
@@ -529,7 +529,7 @@ class Groover:
                 # advance contours
                 self.advance_contours()
 
-            print(self._note_index, self._contours["velocity"]._index)
+            # print(self._note_index, self._contours["velocity"]._index)
 
             # update performance time
             self._performance_time = event.time
@@ -551,7 +551,7 @@ class Groover:
                     )
                 return
             self._note_index, contour_index = self._tune.index_map[pos]
-            print(self._note_index, contour_index)
+            # print(self._note_index, contour_index)
             # update performance time
             # self._performance_time = self._tune.duration_map[pos]
             # update all contours
@@ -602,7 +602,7 @@ class Groover:
         current_message.time = self._performance_time
 
         if self._eighths_to_skip >= current_message.duration:
-            self._eighths_to_skip -= current_message.duration
+            self._eighths_to_skip -= current_message.duration.eighth_duration
             return (
                 [],
                 [],

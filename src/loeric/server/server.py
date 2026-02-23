@@ -1,17 +1,24 @@
+import asyncio
 import json
 import os
 import sys
 import threading
 import time
 import webbrowser
+from collections import defaultdict
 from pathlib import Path
 from typing import List
 
+# from bottle import Bottle, HTTPResponse, request, response, run, static_file
+import fastapi as fapi
 import mido
 import nanoid as nid
 import pyaudio as pa
 import tinysoundfont
-from bottle import Bottle, HTTPResponse, request, response, run, static_file
+import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from muspy.outputs.midi import PITCH_NAMES
 
 import loeric.loeric_utils as lu
@@ -38,7 +45,18 @@ FRONTEND_ROOT = STATIC_ROOT / "site"
 _last_heartbeat = time.time()
 HEARTBEAT_TIMEOUT = 6  # seconds
 
-app = Bottle()
+# app = Bottle()
+app = fapi.FastAPI()
+connections: dict[str, set[fapi.WebSocket]] = defaultdict(set)
+main_loop = asyncio.get_event_loop()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or restrict to your frontend
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 musicians: list[lsm.Musician] = []
 names = ["LOERIC"]
@@ -46,6 +64,26 @@ names = ["LOERIC"]
 synth = None  # , tinysoundfont.Synth()
 synth_is_running = False
 soundfonts = []
+
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: fapi.WebSocket, client_id: str):
+    await websocket.accept()
+
+    for musician in musicians:
+        if musician.id == client_id:
+            # Add client to the ID group
+            musician.connected_clients.add(websocket)
+
+            print(f"Client connected with ID: {client_id}")
+            try:
+                while True:
+                    # Optional: receive messages
+                    msg = await websocket.receive_text()
+                    print(f"Received from {client_id}: {msg}")
+            except fapi.WebSocketDisconnect:
+                print(f"Client {client_id} disconnected")
+                musician.connected_clients.remove(websocket)
 
 
 def _monitor_browser():
@@ -241,15 +279,15 @@ def _key_to_str(key) -> str:
 
 
 def _list_tracks() -> List[str]:
-    return sorted(
-        [
-            f
-            for f in os.listdir(TRACK_DIR)
-            if os.path.isfile(TRACK_DIR / f)
-            and os.path.splitext(f)[1].casefold() in filetypes
-            and not f.startswith(".")
-        ]
-    )
+    t_list = [
+        f
+        for f in os.listdir(TRACK_DIR)
+        if os.path.isfile(TRACK_DIR / f)
+        and os.path.splitext(f)[1].casefold() in filetypes
+        and not f.startswith(".")
+    ]
+    t_list.sort(key=lambda x: (int(x.split(".")[-1] != "set"), x))
+    return t_list
 
 
 def _list_custom_tracks() -> List[str]:
@@ -258,8 +296,8 @@ def _list_custom_tracks() -> List[str]:
 
 
 @app.get("/api/state")
-def _state():
-    response.set_header("Access-Control-Allow-Origin", "*")
+async def _state():
+    # response.set_header("Access-Control-Allow-Origin", "*")
     return {
         "musicians": [m.__json__() for m in musicians],
         "playing": _is_playing(),  # lsm.get__state().name,
@@ -267,7 +305,7 @@ def _state():
             "name": current_track,
             "type": current_track.split(".")[-1],
             "time": f"{musicians[0].current_tune.time_signature.numerator}/{musicians[0].current_tune.time_signature.denominator}",
-            "config": musicians[0].current_tune.get_config(),
+            # "config": musicians[0].current_groover._config,
             "key": _key_to_str(musicians[0].current_tune.key_signature),
             "tempo": musicians[0].current_groover.tempo.qpm,
             "repeats": musicians[0].current_tune.repeats,
@@ -290,7 +328,7 @@ def _controls():
     response.set_header("Access-Control-Allow-Origin", "*")
     return {
         "playing": _is_playing(),
-        "musicians": {m.id: m.current_controls for m in musicians},
+        "intensity": {m.id: m.input_intensity for m in musicians},
     }
 
 
@@ -365,75 +403,42 @@ def __set_track(track: str):
 
 
 @app.get("/api/play")
-def _play():
-    """
-    if lsm.get__state() == lsm.State.STOPPED:
-        for index, musician in enumerate(musicians):
-            if musician.midi_out is None or isinstance(
-                musician.midi_out, lss.SynthOutput
-            ):
-                synth.program_select(
-                    musician.current_groover._midi_channel,
-                    soundfonts[musician.instrument].soundfont_id,
-                    0,
-                    soundfonts[musician.instrument].program,
-                )
-                if musician.midi_out is None:
-                    musician.midi_out = lss.SynthOutput(
-                        f"LOERIC out #{musician.id}#", synth, index
-                    )
-                else:
-                    musician.midi_out.channel = index
-            musician.ready()
-        _start_synth()
-    if lsm.get__state() == lsm.State.PAUSED:
-        for musician in musicians:
-            musician.unpause()
-
-    lsm.update_state(lsm.State.PLAYING)
-    """
+async def _play():
     _start_synth()
     for musician in musicians:
         musician.start()
-    return _state()
+    return await _state()
 
 
 @app.get("/api/pause")
-def _pause():
+async def _pause():
     _stop_synth()
     for musician in musicians:
         musician.pause()
-    """
-    lsm.update_state(lsm.State.PAUSED)
+    return await _state()
+
+
+def __stop():
+    _stop_synth()
     for musician in musicians:
-        musician.pause()
-    """
-    return _state()
+        musician.stop()
 
 
 @app.get("/api/stop")
-def _stop():
-    if not _is_playing():
-        return _state()
+async def _stop():
     _stop_synth()
     for musician in musicians:
         musician.stop()
 
-    """
-    lsm.update_state(lsm.State.STOPPED)
-    for musician in musicians:
-        musician.stop()
-        # musician.create_all()
-    lsm.update_state(lsm.State.STOPPED)
-    """
-    return _state()
+    return await _state()
 
 
 @app.put("/api/instrument")
-def _instrument_change():
-    _stop()
-    musician_id = request.forms.id
-    new_instrument = request.forms.instrument
+async def _instrument_change(request: fapi.Request):
+    __stop()
+    form = await request.form()
+    musician_id = form["id"]
+    new_instrument = form["instrument"]
 
     for musician in musicians:
         if musician.id == musician_id:
@@ -447,26 +452,28 @@ def _instrument_change():
                     soundfonts[musician.instrument].program,
                 )
 
-    return _state()
+    return await _state()
 
 
 @app.put("/api/control")
-def _control_change():
-    musician_id = request.forms.id
-    control = int(request.forms.control)
-    new_value = float(request.forms.value)
+async def _control_change(request: fapi.Request):
+    form = await request.form()
+    musician_id = form["id"]
+    control = int(form["control"])
+    new_value = float(form["value"])
 
     for musician in musicians:
         if musician.id == musician_id:
             musician.set_control_value(control, new_value)
 
-    return _state()
+    return await _state()
 
 
 @app.put("/api/output")
-def _output_change():
-    musician_id = request.forms.id
-    new_output = request.forms.output
+async def _output_change(request: fapi.Request):
+    form = await request.form()
+    musician_id = form["id"]
+    new_output = form["output"]
 
     for index, musician in enumerate(musicians):
         if musician.id == musician_id:
@@ -485,13 +492,14 @@ def _output_change():
 
             musician.midi_out = midi_output
 
-    return _state()
+    return await _state()
 
 
 @app.put("/api/input")
-def _input_change():
-    musician_id = request.forms.id
-    new_input = request.forms.input
+async def _input_change(request: fapi.Request):
+    form = await request.form()
+    musician_id = form["id"]
+    new_input = form["input"]
 
     # assume it's no input
     device_index = None
@@ -505,106 +513,126 @@ def _input_change():
 
     for musician in musicians:
         if musician.id == musician_id:
-            musician.stop_threads()
             musician.midi_in = midi_input
             musician.set_input_audio_device(device_index)
 
-    return _state()
+    return await _state()
 
 
 @app.put("/api/tempo")
-def _set_tempo():
+async def _set_tempo(request: fapi.Request):
     global tempo
-    tempo = int(request.forms.tempo)
+    form = await request.form()
+    tempo = int(form["tempo"])
     for musician in musicians:
         musician.set_tempo(tempo)
 
-    return _state()
+    return await _state()
 
 
 @app.put("/api/drones")
-def _set_drones():
-    value = request.forms.drones == "true"
-    musician_id = request.forms.id
+async def _set_drones(request: fapi.Request):
+    form = await request.form()
+    value = form["drones"] == "true"
+    musician_id = form["id"]
     for musician in musicians:
         if musician.id == musician_id:
             musician.current_groover.set_droning(value)
 
-    return _state()
+    return await _state()
+
+
+@app.put("/api/invert")
+async def _set_invert(request: fapi.Request):
+    form = await request.form()
+    value = form["invert"] == "true"
+    musician_id = form["id"]
+    for musician in musicians:
+        if musician.id == musician_id:
+            musician.invert = value
+
+    return await _state()
 
 
 @app.put("/api/slow_start")
-def _set_slow_start():
-    _stop()
-    value = request.forms.slow_start == "true"
-    musician_id = request.forms.id
+async def _set_slow_start(request: fapi.Request):
+    __stop()
+    form = await request.form()
+    value = form["slow_start"] == "true"
+    musician_id = form["id"]
     for musician in musicians:
         if musician.id == musician_id:
             musician.slow_start = value
 
-    return _state()
+    return await _state()
 
 
 @app.put("/api/slow_end")
-def _set_slow_end():
-    _stop()
-    value = request.forms.slow_end == "true"
-    musician_id = request.forms.id
+async def _set_slow_end(request: fapi.Request):
+    __stop()
+    form = await request.form()
+    value = form["slow_end"] == "true"
+    musician_id = form["id"]
     for musician in musicians:
         if musician.id == musician_id:
             musician.slow_end = value
 
-    return _state()
+    return await _state()
 
 
 @app.put("/api/transpose")
-def _set_transpose():
-    value = int(request.forms.transpose)
+async def _set_transpose(request: fapi.Request):
+    form = await request.form()
+    value = int(form["transpose"])
     print(value)
-    musician_id = request.forms.id
+    musician_id = form["id"]
     for musician in musicians:
         if musician.id == musician_id:
             musician.set_transpose(value)
 
-    return _state()
+    return await _state()
 
 
 @app.put("/api/repeat")
-def _set_repeat():
+async def _set_repeat(request: fapi.Request):
     global repetitions
-    _stop()
-    repetitions = int(request.forms.repeats)
+    __stop()
+    form = await request.form()
+    repetitions = int(form["repeats"])
     __set_track(current_track)
 
-    return _state()
+    return await _state()
 
 
 @app.put("/api/audio_out")
-def _set_audio_out():
+async def _set_audio_out(request: fapi.Request):
     global audio_device_index
 
+    form = await request.form()
     _stop_synth()
-    audio_device_index = int(request.forms.device.split(":")[-1])
+    audio_device_index = int(form["device"].split(":")[-1])
     _start_synth()
 
-    return _state()
+    return await _state()
 
 
 @app.put("/api/track")
-def _set_track():
-    _stop()
-    track = request.forms.track
+async def _set_track(request: fapi.Request):
+    __stop()
+    form = await request.form()
+    track = form["track"]
     __set_track(track)
-    return _state()
+    return await _state()
 
 
 @app.get("/api/track")
-def _get_track():
-    return _state()
+async def _get_track():
+    return await _state()
 
 
+"""
 @app.error(405)
-def _method_not_allowed(res):
+async def _method_not_allowed(res):
     if request.method == "OPTIONS":
         new_res = HTTPResponse()
         new_res.set_header("Access-Control-Allow-Methods", "POST, PUT, GET, OPTIONS")
@@ -612,13 +640,15 @@ def _method_not_allowed(res):
         return new_res
     res.headers["Allow"] += ", OPTIONS"
     return request.app.default_error_handler(res)
+"""
 
 
 """
 @app.post("/api/musician/config")
 def upload_musician_config():
     global musicians
-    musician_id = request.forms.id
+    form = await request.form()
+    musician_id = form["id"]
     for index, musician in enumerate(musicians):
         if musician.id == musician_id:
             upload = request.files.get("upload")
@@ -629,7 +659,7 @@ def upload_musician_config():
 
             musician.config = webapp_load_config(filename)
 
-    return _state()
+    return await _state()
 
 
 @app.post("/api/track/config")
@@ -643,17 +673,17 @@ def upload_track_config():
 
     tune.config = webapp_load_config(filename)
 
-    return _state()
+    return await _state()
 """
 
 
 @app.post("/api/track")
-def _upload_track():
+async def _upload_track(request: fapi.Request):
     upload = request.files.get("upload")
     file = TRACK_DIR / upload.filename
     upload.save(file)
 
-    return _state()
+    return await _state()
 
 
 """
@@ -665,7 +695,6 @@ def get_static():
 @app.get("/<filepath:path>")
 def get_static_filepath(filepath):
     return static_file(filepath, root="static/site")
-"""
 
 
 @app.get("/")
@@ -676,14 +705,15 @@ def _get_static():
 @app.get("/<filepath:path>")
 def _get_static_filepath(filepath):
     return static_file(filepath, root=str(FRONTEND_ROOT))
+"""
 
 
 @app.get("/api/add_musician")
-def _add_musician_api():
-    _stop()
+async def _add_musician_api():
+    __stop()
     _add_musician()
     __set_track(current_track)
-    return _state()
+    return await _state()
 
 
 def _add_musician():
@@ -744,6 +774,11 @@ def start_server():
 
     threading.Thread(target=_monitor_browser, daemon=True).start()
 
-    run(app, host="localhost", port=PORT, quiet=True)
-    print("Lol")
+    app.mount(
+        "/",
+        StaticFiles(directory=str(FRONTEND_ROOT), html=True),
+        name="static",
+    )
+    # run(app, host="localhost", port=PORT, quiet=True)
+    uvicorn.run(app, host="127.0.0.1", port=PORT)
     _stop_synth()

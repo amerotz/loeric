@@ -4,10 +4,10 @@
     },
     "contours": {
         "drone": {
-            "human_impact_scale": 1.0
+            "human_impact_scale": 0.5
         },
         "velocity": {
-            "human_impact_scale": 1.0
+            "human_impact_scale": 0.0
         },
         "velocity_pattern": {
             "human_impact_scale": 0.0
@@ -40,7 +40,7 @@
                 [ [ 0, 2 ] ] ],
             "pitches_mean": [ 0, 0 ],
             "pitches_std": [ 0, 0 ],
-            "velocities_mean": [ 1, 1 ],
+            "velocities_mean": [ 1, 5 ],
             "velocities_std": [ 0, 0 ],
             "durations_mean": [ 1, 1 ],
             "durations_std": [ 0.01, 0.01 ],
@@ -309,7 +309,7 @@
             "contours": [
                 "velocity_intensity" ]
         }
-        
+
     },
     "swing": {
         "min": 1,
@@ -321,5 +321,8 @@
         "min": 0.4,
         "max": 1,
         "bind": "legato"
+    },
+    "drone": {
+        "active": true
     }
 }

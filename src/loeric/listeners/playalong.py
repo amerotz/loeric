@@ -179,9 +179,6 @@ class ListenerThread:
                 audio_monitor.update(np.concatenate(buffer), perc)
                 buffer = buffer[1:]
 
-        # close everything
-        self.close_stream()
-
     def close_stream(self):
         # stop and close the stream
         self.stream.stop_stream()
@@ -302,5 +299,7 @@ def main():
     except KeyboardInterrupt as e:
         print("Listener terminated by user.")
         traceback.print_exception(e)
+    finally:
         listener.stop = True
         player.stop = True
+        listener.close_stream()
