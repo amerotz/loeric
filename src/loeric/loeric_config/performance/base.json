@@ -1,6 +1,6 @@
 {
     "variables": {
-        "var_drone_threshold": 0.5,
+        "var_drone_threshold": 0.25,
         "var_webapp_intensity_control": 49,
         "var_roll_2_prob": 0,
         "var_webapp_human_impact_control": 50,
@@ -287,7 +287,7 @@
                                     "mode": "contour"
                                 }
                             }
-                        } 
+                        }
                     },
                     "weights": [ 0.7, 0.3 ]
                 }
@@ -326,7 +326,7 @@
                             "scale": true,
                             "shift": false
                         },
-                        "pattern": "var_ornament_pattern"                  
+                        "pattern": "var_ornament_pattern"
                     }
                 }
             }

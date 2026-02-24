@@ -17,7 +17,7 @@
 		refresh();
 		heartbeat = setInterval(() => {
 			fetch("/api/heartbeat", { method: "POST" });
-		}, 3000);
+		}, 2250);
 	});
 
 	onDestroy(() => {

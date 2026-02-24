@@ -45,7 +45,7 @@ SOUND_ROOT = STATIC_ROOT / "sound"
 FRONTEND_ROOT = STATIC_ROOT / "site"
 
 _last_heartbeat = time.time()
-HEARTBEAT_TIMEOUT = 6  # seconds
+HEARTBEAT_TIMEOUT = 10  # seconds
 
 # app = Bottle()
 app = fapi.FastAPI()
@@ -90,7 +90,7 @@ async def websocket_endpoint(websocket: fapi.WebSocket, client_id: str):
 
 def _monitor_browser():
     while True:
-        time.sleep(2)
+        time.sleep(3)
         if time.time() - _last_heartbeat > HEARTBEAT_TIMEOUT:
             print("Browser closed. Shutting down LOERIC...")
             os._exit(0)

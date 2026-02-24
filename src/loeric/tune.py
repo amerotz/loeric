@@ -921,15 +921,11 @@ class Tune:
 
         self._key_signatures = key_signatures
 
-        print(self._score[-1])
         self._score_end_time = (
             self._score[-1].time + self._score[-1].duration - trim_end_eighths
         )
         self._score = [el for el in self._score if el.time < self._score_end_time]
-        print(self._score[-1])
-        print(self._score_end_time)
         self._score_end_time = self._score[-1].time + self._score[-1].duration
-        print(self._score_end_time)
 
         self._score = [el for el in self._score if el.time <= self._score_end_time]
 

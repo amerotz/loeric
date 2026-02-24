@@ -964,10 +964,19 @@ class Groover:
         amount = self._contours[
             self._config["drone"]["drone_sets"][drone_name]["notes_per_bar_bind"]
         ].at(note.time)
-        amount_min = self._config["drone"]["drone_sets"][drone_name]["threshold"]
+        amount_min = min(
+            self._contours[
+                self._config["drone"]["drone_sets"][drone_name]["notes_per_bar_bind"]
+            ]
+        )
+        amount_max = max(
+            self._contours[
+                self._config["drone"]["drone_sets"][drone_name]["notes_per_bar_bind"]
+            ]
+        )
         if len(options) != 1:
             index = np.round(
-                (len(options) - 1) * (amount - amount_min) / (1 - amount_min)
+                (len(options) - 1) * (amount - amount_min) / (amount_max - amount_min)
             ).astype(int)
             index = max(0, min(len(options) - 1, index))
             return options[index]

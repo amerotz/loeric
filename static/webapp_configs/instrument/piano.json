@@ -452,7 +452,7 @@
                 "midi_channel": "var_drone_midi_channel",
                 "delay_range": 0.0,
                 "transpose": true,
-                "use_legato": true
+                "use_legato": false
             }
         }
     }

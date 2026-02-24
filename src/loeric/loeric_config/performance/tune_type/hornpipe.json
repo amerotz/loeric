@@ -1,6 +1,6 @@
 {
 	"variables": {
-		"var_notes_per_bar": [2,4,4],
+		"var_notes_per_bar": [4,2],
 		"var_roll_2_prob": 1,
         "var_velocity_weight": [0,1,0,1,1],
         "var_comping_notes_per_bar": [4],
@@ -10,32 +10,48 @@
 	"contours": {
 		"drone": {
 			"recipe": {
-				"weighted_sum": {
+				"multiply": {
 					"contours": {
+						"scale": {
+							"contours": {
+								"o_canainn": {
+									"weights": [1,1,1,1,1],
+									"savgol": true,
+									"scale": true,
+									"shift": true
+								}
+							},
+							"min": 0.5,
+							"max": 1
+						},
 						"pattern": {
-                            "mean": [ 1, 0, 1, 0,
-									  1, 0, 1, 0,
-									  1, 0, 1, 0,
-									  0, 1, 1, 0 ],
-                            "std":  [ 0.1, 0, 0.1, 0,
-									  0.1, 0, 0.1, 0,
-								      0.1, 0, 0.1, 0,
-									  0.1, 0.1, 0.1, 0 ],
+                            "mean": [ 1, -1, 0, -1, 1, -1, 0, -1,
+									  1, -1, 0, -1, 1, -1, 0, -1,
+									  1, -1, 0, -1, 1, -1, 0, -1,
+									  0, -1, 1, -1, 1, -1, 0, -1 ],
+							"std": null,
 							"std_scale": 1,
 							"normalize": false,
 							"period": 4
-						},
-						"o_canainn": {
-							"weights": "var_velocity_weight",
-							"savgol": false,
-							"scale": true,
-							"shift": false
 						}
-					},
-					"weights": [1,0.5]
+					}
 				}
 			}
 		},
+		"notes_per_bar": {
+			"recipe": {
+				"pattern": {
+					"mean": [ 1, 0, 0, 0, 0, 0, 0, 0,
+							  0, 0, 0, 0, 0, 0, 0, 0,
+							  0, 0, 0, 0, 0, 0, 0, 0,
+							  0, 0, 0, 0, 0, 0, 0, 0 ],
+					"std": null,
+					"std_scale": 1,
+					"normalize": false,
+					"period": 4
+				}
+			}
+        },
 		"velocity_pattern": {
 			"recipe":{
 				"pattern": {

@@ -7,19 +7,13 @@ from . import loeric_utils as lu, tune
 class UncomputedContourError(Exception):
     """Raised if the contour has not been computed yet."""
 
-    pass
-
 
 class InvalidRecipeError(Exception):
     """Raised if the contour recipe is invalid."""
 
-    pass
-
 
 class InvalidIndexError(Exception):
     """Raised if the index of the current value is below 0 or exceeds the length of the contour."""
-
-    pass
 
 
 class Contour:

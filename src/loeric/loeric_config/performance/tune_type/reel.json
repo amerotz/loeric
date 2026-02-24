@@ -26,31 +26,36 @@
 	"contours": {
 		"drone": {
 			"recipe": {
-				"weighted_sum": {
+				"multiply": {
 					"contours": {
-						"o_canainn": {
-							"weights": [1, 2, 1, 1, 2],
-							"savgol": true,
-							"scale": true,
-							"shift": true
+						"scale": {
+							"contours": {
+								"o_canainn": {
+									"weights": [1, 2, 1, 1, 2],
+									"savgol": true,
+									"scale": true,
+									"shift": true
+								}
+							},
+							"min": "var_drone_threshold",
+							"max": 1
 						},
 						"pattern": {
-                            "mean": [ 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0 ],
-                            "std":  [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                            "mean": [ 	1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0 ],
+							"std": null,
 							"std_scale": 1,
 							"normalize": false,
 							"period": 2
 						}
-					},
-					"weights": [ 0.5,1]
+					}
 				}
 			}
         },
 		"notes_per_bar": {
 			"recipe": {
 				"pattern": {
-					"mean": [ 0.75, 0, 0.25, 0, 0, 0, 0.25, 0, 0.25, 0, 0, 0, 0.75, 0, 0, 0 ],
-					"std":  [ 0.1,  0, 0.1,  0, 0, 0, 0.1,  0, 0.1,  0, 0, 0, 0.1, 0, 0, 0 ],
+                    "mean": [ 	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+					"std":  null,
 					"std_scale": 1,
 					"normalize": false,
 					"period": 2
@@ -76,6 +81,25 @@
 					"std_scale": 0.0,
 					"normalize": true,
 					"period": 1
+				}
+			}
+		},
+		"swing": {
+			"recipe":{
+				"weighted_sum": {
+					"contours": {
+						"o_canainn": {
+							"weights": [0, 1, 0, 0, 0],
+							"savgol": true,
+							"scale": true,
+							"shift": true
+						},
+						"random": {
+							"min": 0.0,
+							"max": 1.0
+						}
+					},
+					"weights":[0.95, 0.05]
 				}
 			}
 		}

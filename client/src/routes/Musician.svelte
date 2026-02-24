@@ -179,7 +179,7 @@
 						<span class="text-gray-400 font-bold">DRONES</span>
 						<span class="text-gray-300">Toggle LOERIC's accompanying system.</span>
 					</div>
-					<input class="col-span-1" type="checkbox" bind:checked={musician.droning} onchange={() => apiPut("drones", { id: musician.id, drones: musician.droning })} />
+					<input class="col-span-1 rounded-md border-gray-300 text-orange-600 transition" type="checkbox" bind:checked={musician.droning} onchange={() => apiPut("drones", { id: musician.id, drones: musician.droning })} />
 				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<label class="flex gap-3 justify-between">
@@ -195,7 +195,7 @@
 						<span class="text-gray-400 font-bold ">SLOW START</span>
 						<span class="text-gray-300">Build up speed to selected tempo at performance start.</span>
 					</div>
-					<input class="col-span-1" type="checkbox" bind:checked={musician.slow_start} onchange={slowStartChange} />
+					<input class="col-span-1 rounded-md border-gray-300 text-orange-600 transition" type="checkbox" bind:checked={musician.slow_start} onchange={slowStartChange} />
 				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<label class="flex gap-3 justify-between">
@@ -203,7 +203,7 @@
 						<span class="text-gray-400 font-bold ">SLOW END</span>
 						<span class="text-gray-300">Slow down from selected tempo at performance end.</span>
 					</div>
-					<input class="col-span-1" type="checkbox" bind:checked={musician.slow_end} onchange={slowEndChange} />
+					<input class="col-span-1 rounded-md border-gray-300 text-orange-600 transition" type="checkbox" bind:checked={musician.slow_end} onchange={slowEndChange} />
 
 				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
@@ -403,8 +403,9 @@
 						{#if musician.audioIn == "audioIn:None" || control.name != "Intensity"}
 						<label class="flex w-full items-center">
 							<span class="text-left w-100">{control.name}</span>
-							<input class="w-full" type="range" step="0.01" max="1" min="0"
+							<input type="range" step="0.01" max="1" min="0"
 							data-control={control.control}
+							class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600 focus:outline-none"
 							bind:value={control_values[control.name]} oninput={controlChange}/>
 						</label>
 						{/if}

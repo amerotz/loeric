@@ -534,7 +534,7 @@ class Musician:
             "invert": self._invert,
             "controls": self.current_controls,
             "droning": self.current_groover._config["drone"]["active"],
-            "slow_start": self.current_groover._config["tempo_control"]["slow_start"],
-            "slow_end": self.current_groover._config["tempo_control"]["slow_end"],
+            "slow_start": self._slow_start,
+            "slow_end": self._slow_end,
             "transpose": self._transpose,
         }
