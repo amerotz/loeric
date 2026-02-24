@@ -210,7 +210,7 @@
 				<label class="flex flex-col justify-between">
 					<span class="text-gray-400 font-bold">OUTPUT</span>
 					<span class="text-gray-300">Choose between built-in sounds or MIDI for external sounds.</span>
-<div class="flex w-full justify-start items-center">
+		<div class="flex w-full justify-start items-center">
 			<el-select class="w-full" onchange={outputChange}>
 				<button type="button" class="w-full cursor-default rounded-md bg-transparent py-1.5 pr-2 pl-3 text-left text-white">
 				<el-selectedcontent >
@@ -271,6 +271,7 @@
 						{/each}
 					</select>
 					-->
+					</div>
 				</label>
 			</div>
 		</div>

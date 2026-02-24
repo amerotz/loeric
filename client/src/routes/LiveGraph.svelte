@@ -5,7 +5,6 @@
   Chart.register(...registerables);
 
   export let values = [];       // array of numbers
-  export let label = "Data";    // chart label
 
   let canvas;
   let chart;

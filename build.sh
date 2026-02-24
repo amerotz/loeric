@@ -44,6 +44,7 @@ pip install dist/loeric-2.0.0-py2.py3-none-any.whl --force-reinstall
 # pyinstaller
 echo "Building LOERIC executable with PyInstaller..."
 PYINSTALLER_CMD="pyinstaller \
+  --onefile \
   --collect-submodules=src \
   --add-data static:static \
   --add-data src/loeric/loeric_config/performance:loeric/loeric_config/performance \
