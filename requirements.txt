@@ -29,7 +29,6 @@ jsonpickle==4.1.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 kiwisolver==1.4.9
-loeric @ file:///home/marco/git/loeric/dist/loeric-2.0.0-py2.py3-none-any.whl#sha256=b67b70011e789e4757f14f5f264f2f321b51427bed2313adad1184639c794869
 matplotlib==3.10.8
 mccabe==0.7.0
 miditoolkit==1.0.1
