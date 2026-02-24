@@ -56,6 +56,7 @@ pyparsing==3.3.2
 pypianoroll==1.0.4
 pyproject_hooks==1.2.0
 python-dateutil==2.9.0.post0
+python-multipart==0.0.22
 python-rtmidi==1.5.8
 pytokens==0.4.1
 pytz==2025.2
