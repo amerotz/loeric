@@ -27,20 +27,14 @@ import loeric.server.synthout as lss
 import loeric.tune as tu
 
 
-PORT = int(os.getenv("LOERIC_WEBAPP_PORT", "8080"))
+PORT = int(os.getenv("LOERIC_WEBAPP_PORT", 8080))
 
 if getattr(sys, "frozen", False):
     BASE_DIR = Path(sys._MEIPASS)
 else:
     BASE_DIR = Path(__file__).resolve().parents[3]
 
-# Proper handling of env override
-static_env = os.getenv("LOERIC_WEBAPP_DIR")
-
-if static_env:
-    STATIC_ROOT = Path(static_env).resolve()
-else:
-    STATIC_ROOT = (BASE_DIR / "static").resolve()
+STATIC_ROOT = Path(os.getenv("LOERIC_WEBAPP_DIR", BASE_DIR / "static")).resolve()
 
 TRACK_DIR = STATIC_ROOT / "midi"
 TEMP_DIR = STATIC_ROOT / "temp"
