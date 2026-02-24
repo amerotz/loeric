@@ -30,8 +30,10 @@ import loeric.tune as tu
 PORT = int(os.getenv("LOERIC_WEBAPP_PORT", 8080))
 
 if getattr(sys, "frozen", False):
+    print("Running compiled binary.")
     BASE_DIR = Path(sys._MEIPASS)
 else:
+    print("Running from cli.")
     BASE_DIR = Path(__file__).resolve().parents[3]
 
 STATIC_ROOT = Path(os.getenv("LOERIC_WEBAPP_DIR", BASE_DIR / "static")).resolve()
