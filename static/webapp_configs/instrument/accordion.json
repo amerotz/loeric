@@ -460,12 +460,13 @@
         "C5": "B4"
     },
     "drone": {
+        "active": true,
         "probability_scale": false,
         "drone_sets": {
             "free": {
                 "velocity_multiplier": 0.9,
                 "polyphony_min": 1,
-                "polyphony_max": 2,
+                "polyphony_max": 1,
                 "notes": [ 24, 26, 28, 29, 31, 33],
                 "threshold": "var_drone_threshold",
                 "bind": "var_drone_bind",

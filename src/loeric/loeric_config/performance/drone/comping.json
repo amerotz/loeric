@@ -1,6 +1,4 @@
 {
-    "variables":{
-    },
     "contours": {
         "lower_drone": {
             "recipe": {
@@ -9,7 +7,7 @@
                     "std": null,
                     "std_scale": 1,
                     "normalize": false,
-                    "period": 2
+                    "period": "var_comping_pattern_period"
                 }
             },
             "human_impact_scale": 0
@@ -21,7 +19,7 @@
                     "std": null,
                     "std_scale": 1,
                     "normalize": false,
-                    "period": 2
+                    "period": "var_comping_pattern_period"
                 }
             },
             "human_impact_scale": 0

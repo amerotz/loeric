@@ -4,6 +4,9 @@ import tinysoundfont
 from mido.ports import BaseOutput
 
 
+file_to_soundfont_id = {}
+
+
 class SynthSound:
 
     def __init__(
@@ -32,15 +35,30 @@ class SynthSound:
         self._gain = gain
 
     def load(self, synth):
+        global file_to_soundfont_id
         if not os.path.isfile(self._path):
             self._is_default = True
         else:
             self._is_default = False
-            self._soundfont_id = synth.sfload(self._path, gain=self._gain)
+            if self._path in file_to_soundfont_id:
+                # get sf id
+                self._soundfont_id = file_to_soundfont_id[self._path][0]
+                # add another instrument to sf
+                file_to_soundfont_id[self._path][1] += 1
+            else:
+                # load sf
+                self._soundfont_id = synth.sfload(self._path, gain=self._gain)
+                # add to dict
+                file_to_soundfont_id[self._path] = [self._soundfont_id, 1]
 
     def unload(self, synth):
         if self._soundfont_id is not None:
             synth.sfunload(self._soundfont_id)
+            # reduce count of active instruments
+            file_to_soundfont_id[self._path][1] -= 1
+            # if 0 remove from dict
+            if file_to_soundfont_id[self._path][1] == 0:
+                del file_to_soundfont_id[self._path]
 
     @property
     def name(self):

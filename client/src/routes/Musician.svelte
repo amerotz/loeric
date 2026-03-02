@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type {Musician, Options} from "$lib/types";
 	import JSONEditorBar from "./JSONEditorBar.svelte";
+	import CheckboxOption from "./CheckboxOption.svelte";
 
 	import { onMount, onDestroy } from "svelte";
 
@@ -174,13 +175,12 @@
 				</select>
 			</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-				<label class="flex gap-3 justify-between">
-					<div class="flex flex-col">
-						<span class="text-gray-400 font-bold">DRONES</span>
-						<span class="text-gray-300">Toggle LOERIC's accompanying system.</span>
-					</div>
-					<input class="col-span-1 rounded-md border-gray-300 text-orange-600 transition" type="checkbox" bind:checked={musician.droning} onchange={() => apiPut("drones", { id: musician.id, drones: musician.droning })} />
-				</label>
+				<CheckboxOption
+					title="DRONES"
+					description="Toggle LOERIC's accompanying system."
+					bind:_bind={musician.droning}
+					_onchange={() => apiPut("drones", { id: musician.id, drones: musician.droning })}
+				/>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<label class="flex gap-3 justify-between">
 				<div class="flex flex-col">
@@ -190,22 +190,19 @@
 				  <input class="col-span-1" type="number" min="-12" max="12" bind:value={musician.transpose} onchange={transposeChange}/>
 				</label>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-				<label class="flex gap-3 justify-between">
-					<div class="flex flex-col">
-						<span class="text-gray-400 font-bold ">SLOW START</span>
-						<span class="text-gray-300">Build up speed to selected tempo at performance start.</span>
-					</div>
-					<input class="col-span-1 rounded-md border-gray-300 text-orange-600 transition" type="checkbox" bind:checked={musician.slow_start} onchange={slowStartChange} />
-				</label>
+				<CheckboxOption
+					title="SLOW START"
+					description="Build up speed to selected tempo at performance start."
+					bind:_bind={musician.slow_start}
+					_onchange={slowStartChange}
+				/>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
-				<label class="flex gap-3 justify-between">
-					<div class="flex flex-col">
-						<span class="text-gray-400 font-bold ">SLOW END</span>
-						<span class="text-gray-300">Slow down from selected tempo at performance end.</span>
-					</div>
-					<input class="col-span-1 rounded-md border-gray-300 text-orange-600 transition" type="checkbox" bind:checked={musician.slow_end} onchange={slowEndChange} />
-
-				</label>
+				<CheckboxOption
+					title="SLOW START"
+					description="Slow down from selected tempo at performance end."
+					bind:_bind={musician.slow_end}
+					_onchange={slowEndChange}
+				/>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<label class="flex flex-col justify-between">
 					<span class="text-gray-400 font-bold">OUTPUT</span>

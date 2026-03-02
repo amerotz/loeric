@@ -520,7 +520,9 @@ class PatternContour(Contour):
         self._std = np.array(std).astype(float)
         self._std_scale = std_scale
 
-        self._time_period = midi.time_signature.eighths_per_bar.eighth_duration * period
+        self._time_period = midi.time_signature.eighths_per_bar.eighth_duration * float(
+            period
+        )
         bar_position = self._contour_times / self._time_period
 
         pattern_indexes = ((len(self._mean) * bar_position) % len(self._mean)).astype(

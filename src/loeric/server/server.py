@@ -146,6 +146,16 @@ def _load_soundfonts():
             default_config=str(SPECIFIC_CONFIGS_PATH / "instrument/piano.json"),
             gain=-10,
         ),
+        "Piano (Comping)": lss.SynthSound(
+            name="Piano (Comping)",
+            path=str(SOUND_ROOT / "piano.sf2"),
+            program=0,
+            config=str(SPECIFIC_CONFIGS_PATH / "instrument/piano_comping.json"),
+            default_soundfont_id=default_soundfont_id,
+            default_program=0,
+            default_config=str(SPECIFIC_CONFIGS_PATH / "instrument/piano_comping.json"),
+            gain=-10,
+        ),
         "Harp": lss.SynthSound(
             name="Harp",
             path=str(SOUND_ROOT / "Celtic Harp.sf2"),
@@ -481,6 +491,7 @@ async def _output_change(request: fapi.Request):
         if musician.id == musician_id:
 
             _stop_synth()
+            musician.midi_out.reset()
 
             if new_output == "create_out":
                 midi_output = mido.open_output(
