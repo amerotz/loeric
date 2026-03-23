@@ -231,6 +231,7 @@ def main():
     parser.add_argument(
         "--plot",
         help="plots the specified contour before playback.",
+        nargs="+",
         type=str,
         default=None,
     )
@@ -397,13 +398,43 @@ def main():
             intensity_control=args["intensity_control"],
             human_impact_control=args["human_impact_control"],
             syncing=args["sync"],
-            plot=args["plot"],
             slow_start=args["slow_start"],
             slow_end=args["slow_end"],
             do_end_note=args["do_end_note"],
             verbose=args["verbose"],
             loeric_id=loeric_id,
         )
+
+        if args["plot"] is not None:
+            import matplotlib.pyplot as plt
+
+            x = tune.float_times
+            x /= max(x)
+            plot_num = len(args["plot"])
+            fig = plt.figure(figsize=(20, 5 * plot_num))
+            axs = fig.subplots(plot_num, 1, sharex=True)
+            if plot_num == 1:
+                axs = [axs]
+            for ax, contour in zip(axs, args["plot"]):
+                ax.step(
+                    x,
+                    (
+                        groover._contours["pitch_contour"]._contour
+                        - min(groover._contours["pitch_contour"]._contour)
+                    )
+                    / (
+                        max(groover._contours["pitch_contour"]._contour)
+                        - min(groover._contours["pitch_contour"]._contour)
+                    ),
+                    linestyle=":",
+                    where="post",
+                )
+                ax.step(
+                    x, groover._contours[contour]._contour, where="post", marker="x"
+                )
+                ax.set_xlim(min(x) - 0.01, 1 + 0.01)
+            plt.tight_layout()
+            plt.show()
 
         # set input callback
         if port is not None:

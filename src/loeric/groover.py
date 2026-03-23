@@ -37,7 +37,6 @@ class Groover:
         intensity_control: int = 1,
         human_impact_control: int = 11,
         syncing: bool = False,
-        plot=None,
         slow_start=False,
         slow_end=False,
         do_end_note=False,
@@ -58,12 +57,10 @@ class Groover:
         :param intensity_control: the MIDI CC to use for intensity.
         :param human_impact_control: the MIDI CC to use for human impact.
         :param syncing: whether or not synchronization with multiple LOERIC istances is active.
-        :param plot: the contour to plot before playback.
         :param slow_start: start the performance at a slower tempo.
         :param slow_end: end the performance at a slower tempo.
         """
 
-        self._plot = plot
         self._verbose = verbose
         self._slow_start = slow_start
         self._slow_end = slow_end
@@ -358,28 +355,6 @@ class Groover:
 
                 # update contour
                 self._contours[contour]._contour = data
-
-        if self._plot is not None:
-            import matplotlib.pyplot as plt
-
-            x = self._tune.float_times
-            plt.figure(figsize=(20, 5))
-            plt.step(
-                x,
-                (
-                    self._contours["pitch_contour"]._contour
-                    - min(self._contours["pitch_contour"]._contour)
-                )
-                / (
-                    max(self._contours["pitch_contour"]._contour)
-                    - min(self._contours["pitch_contour"]._contour)
-                ),
-                linestyle=":",
-                where="post",
-            )
-            plt.step(x, self._contours[self._plot]._contour, where="post", marker="x")
-            plt.tight_layout()
-            plt.show()
 
         # object holding each contour's value in a given moment
         self._contour_values = {}

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import shutil
 import sys
 import threading
 import time
@@ -17,7 +18,6 @@ import pyaudio as pa
 import tinysoundfont
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from muspy.outputs.midi import PITCH_NAMES
 
@@ -692,9 +692,13 @@ def upload_track_config():
 
 @app.post("/api/track")
 async def _upload_track(request: fapi.Request):
-    upload = request.files.get("upload")
-    file = TRACK_DIR / upload.filename
-    upload.save(file)
+    form = await request.form()
+    upload = form["upload"]
+
+    file_path = TRACK_DIR / upload.filename
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(upload.file, buffer)
 
     return await _state()
 

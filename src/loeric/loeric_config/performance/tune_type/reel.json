@@ -1,6 +1,6 @@
 {
 	"variables": {
-        "var_notes_per_bar": [8,4,2,1],
+        "var_notes_per_bar": [8,4],
         "var_velocity_weight": [0,-1,1,1,1],
 		"var_legato_pattern": {
 			"mean": [

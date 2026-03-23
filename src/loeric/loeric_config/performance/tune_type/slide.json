@@ -1,6 +1,6 @@
 {
 	"variables": {
-        "var_notes_per_bar": [4,2],
+        "var_notes_per_bar": [12,4],
         "var_velocity_weight": [0,1,0,0,0],
 		"var_legato_pattern": {
 			"mean": [1,0.8,1],
@@ -34,28 +34,54 @@
 
 	},
 	"contours":{
-		"drone": {
+		"notes_per_bar": {
 			"recipe": {
-				"weighted_sum": {
-					"contours": {
-						"o_canainn": {
-							"weights": [0, 1, 1, 1, -1],
-							"savgol": false,
-							"scale": true,
-							"shift": true
-						},
-						"pattern": {
-							"mean": [1, 0, 1, 0, 0, 1],
-							"std": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
-							"std_scale": 1,
-							"normalize": false,
-							"period": 1
-						}
-					},
-					"weights": [ 0.5,  0.5]
+				"pattern": {
+					"mean": [
+						1,0,0, 0,0,0, 0,0,0, 0,0,0,
+						1,0,0, 0,0,0, 1,0,0, 1,0,0,
+						1,0,0, 0,0,0, 0,0,0, 0,0,0,
+						1,0,0, 0,0,0, 1,0,0, 1,0,0
+					],
+					"std": null,
+					"std_scale": 1,
+					"normalize": false,
+					"period": 4
 				}
 			}
-        },
+		},
+		"drone": {
+			"recipe": {
+				"multiply": {
+					"contours": {
+						"scale": {
+							"contours": {
+								"o_canainn": {
+									"weights": [1, 1, 1, 1, -1],
+									"savgol": false,
+									"scale": true,
+									"shift": true
+								}
+							},
+							"min": 0,
+							"max": 1
+						},
+						"pattern": {
+							"mean": [
+								1,0,0, 0,0,1, 0,0,1, 0,0,1,
+								1,0,0, 0,0,1, 0,0,1, 1,0,0,
+								1,0,0, 0,0,1, 0,0,1, 0,0,1,
+								1,0,0, 0,0,1, 1,0,0, 1,0,0
+							],
+							"std": null,
+							"std_scale": 1,
+							"normalize": false,
+							"period": 4
+						}
+					}
+				}
+			}
+		},
 		"velocity_pattern": {
 			"recipe": {
 				"pattern": {
@@ -79,16 +105,16 @@
 			}
 		}
 	},
-    "swing": {
+	"swing": {
 		"min": 1.5,
 		"max": 1,
 		"bind": "swing",
 		"locations": [1,4,7,10]
 	},
 	"values": {
-        "beat_velocity_increase": 16
+		"beat_velocity_increase": 16
 	},
 	"harmony": {
-        "chords_per_bar": 4
-    }
+		"chords_per_bar": 4
+	}
 }

@@ -1,6 +1,6 @@
 {
 	"variables": {
-        "var_notes_per_bar": [8,4,2,1],
+        "var_notes_per_bar": [8],
         "var_velocity_weight": [0,1,0,0,0],
         "var_comping_notes_per_bar": [4],
         "var_upper_comping_pattern": [0,1,0,1,0,1,0,1],
@@ -88,4 +88,3 @@
         "chords_per_bar": 4
     }
 }
-

@@ -1,7 +1,7 @@
 {
 	"variables": {
-        "var_notes_per_bar": [8,4,2,1],
-        "var_velocity_weight": [0,1,0,0,0], 
+        "var_notes_per_bar": [8],
+        "var_velocity_weight": [0,-1,0,0,0],
         "var_comping_notes_per_bar": [4],
         "var_upper_comping_pattern": [0,1,0,1,0,1,0,1],
         "var_lower_comping_pattern": [1,0,1,0,1,0,1,0]
@@ -12,7 +12,7 @@
 				"weighted_sum": {
 					"contours": {
 						"o_canainn": {
-							"weights": [0, 1, 0, 0, 0],
+							"weights": [0, -1, 0, 0, 0],
 							"savgol": true,
 							"scale": true,
 							"shift": true
@@ -31,7 +31,7 @@
 				"weighted_sum": {
 					"contours": {
 						"o_canainn": {
-							"weights": [0, 1, 0, 0, 0],
+							"weights": [0, -1, 0, 0, 0],
 							"savgol": true,
 							"scale": true,
 							"shift": true
@@ -93,4 +93,3 @@
         "chords_per_bar": 4
     }
 }
-
