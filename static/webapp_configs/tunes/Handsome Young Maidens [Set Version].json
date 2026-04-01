@@ -4,7 +4,7 @@
     },
     "contours": {
         "drone": {
-            "human_impact_scale": 0.5
+            "human_impact_scale": 1.0
         },
         "velocity": {
             "human_impact_scale": 0.0
@@ -124,7 +124,7 @@
             "velocities_mean": [ 1, 1, 1 ],
             "velocities_std": [ 0, 0, 0 ],
             "durations_mean": [ 0.8, 0.3, 0.9 ],
-            "durations_std": [ 0.1, 0.1, 0.1 ],
+            "durations_std": [ 0.1, 0.0, 0.1 ],
             "probability": 1,
             "length": 2,
             "diatonic": true,
@@ -139,7 +139,7 @@
             "velocities_mean": [ 1, 1 ],
             "velocities_std": [ 0, 0 ],
             "durations_mean": [ 0.2, 0.8 ],
-            "durations_std": [ 0.1, 0.1 ],
+            "durations_std": [ 0.0, 0.1 ],
             "probability": 1,
             "length": 1,
             "diatonic": true,
@@ -154,7 +154,7 @@
             "velocities_mean": [ 1, 0.8, 1 ],
             "velocities_std": [ 0, 0, 0 ],
             "durations_mean": [ 0.8, 0.3, 0.9 ],
-            "durations_std": [ 0.1, 0.1, 0.1 ],
+            "durations_std": [ 0.1, 0.0, 0.1 ],
             "probability": 1,
             "length": 2,
             "diatonic": true,
@@ -184,7 +184,7 @@
             "velocities_mean": [ 1 ],
             "velocities_std": [ 0.25 ],
             "durations_mean": [ 1 ],
-            "durations_std": [ 0.25 ],
+            "durations_std": [ 0.1 ],
             "probability": 0.01,
             "length": 1,
             "diatonic": false,
@@ -199,7 +199,7 @@
             "velocities_mean": [ 1 ],
             "velocities_std": [ 0.25 ],
             "durations_mean": [ 1 ],
-            "durations_std": [ 0.25 ],
+            "durations_std": [ 0.1 ],
             "probability": 0.01,
             "length": 1,
             "diatonic": true,
@@ -212,9 +212,9 @@
             "pitches_mean": [ 0 ],
             "pitches_std": [ 4 ],
             "velocities_mean": [ 1 ],
-            "velocities_std": [ 0.25 ],
+            "velocities_std": [ 0.1 ],
             "durations_mean": [ 1 ],
-            "durations_std": [ 0.25 ],
+            "durations_std": [ 0.1 ],
             "probability": 0.01,
             "length": 1,
             "diatonic": false,

@@ -26,21 +26,6 @@
         }
     },
     "ornamentation": {
-        "error_chromatic": {
-            "cases": [
-                "not beat" ],
-                "pitches_mean": [ 0 ],
-                "pitches_std": [ 4 ],
-                "velocities_mean": [ 1 ],
-                "velocities_std": [ 0.25 ],
-                "durations_mean": [ 1 ],
-                "durations_std": [ 0.5 ],
-                "probability": 0.01,
-                "length": 1,
-                "diatonic": false,
-                "threshold": 0,
-                "slide": false
-        },
         "error_diatonic": {
             "cases": [
                 "not beat" ],
@@ -62,9 +47,7 @@
             "control": 49,
             "contours": [
                 "orn_error_diatonic",
-                "orn_error_diatonic_prob",
-                "orn_error_chromatic",
-                "orn_error_chromatic_prob"
+                "orn_error_diatonic_prob"
             ]
         }
     },
