@@ -1,3 +1,4 @@
+import copy
 import pathlib
 import sys
 import time
@@ -31,6 +32,8 @@ general_configs_path = general_configs_path / "loeric_config" / "performance"
 # key signatures
 number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
 
+major_scale = np.array([0, 2, 4, 5, 7, 9, 11])
+
 
 def midi_to_freq(midi):
     return 440 * 2 ** ((midi - 69) / 12)
@@ -62,29 +65,49 @@ def play(
     :param kwargs: the performance arguments
     """
 
-    player.init_playback()
-    player.reset_song_time(
-        song_time=groover._tune.times[0].eighth_duration,
-    )
+    player.set_song_time(groover._tune._annotated_score[0].time.eighth_duration)
 
     average_loop_time = 0
     next_event_time = 0
+    previous_message = None
+    original_message = None
 
     # iterate over messages
     while loop_condition():
 
+        previous_message = copy.copy(original_message)
+        original_message = groover.next_event()
+
+        player.set_tempo_scale(groover.tempo_scale)
+
+        # no more messages to perform, exit
+        if original_message is None:
+            next_event_time = previous_message.time + previous_message.duration
+            print(next_event_time)
+            player.wake_me_up_at(next_event_time)
+            groover.reset()
+            break
+
+        # calculate time to wake up for next message
+        # next_event_time = original_message.time + original_message.duration
+        next_event_time = original_message.time
+        time_to_think = next_event_time - 2 * (
+            average_loop_time / groover._eighth_duration_seconds
+        )
+        # wake up slightly before next note
+        player.wake_me_up_at(time_to_think)
+
+        # wait to be awaken by player
+        while loop_condition() and not player.has_reached_wake_time.is_set():
+            player.has_reached_wake_time.wait()
+        player.has_reached_wake_time.clear()
+
+        # wait to be awaken by user / other loeric instance in session
         while groover.stopped.is_set() and loop_condition():
             groover.playback_resumed.wait()
 
         # start measuring loop
         loop_start_time = time.time()
-        original_message = groover.next_event()
-
-        # no more messages to perform, exit
-        if original_message is None:
-            player.wake_me_up_at(next_event_time)
-            groover.reset()
-            break
 
         new_messages = []
         # perform notes
@@ -94,15 +117,27 @@ def play(
             if note_callback is not None:
                 note_callback(original_message)
         # keep meta messages intact
+        # handle score elements
         else:
-            if isinstance(original_message, tu.SongPosition):
+            # barlines
+            if isinstance(original_message, tu.Barline):
+                groover.reset_accidentals()
+            # tempos
+            elif isinstance(original_message, tu.Tempo):
+                groover._tune.set_tempo(original_message)
+                if kwargs["verbose"] > 0:
+                    print(f"[INFO]\tChanging tempo. {groover.tempo}")
+            # song positions
+            elif isinstance(original_message, tu.SongPosition):
                 if songpos_callback is not None:
                     songpos_callback(original_message)
+            # repetitions
             elif isinstance(original_message, tu.Repetition):
                 if repetition_callback is not None:
                     repetition_callback(original_message)
                 if groover.skip_repetition:
                     break
+            # key signature
             elif isinstance(original_message, tu.KeySignature):
                 if groover._tune.forced_key:
                     if kwargs["verbose"] > 0:
@@ -113,6 +148,7 @@ def play(
                     if kwargs["verbose"] > 0:
                         print(f"[INFO]\tChanging key. {original_message}")
                     groover._tune.set_key_signature(original_message)
+            # chords
             elif isinstance(original_message, tu.Chord):
                 if kwargs["verbose"] > 0:
                     if original_message.is_user:
@@ -128,7 +164,6 @@ def play(
 
             midi_headers = original_message.to_midi(absolute_time=True)
 
-        player.set_tempo_scale(groover.tempo_scale)
         player.add_notes(new_messages)
         player.add_midi(midi_headers)
 
@@ -142,12 +177,6 @@ def play(
             original_message.duration.eighth_duration * groover._eighth_duration_seconds
         )
 
-        # calculate time to wake up for next message
-        next_event_time = original_message.time + original_message.duration
-        time_to_think = next_event_time - 2 * (
-            average_loop_time / groover._eighth_duration_seconds
-        )
-
         if (
             average_loop_time > message_duration_seconds
             and original_message.duration != 0
@@ -157,12 +186,6 @@ def play(
                     f"\033[38;2;255;255;0m[WARN] Intra-note computations are taking too much time ({np.round(average_loop_time, 3)} vs {np.round(message_duration_seconds, 3)}). Free your CPU!\033[0m"
                 )
 
-        # wake up slightly before next note
-        player.wake_me_up_at(time_to_think)
-        while loop_condition() and not player.has_reached_wake_time.is_set():
-            player.has_reached_wake_time.wait()
-        player.has_reached_wake_time.clear()
-
     if groover.do_end_note:
         groover.reset()
         groover.advance_contours()
@@ -170,10 +193,13 @@ def play(
         player.add_notes(end_notes)
 
         final_wake_time = end_notes[-1].time + end_notes[-1].duration
+        player.wake_me_up_at(final_wake_time)
+    """
     else:
         final_wake_time = groover.performance_time
+        print(final_wake_time)
+    """
 
-    player.wake_me_up_at(final_wake_time)
     while loop_condition() and not player.has_reached_wake_time.is_set():
         player.has_reached_wake_time.wait()
     player.has_reached_wake_time.clear()

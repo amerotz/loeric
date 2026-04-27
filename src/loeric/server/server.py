@@ -317,7 +317,8 @@ async def _state():
             "name": current_track,
             "type": current_track.split(".")[-1],
             "time": f"{musicians[0].current_tune.time_signature.numerator}/{musicians[0].current_tune.time_signature.denominator}",
-            # "config": musicians[0].current_groover._config,
+            "custom_config": musicians[0].current_tune.json_config,
+            "full_config": musicians[0].current_groover._config,
             "key": _key_to_str(musicians[0].current_tune.key_signature),
             "tempo": musicians[0].current_groover.tempo.qpm,
             "repeats": musicians[0].current_tune.repeats,
@@ -675,19 +676,24 @@ def upload_musician_config():
     return await _state()
 
 
+"""
+
+
 @app.post("/api/track/config")
-def upload_track_config():
-    global tune
-    upload = request.files.get("upload")
-    filename = f"tunes/{os.path.splitext(tune.name.lower())[0]}"
-    path = webapp_config_path(filename)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    upload.save(path, overwrite=True)
+async def _upload_track_config(request: fapi.Request):
+    form = await request.form()
+    print(form)
+    """
+    upload = form["upload"]
+
+    file_path = TRACK_DIR / upload.filename
+
+    # upload.save(path, overwrite=True)
 
     tune.config = webapp_load_config(filename)
+    """
 
     return await _state()
-"""
 
 
 @app.post("/api/track")
@@ -769,7 +775,7 @@ def _init_musician(track):
 
 def _open_browser():
     # Wait a bit to ensure server is ready
-    time.sleep(1)
+    # time.sleep(1)
     webbrowser.open(f"http://localhost:{PORT}")
 
 

@@ -448,7 +448,8 @@ def main():
             save=args["save"],
             verbose=args["verbose"],
             midi_out=out,
-            song_start_time=tune.times[0].eighth_duration,
+            midi_sync_out=sync_port_out,
+            song_start_time=tune._annotated_score[0].time.eighth_duration,
         )
 
         player_t = threading.Thread(target=player_loop, args=[player, groover])
@@ -475,13 +476,15 @@ def main():
             play_event.set()
 
         def songpos_callback(message):
+            """
             if sync_port_out is not None:
                 for msg in message.to_midi():
                     sync_port_out.send(msg)
-                if args["verbose"] > 0:
-                    print(
-                        f"[INFO]\t{groover.loeric_id} SENT {message.position} ({time.time()})"
-                    )
+            """
+            if args["sync"] and args["verbose"] > 0:
+                print(
+                    f"[INFO]\t{groover.loeric_id} SENT {message.position} ({time.time()})"
+                )
 
         # start playback
         try:

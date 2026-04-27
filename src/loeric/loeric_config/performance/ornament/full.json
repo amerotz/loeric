@@ -34,7 +34,7 @@
             "durations_std": [ 0.01, 0.01, 0.01, 0.01, 0 ],
             "probability": 1,
             "length": 2,
-            "diatonic": true,
+            "diatonic": false,
             "threshold": 0,
             "slide": true
         },
@@ -171,7 +171,7 @@
             "length": 1,
             "diatonic": false,
             "threshold": 0,
-            "slide": false 
+            "slide": false
         },
         "error_diatonic": {
             "cases": [
@@ -187,7 +187,7 @@
             "length": 1,
             "diatonic": true,
             "threshold": 0,
-            "slide": false 
+            "slide": false
         },
         "error_slide": {
             "cases": [

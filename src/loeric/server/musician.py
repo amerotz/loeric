@@ -84,7 +84,7 @@ class Musician:
             print("[INFO]\tPlayer thread started.")
             while not self._stop_event.is_set():
 
-                # If paused → block indefinitely
+                # If paused then block indefinitely
                 while (
                     self.current_groover.stopped.is_set()
                     and not self._stop_event.is_set()
@@ -92,7 +92,7 @@ class Musician:
                     self.player.reset()
                     self.current_groover.playback_resumed.wait()
 
-                    # If stop happened while paused → exit
+                    # If stop happened while paused then exit
                     if self._stop_event.is_set():
                         break
 

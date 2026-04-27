@@ -237,9 +237,11 @@ class PhraseContour(Contour):
 
         bar_length = midi.time_signature.eighths_per_bar.eighth_duration
         phrase_eighths = bar_length * phrase_length
-        phrase_position = (
-            (self._contour_times - shift) % phrase_eighths
-        ) / phrase_eighths
+        # consider note onset + half of duration as phrase position
+        # anders says it works better
+        note_durations = np.array([d.eighth_duration for d in midi.durations])
+        note_positions = self._contour_times + note_durations / 2
+        phrase_position = ((note_positions - shift) % phrase_eighths) / phrase_eighths
 
         if kind == "arch":
             acc = 0.1 * accelerando * (1 - (phrase_position / turn)) ** power
@@ -818,8 +820,9 @@ def create_contour(
                 )
             )
 
-        contour_program["contours"] = all_contours
-        return operation_dict[key](**contour_program)
+        program = contour_program.copy()
+        program["contours"] = all_contours
+        return operation_dict[key](**program)
 
     else:
         raise InvalidRecipeError(

@@ -19,8 +19,11 @@ class Player:
         time_signature=None,
         save: bool = False,
         midi_out=None,
+        midi_sync_out=None,
         verbose: int = 0,
         song_start_time=0,
+        midi_out_lock=None,
+        midi_sync_out_lock=None,
     ):
         """
         Initialize the class.
@@ -34,14 +37,28 @@ class Player:
         self._key_signature = key_signature
         self._time_signature = time_signature
         self._saving = save
+
         self._midi_out = midi_out
+        self._midi_sync_out = midi_sync_out
+
         self._tempo = tempo
         self._verbose = verbose
         self._message_queue = []
         self._message_queue_lock = threading.Lock()
         self._active_notes = []
         self.has_reached_wake_time = threading.Event()
-        self._midi_out_lock = threading.Lock()
+
+        if midi_out_lock is None:
+            self._midi_out_lock = threading.Lock()
+        else:
+            self._midi_out_lock = midi_out_lock
+        print(id(self._midi_out_lock))
+
+        if midi_sync_out_lock is None:
+            self._midi_sync_out_lock = threading.Lock()
+        else:
+            self._midi_sync_out_lock = midi_sync_out_lock
+
         self._tempo_scale = 1
         self._time_division = tu.TimeDelta(
             eighth_duration=2 / tu.MINIMUM_QUARTER_DIVISION
@@ -50,7 +67,7 @@ class Player:
         self.__song_start_time = song_start_time
         self._song_time = tu.TimeDelta(eighth_duration=song_start_time)
         self._last_played_message_time = self._song_time.eighth_duration
-        self._notify_song_time = tu.TimeDelta(eighth_duration=1000000)
+        self._notify_song_time = tu.TimeDelta(eighth_duration=song_start_time)
 
         if self._saving:
             self._midi_performance = mido.MidiFile(type=0)
@@ -86,8 +103,8 @@ class Player:
         # obtained from
         # mido/mido/midifiles/midifiles.py:423-424
         # to minimize drifting
-        self._start_time = time.time()
-        self._input_time = 0.0
+        # self._start_time = time.time()
+        # self._input_time = 0.0
 
     def reset_song_time(self, song_time=None):
         if song_time is None:
@@ -139,6 +156,10 @@ class Player:
         self._song_time = tu.TimeDelta(eighth_duration=value)
         self._notify_song_time = tu.TimeDelta(eighth_duration=value)
 
+        # remove any messages
+        with self._message_queue_lock:
+            self._message_queue = []
+
     def play_next(self) -> None:
         """
         Play the messages in input and append them to the generated performance.
@@ -147,33 +168,42 @@ class Player:
         :param messages: the midi messages to play.
         """
 
-        start_time = time.time()
+        # wake up the groover if time reached
         if self._song_time >= self._notify_song_time:
             self.has_reached_wake_time.set()
 
+        # store start time of loop
+        start_time = time.time()
+        # until we have stuff to play
+
         while True:
 
+            # check the queue
             with self._message_queue_lock:
                 if len(self._message_queue) == 0:
                     break
 
-                delta = self._song_time - self._message_queue[0].time
-
-                if delta < 0:
+                # if we have not reached the next message in the queue, stop
+                if self._song_time < self._message_queue[0].time:
                     break
 
+                # else get the message
                 msg = self._message_queue.pop(0)
 
+            # save midi performance
             if self._saving:
 
                 # TODO
                 # fix export
                 save_message = copy.deepcopy(msg)
+                # change time to ticks
                 new_time = np.round(save_message.time * 32767 / 2).astype(int)
                 save_message.time = new_time
                 print(save_message)
+                # add to track
                 self._midi_track.append(save_message)
 
+            # meta messages can't be performed
             if msg.is_meta:
                 continue
 
@@ -182,52 +212,85 @@ class Player:
             if lu.is_note_on(msg):
                 key = f"{msg.note}_{msg.channel}"
 
+                # if note is active on that channel
+                # and we need to play it again
                 if key in self._active_notes:
 
-                    # turn off
+                    # turn off existing note
+                    # before the other one is sent
                     off_msg = mido.Message(
                         "note_off", note=msg.note, channel=msg.channel, velocity=0
                     )
+
                     if self._verbose == 5:
                         print("[MIDI]\t", off_msg)
+
                     self._midi_out.send(off_msg)
 
-                    # remove message
-                    self._active_notes.remove(key)
+                    # no need to remove it from active notes since
+                    # it will be sent again
 
-                self._active_notes.append(f"{msg.note}_{msg.channel}")
+                else:
+                    # register that this note is active
+                    self._active_notes.append(f"{msg.note}_{msg.channel}")
 
             elif lu.is_note_off(msg):
+                # if it was active
                 key = f"{msg.note}_{msg.channel}"
 
+                # remove it from active notes
                 if key in self._active_notes:
                     self._active_notes.remove(key)
 
             if self._verbose == 5:
                 print("[MIDI]\t", msg)
 
-            if self._midi_out is not None:
-                msg.time = 0
+            # instant
+            msg.time = 0
+
+            # if we have a sync port, send songpos messages there
+            if msg.type == "songpos" and self._midi_sync_out is not None:
+                with self._midi_sync_out_lock:
+                    self._midi_sync_out.send(msg)
+
+            # if there is a midi output (so we are not saving)
+            # send the message there
+            elif self._midi_out is not None:
+
                 with self._midi_out_lock:
                     self._midi_out.send(msg)
 
+        # advance song performance time by small delta
         self._song_time += self._time_division
+
+        # if we are not saving
         if self._midi_out is not None:
+
+            # fraction of eight note converted to seconds
+            wait_time = self._time_division.eighth_duration * self._tempo_scale
+
+            # compensate loop duration
             delay_time = time.time() - start_time
-            time.sleep(
-                max(
-                    self._time_division.eighth_duration * self._tempo_scale
-                    - delay_time,
-                    0,
-                )
-            )
+            wait_time -= delay_time
+
+            # cannot wait negative time
+            time.sleep(max(wait_time, 0))
 
     def reset(self) -> None:
         """
-        Reset the output port.
+        Explicitly reset the output port.
         """
         if self._midi_out is not None:
-            self._midi_out.reset()
+            with self._midi_out_lock:
+                for item in self._active_notes:
+
+                    note, channel = item.split("_")
+                    print(note, channel)
+                    self._midi_out.send(
+                        mido.Message(
+                            "note_off", note=int(note), channel=int(channel), velocity=0
+                        )
+                    )
 
     def save(self, filename: str) -> None:
         """

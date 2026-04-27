@@ -286,7 +286,7 @@ def sync_loeric(inports, outports):
 
             # who sent this?
             loeric_id = re.search("#.*#", port.name)[0]
-            # shell_print(f"{loeric_id}: SENT {msg.pos} ({now})")
+            shell_print(f"{loeric_id}: SENT {msg.pos} ({now})")
 
             # don't sync the human
             if "HUMAN" in port.name:

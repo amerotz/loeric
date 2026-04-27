@@ -2,11 +2,13 @@
     "drone": {
         "drone_sets": {
             "bowed": {
-                "notes": [ 65, 60, 55, 50, 45, 40]
+                "notes": [47, 52, 57, 62, 67],
+                "polyphony_min": 1,
+                "polyphony_max": 2
             },
             "free": {
-                "notes": [ 45, 49, 50, 54, 55, 59, 60, 64, 65 ]
-
+                "threshold": 1.1,
+                "notes": []
             }
         }
     }

@@ -5,7 +5,8 @@
 
 	let {
 		json,
-		onUpload = async () => {}
+		onUpload = async () => {},
+		text
 	}: {
 		json: any,
 		onUpload: (form: FormData) => Promise<void>
@@ -35,12 +36,13 @@
 		--jse-background-color: #030712;
 		--jse-key-color: #99a1af;
 		--jse-delimiter-color: #6a7282;
-	}
+    	--jse-font-size-mono: 1rem;
+  }
 </style>
 
-<Accordion>
+<Accordion text={text}>
 	<div class="jse-theme-dark flex flex-col">
-		<div class="flex">
+		<div class="flex text-m">
 			<button onclick={() => mode = Mode.text} class="material-symbols-outlined !text-base p-1" title="Edit Text">
 				text_snippet
 			</button>
@@ -52,8 +54,6 @@
 				<span class="material-symbols-outlined !text-base p-1">upload</span>
 			</FileUpload>
 		</div>
-		<JSONEditor mode={mode} content={content} mainMenuBar={false} navigationBar={false} statusBar={false}
-		            onChange={handleChange}/>
+		<JSONEditor mode={mode} content={content} mainMenuBar={false} navigationBar={false} statusBar={false} onChange={handleChange}/>
 	</div>
 </Accordion>
-

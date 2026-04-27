@@ -76,6 +76,21 @@ class Groover:
         self._tune = tune
         self._tempo = self._tune._tempos[0]
 
+        # tempo sync
+        self._external_tempo = None
+        self._tempo_lock = threading.Lock()
+        self._last_clock_time = None
+
+        # accidentals
+        self._accidentals = defaultdict(int)
+
+        # keyswitches
+        self._last_keyswitches = []
+
+        # intonation
+        self._last_recorded_intonation = 0
+        self._intonation = np.zeros(127)
+
         # offset for messages after ornaments
         self._eighths_to_skip = 0
 
@@ -221,10 +236,16 @@ class Groover:
                 self._drone_midi_channels.append(ch)
 
         # set parameters
-        if self._config["tempo_control"]["bpm"] is None:
-            self._user_tempo = self._tune._tempos[0]
+        self._bpm_to_original_tempo_ratio = 1
+        if self._config["tempo_control"]["bpm"] is not None:
+            self._bpm_to_original_tempo_ratio = (
+                self._config["tempo_control"]["bpm"] / self._tune.tempo.qpm
+            )
+        """
         else:
             self._user_tempo = tu.Tempo(qpm=self._config["tempo_control"]["bpm"])
+        """
+
         self._max_ornament_length = 0
         for o in self._config["ornamentation"]:
             self._max_ornament_length = max(
@@ -245,18 +266,6 @@ class Groover:
                 for note in self._config["drone"]["drone_sets"][d]["notes"]
             ]
         )
-
-        # keyswitches
-        self._last_keyswitches = []
-
-        # intonation
-        self._last_recorded_intonation = 0
-        self._intonation = np.zeros(127)
-
-        # tempo sync
-        self._external_tempo = None
-        self._tempo_lock = threading.Lock()
-        self._last_clock_time = None
 
         # create contours
         self._contours = {}
@@ -366,7 +375,12 @@ class Groover:
             self._contour_values[f"{contour_name}_human_impact"] = self._config[
                 "contours"
             ][contour_name]["human_impact_scale"]
-            self._contour_values[contour_name] = 0.5
+            # patterns are multiplied, so leave it unchanged
+            if "pattern" in contour_name:
+                self._contour_values[contour_name] = 1
+            # for other contours, 0.5 means "average"
+            else:
+                self._contour_values[contour_name] = 0.5
 
         for group in self._config["control_2_contour"].values():
             for contour_name in group["contours"]:
@@ -393,7 +407,7 @@ class Groover:
         Read the values associated with a given control number.
         """
         val = [
-            self._contour_values[c]
+            self._contour_values[c.split("#")[0]]
             for c in self._config["contour_2_control"]
             if self._config["contour_2_control"][c]["control"] == control_num
         ]
@@ -414,7 +428,12 @@ class Groover:
             if control_num == event_number:
                 for contour_name in group["contours"]:
                     self.set_contour_value(contour_name, value)
-                    print(f'"\x1b[0K"{contour_name}:\t{round(value, 2)}', end="\r")
+                    # print(f"{contour_name}:\t{round(value, 2)}")
+                    """
+                    print(
+                        f"[{str(self.loeric_id)[:4]}]\t{contour_name}:\t{round(value, 2)}"
+                    )
+                    """
                     if self._verbose == 4:
                         print(
                             f"[{str(self.loeric_id)[:4]}]\t{contour_name}:\t{round(value, 2)}"
@@ -467,11 +486,6 @@ class Groover:
 
             self._contour_values[contour_name] *= 1 - hi
             self._contour_values[contour_name] += hi * intensity
-            """
-            self._contour_values[contour_name] = np.nan_to_num(
-                self._contour_values[contour_name], nan=0.5
-            )
-            """
 
     def set_contour_value(self, contour_name: str, value: float) -> None:
         """
@@ -583,6 +597,11 @@ class Groover:
                 [],
             )
 
+        # check if note is non diatonic and store it
+        deg, acc = self._tune.key_signature.degree_from_root(current_message.pitch)
+        self._accidentals[deg] = acc
+
+        # store velocity
         current_message._velocity = self._current_velocity
         notes = [current_message]
 
@@ -623,6 +642,7 @@ class Groover:
                     "threshold"
                 ]
 
+                # TODO make this a function
                 drone_type = drone_option.split("#")[0]
 
                 notes_per_bar = None
@@ -639,7 +659,6 @@ class Groover:
                     ).eighth_duration
 
                 start_time = original_notes[0].time
-
                 end_time = original_notes[-1].time + original_notes[-1].duration
 
                 og_pitches = np.array([n.pitch for n in original_notes])
@@ -721,7 +740,15 @@ class Groover:
                             self._active_pedals.append(drone_option)
 
                         # create the note events
-                        drone_pitches = sorted(drone_pitches)
+                        reverse = False
+                        if (
+                            "ascending"
+                            in self._config["drone"]["drone_sets"][drone_option]
+                        ):
+                            reverse = self._config["drone"]["drone_sets"][drone_option][
+                                "ascending"
+                            ]
+                        drone_pitches = sorted(drone_pitches, reverse=reverse)
                         d_notes, delay = self._add_drone(
                             note, drone_pitches, drone_option, notes_per_bar
                         )
@@ -750,6 +777,7 @@ class Groover:
             note = self._apply_swing(note)
 
             if note.is_note:
+
                 # change intonation
                 note._pitch += self._intonation[int(note.pitch)] + self._config[
                     "values"
@@ -760,6 +788,7 @@ class Groover:
             note = self._apply_swing(note)
 
             if note.is_note:
+
                 # change intonation
                 note._pitch += self._intonation[int(note.pitch)] + self._config[
                     "values"
@@ -1011,7 +1040,16 @@ class Groover:
                 )
             )
             if not drone_name.startswith("pedal"):
-                delay += self._config["drone"]["drone_sets"][drone_name]["delay_range"]
+                val = self._config["drone"]["drone_sets"][drone_name]["delay_range"]
+                mul = 1
+                if "delay_bind" in self._config["drone"]["drone_sets"][drone_name]:
+                    mul = self._contour_values[
+                        self._config["drone"]["drone_sets"][drone_name]["delay_bind"]
+                    ]
+                    if val < 0:
+                        mul = 1 - mul
+
+                delay += mul * val
 
         return notes, delay
 
@@ -1250,15 +1288,18 @@ class Groover:
         """
         :return: the user-set tempo.
         """
-        base_tempo = self._user_tempo
+        base_tempo = tu.Tempo(
+            qpm=self._tune.tempo.qpm * self._bpm_to_original_tempo_ratio
+        )
         with self._tempo_lock:
             if self._external_tempo is not None:
                 base_tempo = self._external_tempo
 
         return base_tempo
 
+    # TODO what to do with approaches?
+    """
     def approach_from_above(self, note_number: int, tune: tu.Tune) -> int:
-        """
         Return the midi note number to approach the given note from above.
         If no special approach rule is specified in the configuration file, it will return the next note in the scale of the tune's key from the given note.
 
@@ -1266,7 +1307,6 @@ class Groover:
         :param tune: the reference tune.
 
         :return: the note used the approach the given note from above.
-        """
         note_name = m21.pitch.Pitch(midi=note_number).nameWithOctave
         # use configuration
         if note_name in self._config["approach_from_above"]:
@@ -1277,16 +1317,13 @@ class Groover:
             index = self._tune.key_signature.semitones_from_root(note_number)
             return lu.above_approach_scale[index] + note_number
 
-    def approach_from_below(self, note_number: int, tune: tu.Tune) -> int:
-        """
+    def approach_from_below(self, note_number: int) -> int:
         Return the midi note number to approach the given note from below.
         If no special approach rule is specified in the configuration file, it will return the previous note in the scale of the tune's key from the given note.
 
         :param note_number: the note to approach.
-        :param tune: the reference tune.
 
         :return: the note used the approach the given note from below.
-        """
         note_name = m21.pitch.Pitch(midi=note_number).nameWithOctave
         # use configuration
         if note_name in self._config["approach_from_below"]:
@@ -1296,6 +1333,10 @@ class Groover:
         else:
             index = self._tune.key_signature.semitones_from_root(note_number)
             return lu.below_approach_scale[index] + note_number
+    """
+
+    def reset_accidentals(self):
+        self._accidentals = defaultdict(int)
 
     def generate_ornament(
         self, message: mido.Message, ornament_type: str
@@ -1340,44 +1381,38 @@ class Groover:
 
         ornaments = []
         is_slide = self._config["ornamentation"][ornament_type]["slide"]
+        is_diatonic = self._config["ornamentation"][ornament_type]["diatonic"]
         offset = message.time
         for i, (p, v, d) in enumerate(zip(pitches, velocities, durations)):
 
-            # if a step and diatonic
-            if abs(p) == 1 and self._config["ornamentation"][ornament_type]["diatonic"]:
-                if p < 0:
-                    new_note = self.approach_from_below(message.pitch, self._tune)
-                else:
-                    new_note = self.approach_from_above(message.pitch, self._tune)
+            if is_diatonic:
+                new_note = self._tune.key_signature.degree_add(
+                    message.pitch, np.round(p).astype(int)
+                )
+
+                # change accidentals
+                deg, acc = self._tune.key_signature.degree_from_root(new_note)
+                if acc == 0:
+                    new_note += self._accidentals[deg]
+
+                # microtonal as fractional part
+                new_note += p - np.round(p)
             else:
+                # TODO decide what to do with approaches
+                """
+                if abs(p) == 1:
+                    if p < 0:
+                        new_note = self.approach_from_below(message.pitch, self._tune)
+                    else:
+                        new_note = self.approach_from_above(message.pitch, self._tune)
+                else:
+                """
                 new_note = message.pitch + p
 
             # if not sliding, quantize
             # slides can be microtonal
             if not is_slide:
                 new_note = int(new_note)
-
-            # get note position in scale
-            note_index = int(self._tune.key_signature.semitones_from_root(new_note))
-
-            # if quantization needed
-            if (
-                lu.needs_pitch_quantization[note_index]
-                and not is_slide
-                and self._config["ornamentation"][ornament_type]["diatonic"]
-            ):
-                # check both quantizing up and down
-                opt = {
-                    abs(p - 1): -1,
-                    abs(p + 1): 1,
-                }
-                # if one option leaves the note unchanged, use the other
-                if min(opt) == 0:
-                    p += opt[max(opt)]
-                else:
-                    p -= opt[min(opt)]
-
-                new_note = message.pitch + p
 
             new_pitch = min(127, max(0, new_note))
 
@@ -1439,10 +1474,11 @@ class Groover:
         # iterate until needed
         while case_len < self._max_ornament_length:
 
-            index = min(
-                self._note_index + case_i,
-                len(self._tune) - 1,
-            )
+            index = self._note_index + case_i
+
+            if index >= len(self._tune):
+                break
+
             note = self._tune[index]
 
             # save first pitch
@@ -1463,6 +1499,8 @@ class Groover:
 
         # for each ornament
         for ornament in self._config["ornamentation"]:
+
+            is_diatonic = self._config["ornamentation"][ornament]["diatonic"]
             cases = self._config["ornamentation"][ornament]["cases"]
 
             prob = self._config["ornamentation"][ornament]["probability"]
@@ -1497,15 +1535,38 @@ class Groover:
                     tune_i = 0
                     for note in case_notes:
 
+                        # check duration
+                        if tune_i >= len(tune_notes):
+                            # if tune is shorter
+                            message_length = 0
+                            pitch_difference = 100
+                            break
+
                         # target pitch
                         pitch = note[0]
 
                         # target duration
                         duration = note[1]
 
-                        # actual pitch & duration
-                        pitch_difference = tune_notes[tune_i].pitch - first_pitch
+                        if is_diatonic:
+                            # pitch diff in diatonic steps
+                            pitch_difference, is_chromatic = (
+                                self._tune.key_signature.degree_difference(
+                                    first_pitch, tune_notes[tune_i].pitch
+                                )
+                            )
+                            if is_chromatic:
+                                deg, acc = self._tune.key_signature.degree_from_root(
+                                    tune_notes[tune_i].pitch
+                                )
+                                self._accidentals[deg] = acc
+                            # elegible = elegible and not is_chromatic
+                        else:
+                            # pitch diff in chromatic steps
+                            pitch_difference = tune_notes[tune_i].pitch - first_pitch
+
                         message_length = tune_notes[tune_i].duration
+
                         tune_i += 1
 
                         # check
@@ -1535,6 +1596,7 @@ class Groover:
             options_prob = np.array(options_prob).astype(float)
             options_prob /= options_prob.sum()
 
+        # print(options)
         return np.random.choice(options, p=options_prob)
 
     def can_generate_ornament(self) -> bool:

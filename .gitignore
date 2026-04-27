@@ -175,3 +175,4 @@ cython_debug/
 /static/site
 /static/sound
 /configs
+/src/scripts

@@ -2,6 +2,7 @@
 	import type {Musician, Options} from "$lib/types";
 	import JSONEditorBar from "./JSONEditorBar.svelte";
 	import CheckboxOption from "./CheckboxOption.svelte";
+	import LOERICOutputEntry from "./LOERICOutputEntry.svelte";
 
 	import { onMount, onDestroy } from "svelte";
 
@@ -198,7 +199,7 @@
 				/>
 				<hr class="h-0.5 border-t-0 bg-gray-600" />
 				<CheckboxOption
-					title="SLOW START"
+					title="SLOW END"
 					description="Slow down from selected tempo at performance end."
 					bind:_bind={musician.slow_end}
 					_onchange={slowEndChange}
@@ -207,67 +208,28 @@
 				<label class="flex flex-col justify-between">
 					<span class="text-gray-400 font-bold">OUTPUT</span>
 					<span class="text-gray-300">Choose between built-in sounds or MIDI for external sounds.</span>
-		<div class="flex w-full justify-start items-center">
-			<el-select class="w-full" onchange={outputChange}>
-				<button type="button" class="w-full cursor-default rounded-md bg-transparent py-1.5 pr-2 pl-3 text-left text-white">
-				<el-selectedcontent >
-						<div class="flex items-center gap-3 pr-6">
-							{#if selected_out.startsWith("LOERIC Synth")}
-									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"></rect><path d="M12 6h.01"></path><circle cx="12" cy="14" r="4"></circle><path d="M12 14h.01"></path></svg>
-									<div class="text-m">LOERIC Built-in Synth</div>
-								{:else}
-									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="M6 8h4"></path><path d="M14 8h.01"></path><path d="M18 8h.01"></path><path d="M2 12h20"></path><path d="M6 12v4"></path><path d="M10 12v4"></path><path d="M14 12v4"></path><path d="M18 12v4"></path></svg>
-								<div class="text-m">{selected_out}</div>
-							{/if}
-						</div>
-				</el-selectedcontent>
-				</button>
-					<el-options anchor="bottom start" popover class="max-h-110 w-(--button-width) overflow-auto rounded-md bg-gray-950 py-1 text-white shadow-lg [--anchor-gap:--spacing(1)] data-leave:transition data-leave:transition-discrete data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0">
-						<el-option value="synth"
-							class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
-
-							<div class="flex items-center gap-3 pr-6">
-								<div>
-									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"></rect><path d="M12 6h.01"></path><circle cx="12" cy="14" r="4"></circle><path d="M12 14h.01"></path></svg>
-								</div>
-								<div class="text-m">LOERIC Built-in Synth</div>
-							</div>
-						</el-option>
-						<el-option value="create_out"
-							class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
-
-							<div class="flex items-center gap-3 pr-6">
-								<div>
-									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="M6 8h4"></path><path d="M14 8h.01"></path><path d="M18 8h.01"></path><path d="M2 12h20"></path><path d="M6 12v4"></path><path d="M10 12v4"></path><path d="M14 12v4"></path><path d="M18 12v4"></path></svg>
-								</div>
-								<div class="text-m">LOERIC MIDI Out</div>
-							</div>
-						</el-option>
-						{#each options.outputs as output}
-							<el-option value={output}
-
-								class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
-
-								<div class="flex items-center gap-3 pr-6">
-									<div>
-										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="M6 8h4"></path><path d="M14 8h.01"></path><path d="M18 8h.01"></path><path d="M2 12h20"></path><path d="M6 12v4"></path><path d="M10 12v4"></path><path d="M14 12v4"></path><path d="M18 12v4"></path></svg>
-									</div>
-									<div class="text-m">{output}</div>
-								</div>
-							</el-option>
-						{/each}
-					</el-options>
-				</el-select>
-
-				<!--
-					<select class="mt-3" onchange={outputChange}>
-					<option value="synth" selected={musician.midiOut?.startsWith("LOERIC Synth ")}> LOERIC Built-In Synth </option>
-					<option value="create_out" selected={musician.midiOut?.startsWith("LOERIC out ")}>LOERIC MIDI Output</option>
-						{#each options.outputs as output}
-							<option value={output} selected={musician.midiOut === output}>{output}</option>
-						{/each}
-					</select>
-					-->
+					<div class="flex w-full justify-start items-center">
+						<el-select class="w-full" onchange={outputChange}>
+							<button type="button" class="w-full cursor-default rounded-md bg-transparent py-1.5 pr-2 pl-3 text-left text-white">
+								<el-selectedcontent >
+									<LOERICOutputEntry name={selected_out} is_synth={selected_out.startsWith("LOERIC Synth")}/>
+								</el-selectedcontent>
+							</button>
+							<el-options anchor="bottom start" popover class="max-h-110 w-(--button-width) overflow-auto rounded-md bg-gray-950 py-1 text-white shadow-lg [--anchor-gap:--spacing(1)] data-leave:transition data-leave:transition-discrete data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0">
+								<el-option value="synth" class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
+									<LOERICOutputEntry name="LOERIC Built-in Synth" is_synth={true}/>
+								</el-option>
+								<el-option value="create_out"
+									class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
+									<LOERICOutputEntry name="LOERIC MIDI Out" is_synth={false}/>
+								</el-option>
+							{#each options.outputs as output}
+								<el-option value={output} class="group/option relative block cursor-default py-2 pr-9 pl-3 text-white select-none focus:bg-primary group-focus/option:text-white focus:outline-hidden">
+									<LOERICOutputEntry name={output} is_synth={false}/>
+								</el-option>
+							{/each}
+							</el-options>
+						</el-select>
 					</div>
 				</label>
 			</div>

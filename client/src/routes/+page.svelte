@@ -94,7 +94,14 @@
 		<div class="flex justify-between items-center bg-gray-950 py-3 px-6 shadow-lg rounded-xl">
 			<Tracklist current_track={loeric_state.track} track_list={loeric_state.options.trackList} customized_tracks={loeric_state.options.customized_tracks} onSelected={trackChange} />
 
-			<div><span class="opacity-70 font-light">Key:</span> {loeric_state.track.key}</div>
+			<div>
+				<span class="opacity-70 font-light">Key:</span>
+			{#if loeric_state.track.type != 'set'}
+				<span>{loeric_state.track.key}</span>
+				{:else}
+				...
+			{/if}
+			</div>
 			<div><span class="opacity-70 font-light">Meter:</span> {loeric_state.track.time}</div>
 			<div>
 				<span class="opacity-70 font-light">Tempo (QPM):</span>
@@ -123,9 +130,14 @@
 				{/if}
 			</div>
 		</div>
-		<!--
-		<JSONEditorBar bind:json={loeric_state.track.config} onUpload={(form) => apiUpload('track/config', form)}></JSONEditorBar>
-		-->
+		<div class="flex w-full">
+		<div class="flex-col w-1/2">
+			<JSONEditorBar bind:json={loeric_state.track.custom_config} text="Custom configuration snippet" onUpload={(form) => apiUpload('track/config', form)}></JSONEditorBar>
+		</div>
+		<div class="flex-col w-1/2">
+			<JSONEditorBar bind:json={loeric_state.track.full_config} text="Full configuration" onUpload={(form) => apiUpload('track/config', form)}></JSONEditorBar>
+		</div>
+		</div>
 		<div class="grid grid-cols-1 gap-4 mt-8 justify-center">
 			{#each loeric_state.musicians as musician}
 				<Musician musician={musician} options={loeric_state.options} apiPut={apiPut} apiUpload={apiUpload}/>

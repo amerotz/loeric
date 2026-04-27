@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import random
 
@@ -173,7 +174,10 @@ class TimeDelta:
             return self._eighth_duration <= other.eighth_duration
 
     def __ge__(self, other):
-        return self._eighth_duration >= other.eighth_duration
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration >= other
+        else:
+            return self._eighth_duration >= other.eighth_duration
 
     def __eq__(self, other):
         if isinstance(other, int) or isinstance(other, float):
@@ -228,6 +232,9 @@ class ScoreElement:
             print("\033[38;2;255;255;0m[WARN]\tDuration cannot be negative!\033[0m")
             # raise Exception("Duration cannot be negative")
 
+    def to_midi(self, absolute_time=False):
+        return []
+
 
 class Pause(ScoreElement):
 
@@ -242,13 +249,6 @@ class Pause(ScoreElement):
 
     def __repr__(self):
         return f"(Pause {self._duration} t={self._time})"
-
-    def to_midi(self, absolute_time=False):
-        time = self.duration
-        if absolute_time:
-            time += self._time
-
-        return [mido.Message("note_off", note=0, time=time.eighth_duration)]
 
 
 class Chord(ScoreElement):
@@ -346,9 +346,6 @@ class Chord(ScoreElement):
             bass = f"/{NOTE_NAMES[self._bass]} "
         return f"(Chord {root}{self._quality}{bass} n={self._number} t={self._time})"
 
-    def to_midi(self, absolute_time=False):
-        return []
-
 
 class SongPosition(ScoreElement):
 
@@ -424,6 +421,45 @@ class KeySignature(ScoreElement):
             f"(KeySignature k={NOTE_NAMES[self._root]} m={self._mode} t={self._time})"
         )
 
+    def degree_from_root(self, pitch: int, with_octave=False):
+
+        indexes = np.argwhere(self.scale == (pitch - self.root) % 12)
+        accidental = 0
+
+        if len(indexes) == 0:
+
+            indexes = np.argwhere(self.scale == (pitch - 1 - self._root) % 12)
+            accidental = 1
+
+        indexes = indexes[0][0]
+        if with_octave:
+            indexes += 7 * ((pitch - self._root) // 12)
+
+        return int(indexes), accidental
+
+    def degree_difference(self, pitch1, pitch2):
+
+        a, acc1 = self.degree_from_root(pitch1, with_octave=True)
+        b, acc2 = self.degree_from_root(pitch2, with_octave=True)
+
+        is_chromatic = False
+        if acc1 + acc2 != 0:
+            is_chromatic = True
+
+        return b - a, is_chromatic
+
+    def degree_add(self, midi, degree):
+
+        note, acc = self.degree_from_root(midi)
+
+        midi += self.scale[int(note + degree) % 7]
+        midi -= self.scale[int(note)]
+        midi -= acc
+
+        midi += 12 * ((note + degree) // 7)
+
+        return midi
+
     def to_midi(self, absolute_time=False):
 
         time = self.duration
@@ -441,11 +477,32 @@ class KeySignature(ScoreElement):
     def major_root(self) -> int:
         mode_offset = {
             "major": 0,
-            "minor": 3,
-            "dorian": 10,
+            "dorian": -2,
+            "phrygian": -3,
             "mixolydian": 5,
+            "lydian": 7,
+            "minor": 3,
+            "locrian": 1,
         }
-        return (self._root + mode_offset[self._mode]) % 12
+        return (12 + self._root + mode_offset[self._mode]) % 12
+
+    @property
+    def scale(self):
+        mode_degree = {
+            "major": 0,
+            "dorian": 1,
+            "phrygian": 2,
+            "mixolydian": 3,
+            "lydian": 4,
+            "minor": 5,
+            "locrian": 6,
+        }
+        scale = np.roll(lu.major_scale, -mode_degree[self._mode])
+        scale -= scale[0]
+        scale += 12
+        scale %= 12
+
+        return scale
 
     @staticmethod
     def root_from_string(key_signature: str) -> int:
@@ -521,8 +578,20 @@ class Repetition(ScoreElement):
     def __repr__(self):
         return f"(Repetition n={self._number} t={self._time})"
 
-    def to_midi(self, absolute_time=False):
-        return []
+
+class Barline(ScoreElement):
+
+    def __init__(self, number: int = 0, time: float = 0):
+        super().__init__(time)
+
+        self._number = number
+
+    @property
+    def number(self):
+        return self._number
+
+    def __repr__(self):
+        return f"(Barline n={self._number} t={self._time})"
 
 
 class Note(ScoreElement):
@@ -553,9 +622,13 @@ class Note(ScoreElement):
     def __repr__(self):
         s = f"(Note p={self._pitch} {self._duration} id={self._id} t={np.round(self._time.eighth_duration, 2)} c={self.channel}"
         if self._is_slide:
-            s += f",\n\tslide={self._slide_targets})"
-        else:
-            s += ")"
+            s += f",\n\tslide={self._slide_targets}"
+
+        if self.has_metadata:
+            s += " meta=["
+            s += ",".join([str(m) for m in self.metadata])
+            s += "]"
+        s += ")"
         return s
 
     def add_metadata(self, data):
@@ -667,8 +740,7 @@ class Note(ScoreElement):
                 mult = random.uniform(0.25, 0.5)
                 for j in range(resolution):
 
-                    if absolute_time:
-                        overall_time = overall_time + slide_duration
+                    overall_time = overall_time + slide_duration
 
                     perc = j / resolution
                     perc **= mult
@@ -679,7 +751,7 @@ class Note(ScoreElement):
                             "pitchwheel",
                             pitch=pb,
                             channel=self.channel,
-                            time=overall_time.eighth_duration.astype(float),
+                            time=float(overall_time.eighth_duration),
                         )
                     )
                     note_duration = note_duration - slide_duration
@@ -698,10 +770,6 @@ class Note(ScoreElement):
                 velocity=0,
             )
         )
-
-        if self.has_metadata:
-            for meta in self.metadata:
-                messages.extend(meta.to_midi(absolute_time=absolute_time))
 
         return messages
 
@@ -738,11 +806,26 @@ class Tune:
             self._sync_interval = TimeDelta(eighth_duration=sync_interval)
         self._first_bar_length = 0
         self._tune_type = None
-        self.config = config
         self.repeats = repeats
+
+        # save filename of config
+        self.config = config
+        self.json_config = None
+        if config is not None and os.path.isfile(config):
+            with open(config, "r") as f:
+                # keep a loaded version for the server
+                self.json_config = json.load(f)
 
         if filename.endswith(".mid") or filename.endswith(".midi"):
             midi_source = mp.read_midi(filename)
+        elif filename.endswith(".mxl"):
+            midi_source = mp.read_musicxml(filename)
+            self._first_bar_length = (
+                midi_source.barlines[1].time - midi_source.barlines[0].time
+            ) / 12
+
+            # TODO obtain tune type
+            self._tune_type = None
         elif filename.endswith(".abc"):
             midi_source = mp.read_abc(filename)
             self._first_bar_length = (
@@ -756,6 +839,7 @@ class Tune:
                 f"Cannot read {filename}. Make sure it is a MIDI or ABC file."
             )
 
+        print(midi_source)
         ############################# tempo #############################
 
         self._tempos = [
@@ -765,6 +849,7 @@ class Tune:
             )
             for t in midi_source.tempos
         ]
+        self._current_tempo = self._tempos[0]
 
         ######################### key signature #########################
 
@@ -832,6 +917,22 @@ class Tune:
                 f"[INFO]\tSynchronizing every:\t{self._sync_interval/2} quarters.",
             )
 
+        ######################### barlines ######################
+        midi_source_barlines = []
+        for i in range(len(midi_source.tracks)):
+            midi_source_barlines.extend(midi_source.barlines)
+
+        barline_times = np.array(
+            [
+                self.ticks_to_eighth_notes(msg.time, midi_source.resolution)
+                for msg in midi_source_barlines
+            ]
+        )
+
+        self._barlines = [
+            Barline(number=i, time=t) for i, t in enumerate(barline_times)
+        ]
+
         ######################### create the chords ######################
 
         midi_source_chords = []
@@ -884,6 +985,8 @@ class Tune:
             for p, d, i, t in zip(note_pitches, note_durations, note_ids, note_times)
         ]
 
+        ######################### handle repetitions ######################
+
         # add repetitions
         score_duration = self._score[-1].time + self._score[-1].duration
 
@@ -891,6 +994,8 @@ class Tune:
         repetitions = []
         chords = []
         key_signatures = []
+        tempos = []
+        barlines = []
         # add notes and repetitions
         for r in range(repeats):
             new_score = copy.deepcopy(self._score)
@@ -909,6 +1014,24 @@ class Tune:
                         ).eighth_duration,
                     )
                 )
+            for t in self._tempos:
+                tempos.append(
+                    Tempo(
+                        qpm=t.qpm,
+                        time=(
+                            t.time + score_duration * r - self._first_bar_length
+                        ).eighth_duration,
+                    )
+                )
+            for b in self._barlines:
+                barlines.append(
+                    Barline(
+                        number=b.number + r * len(self._barlines),
+                        time=(
+                            b.time + score_duration * r - self._first_bar_length
+                        ).eighth_duration,
+                    )
+                )
             for c in self._original_chords:
                 new_c = copy.deepcopy(c)
                 new_c.time = c.time + score_duration * r - self._first_bar_length
@@ -917,21 +1040,32 @@ class Tune:
 
         self._score = tmp_score
         self._original_chords = chords
-        self._chords = []  # will be calculated later
-
         self._key_signatures = key_signatures
+        self._tempos = tempos
+        self._barlines = barlines
 
+        # calculate end time for score with optional end trim
         self._score_end_time = (
             self._score[-1].time + self._score[-1].duration - trim_end_eighths
         )
+        # remove anything beyond end time (actually happens only if trimming)
         self._score = [el for el in self._score if el.time < self._score_end_time]
-        self._score_end_time = self._score[-1].time + self._score[-1].duration
 
-        self._score = [el for el in self._score if el.time <= self._score_end_time]
+        # recompute
+        self._score_end_time = self._score[-1].time + self._score[-1].duration
 
         ############# score with repetition signs, songpos etc ###########
 
+        self._chords = []  # will be calculated later
+
         self._annotated_score = []
+
+        # add tempos
+        print(self._tempos)
+        self._annotated_score.extend(self._tempos)
+
+        # add barlines
+        self._annotated_score.extend(self._barlines)
 
         # add repetitions
         self._annotated_score.extend(repetitions)
@@ -956,17 +1090,6 @@ class Tune:
 
         # divide add songpos in messages that contain a sync interval
         should_add_position = np.ones_like(song_positions).astype(bool)
-        for j, note in enumerate(self._score):
-
-            note_start = note.time
-            note_end = note.time + note.duration
-            for i, position in enumerate(song_positions):
-
-                timestamp = position.time
-                # if timestamp contained in note
-                if note_start < timestamp and timestamp < note_end:
-                    note.add_metadata(position)
-                    should_add_position[i] = False
 
         self._annotated_score.extend(song_positions[should_add_position])
         self._annotated_score.extend(self._score)
@@ -990,8 +1113,16 @@ class Tune:
         contour_index = -1
         for i, el in enumerate(self._annotated_score):
 
+            # if song position add it
             if isinstance(el, SongPosition):
                 self.index_map[el.position] = (i, contour_index)
+            """
+            # if song position inside a note
+            elif isinstance(el, Note) and el.has_metadata:
+                for m in el.metadata:
+                    if isinstance(m, SongPosition):
+                        self.index_map[m.position] = (i, contour_index)
+            """
 
             if el.is_note:
                 contour_index += 1
@@ -1153,6 +1284,9 @@ class Tune:
     def set_key_signature(self, key):
         self._current_key = key
 
+    def set_tempo(self, tempo):
+        self._current_tempo = tempo
+
     def set_chord(self, chord):
         self._current_chord = chord
 
@@ -1181,7 +1315,7 @@ class Tune:
 
     @property
     def tempo(self):
-        return self._tempos[0]
+        return self._current_tempo
 
     @property
     def tune_type(self):
