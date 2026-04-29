@@ -839,7 +839,6 @@ class Tune:
                 f"Cannot read {filename}. Make sure it is a MIDI or ABC file."
             )
 
-        print(midi_source)
         ############################# tempo #############################
 
         self._tempos = [
@@ -980,7 +979,7 @@ class Tune:
         )
 
         # pitch, duration, note id, time
-        self._score = [
+        _score = [
             Note(pitch=p, eighth_duration=d, id=i, time=t)
             for p, d, i, t in zip(note_pitches, note_durations, note_ids, note_times)
         ]
@@ -988,7 +987,7 @@ class Tune:
         ######################### handle repetitions ######################
 
         # add repetitions
-        score_duration = self._score[-1].time + self._score[-1].duration
+        score_duration = _score[-1].time + _score[-1].duration
 
         tmp_score = []
         repetitions = []
@@ -998,7 +997,7 @@ class Tune:
         barlines = []
         # add notes and repetitions
         for r in range(repeats):
-            new_score = copy.deepcopy(self._score)
+            new_score = copy.deepcopy(_score)
             for n in new_score:
                 n.time += score_duration * r - self._first_bar_length
             repetitions.append(
@@ -1038,21 +1037,19 @@ class Tune:
                 chords.append(new_c)
             tmp_score.extend(new_score)
 
-        self._score = tmp_score
+        _score = tmp_score
         self._original_chords = chords
         self._key_signatures = key_signatures
         self._tempos = tempos
         self._barlines = barlines
 
         # calculate end time for score with optional end trim
-        self._score_end_time = (
-            self._score[-1].time + self._score[-1].duration - trim_end_eighths
-        )
+        self._score_end_time = _score[-1].time + _score[-1].duration - trim_end_eighths
         # remove anything beyond end time (actually happens only if trimming)
-        self._score = [el for el in self._score if el.time < self._score_end_time]
+        _score = [el for el in _score if el.time < self._score_end_time]
 
         # recompute
-        self._score_end_time = self._score[-1].time + self._score[-1].duration
+        self._score_end_time = _score[-1].time + _score[-1].duration
 
         ############# score with repetition signs, songpos etc ###########
 
@@ -1092,7 +1089,7 @@ class Tune:
         should_add_position = np.ones_like(song_positions).astype(bool)
 
         self._annotated_score.extend(song_positions[should_add_position])
-        self._annotated_score.extend(self._score)
+        self._annotated_score.extend(_score)
 
         self._annotated_score.sort(key=lambda x: x.time)
 
@@ -1291,24 +1288,48 @@ class Tune:
         self._current_chord = chord
 
     @property
-    def score(self):
-        return self._score
-
-    @property
     def pitches(self):
-        return np.array([note.pitch for note in self._score])
+        return np.array(
+            [
+                note.pitch
+                for note in list(
+                    filter(lambda x: isinstance(x, Note), self._annotated_score)
+                )
+            ]
+        )
 
     @property
     def durations(self):
-        return np.array([note.duration for note in self._score])
+        return np.array(
+            [
+                note.duration
+                for note in list(
+                    filter(lambda x: isinstance(x, Note), self._annotated_score)
+                )
+            ]
+        )
 
     @property
     def times(self):
-        return np.array([note.time for note in self._score])
+        return np.array(
+            [
+                note.time
+                for note in list(
+                    filter(lambda x: isinstance(x, Note), self._annotated_score)
+                )
+            ]
+        )
 
     @property
     def float_times(self):
-        return np.array([note.time.eighth_duration for note in self._score])
+        return np.array(
+            [
+                note.time.eighth_duration
+                for note in list(
+                    filter(lambda x: isinstance(x, Note), self._annotated_score)
+                )
+            ]
+        )
 
     def position_time(self, position):
         return self._position_times[position]
@@ -1333,15 +1354,10 @@ class Tune:
         else:
             return self._tune_type
 
-    def get_note_by_id(self, id):
-        return [note for note in self._score if note.id == id][0]
-
     def __len__(self) -> int:
-        # return len(self._score)
         return len(self._annotated_score)
 
     def __getitem__(self, idx: int):
-        # return self._score[idx]
         return self._annotated_score[idx]
 
 
