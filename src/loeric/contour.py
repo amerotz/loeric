@@ -1,3 +1,12 @@
+"""
+This file is part of LOERIC.
+
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
 import numpy as np
 from scipy.signal import savgol_filter
 
@@ -555,7 +564,8 @@ class PatternContour(Contour):
             for i in np.unique(bars):
 
                 indexes = np.argwhere(bars == i)
-                pattern[indexes] /= pattern[indexes].sum()
+                if pattern[indexes].sum() != 0:
+                    pattern[indexes] /= pattern[indexes].sum()
                 pattern[indexes] *= len(indexes)
 
         self._contour = pattern

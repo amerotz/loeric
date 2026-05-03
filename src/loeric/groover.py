@@ -1,3 +1,12 @@
+"""
+This file is part of LOERIC.
+
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
 import copy
 import importlib.resources as ir
 import json
@@ -816,6 +825,11 @@ class Groover:
         # add the other drones
         notes.extend(non_legato_drones)
 
+        time_diff = 0
+        for note in notes:
+            old_duration
+            note.duration *= self._contour_values["tempo_pattern"]
+
         ################### convert to midi #########################
 
         midi_headers = []
@@ -849,7 +863,7 @@ class Groover:
 
     @property
     def tempo_scale(self):
-        return self._eighth_duration_seconds * self._contour_values["tempo_pattern"]
+        return self._eighth_duration_seconds 
 
     @property
     def performance_time(self):
