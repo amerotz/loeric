@@ -118,10 +118,12 @@ def main():
                     options.append(file.replace(".json", ""))
 
                 s = " ".join(options)
+                """
                 print(
                     f"--{'{: <10}'.format(folder.replace("_", "-"))}{textwrap.fill(s, width=32, initial_indent="\t", subsequent_indent="\t\t")}"
                 )
                 print()
+                """
 
         return
 
