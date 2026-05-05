@@ -7,6 +7,7 @@ LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 
 You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 """
+
 import copy
 import importlib.resources as ir
 import json
@@ -108,6 +109,7 @@ class Groover:
         self._note_index = -1
         self._note_index_lock = threading.RLock()
         self._performance_time = tu.TimeDelta(eighth_duration=0)
+        self._note_time_offset = tu.TimeDelta(eighth_duration=0)
 
         self._initial_human_impact = human_impact
         self._syncing = syncing
@@ -807,7 +809,7 @@ class Groover:
         pauses = []
         for note in notes:
             # legato
-            mult = self._current_legato
+            mult = self._current_legato(note.time)
             new_length = note.duration * mult
             pause = tu.Pause(
                 eighth_duration=(note.duration - new_length).eighth_duration,
@@ -825,10 +827,17 @@ class Groover:
         # add the other drones
         notes.extend(non_legato_drones)
 
-        time_diff = 0
+        # apply tempo pattern
         for note in notes:
-            old_duration
-            note.duration *= self._contour_values["tempo_pattern"]
+            # keep old duration
+            old_duration = note.duration.eighth_duration
+            # update note
+            # note.duration *= self._contour_values["tempo_pattern"]
+            note.duration *= self._contours["tempo_pattern"].at(note.time)
+            # shift note according to previous one's duration
+            note.time -= self._note_time_offset
+            # update shift
+            self._note_time_offset = old_duration - note.duration.eighth_duration
 
         ################### convert to midi #########################
 
@@ -863,7 +872,7 @@ class Groover:
 
     @property
     def tempo_scale(self):
-        return self._eighth_duration_seconds 
+        return self._eighth_duration_seconds
 
     @property
     def performance_time(self):
@@ -1275,14 +1284,13 @@ class Groover:
         """
         return self._config["values"]["do_end_note"]
 
-    @property
-    def _current_legato(self):
+    def _current_legato(self, time):
         return max(
             min(
                 1,
                 self._config["legato"]["min"]
                 + self._legato_amount
-                * self._contour_values[self._config["legato"]["bind"]],
+                * self._contours[self._config["legato"]["bind"]].at(time),
             ),
             0,
         )
