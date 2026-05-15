@@ -231,10 +231,22 @@
     "drones": {
       "bypass": false,
       "data": {
+        "pedal": {
+          "is_active": true,
+          "type": "pedal",
+          "notes": [33],
+          "bind": "$drone",
+          "threshold": 0,
+          "allow_root": true,
+          "transpose": 0,
+          "polyphony_min": 1,
+          "polyphony_max": 1,
+          "velocity_multiplier": 1
+        },
         "lower": {
           "type": "free",
           "allow_root": false,
-          "is_active": true,
+          "is_active": false,
           "threshold": 0.5,
           "velocity_multiplier": 0.9,
           "bind": "lower_drone",
@@ -246,13 +258,12 @@
           "midi_channel": "var_drone_midi_channel",
           "delay_range": 0.0,
           "transpose": true,
-          "use_legato": true,
           "ascending": false
         },
         "upper": {
           "type": "free",
           "allow_root": false,
-          "is_active": true,
+          "is_active": false,
           "threshold": 0.5,
           "velocity_multiplier": 0.9,
           "bind": "upper_drone",
@@ -293,6 +304,7 @@
       "locations": [1, 3, 5, 7]
     },
     "timing": {
+      "bypass": false,
       "bind": "$tempo",
       "pattern": "tempo_pattern",
       "qpm_amount": 1,

@@ -14,13 +14,17 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import copy
+import logging
 import random
 from collections import defaultdict
 
-import element as le
 import nanoid as nid
 import numpy as np
-import utils as lu
+
+import loeric.element as le
+import loeric.utils as lu
+
+logger = logging.getLogger(__name__)
 
 
 class LOERICModule:
@@ -41,8 +45,7 @@ class LOERICModule:
         contour_values: np.array,
         window: list[le.LOERICElement] = None,
     ):
-        """
-        Process an element (only if not seen by this module already).
+        """Process an element (only if not seen by this module already).
 
         :param element: the element to process.
         :param contour_values: the contour values to use.
@@ -80,8 +83,9 @@ class LOERICModule:
         return self._window_size
 
     @staticmethod
-    def create_module(module_name: str, **kwargs):
+    def create_module(module: str, **kwargs):
 
+        module_name = module.split("#")[0]
         if module_name == "legato":
             return LegatoModule(**kwargs)
         elif module_name == "swing":
@@ -119,8 +123,7 @@ class TransposeModule(LOERICModule):
         contour_values: np.array,
         window: list[le.LOERICElement] = None,
     ):
-        """
-        Transpose notes.
+        """Transpose notes.
 
         :param element: the element to process.
         :param contour_values: the contour values to use.
@@ -165,8 +168,7 @@ class HarmonyModule(LOERICModule):
         contour_values: np.array,
         window: list[le.LOERICElement] = None,
     ):
-        """
-        Transpose notes.
+        """Transpose notes.
 
         :param element: the element to process.
         :param contour_values: the contour values to use.
@@ -180,7 +182,6 @@ class HarmonyModule(LOERICModule):
             self._key_signature = copy.copy(element)
         elif isinstance(element, le.Chord):
             self._last_forced_chord = copy.copy(element)
-            print(element)
 
         # only compute when reaching the interval
         should_compute = (
@@ -193,6 +194,7 @@ class HarmonyModule(LOERICModule):
         )
         if should_compute:
             self._last_computation_time = element.time.eighth_duration
+            self._last_forced_chord = None
 
             # filter out elements outside required time frame
             window = [
@@ -204,6 +206,9 @@ class HarmonyModule(LOERICModule):
             ]
             chord = self._calculate_chord(window)
             chord.time = element.time.eighth_duration
+
+            logger.info(f"Playing chord {chord}")
+
             return [chord, element]
 
         return [element]
@@ -301,8 +306,7 @@ class DynamicsModule(LOERICModule):
         contour_values: np.array,
         window: list[le.LOERICElement] = None,
     ):
-        """
-        Apply dynamics.
+        """Apply dynamics.
 
         :param element: the element to process.
         :param contour_values: the contour values to use.
@@ -318,7 +322,7 @@ class OrnamentModule(LOERICModule):
     class OrnamentConfig:
         def __init__(self, name: str, config: dict):
 
-            self._name = name
+            self.name = name
 
             for key in config:
                 setattr(self, key, config[key])
@@ -355,13 +359,11 @@ class OrnamentModule(LOERICModule):
         contour_values: np.array,
         window: list[le.LOERICElement] = None,
     ):
-        """
-        Apply ornament.
+        """Apply ornament.
 
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
-
         if isinstance(element, le.TimeSignature):
             self._time_signature = copy.copy(element)
         elif isinstance(element, le.KeySignature):
@@ -405,15 +407,11 @@ class OrnamentModule(LOERICModule):
         return [element]
 
     def _can_generate_ornament(self, prob) -> bool:
-        """
-        :return: whether or not to generate an ornament given the current ornament contour.
-        """
+        """:return: whether or not to generate an ornament given the current ornament contour."""
         return random.choices([True, False], weights=[prob, 1 - prob], k=1)[0]
 
     def _choose_ornament(self, element, contour_values, window) -> str:
-        """
-        Evaluate the ornament specific rules and chooose how the note will be ornamented.
-
+        """Evaluate the ornament specific rules and chooose how the note will be ornamented.
 
         :return: the chosen ornament type.
         """
@@ -529,15 +527,13 @@ class OrnamentModule(LOERICModule):
         return np.random.choice(options, p=options_prob)
 
     def _generate_ornament(self, element, ornament) -> list[le.LOERICElement]:
-        """
-        Generate the sequence of notes corresponding to the chosen ornament.
+        """Generate the sequence of notes corresponding to the chosen ornament.
 
         :param message: the midi message to ornament.
         :param ornament_type: the type of ornament to generate.
         :return: the list of midi events corresponding to the chosen ornament.
         """
-
-        print(f"\033[38;2;255;0;255m[ORNT]\t{ornament}\033[0m")
+        logger.info(f"{ornament.name}")
 
         # sample pitches
         p_std = ornament.pitches_std
@@ -643,6 +639,16 @@ class DroneModule(LOERICModule):
                 self.delay_bind = None
 
             self.last_computed_time = -np.inf
+            self._is_running = False
+
+        def is_running(self):
+            return self._is_running
+
+        def activate(self):
+            self._is_running = True
+
+        def __repr__(self):
+            return f"(Drone {self.type})"
 
     def __init__(self, data: dict, **kwargs):
         super().__init__(**kwargs)
@@ -654,7 +660,9 @@ class DroneModule(LOERICModule):
         self._time_signature = None
         self._key_signature = None
         self._current_chord = None
-        self._all_drones = [d.notes for d in self._drone_sets]
+        self._all_drones = np.array(
+            [n for d in self._drone_sets for n in d.notes]
+        ).flatten()
 
     def process(
         self,
@@ -662,13 +670,11 @@ class DroneModule(LOERICModule):
         contour_values: np.array,
         window: list[le.LOERICElement] = None,
     ):
-        """
-        Apply drones.
+        """Apply drones.
 
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
-
         if isinstance(element, le.TimeSignature):
             self._time_signature = copy.copy(element)
         elif isinstance(element, le.KeySignature):
@@ -689,9 +695,10 @@ class DroneModule(LOERICModule):
                 continue
 
             # pedals can't be triggered twice
-            if drone.type == "pedal" and drone.is_running:
+            if drone.type == "pedal" and drone.is_running():
                 continue
 
+            notes_per_bar = None
             if drone.type != "pedal":
                 notes_per_bar = self._current_notes_per_bar(drone, contour_values)
                 drone_interval = self._time_signature.eighths_per_bar / notes_per_bar
@@ -714,7 +721,7 @@ class DroneModule(LOERICModule):
             can_drone = can_drone and drone.last_computed_time != element.time
 
             if can_drone:
-                drone.last_computed_time = element.time
+                drone.last_computed_time = element.time.eighth_duration
                 # get pitches
                 drone_pitches = self._get_drone(self._last_pitch, drone, contour_values)
 
@@ -722,8 +729,10 @@ class DroneModule(LOERICModule):
                 if drone.type == "pedal" and len(drone_pitches) != 0:
                     drone.activate()
 
-                # create the note events
-                drone_pitches = sorted(drone_pitches, reverse=drone.ascending)
+                else:
+                    # create the note events
+                    drone_pitches = sorted(drone_pitches, reverse=drone.ascending)
+
                 d_notes, delay = self._add_drone(
                     element, drone_pitches, drone, notes_per_bar, contour_values
                 )
@@ -807,7 +816,8 @@ class DroneModule(LOERICModule):
 
         possible_bases = np.array([*available_notes, reference])
         # old harmony sort
-        # index = np.argsort(0.1 * np.arange(len(available_notes)) + (7 * (available_notes - harmony)) % 12)
+        # index = np.argsort(0.1 * np.arange(len(available_notes))
+        # + (7 * (available_notes - harmony)) % 12)
 
         # sort based on harmony
         # magic function time
@@ -875,8 +885,7 @@ class DroneModule(LOERICModule):
         return notes[1:]
 
     def _add_drone(self, element, pitches, drone, notes_per_bar, contour_values):
-        """
-        Add drones to each note in input.
+        """Add drones to each note in input.
 
         :param notes: the notes to add a drone to.
         :param drone: the drone notes to add.
@@ -884,7 +893,7 @@ class DroneModule(LOERICModule):
         :return: the input notes, with an added drone.
         """
         if drone.type == "pedal":
-            note_duration = np.inf
+            note_duration = le.TimeDelta(np.inf)
         else:
             note_duration = self._time_signature.eighths_per_bar / notes_per_bar
 
@@ -933,7 +942,10 @@ class TimingModule(LOERICModule):
         self._pattern = pattern
         self._amount_qpm = qpm_amount
         self._only_increase = only_increase
-        self._internal_offset = 0
+
+        self._internal_offset = le.TimeDelta(0)
+        self._last_computation_time = le.TimeDelta(0)
+        self._offset_snapshot = le.TimeDelta(0)
 
         self._tempo = le.Tempo(qpm=120)
         self._first_tempo = None
@@ -945,13 +957,11 @@ class TimingModule(LOERICModule):
         contour_values: np.array,
         window: list[le.LOERICElement] = None,
     ):
-        """
-        Apply timing.
+        """Apply timing.
 
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
-
         if isinstance(element, le.Tempo):
             if isinstance(element, le.UserTempo):
                 self._user_tempo_to_original_ratio = element.qpm / self._first_tempo.qpm
@@ -967,18 +977,32 @@ class TimingModule(LOERICModule):
         qpm = self._process_tempo(contour_values)
         return [le.Tempo(qpm=qpm, time=element.time.eighth_duration), element]
 
-    def _process_element(self, element: le.LOERICElement, contour_values: np.array):
-        # keep old duration
+    def _process_element(
+        self,
+        element: le.LOERICElement,
+        contour_values: np.array,
+    ):
+        current_time = copy.copy(element.time)
+
+        # all simultaneous notes share same offset
+        update_offset = self._last_computation_time != current_time
+
+        if update_offset:
+            self._last_computation_time = current_time
+            self._offset_snapshot = copy.copy(self._internal_offset)
+
+        # keep original duration
         old_duration = copy.copy(element.duration)
 
-        # update note
+        # apply timing
         element.duration *= contour_values[self._pattern]
 
-        # shift note according to previous one's duration
-        element.time -= self._internal_offset
+        # apply offset
+        element.time -= self._offset_snapshot
 
-        # update shift
-        self._internal_offset += (old_duration - element.duration).eighth_duration
+        # only integrate once per score-time
+        if update_offset:
+            self._internal_offset += old_duration - element.duration
 
         return element
 
@@ -1085,8 +1109,7 @@ class SwingModule(LOERICModule):
         contour_values: np.array,
         window: list[le.LOERICElement] = None,
     ):
-        """
-        Apply swing.
+        """Apply swing.
 
         :param element: the element to process.
         :param contour_values: the contour values to use.
@@ -1145,8 +1168,7 @@ class LegatoModule(LOERICModule):
         contour_values: np.array,
         window: list[le.LOERICElement] = None,
     ):
-        """
-        Apply legato.
+        """Apply legato.
 
         :param element: the element to process.
         :param contour_values: the contour values to use.

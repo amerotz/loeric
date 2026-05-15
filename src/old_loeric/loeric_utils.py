@@ -7,6 +7,7 @@ LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 
 You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 """
+
 import copy
 import pathlib
 import sys
@@ -42,14 +43,6 @@ general_configs_path = general_configs_path / "loeric_config" / "performance"
 number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
 
 major_scale = np.array([0, 2, 4, 5, 7, 9, 11])
-
-
-def midi_to_freq(midi):
-    return 440 * 2 ** ((midi - 69) / 12)
-
-
-def freq_to_midi(freq):
-    return 69 + 12 * np.log2(freq / 440)
 
 
 # play midi file

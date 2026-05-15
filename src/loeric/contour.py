@@ -1,108 +1,92 @@
-"""
-This file is part of LOERIC.
+# This file is part of LOERIC.
+#
+# LOERIC is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# LOERIC is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
-LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
-"""
 import numpy as np
 from scipy.signal import savgol_filter
 
-from . import loeric_utils as lu, tune
+import loeric.element as le
+import loeric.tune as tu
 
 
-class UncomputedContourError(Exception):
-    """Raised if the contour has not been computed yet."""
+class ContourManager:
+    def __init__(self, config: dict, tune: tu.Tune):
+
+        self._config = config
+
+        # create contours
+        self._contours = {}
+
+        # for every contour c
+        for c in self._config:
+            print(f"[INFO]\tCreating {c} contour.")
+
+            # create contour
+            self._contours[c] = create_contour(
+                tune, self._config[c]["recipe"], parent=c
+            )
+
+    def __setitem__(self, key: str, value: float):
+        """Set the contour named ``key`` to ``value``."""
+
+    def __getitem__(self, key: str):
+        """Get the value of contour named ``key``."""
+
+    @property
+    def contours(self):
+        """Return a dictionary of all contours."""
+        return self._contours
+
+    def at(self, time: float = None):
+        """Return contour values at a specific time."""
+        return {c: self._contours[c].at(time) for c in self._contours}
+
+    def reset(self):
+        """Reset all variables."""
 
 
 class InvalidRecipeError(Exception):
     """Raised if the contour recipe is invalid."""
 
 
-class InvalidIndexError(Exception):
-    """Raised if the index of the current value is below 0 or exceeds the length of the contour."""
-
-
 class Contour:
     """A class representing a note-wise intensity conotour."""
 
     def __init__(self):
-        """
-        Initialize the class.
-        """
-        self._index = -1
+        """Initialize the class."""
         self._contour = None
 
     def __len__(self):
-        """
-        The length of this contour.
-        """
+        """The length of this contour."""
         return len(self._contour)
 
-    def __getitem__(self, index):
-        """
-        Index an item in the contour.
-        """
-        return self._contour[index]
+    @property
+    def values(self):
+        """Return all contour values as an array"""
+        return self._contour
 
-    def calculate(self, midi: tune.Tune) -> None:
-        """
-        Calculate the intensity contour for the given tune.
+    def calculate(self, midi: tu.Tune) -> None:
+        """Calculate the intensity contour for the given tune.
 
         :param midi: the input tune.
         """
         self._contour_times = np.array([t.eighth_duration for t in midi.times])
 
-    def jump(self, index: int) -> None:
-        """
-        Jump to the specified index in the contour.
-
-        :param index: the index to jump to.
-        :raise contour.InvalidIndexError: if the index exceeds the length of the contour.
-        """
-
-        if index >= len(self._contour):
-            raise InvalidIndexError(
-                f"Cannot jump to index {index} with contour length {len(self._contour)}"
-            )
-        else:
-            self._index = index
-
-    def next(self) -> float:
-        """
-        Return the next element (i.e. intensity value) of the intensity contour.
-
-        :raise contour.UncomputedContourError: if the contour has not been computed yet.
-        :raise contour.InvalidIndexError: if the index of the current value is below 0 or exceeds the length of the contour.
-
-        :return: the next intensity value.
-        """
-        if self._contour is None:
-            raise UncomputedContourError(
-                "Contour is not computed. Call calculate() first."
-            )
-
-        self._index += 1
-
-        if self._index < 0 or self._index >= len(self._contour):
-            raise InvalidIndexError(
-                f"Cannot index contour with length {len(self._contour)} with index {self._index}."
-            )
-        return self._contour[self._index]
-
-    def reset(self) -> None:
-        """
-        Resets the contour iteration. The next call to `next()` will return the first element of the contour.
-        """
-        self._index = -1
-
     def scale_and_savgol(
         self, array: np.ndarray, savgol: bool = True, shift: bool = False, scale=False
     ) -> np.ndarray:
-        """
-        Scale the contour to have it range between 0 and 1.
+        """Scale the contour to have it range between 0 and 1.
         Optionally, apply a Savitzky-Golay filter with a window of 15 and order 3.
         Optionally, rescale the array to bring the extremes to 0 and 1.
         Optionally, shift the array to bring its mean closer to 0.5.
@@ -114,7 +98,6 @@ class Contour:
 
         :return: the processed array.
         """
-
         # this is a mandatory scaling step, since the contour needs
         # to have range 0 to 1
         array -= min(array)
@@ -138,10 +121,11 @@ class Contour:
 
         return array
 
-    def at(self, time):
-        """
-        Return the value of the contour at a specific performance time.
-        """
+    def at(self, time: le.TimeDelta | float | int):
+        """Return the value of the contour at a specific performance time, in eighth notes."""
+        if isinstance(time, float) or isinstance(time, int):
+            time = le.TimeDelta(eighth_duration=time)
+
         lower_limit = time.eighth_duration >= self._contour_times
         upper_limit = time.eighth_duration < np.roll(self._contour_times, -1)
 
@@ -192,9 +176,8 @@ class RandomContour(Contour):
     def __init__(self):
         super().__init__()
 
-    def calculate(self, midi: tune.Tune, min: float = 0, max: float = 1) -> None:
-        """
-        Compute a random contour following a uniform distribution in the specified range, by default between 0 and 1.
+    def calculate(self, midi: tu.Tune, min: float = 0, max: float = 1) -> None:
+        """Compute a random contour following a uniform distribution in the specified range, by default between 0 and 1.
 
         :param midi: the input tune.
         :param extremes: the upper and lower bound for the random contour. If None, the range will be (0, 1).
@@ -219,7 +202,7 @@ class PhraseContour(Contour):
 
     def calculate(
         self,
-        midi: tune.Tune,
+        midi: tu.Tune,
         accelerando=0.5,
         ritardando=1,
         turn=0.3,
@@ -230,12 +213,10 @@ class PhraseContour(Contour):
         mode="contour",
         kind="arch",
     ) -> None:
-        """
-        Compute a phrasing contour using a sum of sine functions.
+        """Compute a phrasing contour using a sum of sine functions.
 
         :param midi: the input tune.
         """
-
         assert mode in ["contour", "ratio"]
         assert kind in ["arch", "gesture"]
 
@@ -263,7 +244,7 @@ class PhraseContour(Contour):
                         phrase_position
                         - 1
                         + 1 / bar_length
-                        + 2 / tune.MINIMUM_QUARTER_DIVISION,
+                        + 2 / le.MINIMUM_QUARTER_DIVISION,
                     ),
                 ),
                 0,
@@ -301,14 +282,13 @@ class IntensityContour(Contour):
 
     def calculate(
         self,
-        midi: tune.Tune,
+        midi: tu.Tune,
         weights: list = None,
         savgol: bool = True,
         shift: bool = False,
         scale: bool = False,
     ) -> None:
-        """
-        Compute the contour as the weighted sum of O'Canainn component.
+        """Compute the contour as the weighted sum of O'Canainn component.
         An optional random component can be added.
 
         :param midi: the input tune.
@@ -316,7 +296,6 @@ class IntensityContour(Contour):
         :param savgol: whether or not to apply a final savgol filtering step (recommended).
         :param shift: whether or not to apply a final shifting step to bring the mean of the array close to 0.5.
         """
-
         super().calculate(midi)
 
         weights = np.array(weights).astype(float)
@@ -351,10 +330,9 @@ class IntensityContour(Contour):
         )
 
     def ocanainn_scores(
-        self, midi: tune.Tune
+        self, midi: tu.Tune
     ) -> tuple[np.array, np.array, np.array, np.array, np.array]:
-        """
-        Computes the individual components for the ocanainn score:
+        """Computes the individual components for the ocanainn score:
 
         * frequency score;
         * beat score;
@@ -433,46 +411,6 @@ class IntensityContour(Contour):
         return frequency_score, beat_score, ambitus_score, leap_score, length_score
 
 
-class MessageLengthContour(Contour):
-    """A contour holding the length of each note in the tune."""
-
-    def __init__(self):
-        super().__init__()
-
-    def calculate(
-        self,
-        midi: tune.Tune,
-    ) -> None:
-        """
-        Calculate the contour as the length of each note message (from each note on message to the next note off message).
-
-        :param midi: the input tune object.
-        """
-
-        super().calculate(midi)
-
-        self._contour = midi.durations
-
-
-class PitchDifferenceContour(Contour):
-    """A contour holding the pitch difference between notes in the tune."""
-
-    def __init__(self):
-        super().__init__()
-
-    def calculate(
-        self,
-        midi: tune.Tune,
-    ) -> None:
-
-        super().calculate(midi)
-
-        pitches = midi.pitches
-        diff = np.diff(pitches)
-        diff = np.insert(diff, 0, 0)
-        self._contour = diff
-
-
 class PitchContour(Contour):
     """A contour holding the pitch of notes in the tune."""
 
@@ -481,7 +419,7 @@ class PitchContour(Contour):
 
     def calculate(
         self,
-        midi: tune.Tune,
+        midi: tu.Tune,
         savgol: bool = True,
         shift: bool = True,
         scale: bool = True,
@@ -505,22 +443,20 @@ class PatternContour(Contour):
 
     def calculate(
         self,
-        midi: tune.Tune,
+        midi: tu.Tune,
         mean: list = [1],
         std: list = [0],
         std_scale: float = 1,
         normalize: bool = False,
         period: float = 1,
     ) -> None:
-        """
-        Create the contour by repeating the input weights over the specified period.
+        """Create the contour by repeating the input weights over the specified period.
         If standard deviatons are specified, the resulting patter is sampled from each distribution at each loaction.
 
         :param mean: the pattern to repeat.
         :param std: the std of the pattern to repeat, for every item.
         :param period: the length of the pattern, in bars.
         """
-
         super().calculate(midi)
 
         if std is None:
@@ -530,26 +466,33 @@ class PatternContour(Contour):
         self._mean = np.array(mean).astype(float)
         self._std = np.array(std).astype(float)
         self._std_scale = std_scale
+        self._normalize = normalize
+        self._pattern_size = len(self._mean)
 
+        # obtain time pedios
         self._time_period = midi.time_signature.eighths_per_bar.eighth_duration * float(
             period
         )
+        # position in time period
         bar_position = self._contour_times / self._time_period
 
-        pattern_indexes = ((len(self._mean) * bar_position) % len(self._mean)).astype(
-            int
-        )
+        # obtain indexes (without module to check jumps)
+        pattern_indexes = (self._pattern_size * bar_position).astype(int)
+
+        # obtain jumps in pattern
         diff = np.diff(pattern_indexes)
         index_diff = np.argwhere(diff > 1)
 
+        # bring pattern back to size
+        pattern_indexes %= self._pattern_size
         pattern_means = self._mean[pattern_indexes].astype(float)
         pattern_stds = self._std[pattern_indexes].astype(float)
 
         for index in index_diff:
             source_index = pattern_indexes[index].item()
             add_indexes = np.arange(source_index, source_index + diff[index].item())
-            pattern_means[index] = np.max(self._mean[add_indexes])
-            pattern_stds[index] = np.max(self._std[add_indexes])
+            pattern_means[index] = np.mean(self._mean[add_indexes])
+            pattern_stds[index] = np.mean(self._std[add_indexes])
 
         pattern = np.random.normal(
             loc=pattern_means,
@@ -557,16 +500,15 @@ class PatternContour(Contour):
             size=len(pattern_means),
         )
 
-        self._normalize = normalize
         if normalize:
             bars = self._contour_times // self._time_period
+            durations = midi.float_durations
 
             for i in np.unique(bars):
-
                 indexes = np.argwhere(bars == i)
-                if pattern[indexes].sum() != 0:
-                    pattern[indexes] /= pattern[indexes].sum()
-                pattern[indexes] *= len(indexes)
+                bar_durations = durations[indexes]
+                pattern[indexes] /= np.multiply(pattern[indexes], bar_durations).sum()
+                pattern[indexes] *= bar_durations.sum()
 
         self._contour = pattern
 
@@ -587,8 +529,7 @@ class PatternContour(Contour):
 
 
 def multiply(contours: list[Contour] = []) -> Contour:
-    """
-    Returns a new contour that holds the product of the input contours.
+    """Returns a new contour that holds the product of the input contours.
 
     :param contours: the contours to multiply.
 
@@ -610,8 +551,7 @@ def multiply(contours: list[Contour] = []) -> Contour:
 def weighted_sum(
     contours: list[Contour] = [], weights: list = [], normalize: bool = True
 ) -> Contour:
-    """
-    Returns a new contour that holds the weighted sum of the input contours.
+    """Returns a new contour that holds the weighted sum of the input contours.
 
     :param contours: the contours to add.
     :param weights: the weight for each contour.
@@ -655,8 +595,7 @@ def weighted_sum(
 
 
 def linear_transform(contours: Contour = None, a: float = 1, b: float = 0) -> Contour:
-    """
-    Apply a linear transformation of the input contour f(x)= ax + b.
+    """Apply a linear transformation of the input contour f(x)= ax + b.
 
     :param contour: the input contour.
     :param a: the slope.
@@ -675,8 +614,7 @@ def linear_transform(contours: Contour = None, a: float = 1, b: float = 0) -> Co
 
 
 def clamp(contours: Contour = None, low: float = 0, high: float = 1) -> Contour:
-    """
-    Clamp the contour in the given range.
+    """Clamp the contour in the given range.
 
     :param contour: the input contour.
     :param low: the lower limit.
@@ -693,8 +631,7 @@ def clamp(contours: Contour = None, low: float = 0, high: float = 1) -> Contour:
 
 
 def shift(contours: list[Contour] = None, offset: int = -1) -> Contour:
-    """
-    Shift the contour by offset.
+    """Shift the contour by offset.
 
     :param contour: the input contour.
     :param offset: the offset of the contour, in note indexes.
@@ -710,8 +647,7 @@ def shift(contours: list[Contour] = None, offset: int = -1) -> Contour:
 
 
 def to_mean(contours: list[Contour] = None, mean: float = 0.5) -> Contour:
-    """
-    Shift the contour so that it has a specific mean.
+    """Shift the contour so that it has a specific mean.
 
     :param contour: the input contour.
     :param mean: the desired mean.
@@ -726,8 +662,7 @@ def to_mean(contours: list[Contour] = None, mean: float = 0.5) -> Contour:
 
 
 def power(contours: list[Contour] = None, exp: float = 1) -> Contour:
-    """
-    Elevate the contour to the specified power.
+    """Elevate the contour to the specified power.
 
     :param contour: the input contour.
     :param exp: the exponent.
@@ -740,8 +675,7 @@ def power(contours: list[Contour] = None, exp: float = 1) -> Contour:
 
 
 def scale(contours: list[Contour] = None, min: float = 0, max: float = 1) -> Contour:
-    """
-    Scale a contour to cover a specific interval.
+    """Scale a contour to cover a specific interval.
 
     :param contour: the input contour.
     :param min: the minimum value.
@@ -752,13 +686,12 @@ def scale(contours: list[Contour] = None, min: float = 0, max: float = 1) -> Con
     assert len(contours) == 1
 
     def scl(x, a, b, min_x, max_x):
-        # print(x, a, b, min_x, max_x)
         x -= min_x
         x /= max_x - min_x
         return a + (b - a) * x
 
-    min_x = np.min(contours[0])
-    max_x = np.max(contours[0])
+    min_x = np.min(contours[0].values)
+    max_x = np.max(contours[0].values)
 
     new_contour = CompositeContour(
         contours,
@@ -769,17 +702,15 @@ def scale(contours: list[Contour] = None, min: float = 0, max: float = 1) -> Con
 
 
 def create_contour(
-    tune: tune.Tune, contour_program: dict, key=None, parent=None
+    tune: tu.Tune, contour_program: dict, key=None, parent=None
 ) -> Contour:
-    """
-    Programmatically create a contour given its definition.
+    """Programmatically create a contour given its definition.
 
     :param tune: the input tune for the contour.
     :param contour_program: the dictionary containing the contour definition.
 
     :return: the final assembled contour.
     """
-
     eval_dict = {
         "o_canainn": IntensityContour,
         "pitch": PitchContour,
@@ -820,7 +751,6 @@ def create_contour(
 
     # aggregate calculated contours
     elif key in operation_dict:
-
         all_contours = []
 
         for c in contour_program["contours"]:

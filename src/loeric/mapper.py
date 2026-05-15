@@ -13,10 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
-"""
-This implements the Mapper, responsible for the routing and weighting of signals.
+"""The Mapper is responsible for the routing and weighting of signals.
 
-Inputs and outputs are declared in the 'mapping' filed of the config, respectively in 'sources' and 'targets'.
+Inputs and outputs are declared in the 'mapping' filed of the config,
+respectively in 'sources' and 'targets'.
 
 The 'rules' section contains a list of rules to map the two.
 
@@ -47,13 +47,19 @@ ROUTING_TARGETS: target | TARGET_EL,ROUTING_TARGETS
 
 """
 
+import logging
 from collections import defaultdict
 
 import numpy as np
 
+logger = logging.getLogger(__name__)
+
 
 class Parameter:
-    """A parameter that can be used by the mapper. Supports division in multiple ranges."""
+    """A parameter that can be used by the mapper.
+
+    Supports division in multiple ranges.
+    """
 
     def __init__(self, name, min_value=-np.inf, max_value=np.inf):
         self._name = name
@@ -91,9 +97,7 @@ class LOERICMatrix:
         self._bias = np.zeros(len(inputs))
 
     def __call__(self, x: np.array) -> np.array:
-        """
-        Execute M.T @ x + b
-        """
+        """Execute M.T @ x + b"""
         return self.matrix.T @ x + self._bias
 
     @property
@@ -151,8 +155,8 @@ class RuleLayer(LOERICMatrix):
     def link(
         self, source: str, target: str, weight: float | Parameter = 1, fun=lambda x: x
     ):
-        """
-        Couple a source to a target (default weight = 1).
+        """Couple a source to a target (default weight = 1).
+
         If a Parameter is passed as weight, the weight will change with it.
         Optionally  provide a function to execute on param when it updates.
         """
@@ -181,14 +185,12 @@ class RuleLayer(LOERICMatrix):
         return name in self._outputs
 
     def copy_rules(self, source, target):
-        """
-        Copy the rules for source into target.
+        """Copy the rules for source into target.
 
         e.g. if velocity is modulated by intensity and then output to expression,
         copy the contents of $velocity to expression.
 
         """
-
         assert source in self._outputs, f"'{source}' is not a valid ruleset source."
         assert (
             target in self._outputs
@@ -280,9 +282,9 @@ class Mapper:
         )
         self._create_ranged_input_names(rules)
 
-        print(self._input_names)
-        print(self._output_names)
-        print(self._impact_names)
+        logger.debug(self._input_names)
+        logger.debug(self._output_names)
+        logger.debug(self._impact_names)
 
         # create pre processing
         self._pre_layer = PreProcessingLayer(self._input_names)
@@ -300,7 +302,6 @@ class Mapper:
 
     def _fill_matrices(self, rules: list[str]):
         """Populate the pre-processing matrix, the human impact matrix and the rule matrix according to the specified rules."""
-
         # identity routing
         for name in self._output_names:
             if name in self._input_names:
@@ -355,11 +356,8 @@ class Mapper:
             ):
                 self._rule_layer.link(name, dest)
 
-        print(self._rule_layer.matrix)
-
     def _apply_action(self, action, el, source, source_range):
-        """
-        Parse the current element by implementing the functions connected to the specified action.
+        """Parse the current element by implementing the functions connected to the specified action.
 
         The select and map actions update source_range, which is returned accordingly (unaltered in the case of other actions).
 
@@ -448,7 +446,6 @@ class Mapper:
 
     def _parse_action_route(self, source, target):
         """Redirect the value of source to target without modulation."""
-
         assert (
             "$" not in target and "@" not in target and target not in self._input_names
         ), f"'{target}' can only appear as a source, not routing destination."
@@ -481,8 +478,7 @@ class Mapper:
                 self._rule_layer.link(source, target)
 
     def _parse_action_modulate(self, source_1: str, source_2: str):
-        """
-        Implement modulation of source_2 through source_1.
+        """Implement modulation of source_2 through source_1.
 
         e.g. _parse_action_modulate(intensity, velocity) fills the matrix so that:
 
@@ -490,7 +486,6 @@ class Mapper:
         $velocity = intensity * %velocity + velocity * (1 - %velocity)
         ```
         """
-
         assert (
             "$" not in source_1
         ), f"Processed value '{source_1}' can only be routed to outputs, not act as modulator."
@@ -604,10 +599,7 @@ class Mapper:
             self._parameters[o].set(v)
 
     def _preprocess_inputs(self):
-        """
-        Apply range selection and mapping to inputs.
-        """
-
+        """Apply range selection and mapping to inputs."""
         for p in self._input_names:
             self._parameters[p].set(self._parameters[Parameter.basename(p)].get())
 

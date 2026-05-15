@@ -14,11 +14,11 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import random
-import time
 
-import element as le
 import mido
 import numpy as np
+
+import loeric.element as le
 
 
 class MIDIQueue(le.Queue):
@@ -26,6 +26,7 @@ class MIDIQueue(le.Queue):
 
     def __init__(self):
         super().__init__()
+        self._seq = 0
         self._message_priority = {
             "pitchwheel": 0,
             "control_change": 1,
@@ -43,10 +44,11 @@ class MIDIQueue(le.Queue):
             (
                 item.time,
                 priority,
-                time.time(),
+                self._seq,
                 item,
             )
         )
+        self._seq += 1
 
     def peek(self):
         return super().peek()[-1]
@@ -55,7 +57,7 @@ class MIDIQueue(le.Queue):
         return super().pop()[-1]
 
 
-class MIDIPlayer:
+class MIDIOutput:
 
     def __init__(self):
         self._out = mido.open_output(mido.get_output_names()[0])
