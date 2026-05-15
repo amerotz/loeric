@@ -1,0 +1,173 @@
+# This file is part of LOERIC.
+#
+# LOERIC is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# LOERIC is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+
+import element as le
+import module as lm
+
+
+class Groover:
+    """The core of LOERIC's performance rules."""
+
+    def __init__(self, config) -> None:
+        """Initialise a groover instance."""
+
+        self._queue = le.LOERICQueue()
+        self._working_queue = le.LOERICQueue()
+        self._contour_values = {}
+
+        self._modules = []
+        for m in config:
+            self._modules.append(lm.LOERICModule.create_module(m, **config[m]))
+
+    def push(self, event):
+        """
+        Add an element to the groover's working queue. Elements are processed by calling
+        ``update(time)``.
+        """
+        self._working_queue.push(event)
+
+    def set_tempo(self, qpm: float, time: float):
+        """Request a specific tempo change at a specific time."""
+        self.push(le.UserTempo(qpm=qpm, time=time))
+
+    def set(self, contours):
+        for c in contours:
+            self._contour_values[c] = contours[c]
+
+    @property
+    def lookahead_size(self):
+        size = 0
+        for m in self._modules:
+            size = max(m.lookahead_size, size)
+        return size
+
+    @property
+    def window_size(self):
+        size = 0
+        for m in self._modules:
+            size = max(m.window_size, size)
+        return size
+
+    def update(self, time: le.TimeDelta, window: list[le.LOERICElement] = None) -> None:
+        """
+        Update the groover by going through the working queue and applying the modules.
+        Only events at the requested time will be brought to completion, while the others
+        will once the new performance time has been reached (and the groover has been updated
+        with the latest values).
+
+        :param time: the requested performance time.
+        :param window: an optional window of elements forward in time.
+        """
+        while self._update_step(time, window):
+            pass
+
+    def _update_step(
+        self, time: le.TimeDelta, window: list[le.LOERICElement] = None
+    ) -> None:
+        # get element
+        # is it now? great go on
+
+        can_process = (
+            not self._working_queue.is_empty()
+            and self._working_queue.peek().time <= time
+        )
+        if can_process:
+            event = self._working_queue.pop()
+            # print(event, self._working_queue._q)
+        else:
+            event = le.NullEvent(time=time.eighth_duration)
+
+        # run it through the modules
+        to_be_processed_by_module = [event]
+        for i, module in enumerate(self._modules):
+            """
+            if can_process:
+                print()
+                print(module.name)
+                print(to_be_processed_by_module)
+                if len(to_be_processed_by_module) == 1:
+                    print(to_be_processed_by_module[0]._module_signatures)
+            """
+            spawned_elements = []
+            for e in to_be_processed_by_module:
+                module_ouput = module(e, self._contour_values, window=window)
+
+                for out in module_ouput:
+                    """
+                    if can_process:
+                        print(time, out.time, out.time <= time, id(out))
+                    """
+                    # module output is at same time
+                    # can be processed by next module
+                    if out.time <= time:
+                        spawned_elements.append(out)
+                        """
+                        if can_process:
+                            print("to next module")
+                        """
+                    # module output is later
+                    # should be added to queue for later
+                    else:
+                        if not isinstance(out, le.NullEvent):
+                            self._working_queue.push(out)
+                            # print(self._working_queue._q)
+                        """
+                        if can_process:
+                            print(out)
+                            print("for later")
+                        """
+
+            # next step will process eveything spawned
+            # at current time
+            to_be_processed_by_module = spawned_elements
+
+        # after all modules have executed, to_be_processed_by_module
+        # contains everything that should go in the final queue
+        for el in to_be_processed_by_module:
+            if not isinstance(el, le.NullEvent):
+                self._queue.push(el)
+
+        return can_process
+
+    def pop(self, time: float = None) -> list:
+        """
+        Obtain the next elements to be performed at a specific time.
+
+        :param time: the requested performance time.
+
+        :return: the events at time. If time is None, it returns the
+        next event in the queue.
+        """
+        # return next event
+        if time is None:
+            return [self._queue.pop()]
+
+        # return all events at time
+        events = []
+        while not self._queue.is_empty():
+            # peek first event
+            event = self._queue.peek()
+            # if time is in the future, then we are done
+            # because the queue is a priority queue
+            if event.time > time:
+                break
+            # otherwise remove it and add it to
+            # the events to return
+            else:
+                events.append(self._queue.pop())
+        return events
+
+    def reset(self):
+        """Reset all variables."""
