@@ -23,14 +23,26 @@
 import numpy as np
 
 import loeric.element as le
+import loeric.inputs as li
 import loeric.outputs as lo
 
 
 class Player:
 
-    def __init__(self):
-        self._output_interface = lo.MIDIOutput()
-        self._input_interface = lo.MIDIInput()
+    def __init__(self, config):
+
+        self._input_interfaces = []
+        for i in config["input"]:
+            interface = li.InputInterface.create_input(config["input"][i])
+            if interface is not None:
+                self._input_interfaces.append(interface)
+
+        self._output_interfaces = []
+        for o in config["output"]:
+            interface = lo.OutputInterface.create_output(config["output"][o])
+            if interface is not None:
+                self._output_interfaces.append(interface)
+
         self._tempo = le.Tempo(qpm=120)
         self._message_queue = le.LOERICQueue()
 
@@ -52,23 +64,15 @@ class Player:
 
     def _play_events(self, events: list[le.LOERICElement], tick):
 
-        self._output_interface._play_events(events, tick)
+        for o in self._output_interfaces:
+            o.play_events(events, tick)
 
-    def __setitem__(self, key: str, value: float):
-        """Set the control named ``key`` to ``value``."""
-
-    def __getitem__(self, key: str):
-        """Get the value of control named ``key``."""
-
-    def reset(self):
-        """Reset all variables"""
-        self._output_interface.reset()
-
-    def set(self, values: dict):
-        pass
-
-    def get(self, key: str = None):
-        pass
+    def shutdown(self):
+        """Close all interfaces."""
+        for i in self._input_interfaces:
+            i.reset()
+        for o in self._output_interfaces:
+            o.reset()
 
     @property
     def eighth_duration_seconds(self) -> float:
@@ -106,10 +110,14 @@ class Player:
         return True
 
     def _get(self):
-        return {"intensity": 1, "autonomy": 1}
+        val = {}
+        for interface in self._input_interfaces:
+            val |= interface.get()
+        return val
 
-    def _set(self, values):
-        pass
+    def _set(self, contour_values: dict):
+        for o in self._output_interfaces:
+            o.set(contour_values)
 
     def step(self, mapper, contour_manager, groover, tune, tick):
 

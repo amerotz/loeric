@@ -340,13 +340,18 @@ class OrnamentModule(LOERICModule):
         def __repr__(self):
             return f"(Ornament {self._name} slide={self.slide} thr={self.threshold} p={self.probability})"
 
-    def __init__(self, bind: str, data: dict, **kwargs):
+    def __init__(self, bind: str, data: dict, whitelist: list[str], **kwargs):
         super().__init__(**kwargs)
 
         self._name = "ornament"
         self._contour = bind
         self._ornaments = [self.OrnamentConfig(o, data[o]) for o in data]
         self._window_size = max([o.length for o in self._ornaments])
+
+        if whitelist is None:
+            self._whitelist = [o.name for o in self._ornaments]
+        else:
+            self._whitelist = whitelist
 
         self._time_signature = None
         self._key_signature = None
@@ -429,6 +434,9 @@ class OrnamentModule(LOERICModule):
         window = [w for w in window if w.is_note]
         # for each ornament
         for ornament in self._ornaments:
+            # only check if whitelist
+            if ornament.name not in self._whitelist:
+                continue
             prob = ornament.probability
 
             # check if probability can be updated via contour

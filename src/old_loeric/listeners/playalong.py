@@ -1,5 +1,4 @@
-"""
-This file is part of LOERIC.
+"""This file is part of LOERIC.
 
 LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
@@ -7,6 +6,7 @@ LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 
 You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 """
+
 import argparse
 import faulthandler
 import threading
@@ -16,7 +16,6 @@ import traceback
 import mido
 import numpy as np
 import pyaudio
-
 
 faulthandler.enable()
 # bad code goes here

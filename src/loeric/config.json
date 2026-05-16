@@ -1,7 +1,7 @@
 {
   "variables": {
     "var_comping_pattern_period": 2,
-    "var_drone_threshold": 0.25,
+    "var_drone_threshold": 0.5,
     "var_webapp_intensity_control": 49,
     "var_roll_2_prob": 0,
     "var_webapp_human_impact_control": 50,
@@ -43,11 +43,12 @@
       }
     },
     "dynamics": {
-      "bind": "$velocity",
+      "bind": "velocity",
       "pattern": "velocity_pattern"
     },
     "ornament": {
-      "bind": "$ornament",
+      "bind": "ornament",
+      "whitelist": null,
       "bypass": false,
       "data": {
         "divide": {
@@ -232,10 +233,10 @@
       "bypass": false,
       "data": {
         "pedal": {
-          "is_active": true,
+          "is_active": false,
           "type": "pedal",
           "notes": [33],
-          "bind": "$drone",
+          "bind": "drone",
           "threshold": 0,
           "allow_root": true,
           "transpose": 0,
@@ -305,7 +306,7 @@
     },
     "timing": {
       "bypass": false,
-      "bind": "$tempo",
+      "bind": "tempo",
       "pattern": "tempo_pattern",
       "qpm_amount": 1,
       "only_increase": false
@@ -313,7 +314,7 @@
     "legato": {
       "min": 0.1,
       "max": 0.95,
-      "bind": "$legato"
+      "bind": "legato"
     }
   },
   "contours": {
@@ -586,29 +587,61 @@
   },
   "player": {
     "input": {
-      "midi#intensity": {
-        "control": 1
+      "main": {
+        "active": false,
+        "type": "midi",
+        "port": "Launch Control XL Launch Contro",
+        "controls": {
+          "intensity": 77,
+          "autonomy": 78
+        }
+      },
+      "di": {
+        "active": true,
+        "type": "audio",
+        "device": "pulse",
+        "frame_rate": 4096,
+        "analysers": {
+          "loudness": {
+            "type": "rms",
+            "floor": "adaptive",
+            "ceil": "adaptive",
+            "responsiveness": 1,
+            "controls": ["di_intensity", "di_autonomy"],
+            "window_size_seconds": 0.1
+          }
+        }
       }
     },
     "output": {
-      "midi#modulation": {
-        "control": 1
-      },
-      "midi#expression": {
-        "control": 11
+      "main": {
+        "active": true,
+        "type": "midi",
+        "port": "Midi Through Port-0",
+        "send_cc": true,
+        "send_messages": true,
+        "velocity_range": [32, 100],
+        "pitchbend_range": 48,
+        "controls": {
+          "modulation": 1,
+          "expression": 11
+        }
       }
     }
   },
   "mapper": {
-    "sources": [
-      "intensity",
-      "velocity",
-      "legato",
-      "tempo",
-      "drone",
-      "ornament"
-    ],
-    "targets": ["modulation", "expression"],
-    "rules": []
+    "sources": ["di_intensity", "di_autonomy", "velocity"],
+    "targets": [],
+    "rules": [
+      "di_autonomy @ [0.0,0.33] > [0.5,0.65]",
+      "di_autonomy @ [0.33,0.66] > [0.85,0.65]",
+      "di_autonomy @ [0.66,1] > [0.85,1]",
+
+      "di_autonomy @ [0.0,0.33] : %velocity",
+      "di_autonomy @ [0.33,0.66] : %velocity",
+      "di_autonomy @ [0.66,1] : %velocity",
+
+      "di_intensity ~ velocity"
+    ]
   }
 }

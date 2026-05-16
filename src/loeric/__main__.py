@@ -17,7 +17,6 @@ import argparse
 import importlib.resources as ir
 import json
 import logging
-import sys
 
 import matplotlib.pyplot as plt
 
@@ -30,11 +29,23 @@ import loeric.utils as lu
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(levelname)s | %(name)s | %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
+    datefmt="%H:%M:%S",
+    format=(
+        "\033[90m%(asctime)s\033[0m "
+        "%(levelname)s "
+        "\033[96m%(name)s\033[0m "
+        "%(message)s"
+    ),
 )
 
+logging.addLevelName(logging.DEBUG, "\033[90mDEBUG\033[0m")
+logging.addLevelName(logging.INFO, "\033[94mINFO\033[0m")
+logging.addLevelName(logging.WARNING, "\033[93mWARNING\033[0m")
+logging.addLevelName(logging.ERROR, "\033[91mERROR\033[0m")
+
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def process_config(config):
@@ -118,7 +129,7 @@ def main():
         config_file = json.load(f)
         config_file = process_config(config_file)
 
-    player = pl.Player()
+    player = pl.Player(config_file["player"])
 
     # load a tune
     mapper = mp.Mapper(config_file["mapper"])

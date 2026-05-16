@@ -13,11 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+import logging
 import time
 
 import numpy as np
 
 import loeric.element as le
+
+logger = logging.getLogger(__name__)
 
 
 def play(tune, player, mapper, groover, contour_manager, args):
@@ -61,7 +64,7 @@ def play(tune, player, mapper, groover, contour_manager, args):
         print("Playback terminated.")
 
     finally:
-        player.reset()
+        player.shutdown()
 
 
 def midi_to_freq(midi):

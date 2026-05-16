@@ -13,12 +13,47 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+import logging
 import random
 
 import mido
 import numpy as np
 
 import loeric.element as le
+
+logger = logging.getLogger(__name__)
+
+
+class OutputInterface:
+
+    @staticmethod
+    def create_output(config: dict):
+
+        if not config["active"]:
+            return None
+        if config["type"] == "midi":
+            return MIDIOutput(
+                port=config["port"],
+                controls=config["controls"],
+                send_cc=config["send_cc"],
+                send_messages=config["send_messages"],
+                velocity_range=config["velocity_range"],
+                pitchbend_range=config["pitchbend_range"],
+            )
+        else:
+            raise ValueError(f"Unknown output interface type {config["type"]}.")
+
+    def play_events(self, events: list[le.LOERICElement], tick: le.TimeDelta | float):
+        """Send events to the output."""
+        pass
+
+    def reset(self):
+        """Reset output state."""
+        pass
+
+    def set(self, contour_values: dict):
+        """Set values to output."""
+        pass
 
 
 class MIDIQueue(le.Queue):
@@ -57,18 +92,32 @@ class MIDIQueue(le.Queue):
         return super().pop()[-1]
 
 
-class MIDIOutput:
+class MIDIOutput(OutputInterface):
 
-    def __init__(self):
-        self._out = mido.open_output(mido.get_output_names()[0])
+    def __init__(
+        self,
+        port: str,
+        controls: dict,
+        send_cc: bool,
+        send_messages: bool,
+        velocity_range: list[int],
+        pitchbend_range: int,
+    ):
+
+        self._out = mido.open_output(port)
+        self._control_values = {}
+        self._controls = controls
+        self._send_cc = send_cc
+        self._send_messages = send_messages
+        self._velocity_range = velocity_range
+        self._free_channels = {i: (-np.inf, -np.inf) for i in range(16)}
+        self._bend_semitones = pitchbend_range
+
         self._mpe_init()
 
         self._queue = MIDIQueue()
-        self._current_channel = 0
 
     def _mpe_init(self):
-        self._bend_down_semitones = 48
-        self._bend_up_semitones = 48
         for channel in range(16):
             self._out.send(
                 mido.Message("control_change", channel=channel, control=101, value=0)
@@ -105,6 +154,8 @@ class MIDIOutput:
 
         elif isinstance(event, le.Note):
 
+            min_v, max_v = self._velocity_range
+
             if event.duration == 0:
                 return []
 
@@ -115,10 +166,7 @@ class MIDIOutput:
             messages = []
 
             bend_semitones = event.pitch - np.round(event.pitch)
-            if bend_semitones > 0:
-                bend_percentage = bend_semitones / self._bend_up_semitones
-            else:
-                bend_percentage = bend_semitones / self._bend_down_semitones
+            bend_percentage = bend_semitones / self._bend_semitones
 
             pitch = max(0, min(127, np.round(event.pitch).astype(int)))
 
@@ -137,7 +185,7 @@ class MIDIOutput:
                     note=pitch,
                     time=overall_time.eighth_duration,
                     channel=event.channel,
-                    velocity=max(0, min(127, int(127 * event.velocity))),
+                    velocity=max(min_v, min(max_v, int(max_v * event.velocity))),
                 )
             )
 
@@ -153,10 +201,7 @@ class MIDIOutput:
                     )
 
                     bend_semitones = note.pitch - event.pitch
-                    if bend_semitones > 0:
-                        bend_percentage = bend_semitones / self._bend_up_semitones
-                    else:
-                        bend_percentage = bend_semitones / self._bend_down_semitones
+                    bend_percentage = bend_semitones / self._bend_semitones
 
                     # append messages
                     mult = random.uniform(0.25, 0.5)
@@ -200,23 +245,66 @@ class MIDIOutput:
     def reset(self):
         self._out.reset()
         self._out.close()
+        logger.info("Reset and closed midi output.")
 
-    def _play_events(self, events: list[le.LOERICElement], tick):
+    def set(self, contour_values):
+        self._control_values |= contour_values
+        if not self._send_cc:
+            return
+        for c in self._controls:
+            if c not in self._control_values:
+                continue
+
+            val = max(0, min(127, int(self._control_values[c] * 127)))
+
+            logger.info(f"{c}: {val}")
+            self._out.send(
+                mido.Message(
+                    "control_change", control=self._controls[c], channel=0, value=val
+                )
+            )
+
+    def _allocate_channel(self, event: le.LOERICElement):
+
+        start_time = event.time
+        end_time = event.time + event.duration
+
+        for ch in self._free_channels:
+            s, e = self._free_channels[ch]
+            if start_time > e:
+                self._free_channels[ch] = (start_time, end_time)
+                return ch
+
+    def play_events(self, events: list[le.LOERICElement], tick):
+
+        if not self._send_messages:
+            return
 
         # obtain all midi messages
         for event in events:
-            event.channel = self._current_channel
-            self._current_channel += 1
-            self._current_channel %= 16
+            if event.is_note:
+                channel = self._allocate_channel(event)
+                event.channel = channel
             for e in self._event_to_midi(event, absolute_time=True):
                 self._queue.push(e)
 
         while not self._queue.is_empty():
+
             m = self._queue.peek()
+
             if m.time <= tick:
+
                 m = self._queue.pop()
+
                 if not m.is_meta:
-                    # mpe
-                    self._out.send(m)
+
+                    if m.is_cc and self._send_cc:
+                        self._out.send(m)
+
+                    elif (
+                        m.type in ["note_on", "note_off", "pitchwheel"]
+                        and self._send_messages
+                    ):
+                        self._out.send(m)
             else:
                 break
