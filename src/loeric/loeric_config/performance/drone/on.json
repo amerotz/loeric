@@ -1,0 +1,7 @@
+{
+  "modules": {
+    "drones": {
+      "bypass": false
+    }
+  }
+}

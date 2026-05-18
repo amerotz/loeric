@@ -65,9 +65,11 @@ class LOERICModule:
         else:
             # process it
             out = self.process(element, contour_values, window=window)
+
             # sign it
             for o in out:
                 o.add_signature(self._signature)
+
             return out
 
     @property
@@ -207,7 +209,7 @@ class HarmonyModule(LOERICModule):
             chord = self._calculate_chord(window)
             chord.time = element.time.eighth_duration
 
-            logger.info(f"Playing chord {chord}")
+            # logger.info(f"Playing chord {chord}")
 
             return [chord, element]
 
@@ -346,7 +348,10 @@ class OrnamentModule(LOERICModule):
         self._name = "ornament"
         self._contour = bind
         self._ornaments = [self.OrnamentConfig(o, data[o]) for o in data]
-        self._window_size = max([o.length for o in self._ornaments])
+        self._window_size = 0
+
+        if len(self._ornaments) != 0:
+            self._window_size = max([o.length for o in self._ornaments])
 
         if whitelist is None:
             self._whitelist = [o.name for o in self._ornaments]
@@ -752,6 +757,12 @@ class DroneModule(LOERICModule):
 
             notes.extend(drone_notes)
 
+        # make sure that any children
+        # have the same signatures
+        # as the parent
+        for n in notes:
+            n.copy_signatures(element)
+
         return [element, *notes]
 
     def _current_notes_per_bar(self, drone, contour_values):
@@ -951,9 +962,9 @@ class TimingModule(LOERICModule):
         self._amount_qpm = qpm_amount
         self._only_increase = only_increase
 
-        self._internal_offset = le.TimeDelta(0)
+        self._internal_offset = 0
         self._last_computation_time = le.TimeDelta(0)
-        self._offset_snapshot = le.TimeDelta(0)
+        self._offset_snapshot = 0
 
         self._tempo = le.Tempo(qpm=120)
         self._first_tempo = None
@@ -990,27 +1001,30 @@ class TimingModule(LOERICModule):
         element: le.LOERICElement,
         contour_values: np.array,
     ):
-        current_time = copy.copy(element.time)
+        current_time = copy.deepcopy(element.time)
 
         # all simultaneous notes share same offset
-        update_offset = self._last_computation_time != current_time
+        update_offset = (
+            element.duration != 0 and self._last_computation_time != current_time
+        )
 
         if update_offset:
             self._last_computation_time = current_time
-            self._offset_snapshot = copy.copy(self._internal_offset)
+            self._offset_snapshot = self._internal_offset
 
         # keep original duration
-        old_duration = copy.copy(element.duration)
+        old_duration = element.duration.eighth_duration
+        new_duration = old_duration * contour_values[self._pattern]
 
         # apply timing
-        element.duration *= contour_values[self._pattern]
+        element.duration = new_duration
 
         # apply offset
         element.time -= self._offset_snapshot
 
         # only integrate once per score-time
         if update_offset:
-            self._internal_offset += old_duration - element.duration
+            self._internal_offset += old_duration - new_duration
 
         return element
 
@@ -1026,6 +1040,7 @@ class TimingModule(LOERICModule):
         else:
             tempo = calculated_tempo
 
+        # tempo /= contour_values[self._pattern]
         return tempo
 
 

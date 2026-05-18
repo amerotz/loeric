@@ -31,7 +31,7 @@ def play(tune, player, mapper, groover, contour_manager, args):
 
     # timekeeping
     tick = le.TimeDelta(eighth_duration=start_time - groover.lookahead_size)
-    time_division = le.TimeDelta(eighth_duration=2 / le.MINIMUM_QUARTER_DIVISION)
+    time_division = le.TimeDelta(eighth_duration=4 / le.MINIMUM_QUARTER_DIVISION)
 
     finish = False
 

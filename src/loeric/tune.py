@@ -203,6 +203,7 @@ class Tune:
         time_signatures = []
         tempos = []
         barlines = []
+
         # add notes and repetitions
         for r in range(repeats):
             new_score = copy.deepcopy(_score)

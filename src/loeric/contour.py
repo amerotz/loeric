@@ -488,11 +488,15 @@ class PatternContour(Contour):
         pattern_means = self._mean[pattern_indexes].astype(float)
         pattern_stds = self._std[pattern_indexes].astype(float)
 
-        for index in index_diff:
-            source_index = pattern_indexes[index].item()
-            add_indexes = np.arange(source_index, source_index + diff[index].item())
-            pattern_means[index] = np.mean(self._mean[add_indexes])
-            pattern_stds[index] = np.mean(self._std[add_indexes])
+        # add missing indexes together only if
+        # normalising, otherwise use whatever value
+        # was already there
+        if normalize:
+            for index in index_diff:
+                source_index = pattern_indexes[index].item()
+                add_indexes = np.arange(source_index, source_index + diff[index].item())
+                pattern_means[index] = np.mean(self._mean[add_indexes])
+                pattern_stds[index] = np.mean(self._std[add_indexes])
 
         pattern = np.random.normal(
             loc=pattern_means,

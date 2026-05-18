@@ -1,0 +1,96 @@
+{
+  "variables": {
+    "var_notes_per_bar": [4],
+    "var_velocity_weight": [0, -2, 1, 1, 1],
+    "var_ornament_pattern": {
+      "mean": [0, 1, 1, 1, 1, 1, 1, 0],
+      "std": [0, 0, 0, 0, 0, 0, 0, 0],
+      "std_scale": 1,
+      "normalize": false,
+      "period": 8
+    },
+    "var_comping_notes_per_bar": [4],
+    "var_comping_pattern_period": 8,
+    "var_upper_comping_pattern": [
+      0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+      1, 0, 1, 0, 1, 1, 0
+    ],
+    "var_lower_comping_pattern": [
+      1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+      0, 1, 0, 1, 0, 1, 0
+    ]
+  },
+  "modules": {
+    "harmony": {
+      "chords_per_bar": 2
+    },
+    "swing": {
+      "min": 1,
+      "max": 1,
+      "locations": [1, 3]
+    }
+  },
+  "contours": {
+    "drone": {
+      "recipe": {
+        "weighted_sum": {
+          "contours": {
+            "o_canainn": {
+              "weights": "var_velocity_weight",
+              "savgol": true,
+              "scale": true,
+              "shift": true
+            },
+            "pattern": {
+              "mean": [
+                0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+                1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0
+              ],
+              "std": [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+              ],
+              "std_scale": 1,
+              "normalize": false,
+              "period": 8
+            }
+          },
+          "weights": [0, 1]
+        }
+      }
+    },
+    "velocity_pattern": {
+      "recipe": {
+        "pattern": {
+          "mean": [0.8, 1.2, 0.8, 1.2, 0.8, 1.2, 1.5, 1],
+          "std": [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01],
+          "std_scale": 1,
+          "normalize": false,
+          "period": 2
+        }
+      }
+    },
+    "legato": {
+      "recipe": {
+        "pattern": {
+          "mean": [1, 0.8, 1, 0.7],
+          "std": [0.0, 0.0, 0.0, 0.0],
+          "std_scale": 1,
+          "normalize": false,
+          "period": 1
+        }
+      }
+    },
+    "tempo_pattern": {
+      "recipe": {
+        "pattern": {
+          "mean": [1, 0.99, 0.98, 1],
+          "std": [0.0, 0.0, 0.0, 0.0],
+          "std_scale": 1,
+          "normalize": true,
+          "period": 1
+        }
+      }
+    }
+  }
+}

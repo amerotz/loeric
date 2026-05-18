@@ -293,6 +293,15 @@ class LOERICElement:
     def add_signature(self, signature):
         self._module_signatures.append(signature)
 
+    def copy_signatures(self, element):
+        for s in element.signatures:
+            if not self.has_signature(s):
+                self.add_signature(s)
+
+    @property
+    def signatures(self):
+        return self._module_signatures
+
     @property
     def time(self):
         return self._time
@@ -692,7 +701,7 @@ class Note(LOERICElement):
         self._velocity = velocity
         self._is_slide = slide
         self._slide_targets = []
-        self.channel = channel
+        self._channel = channel
         self._is_note = True
         self._metadata = []
 
@@ -723,6 +732,17 @@ class Note(LOERICElement):
     @property
     def metadata(self):
         return self._metadata
+
+    @property
+    def channel(self):
+        return self._channel
+
+    @channel.setter
+    def channel(self, ch: int):
+        self._channel = ch
+        if self.is_slide:
+            for note in self._slide_targets:
+                note.channel = ch
 
     def transpose(self, semitones):
         self._pitch += semitones

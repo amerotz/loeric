@@ -114,6 +114,13 @@ def main():
         default=ir.files("loeric.loeric_config.performance").joinpath("config.json"),
     )
     parser.add_argument(
+        "-t",
+        "--transpose",
+        help="the number of semitones to transpose the tune of",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
         "--plot",
         help="plots the specified contour before playback.",
         nargs="+",
@@ -128,6 +135,8 @@ def main():
     with open(args["config"], "r") as f:
         config_file = json.load(f)
         config_file = process_config(config_file)
+        if args["transpose"] is not None and "transpose" in config_file["modules"]:
+            config_file["modules"]["transpose"]["steps"] = args["transpose"]
 
     player = pl.Player(config_file["player"])
 

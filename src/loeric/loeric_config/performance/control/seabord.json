@@ -1,0 +1,42 @@
+{
+	"contours": {
+		"ornament": {
+			"human_impact_scale": 1
+		},
+		"legato": {
+			"human_impact_scale": 1
+		},
+		"velocity": {
+			"human_impact_scale": 1
+		},
+		"tempo": {
+			"human_impact_scale": 0
+		}
+	},
+	"contour_2_control": {},
+	"control_2_contour": {
+		"velocity_intensity":{
+			"control":77,
+			"contours":[
+				"velocity_intensity"
+			]
+		},
+		"ornament_intensity":{
+			"control":78,
+			"contours":[
+				"ornament_intensity"
+			]
+		},
+		"legato_intensity":{
+			"control":79,
+			"contours":[
+				"legato_intensity"
+			]
+		}
+	},
+	"legato":{
+		"min": 0.2,
+		"max": 1,
+		"bind": "legato"
+	}
+}

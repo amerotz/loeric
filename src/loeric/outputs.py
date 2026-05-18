@@ -111,7 +111,7 @@ class MIDIOutput(OutputInterface):
         self._send_messages = send_messages
         self._velocity_range = velocity_range
         self._free_channels = {i: (-np.inf, -np.inf) for i in range(16)}
-        self._bend_semitones = pitchbend_range
+        self._pitchbend_range = pitchbend_range
 
         self._mpe_init()
 
@@ -126,7 +126,12 @@ class MIDIOutput(OutputInterface):
                 mido.Message("control_change", channel=channel, control=100, value=0)
             )
             self._out.send(
-                mido.Message("control_change", channel=channel, control=6, value=48)
+                mido.Message(
+                    "control_change",
+                    channel=channel,
+                    control=6,
+                    value=self._pitchbend_range,
+                )
             )
             self._out.send(
                 mido.Message("control_change", channel=channel, control=38, value=0)
@@ -161,16 +166,17 @@ class MIDIOutput(OutputInterface):
 
             overall_time = le.TimeDelta(eighth_duration=0)
             if absolute_time:
-                overall_time = le.TimeDelta(eighth_duration=event.time.eighth_duration)
+                overall_time = le.TimeDelta(eighth_duration=event._time.eighth_duration)
 
             messages = []
 
-            bend_semitones = event.pitch - np.round(event.pitch)
-            bend_percentage = bend_semitones / self._bend_semitones
+            bend_semitones = event._pitch - np.round(event._pitch)
+            bend_percentage = bend_semitones / self._pitchbend_range
 
-            pitch = max(0, min(127, np.round(event.pitch).astype(int)))
+            event_velocity = event.velocity * (max_v - min_v) + min_v
+            event_velocity = np.clip(event_velocity, min_v, max_v).astype(int)
 
-            pb = int(np.clip(np.round(bend_percentage * 8191), -8192, 8191))
+            pb = min(8191, max(np.round(bend_percentage * 8191).astype(int), -8192))
             messages.append(
                 mido.Message(
                     "pitchwheel",
@@ -182,26 +188,28 @@ class MIDIOutput(OutputInterface):
             messages.append(
                 mido.Message(
                     "note_on",
-                    note=pitch,
-                    time=overall_time.eighth_duration,
+                    note=np.round(event._pitch).astype(int),
+                    time=overall_time.eighth_duration.astype(float),
                     channel=event.channel,
-                    velocity=max(min_v, min(max_v, int(max_v * event.velocity))),
+                    velocity=event_velocity,
                 )
             )
 
-            note_duration = le.TimeDelta(eighth_duration=event.duration.eighth_duration)
-            if event.is_slide:
+            note_duration = le.TimeDelta(
+                eighth_duration=event._duration.eighth_duration
+            )
+            if event._is_slide:
 
                 previous_bend = bend_percentage
                 resolution = 24
 
-                for note in event.slide_targets:
+                for note in event._slide_targets:
                     slide_duration = le.TimeDelta(
                         eighth_duration=note.duration.eighth_duration / resolution
                     )
 
-                    bend_semitones = note.pitch - event.pitch
-                    bend_percentage = bend_semitones / self._bend_semitones
+                    bend_semitones = note.pitch - event._pitch
+                    bend_percentage = bend_semitones / self._pitchbend_range
 
                     # append messages
                     mult = random.uniform(0.25, 0.5)
@@ -225,13 +233,21 @@ class MIDIOutput(OutputInterface):
 
                     previous_bend = bend_percentage
 
-            if event.duration == 0:
+            if event._duration == 0:
                 note_duration += 0.001
 
             messages.append(
                 mido.Message(
+                    "pitchwheel",
+                    pitch=0,
+                    channel=event.channel,
+                    time=(overall_time + note_duration).eighth_duration.astype(float),
+                )
+            )
+            messages.append(
+                mido.Message(
                     "note_off",
-                    note=pitch,
+                    note=np.round(event._pitch).astype(int),
                     channel=event.channel,
                     time=(overall_time + note_duration).eighth_duration.astype(float),
                     velocity=0,
@@ -273,7 +289,12 @@ class MIDIOutput(OutputInterface):
             s, e = self._free_channels[ch]
             if start_time > e:
                 self._free_channels[ch] = (start_time, end_time)
-                return ch
+                return int(ch)
+
+        # steal oldest voice
+        ch = np.argmin([s for s, e in self._free_channels.values()])
+        self._free_channels[ch] = (start_time, end_time)
+        return ch
 
     def play_events(self, events: list[le.LOERICElement], tick):
 
@@ -298,13 +319,13 @@ class MIDIOutput(OutputInterface):
 
                 if not m.is_meta:
 
-                    if m.is_cc and self._send_cc:
-                        self._out.send(m)
+                    if m.type == "control_change":
+                        if self._send_cc:
+                            self._out.send(m)
 
-                    elif (
-                        m.type in ["note_on", "note_off", "pitchwheel"]
-                        and self._send_messages
-                    ):
-                        self._out.send(m)
+                    elif m.type in ["note_on", "note_off", "pitchwheel"]:
+
+                        if self._send_messages:
+                            self._out.send(m)
             else:
                 break

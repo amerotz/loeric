@@ -1,0 +1,5 @@
+{
+	"drone": {
+		"allow_root": false
+	}
+}
