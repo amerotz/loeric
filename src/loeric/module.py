@@ -673,6 +673,9 @@ class DroneModule(LOERICModule):
             if "delay_bind" not in config:
                 self.delay_bind = None
 
+            if "velocity_bind" not in config:
+                self.velocity_bind = None
+
             self.last_computed_time = -np.inf
             self._is_running = False
 
@@ -933,7 +936,12 @@ class DroneModule(LOERICModule):
         delay = 0
 
         for p in pitches:
-            velocity = self._last_velocity * drone.velocity_multiplier
+            if drone.velocity_bind is not None:
+                velocity = contour_values[drone.velocity_bind]
+            else:
+                velocity = self._last_velocity
+
+            velocity *= drone.velocity_multiplier
 
             notes.append(
                 le.Note(
