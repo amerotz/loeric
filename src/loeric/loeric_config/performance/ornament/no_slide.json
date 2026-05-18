@@ -1,13 +1,17 @@
 {
-    "ornamentation": {
-        "slide":{
-            "probability": 0
+  "modules": {
+    "ornament": {
+      "data": {
+        "slide": {
+          "probability": 0
         },
-        "error_slide":{
-            "probability": 0
+        "error_slide": {
+          "probability": 0
         },
-        "vibrato":{
-            "probability": 0
+        "vibrato": {
+          "probability": 0
         }
+      }
     }
+  }
 }

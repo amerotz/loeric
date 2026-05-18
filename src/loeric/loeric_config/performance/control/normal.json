@@ -1,22 +1,24 @@
 {
-	"contours": {
-		"ornament": {
-			"human_impact_scale": 1
-		},
-		"drone": {
-			"human_impact_scale": 0.5
-		},
-		"legato": {
-			"human_impact_scale": 0.5
-		},
-		"swing": {
-			"human_impact_scale": 0
-		},
-		"velocity": {
-			"human_impact_scale": 1
-		},
-		"tempo": {
-			"human_impact_scale": 0
-		}
+"player": {
+	"di": {
+        "active": true,
+        "type": "audio",
+        "device": "pulse",
+        "frame_rate": 4096,
+        "analysers": {
+          "loudness": {
+            "type": "rms",
+            "floor": "adaptive",
+            "ceil": "adaptive",
+            "responsiveness": 1,
+            "controls": ["di_intensity", "di_autonomy"],
+            "window_size_seconds": 0.1
+          }
+        }
+      }
 	}
+	"mapper": {
+	}
+
 }
+

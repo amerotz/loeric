@@ -303,7 +303,7 @@ class MIDIOutput(OutputInterface):
 
         # obtain all midi messages
         for event in events:
-            if event.is_note:
+            if isinstance(event, le.Note):
                 channel = self._allocate_channel(event)
                 event.channel = channel
             for e in self._event_to_midi(event, absolute_time=True):

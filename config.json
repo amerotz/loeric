@@ -76,6 +76,13 @@
       "min": 0.5,
       "max": 1,
       "bind": "legato"
+    },
+    "logger": {
+      "notes": true,
+      "chords": true,
+      "time_signatures": true,
+      "key_signatures": true,
+      "tempos": true
     }
   },
   "contours": {
@@ -349,7 +356,7 @@
   "player": {
     "input": {
       "main": {
-        "active": false,
+        "active": true,
         "type": "midi",
         "port": "Launch Control XL Launch Contro",
         "controls": {
@@ -358,7 +365,7 @@
         }
       },
       "di": {
-        "active": true,
+        "active": false,
         "type": "audio",
         "device": "pulse",
         "frame_rate": 4096,
@@ -391,9 +398,16 @@
     }
   },
   "mapper": {
-    "sources": ["di_intensity", "di_autonomy", "velocity"],
+    "_sources": ["intensity", "autonomy", "velocity"],
+    "sources": ["intensity", "autonomy", "velocity"],
     "targets": [],
-    "rules": [
+    "rules": {
+      "intensity @ [0,0.3] > [0.5,1]",
+      "intensity @ [0.3,1] > [1, 0.2]",
+      "autonomy : %velocity",
+      "intensity ~ velocity"
+    },
+    "_rules": [
       "di_autonomy @ [0.0,0.33] > [0.5,0.65]",
       "di_autonomy @ [0.33,0.66] > [0.85,0.65]",
       "di_autonomy @ [0.66,1] > [0.85,1]",

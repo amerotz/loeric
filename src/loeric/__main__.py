@@ -28,7 +28,7 @@ import loeric.tune as tu
 import loeric.utils as lu
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     datefmt="%H:%M:%S",
     format=(
         "\033[90m%(asctime)s\033[0m "

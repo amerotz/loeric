@@ -494,7 +494,11 @@ class PatternContour(Contour):
         if normalize:
             for index in index_diff:
                 source_index = pattern_indexes[index].item()
-                add_indexes = np.arange(source_index, source_index + diff[index].item())
+                add_indexes = (
+                    np.arange(source_index, source_index + diff[index].item())
+                    % self._pattern_size
+                )
+                print(add_indexes)
                 pattern_means[index] = np.mean(self._mean[add_indexes])
                 pattern_stds[index] = np.mean(self._std[add_indexes])
 

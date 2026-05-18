@@ -1,0 +1,147 @@
+{
+  "modules": {
+    "ornament": {
+      "data": {
+        "accento": {
+          "cases": [
+            [
+              [0, 1],
+              [-1, 1]
+            ]
+          ],
+          "pitches_mean": [0, 1, -1],
+          "pitches_std": [0, 0, 0],
+          "velocities_mean": [1, 0.6, 1],
+          "velocities_std": [0, 0, 0],
+          "durations_mean": [0.75, 0.25, 1],
+          "durations_std": [0.01, 0.1, 0.01],
+          "probability": 1,
+          "length": 2,
+          "diatonic": true,
+          "threshold": 0,
+          "slide": false
+        },
+        "passaggio_up#1": {
+          "cases": [
+            [
+              [0, 2],
+              [1, 2]
+            ]
+          ],
+          "pitches_mean": [0, -2, -1, 0, 1, -1, 0, 1],
+          "pitches_std": [0, 0, 0, 0, 0, 0, 0, 0],
+          "velocities_mean": [1, 0.6, 0.7, 0.8, 1, 0.6, 0.7, 0.8],
+          "velocities_std": [0, 0, 0, 0, 0, 0, 0, 0],
+          "durations_mean": [0.75, 0.5, 0.5, 0.5, 0.65, 0.5, 0.5, 0.5],
+          "durations_std": [0.1, 0, 0, 0, 0.1, 0, 0, 0],
+          "probability": 1,
+          "length": 4,
+          "diatonic": true,
+          "threshold": 1,
+          "slide": false
+        },
+        "passaggio_up#2": {
+          "cases": [
+            [
+              [0, 2],
+              [1, 2]
+            ]
+          ],
+          "pitches_mean": [0, 1, 2, 0, 1, 2, 3, 1],
+          "pitches_std": [0, 0, 0, 0, 0, 0, 0, 0],
+          "velocities_mean": [1, 0.6, 0.7, 0.8, 1, 0.6, 0.7, 0.8],
+          "velocities_std": [0, 0, 0, 0, 0, 0, 0, 0],
+          "durations_mean": [0.75, 0.5, 0.5, 0.5, 0.65, 0.5, 0.5, 0.5],
+          "durations_std": [0.1, 0, 0, 0, 0.1, 0, 0, 0],
+          "probability": 1,
+          "length": 4,
+          "diatonic": true,
+          "threshold": 1,
+          "slide": false
+        },
+        "passaggio_up#3": {
+          "cases": [
+            [
+              [0, 2],
+              [1, 2]
+            ]
+          ],
+          "pitches_mean": [0, 1, 2, 0, 1, -1, 0, 1],
+          "pitches_std": [0, 0, 0, 0, 0, 0, 0, 0],
+          "velocities_mean": [1, 0.6, 0.7, 0.8, 1, 0.6, 0.7, 0.8],
+          "velocities_std": [0, 0, 0, 0, 0, 0, 0, 0],
+          "durations_mean": [0.75, 0.5, 0.5, 0.5, 0.65, 0.5, 0.5, 0.5],
+          "durations_std": [0.1, 0, 0, 0, 0.1, 0, 0, 0],
+          "probability": 1,
+          "length": 4,
+          "diatonic": true,
+          "threshold": 1,
+          "slide": false
+        },
+        "passaggio_up#4": {
+          "cases": [
+            [
+              [0, 2],
+              [1, 2]
+            ]
+          ],
+          "pitches_mean": [0, -2, -1, 0, 1, 2, 3, 1],
+          "pitches_std": [0, 0, 0, 0, 0, 0, 0, 0],
+          "velocities_mean": [1, 0.6, 0.7, 0.8, 1, 0.6, 0.7, 0.8],
+          "velocities_std": [0, 0, 0, 0, 0, 0, 0, 0],
+          "durations_mean": [0.75, 0.5, 0.5, 0.5, 0.65, 0.5, 0.5, 0.5],
+          "durations_std": [0.1, 0, 0, 0, 0.1, 0, 0, 0],
+          "probability": 1,
+          "length": 4,
+          "diatonic": true,
+          "threshold": 1,
+          "slide": false
+        },
+        "passaggio_down#1": {
+          "cases": [
+            [
+              [0, 2],
+              [-1, 2],
+              [-2, 2],
+              [-3, 2]
+            ]
+          ],
+          "pitches_mean": [0, 1, 0, -1, 0, -1, -2, -1, -2, -3, -2, -3],
+          "pitches_std": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          "velocities_mean": [
+            1, 0.7, 0.8, 1, 0.7, 0.8, 1, 0.7, 0.8, 1, 0.7, 0.8
+          ],
+          "velocities_std": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          "durations_mean": [
+            1, 0.5, 0.5, 1, 0.5, 0.5, 1, 0.5, 0.5, 1, 0.5, 0.5
+          ],
+          "durations_std": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          "probability": 1,
+          "length": 8,
+          "diatonic": true,
+          "threshold": 1,
+          "slide": false
+        },
+        "esclamazione": {
+          "cases": [
+            [
+              [0, 2],
+              [-2, 4]
+            ]
+          ],
+          "pitches_mean": [0, -1, -2],
+          "pitches_std": [0, 0, 0],
+          "velocities_mean": [1, 0.6, 1],
+          "velocities_std": [0, 0, 0],
+          "durations_mean": [1.65, 0.35, 2],
+          "durations_std": [0.01, 0.1, 0.01],
+          "probability": 1,
+          "length": 6,
+          "diatonic": true,
+          "threshold": 0,
+          "slide": false
+        }
+      }
+    }
+  }
+}
