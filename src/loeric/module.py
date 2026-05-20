@@ -60,7 +60,10 @@ class LOERICModule:
         window: list[le.LOERICElement] = None,
     ):
         # if I saw this already, don't run again
-        if element.has_signature(self._signature) or self._bypass:
+        if self._bypass:
+            return [element]
+        elif element.has_signature(self._signature):
+            logger.warning(f"{element} was already seen by module {self._name}.")
             return [element]
         else:
             # process it

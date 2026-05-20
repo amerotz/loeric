@@ -61,7 +61,7 @@ class TimeDelta:
 
     @staticmethod
     def quantize(value: float) -> float:
-        division = MINIMUM_QUARTER_DIVISION / 2
+        division = MINIMUM_QUARTER_DIVISION
 
         return np.round(value * division) / division
 

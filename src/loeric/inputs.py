@@ -39,7 +39,7 @@ class InputInterface:
 
 class MIDIInput(InputInterface):
 
-    def __init__(self, port: str, controls: dict, active: bool):
+    def __init__(self, port: str, controls: dict):
 
         super().__init__()
 
@@ -172,6 +172,9 @@ class RMS(AudioInputFunction):
 
         val = (level - self._min_value) / (self._max_value - self._min_value)
         val = min(max(0, val), 1)
+
+        for c in self._controls:
+            logger.info(f"{c}: {val}")
         return val
 
     def get(self):

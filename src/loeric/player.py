@@ -119,7 +119,7 @@ class Player:
         for o in self._output_interfaces:
             o.set(contour_values)
 
-    def step(self, mapper, contour_manager, groover, tune, tick):
+    def step(self, mapper, contour_manager, groover, tune, tick, null_events=False):
 
         performance_tick = tick + groover.lookahead_size
 
@@ -149,7 +149,7 @@ class Player:
             groover.push(s)
 
         # make the groover compute
-        groover.update(performance_tick, window)
+        groover.update(performance_tick, window, null_events=null_events)
 
         # set control outputs for the player
         self._set(contour_values)

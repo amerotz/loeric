@@ -22,7 +22,126 @@ import numpy as np
 import loeric.element as le
 
 
-class Tune:
+class Score:
+
+    def __init__(self):
+        self._annotated_score = []
+        self._time_signatures = [None]
+
+    @property
+    def start_time(self) -> le.TimeDelta:
+        """Return the start time of the score."""
+        return self._annotated_score[0].time
+
+    @property
+    def end_time(self) -> le.TimeDelta:
+        """Return the end time of the score."""
+        return self._annotated_score[-1].time + self._annotated_score[-1].duration
+
+    def ticks_to_eighth_notes(self, duration: int, ticks_per_quarter: int):
+        return (
+            2
+            * np.round(le.MINIMUM_QUARTER_DIVISION * duration / ticks_per_quarter)
+            / le.MINIMUM_QUARTER_DIVISION
+        )
+
+    @property
+    def time_signature(self):
+        return self._time_signatures[0]
+
+    def at(self, time: float | le.TimeDelta) -> list[le.LOERICElement]:
+        """Return all events occurring at the specified time.
+
+        Past the end of the score only EndOfScore will be returned.
+        """
+        if time > self.end_time:
+            return [self._annotated_score[-1]]
+        else:
+            return [el for el in self._annotated_score if el.time == time]
+
+    def window(
+        self, time: float | le.TimeDelta, size: float | le.TimeDelta
+    ) -> list[le.LOERICElement]:
+        """Return a window of tune elements from `time` to `time + size` (in eighth notes)."""
+        if time > self.end_time:
+            return [self._annotated_score[-1]]
+        else:
+            return [
+                el
+                for el in self._annotated_score
+                if el.time >= time and el.time < time + size
+            ]
+
+    @property
+    def pitches(self):
+        return np.array(
+            [
+                note.pitch
+                for note in list(
+                    filter(lambda x: isinstance(x, le.Note), self._annotated_score)
+                )
+            ]
+        )
+
+    @property
+    def durations(self):
+        return np.array(
+            [
+                note.duration
+                for note in list(
+                    filter(lambda x: isinstance(x, le.Note), self._annotated_score)
+                )
+            ]
+        )
+
+    @property
+    def float_durations(self):
+        return np.array(
+            [
+                note.duration.eighth_duration
+                for note in list(
+                    filter(lambda x: isinstance(x, le.Note), self._annotated_score)
+                )
+            ]
+        )
+
+    @property
+    def times(self):
+        return np.array(
+            [
+                note.time
+                for note in list(
+                    filter(lambda x: isinstance(x, le.Note), self._annotated_score)
+                )
+            ]
+        )
+
+    @property
+    def float_times(self):
+        return np.array(
+            [
+                note.time.eighth_duration
+                for note in list(
+                    filter(lambda x: isinstance(x, le.Note), self._annotated_score)
+                )
+            ]
+        )
+
+
+class NullTune(Score):
+    """A tune containing only  null events."""
+
+    def __init__(self):
+        super().__init__()
+
+    def at(time: float | le.TimeDelta):
+        t = time
+        if isinstance(time, le.TimeDelta):
+            t = time.eighth_duration
+        return le.NullEvent(time=t)
+
+
+class Tune(Score):
     """A wrapper for a midi file."""
 
     def __init__(
@@ -43,6 +162,8 @@ class Tune:
         :param sync_interval: the synchronization interval for the virtual session.
 
         """
+        super().__init__()
+
         self._verbose = verbose
 
         self._sync_interval = None
@@ -264,15 +385,13 @@ class Tune:
         self._barlines = barlines
 
         # calculate end time for score with optional end trim
-        self._score_end_time = (
-            _score[-1].time + _score[-1].duration
-        )  # - trim_end_eighths
+        _score_end_time = _score[-1].time + _score[-1].duration  # - trim_end_eighths
 
         # remove anything beyond end time (actually happens only if trimming)
-        _score = [el for el in _score if el.time < self._score_end_time]
+        _score = [el for el in _score if el.time < _score_end_time]
 
         # recompute
-        self._score_end_time = _score[-1].time + _score[-1].duration
+        _score_end_time = _score[-1].time + _score[-1].duration
 
         ############# score with repetition signs, songpos etc ###########
 
@@ -299,7 +418,7 @@ class Tune:
         # arange songpos messages independently
         self._position_times = np.arange(
             start=-self._first_bar_length,
-            stop=self._score_end_time.eighth_duration,
+            stop=_score_end_time.eighth_duration,
             step=self._sync_interval.eighth_duration,
         )
         song_positions = np.array(
@@ -315,7 +434,7 @@ class Tune:
         self._annotated_score.extend(song_positions[should_add_position])
         self._annotated_score.extend(_score)
         self._annotated_score.append(
-            le.EndOfScore(time=self._score_end_time.eighth_duration)
+            le.EndOfScore(time=_score_end_time.eighth_duration)
         )
 
         self._annotated_score.sort(key=lambda x: x.time)
@@ -330,105 +449,3 @@ class Tune:
             print(
                 f"[INFO]\tKey:\t\t\t{self._key_signatures[0].root} {self._key_signatures[0].mode}"
             )
-
-    @property
-    def start_time(self) -> le.TimeDelta:
-        """Return the start time of the score."""
-        return self._annotated_score[0].time
-
-    @property
-    def end_time(self) -> le.TimeDelta:
-        """Return the end time of the score."""
-        return self._score_end_time
-
-    def ticks_to_eighth_notes(self, duration: int, ticks_per_quarter: int):
-        return (
-            2
-            * np.round(le.MINIMUM_QUARTER_DIVISION * duration / ticks_per_quarter)
-            / le.MINIMUM_QUARTER_DIVISION
-        )
-
-    @property
-    def time_signature(self):
-        return self._time_signatures[0]
-
-    @property
-    def key_signatures(self):
-        return self._key_signatures
-
-    def at(self, time: float | le.TimeDelta) -> list[le.LOERICElement]:
-        """Return all events occurring at the specified time.
-        Past the end of the score only EndOfScore will be returned.
-        """
-        if time > self._score_end_time:
-            return [self._annotated_score[-1]]
-        else:
-            return [el for el in self._annotated_score if el.time == time]
-
-    def window(
-        self, time: float | le.TimeDelta, size: float | le.TimeDelta
-    ) -> list[le.LOERICElement]:
-        """Return a window of tune elements from `time` to `time + size` (in eighth notes)."""
-        if time > self._score_end_time:
-            return [self._annotated_score[-1]]
-        else:
-            return [
-                el
-                for el in self._annotated_score
-                if el.time >= time and el.time < time + size
-            ]
-
-    @property
-    def pitches(self):
-        return np.array(
-            [
-                note.pitch
-                for note in list(
-                    filter(lambda x: isinstance(x, le.Note), self._annotated_score)
-                )
-            ]
-        )
-
-    @property
-    def durations(self):
-        return np.array(
-            [
-                note.duration
-                for note in list(
-                    filter(lambda x: isinstance(x, le.Note), self._annotated_score)
-                )
-            ]
-        )
-
-    @property
-    def float_durations(self):
-        return np.array(
-            [
-                note.duration.eighth_duration
-                for note in list(
-                    filter(lambda x: isinstance(x, le.Note), self._annotated_score)
-                )
-            ]
-        )
-
-    @property
-    def times(self):
-        return np.array(
-            [
-                note.time
-                for note in list(
-                    filter(lambda x: isinstance(x, le.Note), self._annotated_score)
-                )
-            ]
-        )
-
-    @property
-    def float_times(self):
-        return np.array(
-            [
-                note.time.eighth_duration
-                for note in list(
-                    filter(lambda x: isinstance(x, le.Note), self._annotated_score)
-                )
-            ]
-        )

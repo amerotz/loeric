@@ -31,13 +31,19 @@ def play(tune, player, mapper, groover, contour_manager, args):
 
     # timekeeping
     tick = le.TimeDelta(eighth_duration=start_time - groover.lookahead_size)
-    time_division = le.TimeDelta(eighth_duration=4 / le.MINIMUM_QUARTER_DIVISION)
+    time_division = le.TimeDelta(eighth_duration=2 / le.MINIMUM_QUARTER_DIVISION)
 
     finish = False
 
     try:
         while tick < start_time:
-            finish = player.step(mapper, contour_manager, groover, tune, tick)
+            finish = player.step(
+                mapper,
+                contour_manager,
+                groover,
+                tune,
+                tick,
+            )
             tick += time_division
 
         input("Press any key to start")
@@ -55,8 +61,12 @@ def play(tune, player, mapper, groover, contour_manager, args):
 
             # compensate loop duration
             delay_time = time.time() - start_time
-            wait_time -= delay_time
+            if delay_time > wait_time:
+                logger.warning(
+                    f"Computation ({np.round(delay_time,4)}s) is taking more than time interval {np.round(wait_time,4)}s!"
+                )
 
+            wait_time -= delay_time
             # cannot wait negative time
             time.sleep(max(wait_time, 0))
 

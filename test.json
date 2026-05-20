@@ -3,8 +3,8 @@
     "var_comping_pattern_period": 2,
     "var_drone_threshold": 0.5,
     "var_roll_2_prob": 0,
-    "var_phrase_length_2": 2,
-    "var_phrase_length_1": 4,
+    "var_phrase_length_2": 4,
+    "var_phrase_length_1": 8,
     "var_velocity_weight": [1, 1, 1, 1, 1],
     "var_drone_bind": "$drone",
     "var_notes_per_bar_bind": "$notes_per_bar",
@@ -21,16 +21,10 @@
       "period": 8,
       "std_scale": 1,
       "normalize": false
-    }
+    },
+    "var_velocity_multiplier": 0.75
   },
   "modules": {
-    "logger#2": {
-      "notes": false,
-      "chords": false,
-      "time_signatures": false,
-      "key_signatures": false,
-      "tempos": true
-    },
     "harmony": {
       "bypass": false,
       "chord_score": [2, -1, 0, 0, 0, 1, -1, 0, 1, 1, 0, -1],
@@ -48,150 +42,10 @@
       "pattern": "velocity_pattern"
     },
     "ornament": {
-      "bind": "$ornament",
+      "bind": "ornament",
       "whitelist": null,
       "bypass": false,
-      "data": {
-        "accento": {
-          "cases": [
-            [
-              [0, 1],
-              [-1, 1]
-            ]
-          ],
-          "pitches_mean": [0, 1, -1],
-          "pitches_std": [0, 0, 0],
-          "velocities_mean": [1, 0.6, 1],
-          "velocities_std": [0, 0, 0],
-          "durations_mean": [0.75, 0.25, 1],
-          "durations_std": [0.01, 0.1, 0.01],
-          "probability": 1,
-          "length": 2,
-          "diatonic": true,
-          "threshold": 0,
-          "slide": false
-        },
-        "passaggio_up#1": {
-          "cases": [
-            [
-              [0, 2],
-              [1, 2]
-            ]
-          ],
-          "pitches_mean": [0, -2, -1, 0, 1, -1, 0, 1],
-          "pitches_std": [0, 0, 0, 0, 0, 0, 0, 0],
-          "velocities_mean": [1, 0.6, 0.7, 0.8, 1, 0.6, 0.7, 0.8],
-          "velocities_std": [0, 0, 0, 0, 0, 0, 0, 0],
-          "durations_mean": [0.75, 0.5, 0.5, 0.5, 0.65, 0.5, 0.5, 0.5],
-          "durations_std": [0.1, 0, 0, 0, 0.1, 0, 0, 0],
-          "probability": 1,
-          "length": 4,
-          "diatonic": true,
-          "threshold": 0,
-          "slide": false
-        },
-        "passaggio_up#2": {
-          "cases": [
-            [
-              [0, 2],
-              [1, 2]
-            ]
-          ],
-          "pitches_mean": [0, 1, 2, 0, 1, 2, 3, 1],
-          "pitches_std": [0, 0, 0, 0, 0, 0, 0, 0],
-          "velocities_mean": [1, 0.6, 0.7, 0.8, 1, 0.6, 0.7, 0.8],
-          "velocities_std": [0, 0, 0, 0, 0, 0, 0, 0],
-          "durations_mean": [0.75, 0.5, 0.5, 0.5, 0.65, 0.5, 0.5, 0.5],
-          "durations_std": [0.1, 0, 0, 0, 0.1, 0, 0, 0],
-          "probability": 1,
-          "length": 4,
-          "diatonic": true,
-          "threshold": 0,
-          "slide": false
-        },
-        "passaggio_up#3": {
-          "cases": [
-            [
-              [0, 2],
-              [1, 2]
-            ]
-          ],
-          "pitches_mean": [0, 1, 2, 0, 1, -1, 0, 1],
-          "pitches_std": [0, 0, 0, 0, 0, 0, 0, 0],
-          "velocities_mean": [1, 0.6, 0.7, 0.8, 1, 0.6, 0.7, 0.8],
-          "velocities_std": [0, 0, 0, 0, 0, 0, 0, 0],
-          "durations_mean": [0.75, 0.5, 0.5, 0.5, 0.65, 0.5, 0.5, 0.5],
-          "durations_std": [0.1, 0, 0, 0, 0.1, 0, 0, 0],
-          "probability": 1,
-          "length": 4,
-          "diatonic": true,
-          "threshold": 0,
-          "slide": false
-        },
-        "passaggio_up#4": {
-          "cases": [
-            [
-              [0, 2],
-              [1, 2]
-            ]
-          ],
-          "pitches_mean": [0, -2, -1, 0, 1, 2, 3, 1],
-          "pitches_std": [0, 0, 0, 0, 0, 0, 0, 0],
-          "velocities_mean": [1, 0.6, 0.7, 0.8, 1, 0.6, 0.7, 0.8],
-          "velocities_std": [0, 0, 0, 0, 0, 0, 0, 0],
-          "durations_mean": [0.75, 0.5, 0.5, 0.5, 0.65, 0.5, 0.5, 0.5],
-          "durations_std": [0.1, 0, 0, 0, 0.1, 0, 0, 0],
-          "probability": 1,
-          "length": 4,
-          "diatonic": true,
-          "threshold": 0,
-          "slide": false
-        },
-        "passaggio_down#1": {
-          "cases": [
-            [
-              [0, 2],
-              [-1, 2],
-              [-2, 2],
-              [-3, 2]
-            ]
-          ],
-          "pitches_mean": [0, 1, 0, -1, 0, -1, -2, -1, -2, -3, -2, -3],
-          "pitches_std": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-          "velocities_mean": [
-            1, 0.7, 0.8, 1, 0.7, 0.8, 1, 0.7, 0.8, 1, 0.7, 0.8
-          ],
-          "velocities_std": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-          "durations_mean": [
-            1, 0.5, 0.5, 1, 0.5, 0.5, 1, 0.5, 0.5, 1, 0.5, 0.5
-          ],
-          "durations_std": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-          "probability": 1,
-          "length": 8,
-          "diatonic": true,
-          "threshold": 0,
-          "slide": false
-        },
-        "esclamazione": {
-          "cases": [
-            [
-              [0, 2],
-              [-2, 4]
-            ]
-          ],
-          "pitches_mean": [0, -1, -2],
-          "pitches_std": [0, 0, 0],
-          "velocities_mean": [1, 0.6, 1],
-          "velocities_std": [0, 0, 0],
-          "durations_mean": [1.65, 0.35, 2],
-          "durations_std": [0.01, 0.1, 0.01],
-          "probability": 1,
-          "length": 6,
-          "diatonic": true,
-          "threshold": 0,
-          "slide": false
-        }
-      }
+      "data": {}
     },
     "transpose": {
       "steps": 0.0
@@ -204,17 +58,18 @@
       "min": 1,
       "max": 1,
       "bind": "$swing",
-      "locations": [0]
+      "locations": [0],
+      "bypass": true
     },
     "timing": {
       "bypass": false,
       "bind": "$tempo",
       "pattern": "tempo_pattern",
-      "qpm_amount": 1,
+      "qpm_amount": 15,
       "only_increase": false
     },
     "legato": {
-      "min": 0.5,
+      "min": 0.6,
       "max": 1,
       "bind": "$legato"
     },
@@ -437,12 +292,16 @@
     },
     "ornament": {
       "recipe": {
-        "pattern": {
-          "mean": [1],
-          "std": [0],
-          "std_scale": 1,
-          "period": 1,
-          "normalize": false
+        "multiply": {
+          "contours": {
+            "o_canainn": {
+              "weights": [1, 1, 1, 1, 1],
+              "savgol": false,
+              "scale": true,
+              "shift": false
+            },
+            "pattern": "var_ornament_pattern"
+          }
         }
       }
     },
@@ -469,7 +328,40 @@
     }
   },
   "player": {
-    "input": {},
+    "input": {
+      "audio_mic_1": {
+        "type": "audio",
+        "active": false,
+        "device": "pulse",
+        "frame_rate": 4096,
+        "analysers": {
+          "loudness": {
+            "type": "rms",
+            "floor": "adaptive",
+            "ceil": "adaptive",
+            "responsiveness": 1,
+            "controls": ["global_intensity", "velocity_tempo_impact"],
+            "window_size_seconds": 0.5
+          }
+        }
+      },
+      "audio_mic_2": {
+        "type": "audio",
+        "active": false,
+        "device": "pulse",
+        "frame_rate": 4096,
+        "analysers": {
+          "loudness": {
+            "type": "rms",
+            "floor": "adaptive",
+            "ceil": "adaptive",
+            "responsiveness": 0.7,
+            "controls": ["tempo_intensity"],
+            "window_size_seconds": 0.5
+          }
+        }
+      }
+    },
     "output": {
       "main": {
         "active": true,
@@ -485,15 +377,32 @@
   },
   "mapper": {
     "sources": [
-      "velocity",
-      "drone",
-      "notes_per_bar",
+      "global_intensity",
+      "tempo_intensity",
+      "velocity_tempo_impact",
       "tempo",
+      "velocity",
       "legato",
-      "ornament",
-      "swing"
+      "drone"
     ],
     "targets": [],
-    "rules": []
+    "rules": [
+      "global_intensity @ [0,0.35]",
+      "global_intensity @ [0.35,0.8] !",
+      "global_intensity @ [0.8,1]",
+      "velocity_tempo_impact @ [0,0.35] > [0.5,0.675]",
+      "velocity_tempo_impact @ [0.35,0.8] > [0.825,0.6]",
+      "velocity_tempo_impact @ [0.8,1] > [0.9,1]",
+      "tempo_intensity @ [0,0.7]",
+      "tempo_intensity @ [0.7,1] !",
+      "0.5 : %drone",
+      "1 : %legato",
+      "velocity_tempo_impact : %velocity,%tempo",
+      "global_intensity @ [0,0.35] ~ velocity,legato,drone",
+      "global_intensity @ [0.35,0.8] ~ velocity,legato,drone",
+      "global_intensity @ [0.8,1] ~ velocity,legato,drone",
+      "tempo_intensity @ [0,0.7] ~ tempo",
+      "tempo_intensity @ [0.7,1] ~ tempo"
+    ]
   }
 }

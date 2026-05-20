@@ -66,7 +66,12 @@ class Groover:
             size = max(m.window_size, size)
         return size
 
-    def update(self, time: le.TimeDelta, window: list[le.LOERICElement] = None) -> None:
+    def update(
+        self,
+        time: le.TimeDelta,
+        window: list[le.LOERICElement] = None,
+        null_events: bool = False,
+    ) -> None:
         """Update the groover by going through the working queue and applying the modules.
 
         Only events at the requested time will be brought to completion, while the others
@@ -75,12 +80,16 @@ class Groover:
 
         :param time: the requested performance time.
         :param window: an optional window of elements forward in time.
+        :param null_events: whether or not to update the groover with null events if queue is empty.
         """
-        while self._update_step(time, window):
+        while self._update_step(time, window, null_events):
             pass
 
     def _update_step(
-        self, time: le.TimeDelta, window: list[le.LOERICElement] = None
+        self,
+        time: le.TimeDelta,
+        window: list[le.LOERICElement] = None,
+        null_events: bool = False,
     ) -> None:
         # get element
         # is it now? great go on
@@ -92,8 +101,10 @@ class Groover:
         if can_process:
             event = self._working_queue.pop()
             # print(event, self._working_queue._q)
-        else:
+        elif null_events:
             event = le.NullEvent(time=time.eighth_duration)
+        else:
+            return can_process
 
         # run it through the modules
         to_be_processed_by_module = [event]

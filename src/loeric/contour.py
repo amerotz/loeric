@@ -213,7 +213,7 @@ class PhraseContour(Contour):
         mode="contour",
         kind="arch",
     ) -> None:
-        """Compute a phrasing contour using a sum of sine functions.
+        """Compute a phrasing contour.
 
         :param midi: the input tune.
         """
@@ -682,6 +682,27 @@ def power(contours: list[Contour] = None, exp: float = 1) -> Contour:
     return new_contour
 
 
+def smooth(contours: list[Contour] = None, window: float = 15) -> Contour:
+    """Elevate the contour to the specified power.
+
+    :param contour: the input contour.
+    :param exp: the exponent.
+
+    :return: the modified input contour.
+    """
+    assert len(contours) == 1
+
+    def smth(x, window):
+        x = np.pad(x, (window, window), "mean")
+        x = savgol_filter(x, window, 3)
+        x = x[window:-window]
+        return x
+
+    new_contour = CompositeContour(contours, lambda cnt_list: smth(cnt_list[0], window))
+
+    return new_contour
+
+
 def scale(contours: list[Contour] = None, min: float = 0, max: float = 1) -> Contour:
     """Scale a contour to cover a specific interval.
 
@@ -736,6 +757,7 @@ def create_contour(
         "power": power,
         "clamp": clamp,
         "scale": scale,
+        "smooth": smooth,
     }
 
     if key is not None:
