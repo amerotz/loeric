@@ -12,11 +12,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
-
 import copy
 import logging
 import random
 from collections import defaultdict
+from functools import cached_property
 
 import nanoid as nid
 import numpy as np
@@ -38,6 +38,18 @@ class LOERICModule:
         self._lookback_size = 0
         self._window_size = 0
         self._bypass = bypass
+        self._key_signature = None
+        self._time_signature = None
+        self._tempo = None
+
+    def set_key_signature(self, key: le.KeySignature):
+        self._key_signature = key
+
+    def set_time_signature(self, meter: le.TimeSignature):
+        self._time_signature = meter
+
+    def set_tempo(self, tempo: le.Tempo):
+        self._tempo = tempo
 
     def process(
         self,
@@ -51,6 +63,13 @@ class LOERICModule:
         :param contour_values: the contour values to use.
         :param window: an optional window of events in the future.
         """
+        if isinstance(element, le.TimeSignature):
+            self._time_signature = copy.copy(element)
+        elif isinstance(element, le.KeySignature):
+            self._key_signature = copy.copy(element)
+        elif isinstance(element, le.Tempo):
+            self._tempo = copy.copy(element)
+
         return [element]
 
     def __call__(
@@ -63,7 +82,9 @@ class LOERICModule:
         if self._bypass:
             return [element]
         elif element.has_signature(self._signature):
-            logger.warning(f"{element} was already seen by module {self._name}.")
+            logger.debug(
+                f"{element} (id {id(element)}) was already seen by module {self._name}."
+            )
             return [element]
         else:
             # process it
@@ -72,11 +93,10 @@ class LOERICModule:
             # sign it
             for o in out:
                 o.add_signature(self._signature)
-                o.copy_signatures(element)
 
             return out
 
-    @property
+    @cached_property
     def name(self):
         return self._name + "::" + self._signature
 
@@ -136,6 +156,8 @@ class TransposeModule(LOERICModule):
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
+        element = super().process(element, contour_values, window)[0]
+
         if (
             isinstance(element, le.Note)
             or isinstance(element, le.Chord)
@@ -152,9 +174,8 @@ class HarmonyModule(LOERICModule):
         super().__init__(**kwargs)
 
         self._name = "harmony"
-        self._time_signature = None
-        self._key_signature = None
         self._last_computation_time = -np.inf
+        self._window_size = None
 
         self._chords_per_bar = chords_per_bar
         self._chord_score = np.array(chord_score)
@@ -170,6 +191,16 @@ class HarmonyModule(LOERICModule):
         self._chord_qualities = np.array([0, 2, 1, 2, 1, 0, 2, 0, 2, 1, 0, 2])
         self._last_forced_chord = None
 
+    @property
+    def window_size(self):
+        if self._time_signature is not None:
+            self._window_size = (
+                self._time_signature.eighths_per_bar / self._chords_per_bar
+            )
+            return self._window_size
+        else:
+            return None
+
     def process(
         self,
         element: le.LOERICElement,
@@ -181,14 +212,9 @@ class HarmonyModule(LOERICModule):
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
-        if isinstance(element, le.TimeSignature):
-            self._time_signature = copy.copy(element)
-            self._window_size = (
-                self._time_signature.eighths_per_bar / self._chords_per_bar
-            )
-        elif isinstance(element, le.KeySignature):
-            self._key_signature = copy.copy(element)
-        elif isinstance(element, le.Chord):
+        element = super().process(element, contour_values, window)[0]
+
+        if isinstance(element, le.Chord):
             self._last_forced_chord = copy.copy(element)
             # filter out the null chord
             if not element.is_valid:
@@ -196,12 +222,14 @@ class HarmonyModule(LOERICModule):
 
         # only compute when reaching the interval
         should_compute = (
-            element.time % self._window_size == 0
+            self.window_size is not None
+            and element.time % self._window_size == 0
             and element.is_performable
             and (
                 self._last_forced_chord is None or not self._last_forced_chord.is_valid
             )
         )
+
         if should_compute:
             self._last_computation_time = element.time.eighth_duration
             self._last_forced_chord = None
@@ -319,6 +347,8 @@ class DynamicsModule(LOERICModule):
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
+        element = super().process(element, contour_values, window)[0]
+
         if isinstance(element, le.Note):
             element.velocity = contour_values[self._contour]
             if self._pattern is not None:
@@ -364,8 +394,6 @@ class OrnamentModule(LOERICModule):
         else:
             self._whitelist = whitelist
 
-        self._time_signature = None
-        self._key_signature = None
         self._accidentals = defaultdict(int)
         self._eighths_to_skip = 0
 
@@ -380,13 +408,10 @@ class OrnamentModule(LOERICModule):
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
-        if isinstance(element, le.TimeSignature):
-            self._time_signature = copy.copy(element)
-        elif isinstance(element, le.KeySignature):
-            self._key_signature = copy.copy(element)
+        element = super().process(element, contour_values, window)[0]
 
         # create ornaments
-        elif isinstance(element, le.Note):
+        if isinstance(element, le.Note):
             # check if accidental
             deg, acc = self._key_signature.degree_from_root(element.pitch)
             if acc != 0 or deg in self._accidentals:
@@ -496,7 +521,7 @@ class OrnamentModule(LOERICModule):
                             message_length = 0
                             pitch_difference = 100
                             logger.debug(
-                                f"Skipped ornament {o.name} because window is too small."
+                                f"Skipped ornament {ornament.name} because window is too small."
                             )
                             break
 
@@ -561,7 +586,6 @@ class OrnamentModule(LOERICModule):
             options_prob = np.array(options_prob).astype(float)
             options_prob /= options_prob.sum()
 
-        # print(options)
         return np.random.choice(options, p=options_prob)
 
     def _generate_ornament(self, element, ornament) -> list[le.LOERICElement]:
@@ -698,8 +722,6 @@ class DroneModule(LOERICModule):
         self._drone_sets = [self.DroneConfig(d, data[d]) for d in data]
         self._last_pitch = None
         self._last_velocity = None
-        self._time_signature = None
-        self._key_signature = None
         self._current_chord = None
         self._all_drones = np.array(
             [n for d in self._drone_sets for n in d.notes]
@@ -716,12 +738,11 @@ class DroneModule(LOERICModule):
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
-        if isinstance(element, le.TimeSignature):
-            self._time_signature = copy.copy(element)
-        elif isinstance(element, le.KeySignature):
-            self._key_signature = copy.copy(element)
-        elif isinstance(element, le.Chord):
+        element = super().process(element, contour_values, window)[0]
+
+        if isinstance(element, le.Chord):
             self._current_chord = copy.copy(element)
+            print("DRONE", element.time, self._current_chord, self._current_chord.bass)
         elif isinstance(element, le.Note):
             self._last_pitch = element.pitch
             self._last_velocity = element.velocity
@@ -981,7 +1002,6 @@ class TimingModule(LOERICModule):
         self._last_computation_time = le.TimeDelta(0)
         self._offset_snapshot = 0
 
-        self._tempo = le.Tempo(qpm=120)
         self._first_tempo = None
         self._user_tempo_to_original_ratio = 1
 
@@ -996,20 +1016,23 @@ class TimingModule(LOERICModule):
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
-        if isinstance(element, le.Tempo):
-            if isinstance(element, le.UserTempo):
-                self._user_tempo_to_original_ratio = element.qpm / self._first_tempo.qpm
-            else:
-                if self._first_tempo is None:
-                    self._first_tempo = element
-                self._tempo = element
+        element = super().process(element, contour_values, window)[0]
 
-        elif not isinstance(element, le.NullEvent):
+        if isinstance(element, le.UserTempo):
+            self._user_tempo_to_original_ratio = element.qpm / self._first_tempo.qpm
+        elif isinstance(element, le.Tempo):
+            if self._first_tempo is None:
+                self._first_tempo = element
+
+        elif not isinstance(element, le.NullEvent) and element.is_performable:
             element = self._process_element(element, contour_values)
 
+        ret_val = [element]
         # always update tempo
-        qpm = self._process_tempo(contour_values)
-        return [le.Tempo(qpm=qpm, time=element.time.eighth_duration), element]
+        if self._tempo is not None:
+            qpm = self._process_tempo(contour_values)
+            ret_val.insert(0, le.Tempo(qpm=qpm, time=element.time.eighth_duration))
+        return ret_val
 
     def _process_element(
         self,
@@ -1077,6 +1100,8 @@ class HistoryBufferModule(LOERICModule):
         window: list[le.LOERICElement] = None,
     ):
 
+        element = super().process(element, contour_values, window)[0]
+
         current_time = element.time
 
         # update buffer
@@ -1106,6 +1131,8 @@ class DelayBufferModule(LOERICModule):
         contour_values: np.array,
         window: list[le.LOERICElement] = None,
     ):
+
+        element = super().process(element, contour_values, window)[0]
 
         current_time = element.time
 
@@ -1154,6 +1181,8 @@ class LoggerModule(LOERICModule):
         window: list[le.LOERICElement] = None,
     ):
 
+        element = super().process(element, contour_values, window)[0]
+
         if self._do_chords and isinstance(element, le.Chord):
             if element.is_user:
                 logger.info(f"Forcing chord {element}")
@@ -1183,7 +1212,6 @@ class SwingModule(LOERICModule):
         self._max_swing = max
         self._contour = bind
         self._locations = locations
-        self._time_signature = None
 
     def process(
         self,
@@ -1196,10 +1224,9 @@ class SwingModule(LOERICModule):
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
-        if isinstance(element, le.TimeSignature):
-            self._time_signature = copy.copy(element)
+        element = super().process(element, contour_values, window)[0]
 
-        elif isinstance(element, le.Note) or isinstance(element, le.Pause):
+        if isinstance(element, le.Note) or isinstance(element, le.Pause):
             x = element.time
 
             # is it an eight note?
@@ -1255,6 +1282,8 @@ class LegatoModule(LOERICModule):
         :param element: the element to process.
         :param contour_values: the contour values to use.
         """
+        element = super().process(element, contour_values, window)[0]
+
         if isinstance(element, le.Note):
             element.duration *= (
                 self._min_legato + self._legato_amount * contour_values[self._contour]

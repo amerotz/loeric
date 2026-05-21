@@ -1,0 +1,26 @@
+{
+  "modules": {
+    "drones": {
+      "data": {
+        "lower": {
+          "allow_root": false,
+          "type": "free",
+          "is_active": true,
+          "probability_scale": true,
+          "notes": [54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65],
+          "polyphony_min": 2,
+          "polyphony_max": 4,
+          "threshold": 0,
+          "bind": "$drone",
+          "velocity_multiplier": "var_velocity_multiplier",
+          "notes_per_bar": [2, 1],
+          "notes_per_bar_bind": "$velocity",
+          "transpose": 0,
+          "delay_range": -0.4,
+          "delay_bind": "$velocity",
+          "ascending": true
+        }
+      }
+    }
+  }
+}

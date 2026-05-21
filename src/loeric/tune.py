@@ -14,12 +14,16 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import copy
+import logging
 import os
+from functools import cached_property
 
 import muspy as mp
 import numpy as np
 
 import loeric.element as le
+
+logger = logging.getLogger(__name__)
 
 
 class Score:
@@ -27,13 +31,15 @@ class Score:
     def __init__(self):
         self._annotated_score = []
         self._time_signatures = [None]
+        self._key_signatures = [None]
+        self._tempos = [None]
 
-    @property
+    @cached_property
     def start_time(self) -> le.TimeDelta:
         """Return the start time of the score."""
         return self._annotated_score[0].time
 
-    @property
+    @cached_property
     def end_time(self) -> le.TimeDelta:
         """Return the end time of the score."""
         return self._annotated_score[-1].time + self._annotated_score[-1].duration
@@ -46,8 +52,16 @@ class Score:
         )
 
     @property
-    def time_signature(self):
-        return self._time_signatures[0]
+    def time_signatures(self):
+        return self._time_signatures
+
+    @property
+    def key_signatures(self):
+        return self._time_signatures
+
+    @property
+    def tempos(self):
+        return self._tempos
 
     def at(self, time: float | le.TimeDelta) -> list[le.LOERICElement]:
         """Return all events occurring at the specified time.
@@ -56,23 +70,33 @@ class Score:
         """
         if time > self.end_time:
             return [self._annotated_score[-1]]
+        elif time < self.start_time:
+            return []
         else:
-            return [el for el in self._annotated_score if el.time == time]
+            indexes = np.argwhere(
+                self.all_float_times == time.eighth_duration
+            ).flatten()
+            return [self._annotated_score[i] for i in indexes]
 
     def window(
         self, time: float | le.TimeDelta, size: float | le.TimeDelta
     ) -> list[le.LOERICElement]:
         """Return a window of tune elements from `time` to `time + size` (in eighth notes)."""
-        if time > self.end_time:
+        if time >= self.end_time:
             return [self._annotated_score[-1]]
+        elif size == 0:
+            return []
         else:
-            return [
-                el
-                for el in self._annotated_score
-                if el.time >= time and el.time < time + size
+            index_1 = np.argwhere(self.all_float_times >= float(time)).flatten()[0]
+            index_2 = np.argwhere(self.all_float_times < float(time + size)).flatten()[
+                -1
             ]
+            window = []
+            for i in range(index_1, index_2, 1):
+                window.append(self._annotated_score[i])
+            return window
 
-    @property
+    @cached_property
     def pitches(self):
         return np.array(
             [
@@ -83,7 +107,7 @@ class Score:
             ]
         )
 
-    @property
+    @cached_property
     def durations(self):
         return np.array(
             [
@@ -94,7 +118,7 @@ class Score:
             ]
         )
 
-    @property
+    @cached_property
     def float_durations(self):
         return np.array(
             [
@@ -105,7 +129,11 @@ class Score:
             ]
         )
 
-    @property
+    @cached_property
+    def all_float_times(self):
+        return np.array([el.time.eighth_duration for el in self._annotated_score])
+
+    @cached_property
     def times(self):
         return np.array(
             [
@@ -116,7 +144,7 @@ class Score:
             ]
         )
 
-    @property
+    @cached_property
     def float_times(self):
         return np.array(
             [
@@ -232,16 +260,16 @@ class Tune(Score):
                 )
             )
 
+        time_signature = self._time_signatures[0]
         if self._sync_interval is None:
-            time_signature = self._time_signatures[0]
             self._sync_interval = (
                 time_signature.eighths_per_bar / time_signature.beat_count
             )
 
-        self._first_bar_length %= self.time_signature.eighths_per_bar.eighth_duration
+        self._first_bar_length %= time_signature.eighths_per_bar.eighth_duration
         if self._verbose > 0:
-            print(
-                f"[INFO]\tSynchronizing every:\t{self._sync_interval / 2} quarters.",
+            logger.info(
+                f"Synchronizing every:\t{self._sync_interval / 2} quarters.",
             )
 
         ######################### barlines ######################
@@ -442,10 +470,10 @@ class Tune(Score):
         # self.create_index_map()
 
         if self._verbose > 0:
-            print(f"[INFO]\tPlaying:\t\t{os.path.basename(filename)}")
-            print(
-                f"[INFO]\tMeter:\t\t\t{self._time_signatures[0].numerator}/{self._time_signatures[0].denominator}"
+            logger.info(f"Playing:\t\t{os.path.basename(filename)}")
+            logger.info(
+                f"Meter:\t\t\t{self._time_signatures[0].numerator}/{self._time_signatures[0].denominator}"
             )
-            print(
-                f"[INFO]\tKey:\t\t\t{self._key_signatures[0].root} {self._key_signatures[0].mode}"
+            logger.info(
+                f"Key:\t\t\t{self._key_signatures[0].root} {self._key_signatures[0].mode}"
             )

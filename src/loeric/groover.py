@@ -48,6 +48,16 @@ class Groover:
         """Request a specific tempo change at a specific time."""
         self.push(le.UserTempo(qpm=qpm, time=time))
 
+    def init_key_signature(self, key: le.KeySignature):
+        """Initialise modules with a key signature."""
+        for m in self._modules:
+            m.set_key_signature(key)
+
+    def init_time_signature(self, meter: le.TimeSignature):
+        """Initialise modules with a time signature."""
+        for m in self._modules:
+            m.set_time_signature(meter)
+
     def set(self, contours):
         for c in contours:
             self._contour_values[c] = contours[c]
@@ -63,7 +73,8 @@ class Groover:
     def window_size(self):
         size = 0
         for m in self._modules:
-            size = max(m.window_size, size)
+            if m.window_size is not None:
+                size = max(m.window_size, size)
         return size
 
     def update(

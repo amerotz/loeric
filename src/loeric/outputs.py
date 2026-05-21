@@ -177,6 +177,7 @@ class MIDIOutput(OutputInterface):
             event_velocity = np.clip(event_velocity, min_v, max_v).astype(int)
 
             pb = min(8191, max(np.round(bend_percentage * 8191).astype(int), -8192))
+            event_pitch = max(0, min(127, np.round(event.pitch).astype(int)))
             messages.append(
                 mido.Message(
                     "pitchwheel",
@@ -188,7 +189,7 @@ class MIDIOutput(OutputInterface):
             messages.append(
                 mido.Message(
                     "note_on",
-                    note=np.round(event._pitch).astype(int),
+                    note=event_pitch,
                     time=overall_time.eighth_duration.astype(float),
                     channel=event.channel,
                     velocity=event_velocity,
@@ -247,7 +248,7 @@ class MIDIOutput(OutputInterface):
             messages.append(
                 mido.Message(
                     "note_off",
-                    note=np.round(event._pitch).astype(int),
+                    note=event_pitch,
                     channel=event.channel,
                     time=(overall_time + note_duration).eighth_duration.astype(float),
                     velocity=0,

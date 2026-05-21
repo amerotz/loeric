@@ -12,7 +12,7 @@
       "bypass": true
     },
     "timing": {
-      "qpm_amount": 15
+      "qpm_amount": 20
     },
     "legato": {
       "min": 0.6,

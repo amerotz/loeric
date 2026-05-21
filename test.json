@@ -1,18 +1,18 @@
 {
   "variables": {
-    "var_comping_pattern_period": 2,
+    "var_comping_pattern_period": 8,
     "var_drone_threshold": 0.5,
-    "var_roll_2_prob": 0,
-    "var_phrase_length_2": 4,
-    "var_phrase_length_1": 8,
-    "var_velocity_weight": [1, 1, 1, 1, 1],
+    "var_roll_2_prob": 1,
+    "var_phrase_length_2": 2,
+    "var_phrase_length_1": 4,
+    "var_velocity_weight": [0, 1, 0, 1, 1],
     "var_drone_bind": "$drone",
     "var_notes_per_bar_bind": "$notes_per_bar",
     "var_legato_pattern": {
-      "mean": [1],
-      "std": [0],
+      "mean": [1, 1, 0.5, 1],
+      "std": null,
       "std_scale": 1,
-      "period": 1,
+      "period": 0.5,
       "normalize": false
     },
     "var_ornament_pattern": {
@@ -22,7 +22,16 @@
       "std_scale": 1,
       "normalize": false
     },
-    "var_velocity_multiplier": 0.75
+    "var_notes_per_bar": [4, 2],
+    "var_comping_notes_per_bar": [4],
+    "var_upper_comping_pattern": [
+      0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+      1, 0, 1, 0, 1, 1, 0
+    ],
+    "var_lower_comping_pattern": [
+      1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+      0, 1, 0, 1, 0, 1, 0
+    ]
   },
   "modules": {
     "harmony": {
@@ -42,7 +51,7 @@
       "pattern": "velocity_pattern"
     },
     "ornament": {
-      "bind": "ornament",
+      "bind": "$ornament",
       "whitelist": null,
       "bypass": false,
       "data": {}
@@ -51,25 +60,59 @@
       "steps": 0.0
     },
     "drones": {
-      "bypass": true,
-      "data": {}
+      "bypass": false,
+      "data": {
+        "lower": {
+          "type": "free",
+          "ascending": true,
+          "is_active": true,
+          "allow_root": false,
+          "threshold": 0.5,
+          "velocity_multiplier": 0.9,
+          "bind": "lower_drone",
+          "notes": [36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
+          "polyphony_min": 1,
+          "polyphony_max": 1,
+          "notes_per_bar_bind": "var_notes_per_bar_bind",
+          "notes_per_bar": "var_comping_notes_per_bar",
+          "midi_channel": "var_drone_midi_channel",
+          "delay_range": 0.0,
+          "transpose": 0
+        },
+        "upper": {
+          "type": "free",
+          "ascending": true,
+          "is_active": true,
+          "allow_root": false,
+          "threshold": 0.5,
+          "velocity_multiplier": 0.9,
+          "bind": "upper_drone",
+          "notes": [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
+          "polyphony_min": 3,
+          "polyphony_max": 3,
+          "notes_per_bar_bind": "var_notes_per_bar_bind",
+          "notes_per_bar": "var_comping_notes_per_bar",
+          "midi_channel": "var_drone_midi_channel",
+          "delay_range": 0.0,
+          "transpose": 0
+        }
+      }
     },
     "swing": {
-      "min": 1,
-      "max": 1,
+      "min": 3,
+      "max": 1.5,
       "bind": "$swing",
-      "locations": [0],
-      "bypass": true
+      "locations": [1, 3, 5, 7]
     },
     "timing": {
       "bypass": false,
       "bind": "$tempo",
       "pattern": "tempo_pattern",
-      "qpm_amount": 15,
+      "qpm_amount": 1,
       "only_increase": false
     },
     "legato": {
-      "min": 0.6,
+      "min": 0.5,
       "max": 1,
       "bind": "$legato"
     },
@@ -84,21 +127,45 @@
   "contours": {
     "drone": {
       "recipe": {
-        "o_canainn": {
-          "weights": "var_velocity_weight",
-          "savgol": false,
-          "scale": true,
-          "shift": true
+        "multiply": {
+          "contours": {
+            "scale": {
+              "contours": {
+                "o_canainn": {
+                  "weights": [1, 1, 1, 1, 1],
+                  "savgol": true,
+                  "scale": true,
+                  "shift": true
+                }
+              },
+              "min": 0.5,
+              "max": 1
+            },
+            "pattern": {
+              "mean": [
+                1, -1, 0, -1, 1, -1, 0, -1, 1, -1, 0, -1, 1, -1, 0, -1, 1, -1,
+                0, -1, 1, -1, 0, -1, 0, -1, 1, -1, 1, -1, 0, -1
+              ],
+              "std": null,
+              "std_scale": 1,
+              "normalize": false,
+              "period": 4
+            }
+          }
         }
       }
     },
     "notes_per_bar": {
       "recipe": {
-        "o_canainn": {
-          "weights": "var_velocity_weight",
-          "savgol": false,
-          "scale": true,
-          "shift": true
+        "pattern": {
+          "mean": [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0
+          ],
+          "std": null,
+          "std_scale": 1,
+          "normalize": false,
+          "period": 4
         }
       }
     },
@@ -198,45 +265,30 @@
     "velocity_pattern": {
       "recipe": {
         "pattern": {
-          "mean": [1.0],
-          "std": [0.0],
+          "mean": [1.1, 1, 1.3, 1],
+          "std": null,
           "std_scale": 1,
           "normalize": false,
-          "period": 1
+          "period": 0.5
         }
       }
     },
     "tempo": {
       "recipe": {
-        "scale": {
+        "weighted_sum": {
           "contours": {
-            "multiply": {
-              "contours": {
-                "phrasing#2": {
-                  "accelerando": 0.5,
-                  "ritardando": 1,
-                  "last": 0.2,
-                  "turn": 0.4,
-                  "power": 2,
-                  "phrase_length": "var_phrase_length_2",
-                  "shift": null,
-                  "mode": "contour"
-                },
-                "phrasing#1": {
-                  "accelerando": 1,
-                  "ritardando": 1,
-                  "last": 0.2,
-                  "turn": 0.4,
-                  "power": 2,
-                  "phrase_length": "var_phrase_length_1",
-                  "shift": null,
-                  "mode": "contour"
-                }
-              }
+            "o_canainn": {
+              "weights": [0, 1, 0, 0, 0],
+              "savgol": true,
+              "scale": false,
+              "shift": true
+            },
+            "random": {
+              "min": 0.0,
+              "max": 1.0
             }
           },
-          "min": 0,
-          "max": 0.5
+          "weights": [0.95, 0.05]
         }
       }
     },
@@ -245,37 +297,17 @@
         "weighted_sum": {
           "contours": {
             "o_canainn": {
-              "weights": [1, 1, 1, 1, 1],
-              "savgol": false,
-              "scale": true,
+              "weights": [0, 1, 0, 0, 0],
+              "savgol": true,
+              "scale": false,
               "shift": true
             },
-            "multiply": {
-              "contours": {
-                "phrasing#2": {
-                  "accelerando": 0.5,
-                  "ritardando": 1,
-                  "last": 0.2,
-                  "turn": 0.4,
-                  "power": 2,
-                  "phrase_length": "var_phrase_length_2",
-                  "shift": null,
-                  "mode": "contour"
-                },
-                "phrasing#1": {
-                  "accelerando": 1,
-                  "ritardando": 1,
-                  "last": 0.2,
-                  "turn": 0.4,
-                  "power": 2,
-                  "phrase_length": "var_phrase_length_1",
-                  "shift": null,
-                  "mode": "contour"
-                }
-              }
+            "random": {
+              "min": 0.0,
+              "max": 1.0
             }
           },
-          "weights": [0.7, 0.3]
+          "weights": [0.95, 0.05]
         }
       }
     },
@@ -325,43 +357,32 @@
           "offset": -1
         }
       }
-    }
-  },
-  "player": {
-    "input": {
-      "audio_mic_1": {
-        "type": "audio",
-        "active": false,
-        "device": "pulse",
-        "frame_rate": 4096,
-        "analysers": {
-          "loudness": {
-            "type": "rms",
-            "floor": "adaptive",
-            "ceil": "adaptive",
-            "responsiveness": 1,
-            "controls": ["global_intensity", "velocity_tempo_impact"],
-            "window_size_seconds": 0.5
-          }
-        }
-      },
-      "audio_mic_2": {
-        "type": "audio",
-        "active": false,
-        "device": "pulse",
-        "frame_rate": 4096,
-        "analysers": {
-          "loudness": {
-            "type": "rms",
-            "floor": "adaptive",
-            "ceil": "adaptive",
-            "responsiveness": 0.7,
-            "controls": ["tempo_intensity"],
-            "window_size_seconds": 0.5
-          }
+    },
+    "lower_drone": {
+      "recipe": {
+        "pattern": {
+          "mean": "var_lower_comping_pattern",
+          "std": null,
+          "std_scale": 1,
+          "normalize": false,
+          "period": "var_comping_pattern_period"
         }
       }
     },
+    "upper_drone": {
+      "recipe": {
+        "pattern": {
+          "mean": "var_upper_comping_pattern",
+          "std": null,
+          "std_scale": 1,
+          "normalize": false,
+          "period": "var_comping_pattern_period"
+        }
+      }
+    }
+  },
+  "player": {
+    "input": {},
     "output": {
       "main": {
         "active": true,
@@ -377,32 +398,15 @@
   },
   "mapper": {
     "sources": [
-      "global_intensity",
-      "tempo_intensity",
-      "velocity_tempo_impact",
-      "tempo",
       "velocity",
+      "drone",
+      "notes_per_bar",
+      "tempo",
       "legato",
-      "drone"
+      "ornament",
+      "swing"
     ],
     "targets": [],
-    "rules": [
-      "global_intensity @ [0,0.35]",
-      "global_intensity @ [0.35,0.8] !",
-      "global_intensity @ [0.8,1]",
-      "velocity_tempo_impact @ [0,0.35] > [0.5,0.675]",
-      "velocity_tempo_impact @ [0.35,0.8] > [0.825,0.6]",
-      "velocity_tempo_impact @ [0.8,1] > [0.9,1]",
-      "tempo_intensity @ [0,0.7]",
-      "tempo_intensity @ [0.7,1] !",
-      "0.5 : %drone",
-      "1 : %legato",
-      "velocity_tempo_impact : %velocity,%tempo",
-      "global_intensity @ [0,0.35] ~ velocity,legato,drone",
-      "global_intensity @ [0.35,0.8] ~ velocity,legato,drone",
-      "global_intensity @ [0.8,1] ~ velocity,legato,drone",
-      "tempo_intensity @ [0,0.7] ~ tempo",
-      "tempo_intensity @ [0.7,1] ~ tempo"
-    ]
+    "rules": []
   }
 }

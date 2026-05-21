@@ -13,11 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
-import copy
 import heapq as hq
 import logging
 from dataclasses import dataclass
-from numbers import Real
+from functools import cached_property
 
 import numpy as np
 
@@ -38,22 +37,66 @@ CHORDS = {
 logger = logging.getLogger(__name__)
 
 
+"""
+class TimeDelta:
+
+    def __init__(self, eighth_duration):
+        if isinstance(eighth_duration, int) or isinstance(eighth_duration, float):
+            self._eighth_duration = TimeDelta.quantize(eighth_duration)
+            if self._eighth_duration != 0:
+                self._absolute_duration = 8 / self._eighth_duration
+        else:
+            raise Exception(
+                f"Only ints and float are valid TimeDelta durations, not {type(eighth_duration)}"
+            )
+
+    @property
+    def eighth_duration(self):
+        return self._eighth_duration
+
+    def __repr__(self):
+        return f"d={np.round(self._eighth_duration, 4)}"
+
+    @eighth_duration.setter
+    def eighth_duration(self, value):
+        self._eighth_duration = TimeDelta.quantize(value)
+        if self._eighth_duration != 0:
+            self._absolute_duration = 8 / self._eighth_duration
+
+    @property
+    def absolute_duration(self):
+        return self._absolute_duration
+
+    @property
+    def divisions(self):
+        return np.round(2 * self._eighth_duration * MINIMUM_QUARTER_DIVISION)
+
+    @staticmethod
+    def quantize(value):
+        return np.round(value * MINIMUM_QUARTER_DIVISION) / (MINIMUM_QUARTER_DIVISION)
+
+"""
+
+
 @dataclass(frozen=True)
 class TimeDelta:
 
     eighth_duration: float
 
     def __post_init__(self):
-        if not isinstance(self.eighth_duration, Real):
+        if not (
+            isinstance(self.eighth_duration, float)
+            or isinstance(self.eighth_duration, int)
+        ):
             raise TypeError(
                 f"TimeDelta requires int/float, got {type(self.eighth_duration)}"
             )
 
-        quantized = self.quantize(float(self.eighth_duration))
+        quantized = TimeDelta.quantize(self.eighth_duration)
 
         object.__setattr__(self, "eighth_duration", quantized)
 
-    @property
+    @cached_property
     def absolute_duration(self) -> float:
         if self.eighth_duration == 0:
             return 0.0
@@ -61,18 +104,90 @@ class TimeDelta:
 
     @staticmethod
     def quantize(value: float) -> float:
-        division = MINIMUM_QUARTER_DIVISION
+        return np.round(value * MINIMUM_QUARTER_DIVISION) / MINIMUM_QUARTER_DIVISION
 
-        return np.round(value * division) / division
+    def __repr__(self):
+        return str(self.eighth_duration)
 
+    def __add__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(self.eighth_duration + other)
+        else:
+            return TimeDelta(self.eighth_duration + other.eighth_duration)
+
+    def __sub__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(self.eighth_duration - other)
+        else:
+            return TimeDelta(self.eighth_duration - other.eighth_duration)
+
+    def __mul__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(self.eighth_duration * other)
+        else:
+            return TimeDelta(self.eighth_duration * other.eighth_duration)
+
+    def __truediv__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(self.eighth_duration / other)
+        else:
+            return TimeDelta(self.eighth_duration / other.eighth_duration)
+
+    def __mod__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(self.eighth_duration % other)
+        else:
+            return TimeDelta(self.eighth_duration % other.eighth_duration)
+
+    def __lt__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self.eighth_duration < other
+        else:
+            return self.eighth_duration < other.eighth_duration
+
+    def __gt__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self.eighth_duration > other
+        else:
+            return self.eighth_duration > other.eighth_duration
+
+    def __le__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self.eighth_duration <= other
+        else:
+            return self.eighth_duration <= other.eighth_duration
+
+    def __ge__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self.eighth_duration >= other
+        else:
+            return self.eighth_duration >= other.eighth_duration
+
+    def __eq__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self.eighth_duration == other
+        else:
+            return self.eighth_duration == other.eighth_duration
+
+    def __ne__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self.eighth_duration != other
+        else:
+            return self.eighth_duration != other.eighth_duration
+
+    def __neg__(self):
+        return TimeDelta(-self.eighth_duration)
+
+    def __float__(self):
+        return float(self.eighth_duration)
+
+
+"""
     def _coerce_other(self, other) -> float:
         if isinstance(other, TimeDelta):
             return other.eighth_duration
-
-        if isinstance(other, Real):
+        else:
             return float(other)
-
-        raise TypeError(f"Unsupported operand type: {type(other)}")
 
     def __repr__(self):
         return f"d={np.round(self.eighth_duration, 4)}"
@@ -131,6 +246,8 @@ class TimeDelta:
     def __ge__(self, other):
         return self.eighth_duration >= self._coerce_other(other)
 
+"""
+
 
 class LOERICElement:
     def __init__(self, time: float = 0):
@@ -176,7 +293,7 @@ class LOERICElement:
     @duration.setter
     def duration(self, value):
         if isinstance(value, TimeDelta):
-            self._duration = copy.deepcopy(value)
+            self._duration = value
         else:
             self._duration = TimeDelta(eighth_duration=value)
         if self._duration.eighth_duration < 0:
@@ -285,7 +402,7 @@ class Chord(LOERICElement):
     def bass(self):
         return self._bass
 
-    @property
+    @cached_property
     def chord_number(self):
         if self._id_string is None:
             return None
@@ -348,12 +465,17 @@ class Tempo(LOERICElement):
         return f"(Tempo q={self._qpm} t={self._time})"
 
 
-class UserTempo(Tempo):
+class UserTempo(LOERICElement):
     def __init__(self, qpm: float = 0, time: float = 0):
-        super().__init__(qpm, time)
+        super().__init__(time)
+        self._qpm = qpm
 
     def __repr__(self):
         return f"(UserTempo q={self._qpm} t={self._time})"
+
+    @property
+    def qpm(self):
+        return self._qpm
 
 
 class KeySignature(LOERICElement):
@@ -418,7 +540,7 @@ class KeySignature(LOERICElement):
 
         return midi
 
-    @property
+    @cached_property
     def major_root(self) -> int:
         mode_offset = {
             "major": 0,
@@ -431,7 +553,7 @@ class KeySignature(LOERICElement):
         }
         return (12 + self._root + mode_offset[self._mode]) % 12
 
-    @property
+    @cached_property
     def scale(self):
         mode_degree = {
             "major": 0,
@@ -612,7 +734,7 @@ class Note(LOERICElement):
             )
         self._slide_targets.append(note)
         self._duration += note.duration
-        duration = copy.deepcopy(self._slide_targets[0].duration)
+        duration = self._slide_targets[0].duration
         for note in self._slide_targets[1:]:
             duration += note.duration
         assert (
@@ -627,7 +749,7 @@ class Note(LOERICElement):
     def duration(self, value):
         original_duration = self._duration.eighth_duration
         if isinstance(value, TimeDelta):
-            self._duration = copy.deepcopy(value)
+            self._duration = value
         else:
             self._duration = TimeDelta(eighth_duration=value)
 
@@ -682,6 +804,7 @@ class LOERICQueue(Queue):
     def __init__(self):
         super().__init__()
         order = [
+            Chord,
             SongPosition,
             Barline,
             KeySignature,
@@ -690,7 +813,6 @@ class LOERICQueue(Queue):
             Tempo,
             UserTempo,
             Repetition,
-            Chord,
             NullEvent,
             Note,
             Pause,
@@ -700,7 +822,6 @@ class LOERICQueue(Queue):
         self._seq = 0
 
     def push(self, item: LOERICElement):
-        item = copy.deepcopy(item)
         super().push(
             (
                 item.time.eighth_duration,

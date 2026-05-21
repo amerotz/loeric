@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+from functools import cached_property
+
 import numpy as np
 from scipy.signal import savgol_filter
 
@@ -43,7 +45,7 @@ class ContourManager:
     def __getitem__(self, key: str):
         """Get the value of contour named ``key``."""
 
-    @property
+    @cached_property
     def contours(self):
         """Return a dictionary of all contours."""
         return self._contours
@@ -66,12 +68,17 @@ class Contour:
     def __init__(self):
         """Initialize the class."""
         self._contour = None
+        self._is_real_time = False
 
     def __len__(self):
         """The length of this contour."""
         return len(self._contour)
 
-    @property
+    @cached_property
+    def is_real_time(self):
+        return self._is_real_time
+
+    @cached_property
     def values(self):
         """Return all contour values as an array"""
         return self._contour
@@ -123,22 +130,14 @@ class Contour:
 
     def at(self, time: le.TimeDelta | float | int):
         """Return the value of the contour at a specific performance time, in eighth notes."""
-        if isinstance(time, float) or isinstance(time, int):
-            time = le.TimeDelta(eighth_duration=time)
+        time = float(time)
 
-        lower_limit = time.eighth_duration >= self._contour_times
-        upper_limit = time.eighth_duration < np.roll(self._contour_times, -1)
-
-        # if value is greater than any time, use last one
-        if not upper_limit.any():
-            return self._contour[-1]
-        elif not lower_limit.any():
+        index = np.argwhere(time >= self._contour_times).flatten()
+        if len(index) == 0:
             return self._contour[0]
-
-        value = self._contour[np.argwhere(lower_limit & upper_limit)[0]][0]
-
-        if np.isnan(value):
-            raise Exception
+        else:
+            index = index[-1]
+        return self._contour[index]
 
         return value
 
@@ -152,22 +151,27 @@ class CompositeContour(Contour):
         self._operation = operation
         self._contour = operation([c._contour for c in self._member_contours])
         self._contour_times = contours[0]._contour_times
+        self._is_real_time = np.any([c.is_real_time for c in self._member_contours])
 
     def at(self, time):
 
-        # retrieve the at value of every member
-        values = [[c.at(time)] for c in self._member_contours]
-        values = np.array(values)
-        # values = np.nan_to_num(values, nan=0.5)
+        if self.is_real_time:
 
-        # aggregate
-        res = self._operation(values)
+            # retrieve the at value of every member
+            values = [[c.at(time)] for c in self._member_contours]
+            values = np.array(values)
+            # values = np.nan_to_num(values, nan=0.5)
 
-        if np.isnan(res[0]):
-            print(self._operation)
-            raise Exception
+            # aggregate
+            res = self._operation(values)
 
-        return res[0]
+            if np.isnan(res[0]):
+                print(self._operation)
+                raise Exception
+
+            return res[0]
+        else:
+            return super().at(time)
 
 
 class RandomContour(Contour):
@@ -225,7 +229,7 @@ class PhraseContour(Contour):
         if shift is None:
             shift = -midi._first_bar_length
 
-        bar_length = midi.time_signature.eighths_per_bar.eighth_duration
+        bar_length = midi.time_signatures[0].eighths_per_bar.eighth_duration
         phrase_eighths = bar_length * phrase_length
         # consider note onset + half of duration as phrase position
         # anders says it works better
@@ -364,8 +368,9 @@ class IntensityContour(Contour):
         indexes = np.where(
             self._contour_times
             % (
-                midi.time_signature.eighths_per_bar.eighth_duration
-                / midi.time_signature.beat_count
+                # TODO make this keep track of time signatures
+                midi.time_signatures[0].eighths_per_bar.eighth_duration
+                / midi.time_signatures[0].beat_count
             )
             == 0
         )
@@ -463,6 +468,8 @@ class PatternContour(Contour):
             std = np.zeros(len(mean))
         assert len(mean) == len(std)
 
+        self._is_real_time = True
+
         self._mean = np.array(mean).astype(float)
         self._std = np.array(std).astype(float)
         self._std_scale = std_scale
@@ -470,9 +477,9 @@ class PatternContour(Contour):
         self._pattern_size = len(self._mean)
 
         # obtain time pedios
-        self._time_period = midi.time_signature.eighths_per_bar.eighth_duration * float(
-            period
-        )
+        self._time_period = midi.time_signatures[
+            0
+        ].eighths_per_bar.eighth_duration * float(period)
         # position in time period
         bar_position = self._contour_times / self._time_period
 
@@ -498,7 +505,6 @@ class PatternContour(Contour):
                     np.arange(source_index, source_index + diff[index].item())
                     % self._pattern_size
                 )
-                print(add_indexes)
                 pattern_means[index] = np.mean(self._mean[add_indexes])
                 pattern_stds[index] = np.mean(self._std[add_indexes])
 

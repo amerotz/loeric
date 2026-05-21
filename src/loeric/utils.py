@@ -25,17 +25,29 @@ logger = logging.getLogger(__name__)
 
 def play(tune, player, mapper, groover, contour_manager, args):
 
+    import cProfile
+    import io
+    import pstats
+    from pstats import SortKey
+
+    pr = cProfile.Profile()
+    pr.enable()
+
     start_time = tune.start_time.eighth_duration
+
+    groover.init_key_signature(tune.key_signatures[0])
+    groover.init_time_signature(tune.time_signatures[0])
 
     groover.set_tempo(args["qpm"], start_time)
 
     # timekeeping
     tick = le.TimeDelta(eighth_duration=start_time - groover.lookahead_size)
-    time_division = le.TimeDelta(eighth_duration=2 / le.MINIMUM_QUARTER_DIVISION)
+    time_division = le.TimeDelta(eighth_duration=1 / le.MINIMUM_QUARTER_DIVISION)
 
     finish = False
 
     try:
+        print("window", groover.window_size)
         while tick < start_time:
             finish = player.step(
                 mapper,
@@ -52,7 +64,9 @@ def play(tune, player, mapper, groover, contour_manager, args):
         while not finish:
             start_time = time.time()
 
-            finish = player.step(mapper, contour_manager, groover, tune, tick)
+            finish = player.step(
+                mapper, contour_manager, groover, tune, tick, null_events=True
+            )
 
             tick += time_division
 
@@ -63,7 +77,7 @@ def play(tune, player, mapper, groover, contour_manager, args):
             delay_time = time.time() - start_time
             if delay_time > wait_time:
                 logger.warning(
-                    f"Computation ({np.round(delay_time,4)}s) is taking more than time interval {np.round(wait_time,4)}s!"
+                    f"Computation ({np.round(delay_time,4)}s) is taking more than time interval ({np.round(wait_time,4)}s)!"
                 )
 
             wait_time -= delay_time
@@ -75,6 +89,13 @@ def play(tune, player, mapper, groover, contour_manager, args):
 
     finally:
         player.shutdown()
+
+        pr.disable()
+        s = io.StringIO()
+        sortby = SortKey.CUMULATIVE
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby).reverse_order()
+        ps.print_stats()
+        print(s.getvalue())
 
 
 def midi_to_freq(midi):
