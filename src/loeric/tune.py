@@ -34,12 +34,12 @@ class Score:
         self._key_signatures = [None]
         self._tempos = [None]
 
-    @cached_property
+    @property
     def start_time(self) -> le.TimeDelta:
         """Return the start time of the score."""
         return self._annotated_score[0].time
 
-    @cached_property
+    @property
     def end_time(self) -> le.TimeDelta:
         """Return the end time of the score."""
         return self._annotated_score[-1].time + self._annotated_score[-1].duration
@@ -57,7 +57,7 @@ class Score:
 
     @property
     def key_signatures(self):
-        return self._time_signatures
+        return self._key_signatures
 
     @property
     def tempos(self):
@@ -92,7 +92,7 @@ class Score:
                 -1
             ]
             window = []
-            for i in range(index_1, index_2, 1):
+            for i in range(index_1, index_2 + 1, 1):
                 window.append(self._annotated_score[i])
             return window
 
@@ -267,10 +267,9 @@ class Tune(Score):
             )
 
         self._first_bar_length %= time_signature.eighths_per_bar.eighth_duration
-        if self._verbose > 0:
-            logger.info(
-                f"Synchronizing every:\t{self._sync_interval / 2} quarters.",
-            )
+        logger.info(
+            f"Synchronizing every:\t{self._sync_interval / 2} quarters.",
+        )
 
         ######################### barlines ######################
         midi_source_barlines = []
@@ -412,6 +411,8 @@ class Tune(Score):
         self._tempos = tempos
         self._barlines = barlines
 
+        _score = sorted(_score, key=lambda x: x.time)
+
         # calculate end time for score with optional end trim
         _score_end_time = _score[-1].time + _score[-1].duration  # - trim_end_eighths
 
@@ -467,13 +468,16 @@ class Tune(Score):
 
         self._annotated_score.sort(key=lambda x: x.time)
 
+        # add tune internal tag
+        for e in self._annotated_score:
+            e.add_tag("SCORE")
+
         # self.create_index_map()
 
-        if self._verbose > 0:
-            logger.info(f"Playing:\t\t{os.path.basename(filename)}")
-            logger.info(
-                f"Meter:\t\t\t{self._time_signatures[0].numerator}/{self._time_signatures[0].denominator}"
-            )
-            logger.info(
-                f"Key:\t\t\t{self._key_signatures[0].root} {self._key_signatures[0].mode}"
-            )
+        logger.info(f"Playing:\t{os.path.basename(filename)}")
+        logger.info(
+            f"Meter:\t{self._time_signatures[0].numerator}/{self._time_signatures[0].denominator}"
+        )
+        logger.info(
+            f"Key:\t\t{self._key_signatures[0].root} {self._key_signatures[0].mode}"
+        )

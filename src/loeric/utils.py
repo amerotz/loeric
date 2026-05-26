@@ -47,8 +47,7 @@ def play(tune, player, mapper, groover, contour_manager, args):
     finish = False
 
     try:
-        print("window", groover.window_size)
-        while tick < start_time:
+        while tick < start_time - groover.lookahead_size:
             finish = player.step(
                 mapper,
                 contour_manager,
@@ -94,13 +93,9 @@ def play(tune, player, mapper, groover, contour_manager, args):
         s = io.StringIO()
         sortby = SortKey.CUMULATIVE
         ps = pstats.Stats(pr, stream=s).sort_stats(sortby).reverse_order()
-        ps.print_stats()
-        print(s.getvalue())
+        # ps.print_stats()
+        # print(s.getvalue())
 
 
 def midi_to_freq(midi):
     return 440 * 2 ** ((midi - 69) / 12)
-
-
-def freq_to_midi(freq):
-    return 69 + 12 * np.log2(freq / 440)

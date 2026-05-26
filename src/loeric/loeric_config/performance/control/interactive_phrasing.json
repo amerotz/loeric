@@ -25,31 +25,19 @@
         "type": "audio",
         "active": true,
         "device": "pulse",
-        "frame_rate": 4096,
+        "samplerate": 44100,
         "analysers": {
           "loudness": {
             "type": "rms",
-            "floor": "adaptive",
-            "ceil": "adaptive",
             "responsiveness": 1,
             "controls": ["global_intensity", "velocity_tempo_impact"],
-            "window_size_seconds": 0.1
-          }
-        }
-      },
-      "audio_mic_2": {
-        "type": "audio",
-        "active": true,
-        "device": "pulse",
-        "frame_rate": 4096,
-        "analysers": {
-          "loudness": {
+            "updates_per_second": 30
+          },
+          "tempo": {
             "type": "rms",
-            "floor": "adaptive",
-            "ceil": "adaptive",
             "responsiveness": 0.7,
             "controls": ["tempo_intensity"],
-            "window_size_seconds": 0.1
+            "updates_per_second": 30
           }
         }
       }

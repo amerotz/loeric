@@ -37,47 +37,6 @@ CHORDS = {
 logger = logging.getLogger(__name__)
 
 
-"""
-class TimeDelta:
-
-    def __init__(self, eighth_duration):
-        if isinstance(eighth_duration, int) or isinstance(eighth_duration, float):
-            self._eighth_duration = TimeDelta.quantize(eighth_duration)
-            if self._eighth_duration != 0:
-                self._absolute_duration = 8 / self._eighth_duration
-        else:
-            raise Exception(
-                f"Only ints and float are valid TimeDelta durations, not {type(eighth_duration)}"
-            )
-
-    @property
-    def eighth_duration(self):
-        return self._eighth_duration
-
-    def __repr__(self):
-        return f"d={np.round(self._eighth_duration, 4)}"
-
-    @eighth_duration.setter
-    def eighth_duration(self, value):
-        self._eighth_duration = TimeDelta.quantize(value)
-        if self._eighth_duration != 0:
-            self._absolute_duration = 8 / self._eighth_duration
-
-    @property
-    def absolute_duration(self):
-        return self._absolute_duration
-
-    @property
-    def divisions(self):
-        return np.round(2 * self._eighth_duration * MINIMUM_QUARTER_DIVISION)
-
-    @staticmethod
-    def quantize(value):
-        return np.round(value * MINIMUM_QUARTER_DIVISION) / (MINIMUM_QUARTER_DIVISION)
-
-"""
-
-
 @dataclass(frozen=True)
 class TimeDelta:
 
@@ -95,12 +54,6 @@ class TimeDelta:
         quantized = TimeDelta.quantize(self.eighth_duration)
 
         object.__setattr__(self, "eighth_duration", quantized)
-
-    @cached_property
-    def absolute_duration(self) -> float:
-        if self.eighth_duration == 0:
-            return 0.0
-        return 8 / self.eighth_duration
 
     @staticmethod
     def quantize(value: float) -> float:
@@ -182,94 +135,25 @@ class TimeDelta:
         return float(self.eighth_duration)
 
 
-"""
-    def _coerce_other(self, other) -> float:
-        if isinstance(other, TimeDelta):
-            return other.eighth_duration
-        else:
-            return float(other)
-
-    def __repr__(self):
-        return f"d={np.round(self.eighth_duration, 4)}"
-
-    def __add__(self, other):
-        return TimeDelta(self.eighth_duration + self._coerce_other(other))
-
-    def __sub__(self, other):
-        return TimeDelta(self.eighth_duration - self._coerce_other(other))
-
-    def __mul__(self, other):
-        return TimeDelta(self.eighth_duration * self._coerce_other(other))
-
-    def __truediv__(self, other):
-        return TimeDelta(self.eighth_duration / self._coerce_other(other))
-
-    def __mod__(self, other):
-        return TimeDelta(self.eighth_duration % self._coerce_other(other))
-
-    def __neg__(self):
-        return TimeDelta(-self.eighth_duration)
-
-    def __float__(self):
-        return float(self.eighth_duration)
-
-    def __int__(self):
-        return int(self.eighth_duration)
-
-    def __radd__(self, other):
-        return TimeDelta(self._coerce_other(other) + self.eighth_duration)
-
-    def __rsub__(self, other):
-        return TimeDelta(self._coerce_other(other) - self.eighth_duration)
-
-    def __rmul__(self, other):
-        return TimeDelta(self._coerce_other(other) * self.eighth_duration)
-
-    def __rtruediv__(self, other):
-        return TimeDelta(self._coerce_other(other) / self.eighth_duration)
-
-    def __rmod__(self, other):
-        return TimeDelta(self._coerce_other(other) % self.eighth_duration)
-
-    def __eq__(self, other):
-        return self.eighth_duration == self._coerce_other(other)
-
-    def __lt__(self, other):
-        return self.eighth_duration < self._coerce_other(other)
-
-    def __le__(self, other):
-        return self.eighth_duration <= self._coerce_other(other)
-
-    def __gt__(self, other):
-        return self.eighth_duration > self._coerce_other(other)
-
-    def __ge__(self, other):
-        return self.eighth_duration >= self._coerce_other(other)
-
-"""
-
-
 class LOERICElement:
     def __init__(self, time: float = 0):
         self._time = TimeDelta(eighth_duration=time)
         self._is_performable = False
         self._duration = TimeDelta(eighth_duration=0)
         self._module_signatures = []
+        self._tags = []
 
     def has_signature(self, signature):
         return signature in self._module_signatures
 
+    def has_tag(self, tag):
+        return tag in self._tags
+
+    def add_tag(self, tag):
+        self._tags.append(tag)
+
     def add_signature(self, signature):
         self._module_signatures.append(signature)
-
-    def copy_signatures(self, element):
-        for s in element.signatures:
-            if not self.has_signature(s):
-                self.add_signature(s)
-
-    @property
-    def signatures(self):
-        return self._module_signatures
 
     @property
     def time(self):
@@ -342,7 +226,6 @@ class Chord(LOERICElement):
         self._bass = None
         self._quality = None
         self._pitches = []
-        self._id_string = None
         self.is_user = is_user
 
         if len(pitches) != 0:
@@ -366,8 +249,7 @@ class Chord(LOERICElement):
                 id_string = "_".join(options[i].astype(str))
                 if id_string in CHORDS:
                     # we found it!
-                    self._id_string = id_string
-                    self._quality, _ = CHORDS[id_string]
+                    self._quality_name, self._quality = CHORDS[id_string]
                     self._root = pitches[i][0]
                     self._pitches = options[i].astype(float)
                     self._bass = pitches[0][0]
@@ -382,6 +264,10 @@ class Chord(LOERICElement):
                 logger.warning(
                     f"Chord shape {pitches} at time {self._time} not supported."
                 )
+
+    @property
+    def quality(self):
+        return self._quality
 
     @property
     def root(self):
@@ -402,28 +288,19 @@ class Chord(LOERICElement):
     def bass(self):
         return self._bass
 
-    @cached_property
-    def chord_number(self):
-        if self._id_string is None:
-            return None
-        _, index = CHORDS[self._id_string]
-        return self._root + 12 * index
-
     @property
     def pitches(self):
         return self._pitches
 
     @staticmethod
-    def from_harmony(harmony):
-        kind = harmony // 12
-        root = harmony % 12
+    def create_chord(root, kind):
         for c in CHORDS:
             _, number = CHORDS[c]
             if kind == number:
                 pitches = [(root + int(n)) % 12 for n in c.split("_")]
                 return Chord(pitches=pitches)
 
-        print(f"[WARN]\tUnknown harmony {harmony} (kind = {kind}, root = {root}).")
+        print(f"[WARN]\tUnknown harmony kind = {kind}, root = {root}.")
 
     def __repr__(self):
         root = "n/a"
@@ -432,9 +309,7 @@ class Chord(LOERICElement):
         bass = ""
         if self._bass is not None and self._root != self._bass:
             bass = f"/{NOTE_NAMES[int(self._bass)]} "
-        return (
-            f"(Chord {root}{self._quality}{bass} n={self.chord_number} t={self._time})"
-        )
+        return f"(Chord {root}{self._quality_name}{bass} t={self._time})"
 
 
 class SongPosition(LOERICElement):
@@ -582,7 +457,7 @@ class TimeSignature(LOERICElement):
         self._denominator = denominator
         self._eighths_per_bar = TimeDelta(eighth_duration=8 * numerator / denominator)
 
-        if self._numerator % 3 == 0:
+        if self._numerator % 3 == 0 and self._denominator == 8:
             self._beat_count = self._numerator / 3
         else:
             self._beat_count = self._numerator
@@ -701,10 +576,6 @@ class Note(LOERICElement):
     @property
     def is_slide(self):
         return self._is_slide
-
-    @property
-    def slide_targets(self):
-        return self._slide_targets
 
     @property
     def metadata(self):

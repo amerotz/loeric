@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+import logging
 from functools import cached_property
 
 import numpy as np
@@ -20,6 +21,8 @@ from scipy.signal import savgol_filter
 
 import loeric.element as le
 import loeric.tune as tu
+
+logger = logging.getLogger(__name__)
 
 
 class ContourManager:
@@ -32,7 +35,7 @@ class ContourManager:
 
         # for every contour c
         for c in self._config:
-            print(f"[INFO]\tCreating {c} contour.")
+            logger.info(f"Creating {c} contour.")
 
             # create contour
             self._contours[c] = create_contour(
@@ -94,14 +97,15 @@ class Contour:
         self, array: np.ndarray, savgol: bool = True, shift: bool = False, scale=False
     ) -> np.ndarray:
         """Scale the contour to have it range between 0 and 1.
+
         Optionally, apply a Savitzky-Golay filter with a window of 15 and order 3.
         Optionally, rescale the array to bring the extremes to 0 and 1.
         Optionally, shift the array to bring its mean closer to 0.5.
 
         :param array: the input contour.
-        :param savgol: whether or not to apply the savgol filter.
-        :param scale: whether or not to rescale the array to use the full range.
-        :param shift: whether or not to shift the filtered array so that its mean is close to 0.5.
+        :param savgol: apply the savgol filter.
+        :param scale: rescale the array to use the full range.
+        :param shift: shift the filtered array so that its mean is close to 0.5.
 
         :return: the processed array.
         """
@@ -139,8 +143,6 @@ class Contour:
             index = index[-1]
         return self._contour[index]
 
-        return value
-
 
 class CompositeContour(Contour):
     """A contour holding an aggregation of other contours."""
@@ -166,7 +168,7 @@ class CompositeContour(Contour):
             res = self._operation(values)
 
             if np.isnan(res[0]):
-                print(self._operation)
+                logger.error(self._operation)
                 raise Exception
 
             return res[0]
@@ -181,10 +183,12 @@ class RandomContour(Contour):
         super().__init__()
 
     def calculate(self, midi: tu.Tune, min: float = 0, max: float = 1) -> None:
-        """Compute a random contour following a uniform distribution in the specified range, by default between 0 and 1.
+        """Compute a random contour following a uniform distribution.
+
+        Default range is between 0 and 1.
 
         :param midi: the input tune.
-        :param extremes: the upper and lower bound for the random contour. If None, the range will be (0, 1).
+        :param extremes: the upper and lower bound for the random contour.
         """
         super().calculate(midi)
 
@@ -229,13 +233,38 @@ class PhraseContour(Contour):
         if shift is None:
             shift = -midi._first_bar_length
 
-        bar_length = midi.time_signatures[0].eighths_per_bar.eighth_duration
-        phrase_eighths = bar_length * phrase_length
-        # consider note onset + half of duration as phrase position
-        # anders says it works better
-        note_durations = np.array([d.eighth_duration for d in midi.durations])
-        note_positions = self._contour_times + note_durations / 2
-        phrase_position = ((note_positions - shift) % phrase_eighths) / phrase_eighths
+        time_signatures = midi.time_signatures
+        note_durations = midi.float_durations
+
+        phrase_position = []
+        # iterate over time signatures
+        for i in range(len(time_signatures)):
+            ts_1 = time_signatures[i]
+            t1 = float(ts_1.time)
+
+            if i < len(time_signatures) - 1:
+                t2 = float(time_signatures[i + 1].time)
+            else:
+                t2 = np.inf
+
+            bar_length = ts_1.eighths_per_bar.eighth_duration
+            phrase_eighths = bar_length * phrase_length
+
+            indexes = np.argwhere(
+                (self._contour_times >= t1) & (self._contour_times < t2)
+            )
+
+            times = self._contour_times[indexes]
+            durations = note_durations[indexes]
+            # consider note onset + half of duration as phrase position
+            # anders says it works better
+            note_positions = times + durations / 2
+
+            phrase_position.append(
+                (((note_positions - shift) % phrase_eighths) / phrase_eighths).flatten()
+            )
+
+        phrase_position = np.concat(phrase_position)
 
         if kind == "arch":
             acc = 0.1 * accelerando * (1 - (phrase_position / turn)) ** power
@@ -293,12 +322,19 @@ class IntensityContour(Contour):
         scale: bool = False,
     ) -> None:
         """Compute the contour as the weighted sum of O'Canainn component.
+
         An optional random component can be added.
+        * frequency score;
+        * beat score;
+        * ambitus score;
+        * leap score;
+        * length score
 
         :param midi: the input tune.
-        :param weights: the weights for the components, respectively frequency score, beat score, ambitus score, leap score and length score.
-        :param savgol: whether or not to apply a final savgol filtering step (recommended).
-        :param shift: whether or not to apply a final shifting step to bring the mean of the array close to 0.5.
+        :param weights: the weights for the components
+        :param savgol: apply a final savgol filtering step
+        :param shift: bring the mean of the array close to 0.5.
+
         """
         super().calculate(midi)
 
@@ -336,8 +372,9 @@ class IntensityContour(Contour):
     def ocanainn_scores(
         self, midi: tu.Tune
     ) -> tuple[np.array, np.array, np.array, np.array, np.array]:
-        """Computes the individual components for the ocanainn score:
+        """Compute the individual components for the ocanainn score.
 
+        These are:
         * frequency score;
         * beat score;
         * ambitus score;
@@ -346,7 +383,7 @@ class IntensityContour(Contour):
 
         :param midi: the input tune used to compute the individual scores.
 
-        :return: the frequency score, the beat score, the ambitus score, the leap score and the length score.
+        :return: the computed scores
         """
         pitches = midi.pitches
         durations = midi.durations
@@ -440,6 +477,57 @@ class PitchContour(Contour):
             )
 
 
+class DurationContour(Contour):
+    """A contour holding the length of each note in the tune."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(self, midi: tu.Tune, absolute: bool) -> None:
+        """Contains the duration of each note.
+
+        :param midi: the input tune object.
+        """
+        super().calculate(midi)
+
+        self._contour = midi.float_durations
+        if absolute:
+            self._contour = 8 / self._contour
+
+
+class BarLengthContour(Contour):
+    """A contour holding the length of each note in the tune."""
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate(self, midi: tu.Tune) -> None:
+        """Contains the length of the bar each note occupies.
+
+        :param midi: the input tune object.
+        """
+        super().calculate(midi)
+
+        self._contour = np.empty(self._contour_times.shape)
+        # iterate over time signatures
+        for i in range(len(midi.time_signatures)):
+            ts_1 = midi.time_signatures[i]
+            t1 = float(ts_1.time)
+
+            if i < len(midi.time_signatures) - 1:
+                t2 = float(midi.time_signatures[i + 1].time)
+            else:
+                t2 = np.inf
+
+            bar_length = ts_1.eighths_per_bar.eighth_duration
+
+            indexes = np.argwhere(
+                (self._contour_times >= t1) & (self._contour_times < t2)
+            )
+
+            self._contour[indexes] = bar_length
+
+
 class PatternContour(Contour):
     """A contour made of a repeating pattern."""
 
@@ -456,7 +544,9 @@ class PatternContour(Contour):
         period: float = 1,
     ) -> None:
         """Create the contour by repeating the input weights over the specified period.
-        If standard deviatons are specified, the resulting patter is sampled from each distribution at each loaction.
+
+        If standard deviatons are specified, the resulting pattern is sampled
+        from each distribution at each loaction.
 
         :param mean: the pattern to repeat.
         :param std: the std of the pattern to repeat, for every item.
@@ -477,6 +567,7 @@ class PatternContour(Contour):
         self._pattern_size = len(self._mean)
 
         # obtain time pedios
+        # TODO multiple time signatures
         self._time_period = midi.time_signatures[
             0
         ].eighths_per_bar.eighth_duration * float(period)
@@ -543,7 +634,7 @@ class PatternContour(Contour):
 
 
 def multiply(contours: list[Contour] = []) -> Contour:
-    """Returns a new contour that holds the product of the input contours.
+    """Return a new contour that holds the product of the input contours.
 
     :param contours: the contours to multiply.
 
@@ -562,10 +653,27 @@ def multiply(contours: list[Contour] = []) -> Contour:
     return new_contour
 
 
+def divide(contours: list[Contour] = []) -> Contour:
+    """Return a new contour that holds the quotient between two input contours.
+
+    :param contours: the contours to divide.
+
+    :return: a new contour holding the quotient of the input contours.
+    """
+    assert len(contours) == 2
+
+    def div(contours):
+        return np.divide(contours[0], contours[1])
+
+    new_contour = CompositeContour(contours, lambda cnt_list: div(cnt_list))
+
+    return new_contour
+
+
 def weighted_sum(
     contours: list[Contour] = [], weights: list = [], normalize: bool = True
 ) -> Contour:
-    """Returns a new contour that holds the weighted sum of the input contours.
+    """Return a new contour that holds the weighted sum of the input contours.
 
     :param contours: the contours to add.
     :param weights: the weight for each contour.
@@ -700,7 +808,7 @@ def smooth(contours: list[Contour] = None, window: float = 15) -> Contour:
 
     def smth(x, window):
         x = np.pad(x, (window, window), "mean")
-        x = savgol_filter(x, window, 3)
+        x = savgol_filter(x, window, min(3, window - 1))
         x = x[window:-window]
         return x
 
@@ -752,11 +860,14 @@ def create_contour(
         "phrasing": PhraseContour,
         "random": RandomContour,
         "pattern": PatternContour,
+        "duration": DurationContour,
+        "bar_length": BarLengthContour,
     }
 
     operation_dict = {
         "weighted_sum": weighted_sum,
         "multiply": multiply,
+        "divide": divide,
         "linear": linear_transform,
         "shift": shift,
         "to_mean": to_mean,

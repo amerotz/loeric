@@ -20,7 +20,6 @@
 # push: add an element to the working queue
 # update: process the queue
 
-import numpy as np
 
 import loeric.element as le
 import loeric.inputs as li
@@ -77,37 +76,6 @@ class Player:
     @property
     def eighth_duration_seconds(self) -> float:
         return 30 / self._tempo.qpm
-
-    def _step(self, mapper, contour_manager, groover, tune, tick):
-
-        X = np.arange(0, 1, 0.01)
-        contour_values = None
-        for x in X:
-            user_inputs = {"intensity": x, "autonomy": x}
-            mapper.set(user_inputs)
-
-            raw_contour_values = {"velocity": 1}
-            mapper.set(raw_contour_values)
-
-            mapper.update()
-
-            if contour_values is None:
-                contour_values = mapper.get(as_array=True)
-            else:
-                contour_values = np.vstack((contour_values, mapper.get(as_array=True)))
-
-        import matplotlib.pyplot as plt
-
-        for i, c in enumerate(mapper.get().keys()):
-            plt.plot(X, contour_values[:, i], label=c)
-            plt.xlim(0, 1.1)
-            plt.ylim(0, 1.1)
-            plt.tight_layout()
-            plt.legend()
-            plt.show()
-            plt.cla()
-
-        return True
 
     def _get(self):
         val = {}
@@ -168,7 +136,9 @@ class Player:
         finished = len(groover_out) != 0
         for s in score_elements:
             finished = (
-                finished and isinstance(s, le.EndOfScore) and tick >= tune.end_time
+                finished
+                and isinstance(s, le.EndOfScore)
+                and tick >= tune.end_time  # - 1 / le.MINIMUM_QUARTER_DIVISION
             )
 
         return finished

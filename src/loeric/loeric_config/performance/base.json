@@ -7,7 +7,7 @@
     "var_phrase_length_1": 4,
     "var_velocity_weight": [1, 1, 1, 1, 1],
     "var_drone_bind": "$drone",
-    "var_notes_per_bar_bind": "$notes_per_bar",
+    "var_notes_per_bar_bind": "notes_per_bar",
     "var_legato_pattern": {
       "mean": [1],
       "std": [0],
@@ -80,6 +80,17 @@
     }
   },
   "contours": {
+    "ones": {
+      "recipe": {
+        "pattern": {
+          "mean": [1],
+          "period": 1,
+          "normalize": false,
+          "std": null,
+          "std_scale": 0
+        }
+      }
+    },
     "drone": {
       "recipe": {
         "o_canainn": {

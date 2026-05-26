@@ -1,0 +1,9 @@
+{
+  "player": {
+    "output": {
+      "main": {
+        "velocity_range": [0, 100]
+      }
+    }
+  }
+}

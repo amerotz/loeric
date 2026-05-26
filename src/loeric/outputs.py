@@ -274,7 +274,7 @@ class MIDIOutput(OutputInterface):
 
             val = max(0, min(127, int(self._control_values[c] * 127)))
 
-            logger.info(f"{c}: cc {self._controls[c]} {val}")
+            # logger.info(f"{c}: cc {self._controls[c]} {val}")
             message = mido.Message(
                 "control_change", control=self._controls[c], channel=0, value=val
             )

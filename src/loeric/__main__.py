@@ -30,12 +30,7 @@ import loeric.utils as lu
 logging.basicConfig(
     level=logging.INFO,
     datefmt="%H:%M:%S",
-    format=(
-        "\033[90m%(asctime)s\033[0m "
-        "%(levelname)s "
-        "\033[96m%(name)s\033[0m "
-        "%(message)s"
-    ),
+    format=("[%(levelname)s] " "\033[96m%(name)s\033[0m " "%(message)s"),
 )
 
 logging.addLevelName(logging.DEBUG, "\033[90mDEBUG\033[0m")
@@ -87,6 +82,7 @@ def _plot_contours(manager, tune, plot_keys):
         ax.step(x, manager.contours[contour].values, where="post", marker="x")
         ax.set_xlim(min(x) - 0.01, 1 + 0.01)
     plt.tight_layout()
+    plt.grid()
     plt.show()
 
 

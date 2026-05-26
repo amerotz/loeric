@@ -1,21 +1,33 @@
 {
   "player": {
-    "di": {
+    "mic_input": {
       "active": true,
       "type": "audio",
       "device": "pulse",
-      "frame_rate": 4096,
+      "samplerate": 44100,
       "analysers": {
         "loudness": {
           "type": "rms",
-          "floor": "adaptive",
-          "ceil": "adaptive",
-          "responsiveness": 1,
-          "controls": ["di_intensity", "di_autonomy"],
-          "window_size_seconds": 0.1
+          "responsiveness": 0.5,
+          "controls": ["intensity", "autonomy"],
+          "updates_per_second": 30
         }
       }
     }
   },
-  "mapper": {}
+  "mapper": {
+    "sources": [
+      "velocity",
+      "ornament",
+      "tempo",
+      "drone",
+      "intensity",
+      "autonomy"
+    ],
+    "targets": [],
+    "rules": [
+      "autonomy : %velocity,%ornament,%tempo,%drone",
+      "intensity ~ velocity,ornament,tempo,drone"
+    ]
+  }
 }

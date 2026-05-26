@@ -1,67 +1,65 @@
 {
-	"contours": {
-		"ornament": {
-			"human_impact_scale": 1
-		},
-		"legato": {
-			"human_impact_scale": 1
-		},
-		"velocity": {
-			"human_impact_scale": 1
-		},
-		"tempo": {
-			"human_impact_scale": 1
-		}
-	},
-	"contour_2_control": {},
-	"control_2_contour": {
-		"velocity_intensity":{
-			"control":77,
-			"contours":[
-				"velocity_intensity"
-			]
-		},
-		"tempo_intensity":{
-			"control":78,
-			"contours":[
-				"tempo_intensity"
-			]
-		},
-		"ornament_intensity":{
-			"control":79,
-			"contours":[
-				"ornament_intensity"
-			]
-		},
-		"legato_intensity":{
-			"control":80,
-			"contours":[
-				"legato_intensity"
-			]
-		},
-		"velocity_human_impact":{
-			"control":81,
-			"contours":[
-				"velocity_human_impact"
-			]
-		},
-		"tempo_human_impact":{
-			"control":82,
-			"contours":[
-				"tempo_human_impact"
-			]
-		},
-		"ornament_human_impact":{
-			"control":83,
-			"contours":[
-				"ornament_human_impact"
-			]
-		},
-		"legato_human_impact":{
-			"control":84,
-			"contours":[
-				"legato_human_impact"
-			]
-		}
-	}
+  "modules": {
+    "dynamics": {
+      "bind": "$velocity"
+    },
+    "ornament": {
+      "bind": "$ornament"
+    },
+    "timing": {
+      "bind": "$tempo",
+      "qpm_amount": 50
+    },
+    "legato": {
+      "bind": "$legato",
+      "min": 0.1,
+      "max": 1
+    }
+  },
+  "player": {
+    "input": {
+      "main": {
+        "active": true,
+        "type": "midi",
+        "port": "Launch Control XL Launch Contro",
+        "controls": {
+          "velocity_i": 77,
+          "tempo_i": 78,
+          "ornament_i": 79,
+          "legato_i": 80,
+          "velocity_a": 77,
+          "tempo_a": 78,
+          "ornament_a": 79,
+          "legato_a": 80
+        }
+      }
+    }
+  },
+  "mapper": {
+    "sources": [
+      "ornament",
+      "legato",
+      "velocity",
+      "tempo",
+      "ornament_i",
+      "legato_i",
+      "velocity_i",
+      "tempo_i",
+      "ornament_a",
+      "legato_a",
+      "velocity_a",
+      "tempo_a"
+    ],
+    "targets": [],
+    "rules": [
+      "ornament_a : %ornament",
+      "ornament_i ~ ornament",
+      "legato_a : %legato",
+      "legato_i ~ legato",
+      "tempo_a : %tempo",
+      "tempo_i ~ tempo",
+      "velocity_a : %velocity",
+      "velocity_i ~ velocity"
+    ]
+  }
 }

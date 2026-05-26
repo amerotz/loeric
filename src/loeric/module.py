@@ -30,14 +30,26 @@ logger = logging.getLogger(__name__)
 class LOERICModule:
     """A performance module implementing a series of performance rules."""
 
-    def __init__(self, bypass=False):
+    def __init__(
+        self, bypass: bool = False, tag: str = None, required_tags: list[str] = None
+    ):
+        """A module to process note events.
 
+        :param bypass: activate or deactivate the module.
+        :param tag: apply a tag to the element.
+        :param required_tags: tags required for the element to be processed.
+        """
         self._signature = nid.generate()
         self._name = "module"
+
         self._lookahead_size = 0
         self._lookback_size = 0
         self._window_size = 0
+
         self._bypass = bypass
+        self._tag = tag
+        self._required_tags = required_tags
+
         self._key_signature = None
         self._time_signature = None
         self._tempo = None
@@ -83,8 +95,10 @@ class LOERICModule:
             return [element]
         elif element.has_signature(self._signature):
             logger.debug(
-                f"{element} (id {id(element)}) was already seen by module {self._name}."
+                f"{element} (id {id(element)}) was already seen by module '{self._name}'."
             )
+            return [element]
+        elif self._should_ignore(element):
             return [element]
         else:
             # process it
@@ -93,8 +107,20 @@ class LOERICModule:
             # sign it
             for o in out:
                 o.add_signature(self._signature)
+                if self._tag is not None:
+                    o.add_tag(self._tag)
 
             return out
+
+    def _should_ignore(self, element: le.LOERICElement) -> bool:
+        """Check if an element contains any forbidden tag."""
+        if self._required_tags is None:
+            return False
+
+        for t in self._required_tags:
+            if not element.has_tag(t):
+                return True
+        return False
 
     @cached_property
     def name(self):
@@ -109,9 +135,9 @@ class LOERICModule:
         return self._window_size
 
     @staticmethod
-    def create_module(module: str, **kwargs):
+    def create_module(module_name: str, **kwargs):
 
-        module_name = module.split("#")[0]
+        module_name = module_name.split("#")[0]
         if module_name == "legato":
             return LegatoModule(**kwargs)
         elif module_name == "swing":
@@ -134,8 +160,100 @@ class LOERICModule:
             return HarmonyModule(**kwargs)
         elif module_name == "logger":
             return LoggerModule(**kwargs)
+        elif module_name == "conditional":
+            return ConditionalModule(**kwargs)
+        elif module_name == "tagger":
+            return TaggerModule(**kwargs)
         else:
             raise ValueError(f"Invalid module name '{module_name}'.")
+
+
+class LOERICCondition:
+
+    def __init__(self, **kwargs):
+
+        self._operation_dict = {
+            "==": lambda x, y: x == y,
+            "<": lambda x, y: x < y,
+            ">": lambda x, y: x > y,
+            ">=": lambda x, y: x >= y,
+            "<=": lambda x, y: x <= y,
+            "!=": lambda x, y: x != y,
+        }
+
+        self._attribute = kwargs["attribute"]
+        self._value = kwargs["value"]
+
+        assert (
+            kwargs["operation"] in self._operation_dict
+        ), f"Unknown operator {kwargs["operation"]}"
+        self._operation = self._operation_dict[kwargs["operation"]]
+
+    def eval(self, element):
+
+        if hasattr(element, self._attribute):
+            return self._operation(getattr(element, self._attribute), self._value)
+
+        else:
+            logger.warning(f"{element} has no attribute {self._attribute}.")
+            return False
+
+    def __call__(self, element):
+        return self.eval(element)
+
+
+class ConditionalModule(LOERICModule):
+    def __init__(self, condition: dict, module: dict, **kwargs):
+        super().__init__(**kwargs)
+
+        self._name = "conditional"
+
+        name = list(module.keys())[0]
+        self._module = LOERICModule.create_module(name, **module[name])
+        self._condition = LOERICCondition(**condition)
+
+    def process(
+        self,
+        element: le.LOERICElement,
+        contour_values: np.array,
+        window: list[le.LOERICElement] = None,
+    ):
+        """Execute the module if the condition is met.
+
+        :param element: the element to process.
+        :param contour_values: the contour values to use.
+        """
+        element = super().process(element, contour_values, window)[0]
+
+        if not element.is_performable:
+            val = self._module(element, contour_values, window)
+
+        if self._condition(element):
+            if element.is_performable:
+                val = self._module(element, contour_values, window)
+            return val
+        else:
+            return [element]
+
+
+class TaggerModule(LOERICModule):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self._name = "tagger"
+
+    def process(
+        self,
+        element: le.LOERICElement,
+        contour_values: np.array,
+        window: list[le.LOERICElement] = None,
+    ):
+        """Tags notes.
+
+        :param element: the element to process.
+        :param contour_values: the contour values to use.
+        """
+        return [element]
 
 
 class TransposeModule(LOERICModule):
@@ -194,9 +312,10 @@ class HarmonyModule(LOERICModule):
     @property
     def window_size(self):
         if self._time_signature is not None:
-            self._window_size = (
-                self._time_signature.eighths_per_bar / self._chords_per_bar
-            )
+            c_per_bar = self._chords_per_bar
+            if c_per_bar is None:
+                c_per_bar = self._time_signature.beat_count
+            self._window_size = self._time_signature.eighths_per_bar / c_per_bar
             return self._window_size
         else:
             return None
@@ -214,8 +333,43 @@ class HarmonyModule(LOERICModule):
         """
         element = super().process(element, contour_values, window)[0]
 
+        accidentals = []
         if isinstance(element, le.Chord):
             self._last_forced_chord = copy.copy(element)
+
+            chord_quality = np.roll(
+                self._chord_qualities, self._key_signature.major_root
+            )[self._last_forced_chord.root]
+
+            # propagate accidentals
+            if self._last_forced_chord.quality != chord_quality:
+                mode_chord = le.Chord.create_chord(
+                    self._last_forced_chord.root, chord_quality
+                )
+                # some chords are triads, some are sevenths
+                chord_len = min(
+                    len(mode_chord.pitches), len(self._last_forced_chord.pitches)
+                )
+                # check degrees that are flat/sharp
+                differences = (
+                    self._last_forced_chord.pitches[:chord_len]
+                    - mode_chord.pitches[:chord_len]
+                )
+                # create accidentals
+                for alteration, degree in zip(
+                    differences, mode_chord.pitches[:chord_len]
+                ):
+                    if alteration == 0:
+                        continue
+                    p = (self._last_forced_chord.root + degree) % 12
+                    accidentals.append(
+                        le.Accidental(
+                            pitch=p,
+                            alteration=alteration,
+                            time=element.time.eighth_duration,
+                        )
+                    )
+
             # filter out the null chord
             if not element.is_valid:
                 element = le.NullEvent(time=element.time.eighth_duration)
@@ -245,9 +399,9 @@ class HarmonyModule(LOERICModule):
             chord = self._calculate_chord(window)
             chord.time = element.time.eighth_duration
 
-            return [chord, element]
+            return [*accidentals, chord, element]
 
-        return [element]
+        return [*accidentals, element]
 
     @property
     def _allowed_chords(self):
@@ -282,12 +436,10 @@ class HarmonyModule(LOERICModule):
             np.argwhere(chords_filtered == chords_filtered.max())[0]
         )
 
-        # check if the selected chord should be major according to the mode
+        # check chord quality according to mode
         chord_quality = np.roll(self._chord_qualities, self._key_signature.major_root)[
             root
         ]
-
-        harmony_value = root
 
         # check if the note score suggests major chord
         if note_count[(root + 4) % 12] > note_count[(root + 3) % 12]:
@@ -324,8 +476,7 @@ class HarmonyModule(LOERICModule):
         ):
             chord_quality += 6
 
-        harmony_value = root + 12 * chord_quality
-        return le.Chord.from_harmony(harmony_value)
+        return le.Chord.create_chord(root, chord_quality)
 
 
 class DynamicsModule(LOERICModule):
@@ -410,8 +561,10 @@ class OrnamentModule(LOERICModule):
         """
         element = super().process(element, contour_values, window)[0]
 
+        if isinstance(element, le.Accidental):
+            self._accidentals[element.pitch] = element.alteration
         # create ornaments
-        if isinstance(element, le.Note):
+        elif isinstance(element, le.Note):
             # check if accidental
             deg, acc = self._key_signature.degree_from_root(element.pitch)
             if acc != 0 or deg in self._accidentals:
@@ -690,6 +843,8 @@ class DroneModule(LOERICModule):
         def __init__(self, name, config):
 
             self._name = name
+            self.harmony_weight = 0.75
+            self.reference_weight = 0.25
 
             for key in config:
                 setattr(self, key, config[key])
@@ -702,6 +857,9 @@ class DroneModule(LOERICModule):
 
             if "velocity_bind" not in config:
                 self.velocity_bind = None
+
+            if "sync_with_notes" not in config:
+                self.sync_with_notes = False
 
             self.last_computed_time = -np.inf
             self._is_running = False
@@ -742,7 +900,6 @@ class DroneModule(LOERICModule):
 
         if isinstance(element, le.Chord):
             self._current_chord = copy.copy(element)
-            print("DRONE", element.time, self._current_chord, self._current_chord.bass)
         elif isinstance(element, le.Note):
             self._last_pitch = element.pitch
             self._last_velocity = element.velocity
@@ -762,10 +919,26 @@ class DroneModule(LOERICModule):
 
             notes_per_bar = None
             if drone.type != "pedal":
-                notes_per_bar = self._current_notes_per_bar(drone, contour_values)
-                drone_interval = self._time_signature.eighths_per_bar / notes_per_bar
-                if element.time % drone_interval != 0:
-                    continue
+                if drone.sync_with_notes:
+                    # if this is not a note
+                    # but we want drones only with score notes
+                    # skip
+                    if not isinstance(element, le.Note):
+                        continue
+                    else:
+                        notes_per_bar = (
+                            self._time_signature.eighths_per_bar / element.duration
+                        )
+                    drone_interval = (
+                        self._time_signature.eighths_per_bar / notes_per_bar
+                    )
+                else:
+                    notes_per_bar = self._current_notes_per_bar(drone, contour_values)
+                    drone_interval = (
+                        self._time_signature.eighths_per_bar / notes_per_bar
+                    )
+                    if element.time % drone_interval != 0:
+                        continue
 
             # keep track of notes
             drone_notes = []
@@ -811,6 +984,9 @@ class DroneModule(LOERICModule):
     def _current_notes_per_bar(self, drone, contour_values):
 
         options = drone.notes_per_bar
+        if options is None:
+            return self._time_signature.beat_count
+
         amount = contour_values[drone.notes_per_bar_bind]
 
         if len(options) != 1:
@@ -900,7 +1076,10 @@ class DroneModule(LOERICModule):
             harmony_score = abs(
                 notes_to_harmony_ratio - np.round(notes_to_harmony_ratio)
             )
-            options = 0.75 * harmony_score + 0.25 * reference_score
+            options = (
+                drone.harmony_weight * harmony_score
+                + drone.reference_weight * reference_score
+            )
 
             if len(options) == 0:
                 base = harmony + 12 * np.round(
@@ -976,7 +1155,7 @@ class DroneModule(LOERICModule):
                 )
             )
             if drone.type != "pedal":
-                val = drone.delay_range
+                val = abs(drone.delay_range)
                 mul = 1
                 if drone.delay_bind is not None:
                     mul = contour_values[drone.delay_bind]
