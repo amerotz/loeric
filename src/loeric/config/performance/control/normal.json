@@ -1,0 +1,36 @@
+{
+  "player": {
+    "input": {
+      "mic_input": {
+        "active": true,
+        "type": "audio",
+        "device": "pulse",
+        "samplerate": 44100,
+        "analysers": {
+          "loudness": {
+            "type": "rms",
+            "responsiveness": 0.5,
+            "controls": ["intensity"],
+            "updates_per_second": 30
+          }
+        }
+      }
+    }
+  },
+  "mapper": {
+    "sources": [
+      "legato",
+      "velocity",
+      "ornament",
+      "tempo",
+      "drone",
+      "swing",
+      "intensity"
+    ],
+    "targets": [],
+    "rules": [
+      "0.5 : %velocity,%ornament,%tempo,%drone,%swing",
+      "intensity ~ velocity,ornament,tempo,drone,swing"
+    ]
+  }
+}

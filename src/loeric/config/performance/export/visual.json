@@ -1,0 +1,22 @@
+{
+  "player": {
+    "output": {
+      "gui": {
+        "active": true,
+        "type": "visual",
+        "window_size": 500,
+        "width": 2000,
+        "height": 1000,
+        "fps": 60,
+        "controls": [
+          "$velocity",
+          "$drone",
+          "$tempo",
+          "$ornament",
+          "$swing",
+          "intensity"
+        ]
+      }
+    }
+  }
+}

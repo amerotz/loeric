@@ -20,12 +20,13 @@ import logging
 
 import matplotlib.pyplot as plt
 
-import loeric.contour as cnt
-import loeric.groover as gr
-import loeric.mapper as mp
-import loeric.player as pl
-import loeric.tune as tu
-import loeric.utils as lu
+import loeric.config as lc
+import loeric.core.contour as cnt
+import loeric.core.groover as gr
+import loeric.core.mapper as mp
+import loeric.core.player as pl
+import loeric.core.tune as tu
+import loeric.core.utils as lu
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,33 +34,14 @@ logging.basicConfig(
     format=("[%(levelname)s] " "\033[96m%(name)s\033[0m " "%(message)s"),
 )
 
-logging.addLevelName(logging.DEBUG, "\033[90mDEBUG\033[0m")
+logging.addLevelName(logging.DEBUG, "\033[90mDEBG\033[0m")
 logging.addLevelName(logging.INFO, "\033[94mINFO\033[0m")
-logging.addLevelName(logging.WARNING, "\033[93mWARNING\033[0m")
-logging.addLevelName(logging.ERROR, "\033[91mERROR\033[0m")
+logging.addLevelName(logging.WARNING, "\033[93mWARN\033[0m")
+logging.addLevelName(logging.ERROR, "\033[91mERRO\033[0m")
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-def process_config(config):
-
-    # compile variables by copying them explicitly
-    if "variables" in config:
-        variables = config["variables"]
-
-        del config["variables"]
-
-        # turn config into string
-        dict_string = json.dumps(config)
-
-        for name, value in variables.items():
-            dict_string = dict_string.replace(f'"{name}"', json.dumps(value))
-
-        config = json.loads(dict_string)
-
-        return config
 
 
 def _plot_contours(manager, tune, plot_keys):
@@ -82,7 +64,6 @@ def _plot_contours(manager, tune, plot_keys):
         ax.step(x, manager.contours[contour].values, where="post", marker="x")
         ax.set_xlim(min(x) - 0.01, 1 + 0.01)
     plt.tight_layout()
-    plt.grid()
     plt.show()
 
 
@@ -97,6 +78,9 @@ def main():
         default=120.0,
     )
     parser.add_argument(
+        "-j", "--cores", help="the number of cores to dedicate", type=int, default=None
+    )
+    parser.add_argument(
         "-r",
         "--repeat",
         help="how many times the tune should be repeated",
@@ -107,7 +91,7 @@ def main():
         "--config",
         help="the path to a configuration file.",
         type=str,
-        default=ir.files("loeric.loeric_config.performance").joinpath("config.json"),
+        default=ir.files("loeric.config").joinpath("config.json"),
     )
     parser.add_argument(
         "-t",
@@ -130,7 +114,7 @@ def main():
     # load config
     with open(args["config"], "r") as f:
         config_file = json.load(f)
-        config_file = process_config(config_file)
+        config_file = lc.process_config(config_file)
         if args["transpose"] is not None and "transpose" in config_file["modules"]:
             config_file["modules"]["transpose"]["steps"] = args["transpose"]
 
@@ -144,6 +128,13 @@ def main():
 
     if args["plot"] is not None:
         _plot_contours(contour_manager, tune, args["plot"])
+
+    # dedicate cores
+    if args["cores"] is not None:
+        lu.pin_to_cores(range(args["cores"]))
+
+    # realtime priority
+    lu.set_realtime_priority()
 
     lu.play(tune, player, mapper, groover, contour_manager, args)
 

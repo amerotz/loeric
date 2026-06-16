@@ -32,6 +32,4 @@ where = ["src"]
 
 [project.scripts]
 loeric = "loeric.__main__:main"
-loeric-config = "loeric.loeric_config.loeric_config:main"
-loeric-listen = "loeric.listeners.playalong:main"
-loeric-midi-listen = "loeric.listeners.midi_velocity_listener:main"
+loeric-config = "loeric.config.__main__:main"
