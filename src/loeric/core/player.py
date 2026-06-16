@@ -67,7 +67,7 @@ class Player:
         for o in self._output_interfaces:
             o.play_events(events, tick)
 
-    def shutdown(self):
+    def reset(self):
         """Close all interfaces."""
         for i in self._input_interfaces:
             i.reset()

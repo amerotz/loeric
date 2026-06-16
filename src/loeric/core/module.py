@@ -55,6 +55,12 @@ class LOERICModule:
         self._time_signature = None
         self._tempo = None
 
+    def reset(self):
+        """Reset all module attributes"""
+        self._key_signature = None
+        self._time_signature = None
+        self._tempo = None
+
     def set_key_signature(self, key: le.KeySignature):
         self._key_signature = key
 
@@ -303,6 +309,11 @@ class HarmonyModule(LOERICModule):
         # ####################### C C#  D Eb  E  F F#  G G#  A A#  B
         self._chord_qualities = np.array([0, 2, 1, 2, 1, 0, 2, 0, 2, 1, 0, 2])
         self._last_forced_chord = None
+
+    def reset(self):
+        super().reset()
+
+        self._window_size = None
 
     @property
     def window_size(self):

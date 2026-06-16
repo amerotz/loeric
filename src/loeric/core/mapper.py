@@ -83,6 +83,9 @@ class Parameter:
         """Get the parameter value, optionally a dict with value for every range where it fits, otherwise 0."""
         return self._value
 
+    def reset(self):
+        self._value = np.nan
+
     def __repr__(self):
         return f"(Param '{self._name}' v={self._value}, r=[{self._min_value},{self._max_value}]"
 
@@ -312,6 +315,10 @@ class Mapper:
         self._plain_input_names = [
             p for p in self._input_names if Parameter.basename(p) == p
         ]
+
+    def reset(self):
+        for p in self._parameters:
+            self._parameters[p].reset()
 
     def _fill_matrices(self, rules: list[str]):
         """Populate the pre-processing matrix, the human impact matrix and the rule matrix according to the specified rules."""

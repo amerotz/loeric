@@ -157,9 +157,9 @@ class MIDIOutput(OutputInterface):
 
         logger.info("Started MIDI CC output thread.")
 
-        messages = []
         while not self._done.is_set():
 
+            messages = []
             for c in self._controls:
                 if c not in self._contour_values:
                     continue
@@ -178,7 +178,9 @@ class MIDIOutput(OutputInterface):
                 for m in messages:
                     self._out.send(m)
 
-            time.sleep(self._message_interval)
+            # instead of using time.sleep
+            # when done is set, this terminates faster
+            self._done.wait(self._message_interval)
 
         logger.info("Terminated MIDI CC output thread.")
 
@@ -326,8 +328,10 @@ class MIDIOutput(OutputInterface):
 
     def reset(self):
         # stop thread
-        while self._cc_thread.is_alive():
-            self._done.set()
+        self._done.set()
+
+        if self._send_cc:
+            self._cc_thread.join(timeout=2.0)
 
         with self._out_lock:
             self._out.reset()

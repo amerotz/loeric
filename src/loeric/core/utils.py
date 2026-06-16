@@ -15,11 +15,9 @@
 
 import logging
 import os
-import time
 
+import matplotlib.pyplot as plt
 import numpy as np
-
-import loeric.core.element as le
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +25,31 @@ logger = logging.getLogger(__name__)
 _MIDI_TO_FREQ_FACTOR = 440.0 * (2.0 ** (-69.0 / 12.0))
 
 
+def plot_contours(manager, tune, plot_keys):
+    """Plot the specified contours."""
+    x = tune.float_times
+    pitches = tune.pitches
+    x /= max(x)
+    plot_num = len(plot_keys)
+    fig = plt.figure(figsize=(20, 5 * plot_num))
+    axs = fig.subplots(plot_num, 1, sharex=True)
+    if plot_num == 1:
+        axs = [axs]
+    for ax, contour in zip(axs, plot_keys):
+        ax.step(
+            x,
+            (pitches - min(pitches)) / (max(pitches) - min(pitches)),
+            linestyle=":",
+            where="post",
+        )
+        ax.step(x, manager.contours[contour].values, where="post", marker="x")
+        ax.set_xlim(min(x) - 0.01, 1 + 0.01)
+    plt.tight_layout()
+    plt.show()
+
+
 def pin_to_cores(cores):
+    """Pin LOERIC to a certain number of cores (assigned sequentially starting from core 0)."""
     try:
         os.sched_setaffinity(0, set(cores))
         logger.info(f"Main loop pinned to CPU cores {list(cores)}.")
@@ -60,8 +82,9 @@ def set_realtime_priority():
         logger.debug(f"Could not set real-time priority: {e}")
 
 
+"""
 def play(tune, player, mapper, groover, contour_manager, args):
-
+    Play a tune.
     import cProfile
     import io
     import pstats
@@ -134,7 +157,9 @@ def play(tune, player, mapper, groover, contour_manager, args):
         ps = pstats.Stats(pr, stream=s).sort_stats(sortby).reverse_order()
         # ps.print_stats()
         # print(s.getvalue())
+"""
 
 
 def midi_to_freq(midi):
+    """Convert a MIDI not number to its frequency."""
     return _MIDI_TO_FREQ_FACTOR * np.exp2(midi / 12.0)

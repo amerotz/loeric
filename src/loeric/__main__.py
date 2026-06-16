@@ -18,13 +18,8 @@ import importlib.resources as ir
 import json
 import logging
 
-import matplotlib.pyplot as plt
-
+import loeric
 import loeric.config as lc
-import loeric.core.contour as cnt
-import loeric.core.groover as gr
-import loeric.core.mapper as mp
-import loeric.core.player as pl
 import loeric.core.tune as tu
 import loeric.core.utils as lu
 
@@ -42,29 +37,6 @@ logging.addLevelName(logging.ERROR, "\033[91mERRO\033[0m")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-def _plot_contours(manager, tune, plot_keys):
-
-    x = tune.float_times
-    pitches = tune.pitches
-    x /= max(x)
-    plot_num = len(plot_keys)
-    fig = plt.figure(figsize=(20, 5 * plot_num))
-    axs = fig.subplots(plot_num, 1, sharex=True)
-    if plot_num == 1:
-        axs = [axs]
-    for ax, contour in zip(axs, plot_keys):
-        ax.step(
-            x,
-            (pitches - min(pitches)) / (max(pitches) - min(pitches)),
-            linestyle=":",
-            where="post",
-        )
-        ax.step(x, manager.contours[contour].values, where="post", marker="x")
-        ax.set_xlim(min(x) - 0.01, 1 + 0.01)
-    plt.tight_layout()
-    plt.show()
 
 
 def main():
@@ -111,6 +83,13 @@ def main():
     args = parser.parse_args()
     args = vars(args)
 
+    # performance improvements
+    # dedicate cores
+    if args["cores"] is not None:
+        lu.pin_to_cores(range(args["cores"]))
+    # realtime priority
+    lu.set_realtime_priority()
+
     # load config
     with open(args["config"], "r") as f:
         config_file = json.load(f)
@@ -118,25 +97,29 @@ def main():
         if args["transpose"] is not None and "transpose" in config_file["modules"]:
             config_file["modules"]["transpose"]["steps"] = args["transpose"]
 
-    player = pl.Player(config_file["player"])
+    # create LOERIC
+    musician = loeric.LOERIC(config_file)
 
-    # load a tune
-    mapper = mp.Mapper(config_file["mapper"])
+    # create tune
     tune = tu.Tune(args["source"], args["repeat"])
-    contour_manager = cnt.ContourManager(config_file["contours"], tune)
-    groover = gr.Groover(config_file["modules"])
+
+    # set params
+    musician.set_tune(tune)
+    musician.set_tempo(args["qpm"])
 
     if args["plot"] is not None:
-        _plot_contours(contour_manager, tune, args["plot"])
+        lu.plot_contours(musician.contour_manager, tune, args["plot"])
 
-    # dedicate cores
-    if args["cores"] is not None:
-        lu.pin_to_cores(range(args["cores"]))
+    try:
+        musician.ready()
 
-    # realtime priority
-    lu.set_realtime_priority()
+        input("Press any key to start...")
 
-    lu.play(tune, player, mapper, groover, contour_manager, args)
+        musician.start()
+    except KeyboardInterrupt:
+        print("Playback terminated.")
+    finally:
+        musician.reset()
 
 
 if __name__ == "__main__":

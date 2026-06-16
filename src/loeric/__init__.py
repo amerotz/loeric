@@ -15,4 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+from loeric.core.loeric import LOERIC
+
 __version__ = "3.0.0"

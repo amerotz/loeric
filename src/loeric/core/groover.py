@@ -176,3 +176,9 @@ class Groover:
 
     def reset(self):
         """Reset all variables."""
+        self._queue = le.LOERICQueue()
+        self._working_queue = le.LOERICQueue()
+        self._contour_values = {}
+
+        for m in self._modules:
+            m.reset()

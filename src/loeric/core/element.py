@@ -21,7 +21,7 @@ from functools import cached_property
 import numpy as np
 
 MINIMUM_QUARTER_DIVISION = 48
-ONE_OVER_MINIMUM_QUARTER_DIVISION = 1 / 48
+ONE_OVER_MINIMUM_QUARTER_DIVISION = 1 / MINIMUM_QUARTER_DIVISION
 NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
 CHORDS = {
     "0_4_7": ("", 0),
