@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loeric</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0f0f0f;
+            --bg-panel: #1a1a1a;
+            --bg-input: #232323;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --accent: #00d4aa;
+            --accent-dark: #00a88a;
+            --danger: #ff4444;
+            --success: #44ff44;
+            --border: #2a2a2a;
+            --shadow: rgba(0, 0, 0, 0.5);
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--bg-panel), var(--bg-dark));
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .status-display {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            text-align: center;
+        }
+
+        .status-display .label {
+            color: var(--text-secondary);
+            display: block;
+            font-size: 0.65rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .status-display .value {
+            color: var(--accent);
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            min-height: 1.2rem;
+        }
+
+        .status-display.running .value {
+            animation: pulse-text 1s infinite;
+        }
+
+        @keyframes pulse-text {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 0.375rem;
+            padding: 1rem;
+        }
+
+        .panel-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            padding: 0.625rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-family: inherit;
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1.25rem;
+            padding-right: 2.5rem;
+        }
+
+        select:hover, select:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            height: 0.5rem;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-bottom: 0.375rem;
+        }
+
+        .slider-label-value {
+            color: var(--accent);
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        button {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: var(--bg-panel);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-dark);
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            border-color: var(--accent-dark);
+            color: var(--bg-dark);
+        }
+
+        .btn-primary:disabled {
+            background: var(--text-secondary);
+            border-color: var(--text-secondary);
+            color: var(--bg-dark);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: #ff2222;
+            border-color: #ff2222;
+        }
+
+        .btn-danger:disabled {
+            background: var(--text-secondary);
+            border-color: var(--text-secondary);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            background: var(--text-secondary);
+        }
+
+        .status-indicator.active {
+            background: var(--success);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        @media (min-width: 640px) {
+            .content {
+                padding: 1.5rem;
+                gap: 1.5rem;
+            }
+
+            .panel {
+                padding: 1.5rem;
+            }
+
+            .section-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .info-text {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .error-message {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: #ff8888;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: rgba(68, 255, 68, 0.1);
+            border: 1px solid var(--success);
+            color: #88ff88;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>◆ Loeric ◆</h1>
+        <div class="status-display">
+            <span class="label">Status</span>
+            <div class="value">
+                <span class="status-indicator"></span>
+                <span id="statusText">Idle</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+
+        <!-- Tune, Config, Instrument Selection -->
+        <div class="section-grid">
+            <!-- Tune Selection -->
+            <div class="panel">
+                <label class="panel-title">Tune</label>
+                <div class="form-group">
+                    <select id="tuneSelect">
+                        <option value="">Loading tunes...</option>
+                    </select>
+                </div>
+                <div class="info-text">Select a composition to run</div>
+            </div>
+
+            <!-- Configuration -->
+            <div class="panel">
+                <label class="panel-title">Configuration</label>
+                <div class="form-group">
+                    <select id="configSelect">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="info-text">Select configuration preset</div>
+            </div>
+        </div>
+
+        <!-- Instrument Model Selection -->
+        <div class="section-grid">
+            <div class="panel">
+                <label class="panel-title">Instrument Model (TODO)</label>
+                <div class="form-group">
+                    <select id="instrumentSelect">
+                        <option value="">Loading instruments...</option>
+                    </select>
+                </div>
+                <div class="info-text">Choose the instrument voice to synthesize</div>
+            </div>
+            <div class="panel">
+                <label class="panel-title">Repeats (TODO)</label>
+                <div class="form-group">
+                    <input id="repetitionInput" type="number" min=1 value=1></input>
+                </div>
+                <div class="info-text">Choose the number of repetitions for the tune</div>
+            </div>
+        </div>
+
+        <!-- Tempo Control -->
+        <div class="panel">
+            <label class="panel-title">Tempo</label>
+            <div class="form-group">
+                <div class="slider-label">
+                    <span>Quarters Per Minute</span>
+                    <span class="slider-label-value" id="tempoValue">160</span>
+                </div>
+                <input type="range" id="tempoSlider" min="40" max="250" value="160">
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="panel">
+            <div class="button-group">
+                <button id="startBtn" class="btn-primary">Start</button>
+                <button id="stopBtn" class="btn-danger">Stop/Pause</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API base URL - adjust if FastAPI is on different host/port
+        const API_BASE = '';
+
+        // State
+        let state = {
+            running: false,
+            currentTune: null,
+            currentConfig: null,
+            currentInstrument: null,
+            tempo: 100
+        };
+
+        // DOM Elements
+        const elements = {
+            tuneSelect: document.getElementById('tuneSelect'),
+            configSelect: document.getElementById('configSelect'),
+            instrumentSelect: document.getElementById('instrumentSelect'),
+            tempoSlider: document.getElementById('tempoSlider'),
+            startBtn: document.getElementById('startBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            statusText: document.getElementById('statusText'),
+            statusIndicator: document.querySelector('.status-indicator'),
+            errorMessage: document.getElementById('errorMessage'),
+            successMessage: document.getElementById('successMessage'),
+            tempoValue: document.getElementById('tempoValue')
+        };
+
+        // Utility functions
+        function showError(message) {
+            elements.errorMessage.textContent = message;
+            elements.errorMessage.classList.add('show');
+            setTimeout(() => {
+                elements.errorMessage.classList.remove('show');
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            elements.successMessage.textContent = message;
+            elements.successMessage.classList.add('show');
+            setTimeout(() => {
+                elements.successMessage.classList.remove('show');
+            }, 3000);
+        }
+
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Request failed');
+                }
+                return await response.json();
+            } catch (error) {
+                showError(error.message);
+                throw error;
+            }
+        }
+
+        function updateUI() {
+            elements.startBtn.disabled = state.running || !state.currentTune;
+            elements.stopBtn.disabled = !state.currentTune || !state.running;
+
+            elements.statusIndicator.classList.toggle('active', state.running);
+            elements.statusText.textContent = state.running ? 'Running' : 'Idle';
+
+            const statusDisplay = document.querySelector('.status-display');
+            statusDisplay.classList.toggle('running', state.running);
+
+            elements.tuneSelect.disabled = state.running;
+            elements.configSelect.disabled = state.running;
+            elements.instrumentSelect.disabled = state.running;
+            elements.tempoSlider.disabled = state.running;
+        }
+
+        // Load tunes using GET
+        async function loadTunes() {
+            try {
+                const response = await apiCall('/api/tunes', 'GET');
+                elements.tuneSelect.innerHTML = '';
+                if (response.tunes.length === 0) {
+                    elements.tuneSelect.innerHTML = '<option value="">No tunes found</option>';
+                } else {
+                    elements.tuneSelect.innerHTML = '<option value="">Select a tune...</option>';
+                    response.tunes.forEach(tune => {
+                        const option = document.createElement('option');
+                        option.value = tune.id;
+                        option.textContent = tune.name;
+                        elements.tuneSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                elements.tuneSelect.innerHTML = '<option value="">Error loading tunes</option>';
+            }
+        }
+
+        // Load configs for a tune using GET
+        async function loadConfigs(tuneId) {
+            if (!tuneId) {
+                elements.configSelect.innerHTML = '<option value="">Select a tune first</option>';
+                state.currentConfig = null;
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/api/configs/${tuneId}`, 'GET');
+                elements.configSelect.innerHTML = '';
+
+                // Add default config first
+                if (response.default_config) {
+                    const option = document.createElement('option');
+                    option.value = response.default_config.id;
+                    option.textContent = `${response.default_config.name} (default)`;
+                    option.selected = true;
+                    elements.configSelect.appendChild(option);
+                    state.currentConfig = response.default_config.id;
+                }
+
+                // Add other configs
+                if (response.configs && response.configs.length > 0) {
+                    response.configs.forEach(config => {
+                        const option = document.createElement('option');
+                        option.value = config.id;
+                        option.textContent = config.name;
+                        elements.configSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                elements.configSelect.innerHTML = '<option value="">Error loading configs</option>';
+                state.currentConfig = null;
+            }
+        }
+
+        // Load instruments using GET
+        async function loadInstruments() {
+            try {
+                const response = await apiCall('/api/instruments', 'GET');
+                elements.instrumentSelect.innerHTML = '';
+
+                if (response.models.length === 0) {
+                    elements.instrumentSelect.innerHTML = '<option value="">No instruments found</option>';
+                } else {
+                    elements.instrumentSelect.innerHTML = '<option value="">Select an instrument...</option>';
+                    response.models.forEach(instrument => {
+                        const option = document.createElement('option');
+                        option.value = instrument.id;
+                        option.textContent = instrument.name;
+                        elements.instrumentSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                elements.instrumentSelect.innerHTML = '<option value="">Error loading instruments</option>';
+            }
+        }
+
+        // Event listeners
+        elements.tuneSelect.addEventListener('change', async (e) => {
+            state.currentTune = e.target.value;
+            if (state.currentTune) {
+                await loadConfigs(state.currentTune);
+            }
+            updateUI();
+        });
+
+        elements.configSelect.addEventListener('change', (e) => {
+            state.currentConfig = e.target.value;
+        });
+
+        elements.instrumentSelect.addEventListener('change', (e) => {
+            state.currentInstrument = e.target.value;
+        });
+
+        elements.tempoSlider.addEventListener('input', (e) => {
+            state.tempo = parseInt(e.target.value);
+            elements.tempoValue.textContent = state.tempo;
+        });
+
+        elements.startBtn.addEventListener('click', async () => {
+            if (!state.currentTune) {
+                showError('Please select a tune first');
+                return;
+            }
+            if (!state.currentInstrument) {
+                showError('Please select an instrument');
+                return;
+            }
+            try {
+                elements.startBtn.classList.add('loading');
+                const response = await apiCall('/api/start', 'POST', {
+                    tune: state.currentTune,
+                    config: state.currentConfig,
+                    instrument_model: state.currentInstrument,
+                    tempo: state.tempo
+                });
+                state.running = true;
+                updateUI();
+                showSuccess(`Started: ${state.currentTune}`);
+            } catch (error) {
+                showError('Failed to start loeric');
+            } finally {
+                elements.startBtn.classList.remove('loading');
+            }
+        });
+
+        elements.stopBtn.addEventListener('click', async () => {
+            try {
+                elements.stopBtn.classList.add('loading');
+                await apiCall('/api/stop', 'POST');
+                state.running = false;
+                updateUI();
+                showSuccess('Stopped');
+            } catch (error) {
+                showError('Failed to stop loeric');
+            } finally {
+                elements.stopBtn.classList.remove('loading');
+            }
+        });
+
+        // Poll status periodically using GET
+        async function pollStatus() {
+            try {
+                const response = await apiCall('/api/status', 'GET');
+                if (response.running !== state.running) {
+                    state.running = response.running;
+                    updateUI();
+                }
+                if (response.current_tune) {
+                    state.currentTune = response.current_tune;
+                }
+            } catch (error) {
+                // Silent fail on status poll to avoid spam
+            }
+        }
+
+        // Initialize
+        function init() {
+            updateUI();
+            loadTunes();
+            loadInstruments();
+            setInterval(pollStatus, 2000);
+        }
+
+        // Start on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
