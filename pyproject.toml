@@ -33,3 +33,4 @@ where = ["src"]
 [project.scripts]
 loeric = "loeric.__main__:main"
 loeric-config = "loeric.config.__main__:main"
+loeric-server= "loeric.server.__main__:main"

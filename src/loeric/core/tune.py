@@ -218,9 +218,7 @@ class Tune(Score):
         self,
         filename: str,
         repeats: int,
-        verbose: int = 0,
         sync_interval: float = None,
-        config=None,
     ):
         """Initialize the class.
 
@@ -228,13 +226,10 @@ class Tune(Score):
         :param repeats: how many times the tune should be repeated.
         :param key: the key of the tune.
         :param meter: the meter of the tune.
-        :param verbose: report info and errors.
         :param sync_interval: the synchronization interval for the virtual session.
 
         """
         super().__init__()
-
-        self._verbose = verbose
 
         self._sync_interval = None
         if sync_interval is not None:

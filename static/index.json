@@ -1,0 +1,10 @@
+{
+  "Hardiman's Jig": {
+    "configs": [],
+    "default": "jig.json"
+  },
+  "Cronin's": {
+    "configs": [],
+    "default": "jig.json"
+  }
+}

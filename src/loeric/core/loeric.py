@@ -69,7 +69,7 @@ class LOERIC:
             )
             self._tick += time_division
 
-    def start(self):
+    def start(self, stop_event=None):
         """Start playback."""
         assert (
             self._tune is not None
@@ -85,6 +85,11 @@ class LOERIC:
 
         # start actual loop
         while not self._finish:
+
+            if stop_event and stop_event.is_set():
+                logger.info("Stop requested")
+                break
+
             start_time = time.perf_counter()
 
             self._finish = self._player.step(
