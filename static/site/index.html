@@ -558,6 +558,11 @@
             function showError(message) {
                 elements.errorMessage.textContent = message;
                 elements.errorMessage.classList.add('show');
+                elements.errorMessage.scrollIntoView({
+                    behaviour: "smooth",
+                    block: "center"
+                });
+                elements.errorMessage.focus();
                 setTimeout(() => {
                     elements.errorMessage.classList.remove('show');
                 }, 5000);
@@ -607,7 +612,8 @@
                 elements.tuneSelect.disabled = state.running;
                 elements.configSelect.disabled = state.running;
                 elements.instrumentSelect.disabled = state.running;
-                elements.tempoSlider.disabled = state.running;
+                // tempo can be changed during playback
+                // elements.tempoSlider.disabled = state.running;
             }
 
             // Load tunes using GET
@@ -755,9 +761,18 @@
             });
 
 
-            elements.tempoSlider.addEventListener('input', (e) => {
+            elements.tempoSlider.addEventListener('input', async (e) => {
                 state.tempo = parseInt(e.target.value);
                 elements.tempoValue.textContent = state.tempo;
+                try {
+                    const response = await apiCall(`/api/tempo/${state.tempo}`, 'POST');
+                    state.running = true;
+                    updateUI();
+                    showSuccess(`Updated tempo to ${state.tempo} QPM.`);
+                } catch (error) {
+                    showError('Failed to start update tempo.');
+                }
+
             });
 
             elements.startBtn.addEventListener('click', async () => {

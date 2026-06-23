@@ -288,13 +288,6 @@ async def get_configs(tune_id: str):
     """
     default_config, configs = get_available_configs(tune_id)
 
-    """
-    if default_config is None:
-        raise HTTPException(
-            status_code=404, detail=f"No configurations found for tune: {tune_id}"
-        )
-    """
-
     return lsm.ConfigsResponse(default_config=default_config, configs=configs)
 
 
@@ -305,10 +298,20 @@ async def get_instruments():
     return lsm.InstrumentModelsResponse(models=instruments)
 
 
+@app.post("/api/tempo/{qpm}", response_model=lsm.StatusResponse)
+async def tempo_change(qpm: float):
+    """POST /api/tempo/{qpm} - Change LOERIC's tempo."""
+    global musician
+    if musician:
+        musician.set_tempo(qpm)
+
+    state.parameters["tempo"] = qpm
+    return await get_status()
+
+
 @app.post("/api/start")
 async def start(request: lsm.StartRequest):
     """POST /api/start - Start loeric with specified tune and parameters."""
-    print(request)
     if state.running:
         raise HTTPException(status_code=400, detail="LOERIC is already running")
 
@@ -378,7 +381,24 @@ async def index():
 
 def main():
     """Start the server."""
+    global BASE_CONFIG
+
+    import argparse
+
     import uvicorn
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-d",
+        "--device",
+        help="Load device-specific configs (options: ['mandaloeric']",
+        type=str,
+        default=None,
+    )
+    args = parser.parse_args()
+
+    if args.device is not None:
+        BASE_CONFIG = Path(CONFIG_PATH / f"{args.device}_base.json")
 
     uvicorn.run(app, host="0.0.0.0", port=PORT)
 

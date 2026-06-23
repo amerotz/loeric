@@ -1,8 +1,10 @@
 import logging
 import multiprocessing
+import queue
 import threading
 import time
 import traceback
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -15,10 +17,25 @@ import loeric.core.player as pl
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class LOERICCommand:
+
+    command: str
+    payload: dict | None = None
+
+    def __repr__(self):
+        return f"(LOERICCommand cmd={self.command} payload={self.payload})"
+
+
 class LOERIC:
 
     def __init__(self, config: dict, mode: str = "process"):
+        """Initialise internal variables.
 
+        If `mode` is equal to `process`, LOERIC will use `multiprocessing`
+        primitives for events and queues; if `thread`, LOERIC will use
+        `threading` primitives.
+        """
         assert mode in ["process", "thread"]
         self._mode = mode
         self._config = config
@@ -31,9 +48,9 @@ class LOERIC:
         self._process = None
 
         if self._mode == "process":
-            self._stop_event = multiprocessing.Event()
+            self._command_queue = multiprocessing.Queue()
         else:
-            self._stop_event = threading.Event()
+            self._command_queue = queue.Queue()
 
     def set_tune(self, tune):
         """Assign a tune to LOERIC and calculate the associated contours."""
@@ -53,18 +70,19 @@ class LOERIC:
         }
         return tunes[tune.time_signatures[0].meter_string]
 
-    def set_tempo(self, tempo: int):
+    def set_tempo(self, tempo: float):
         """Set tempo for LOERIC's performance in quarters per minute (QPM). Defaults to 120 QPM."""
         self._qpm = tempo
+        self._command_queue.put(
+            LOERICCommand(command="tempo", payload={"tempo": tempo})
+        )
 
     def start(self, wait_for_prompt=False):
         """Start LOERIC in a new process."""
         # event to stop playback
-        self._stop_event.clear()
 
         if self._mode == "process":
             # event to start playback if wait for prompt
-            start_event = multiprocessing.Event()
             # event to signal ready state
             ready_event = multiprocessing.Event()
             self._process = multiprocessing.Process(
@@ -74,14 +92,12 @@ class LOERIC:
                     self._tune,
                     self._qpm,
                     wait_for_prompt,
-                    start_event,
+                    self._command_queue,
                     ready_event,
-                    self._stop_event,
                     self._mode,
                 ),
             )
         else:
-            start_event = threading.Event()
             ready_event = threading.Event()
             self._process = threading.Thread(
                 target=self._run,
@@ -90,14 +106,12 @@ class LOERIC:
                     self._tune,
                     self._qpm,
                     wait_for_prompt,
-                    start_event,
+                    self._command_queue,
                     ready_event,
-                    self._stop_event,
                     self._mode,
                 ),
             )
 
-        start_event.clear()
         ready_event.clear()
 
         self._process.start()
@@ -106,13 +120,13 @@ class LOERIC:
             ready_event.wait()
             input("Press any key to start...")
 
-        start_event.set()
+        self._command_queue.put(LOERICCommand(command="start"))
 
     def stop(self):
         """Stop the LOERIC process."""
         if self._process is not None:
             while self._process.is_alive():
-                self._stop_event.set()
+                self._command_queue.put(LOERICCommand(command="stop"))
                 self._process.join()
             self._process = None
 
@@ -123,7 +137,13 @@ class LOERIC:
 
     @staticmethod
     def _run(
-        config, tune, qpm, wait_for_prompt, start_event, ready_event, stop_event, mode
+        config,
+        tune,
+        qpm,
+        wait_for_prompt,
+        queue,
+        ready_event,
+        mode,
     ):
         """Create all LOERIC objects and start playback."""
         if mode == "process":
@@ -155,11 +175,17 @@ class LOERIC:
         )
         time_division_f = time_division.eighth_duration
 
+        def wait_for_command(command):
+            while True:
+                cmd = queue.get()
+                if cmd.command == command:
+                    return cmd
+
         ########## READY PLAYBACK ###############
 
         try:
             # run in advance until lookahead is reached
-            while tick < start_time - groover.lookahead_size:
+            while tick < start_time:
                 finish = player.step(
                     mapper,
                     contour_manager,
@@ -172,8 +198,9 @@ class LOERIC:
             ########## WAIT FOR PROMPT ###############
 
             ready_event.set()
+
             if wait_for_prompt:
-                start_event.wait()
+                wait_for_command("start")
 
             ########## PLAY ###############
 
@@ -181,9 +208,21 @@ class LOERIC:
             finish = False
             while not finish:
 
-                if stop_event.is_set():
-                    logger.info("Stop requested")
-                    break
+                cmd = None
+                if not queue.empty():
+                    cmd = queue.get_nowait()
+
+                if cmd:
+                    print(cmd)
+                    if cmd.command == "stop":
+                        logger.info("Stop requested")
+                        break
+                    elif cmd.command == "tempo":
+                        logger.info("Changed tempo")
+                        groover.set_tempo(
+                            cmd.payload["tempo"],
+                            tick.eighth_duration,
+                        )
 
                 start_time = time.perf_counter()
 
@@ -212,7 +251,7 @@ class LOERIC:
                 wait_time -= delay_time
 
                 # cannot wait negative time
-                stop_event.wait(max(wait_time, 0))
+                time.sleep(max(wait_time, 0))
 
         except Exception as e:
             traceback.print_exc(e)
