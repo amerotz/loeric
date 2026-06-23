@@ -410,9 +410,13 @@ class VisualOutput(OutputInterface):
 
         # create shared memory
         array = np.ones(len(self._contours), dtype=float)
+
         self._memory = shared_memory.SharedMemory(
-            name="loeric-visual-shared-memory", create=True, size=sys.getsizeof(array)
+            name="loeric-visual-shared-memory",
+            create=True,
+            size=sys.getsizeof(array),
         )
+
         # create shared buffer
         self._array = np.ndarray(
             array.shape, dtype=array.dtype, buffer=self._memory.buf

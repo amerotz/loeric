@@ -3,9 +3,9 @@
 Serves the static HTML interface and provides API endpoints to control loeric
 """
 
+import importlib.resources as ir
 import json
 import logging
-import multiprocessing
 import os
 import sys
 import threading
@@ -23,19 +23,18 @@ import loeric.server.models as lsm
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-process = None
 musician = None
-shutdown_event = multiprocessing.Event()
 
 
 def process_monitor():
-    global process
+    """Monitor the process running LOERIC to update app status."""
+    global musician
 
     while True:
-        if process is not None and process.is_alive():
-            process.join()
+        if musician is not None:
+            musician.join()
 
-            process = None
+            musician = None
             state.running = False
             state.current_tune = None
             state.current_config = None
@@ -48,17 +47,20 @@ threading.Thread(
     daemon=True,
 ).start()
 
+PORT = int(os.getenv("LOERIC_WEBAPP_PORT", 8080))
 
 if getattr(sys, "frozen", False):
     print("Running compiled binary.")
     BASE_DIR = Path(sys._MEIPASS)
 else:
     print("Running from cli.")
-    BASE_DIR = Path(__file__).resolve().parents[3]
+    BASE_DIR = Path(__file__).resolve().parents[2]
 
 STATIC_ROOT = Path(os.getenv("LOERIC_WEBAPP_DIR", BASE_DIR / "static")).resolve()
 
 # Configuration
+INSTRUMENT_CONFIG_PATH = ir.files(loeric.config).joinpath("performance/instrument")
+TUNE_CONFIG_PATH = ir.files(loeric.config).joinpath("performance/tune_type")
 CONFIG_PATH = STATIC_ROOT / "configs"
 CONFIG_INDEX_FILE = STATIC_ROOT / "index.json"
 BASE_CONFIG = STATIC_ROOT / "configs" / "base.json"
@@ -76,12 +78,6 @@ app = FastAPI(title="LOERIC")
 
 # Global state
 state = lsm.LOERICState()
-
-# create loeric
-with open(BASE_CONFIG, "r") as f:
-    base_config = json.load(f)
-    musician = loeric.LOERIC(config=base_config)
-    del base_config
 
 # Load config index
 config_index = {}
@@ -127,8 +123,21 @@ def get_available_configs(
 ) -> tuple[Optional[lsm.ConfigInfo], list[lsm.ConfigInfo]]:
     """Get configuration files for a specific tune.
 
-    Returns a tuple of (default_config, all_configs)
+    Each tune can have mutliple configuration snippets
+    specifying interaction modalities, style, outputs, etc.
+    By default, each tune is loaded with the relevant tune type
+    and instrument configuration snippets, as well as a
+    default configuration, if present. The default
+    configuration should specify tweaks to the base configuration
+    (e.g., phrasing, additional ornamentation for that tune),
+    while other configuration files should substantially
+    alter the way the tune is performed (e.g. interaction
+    modalities connected to a specific performance, player, or
+    radically changing LOERIC's defaults).
+
+    :return: a tuple of (default_config, all_configs)
     """
+    # this means that we should just load the tune
     if tune_id not in config_index:
         logger.warning(f"No config entry for tune: {tune_id}")
         return None, []
@@ -154,45 +163,33 @@ def get_available_instruments() -> list[lsm.InstrumentModel]:
     Adapt this based on how loeric defines instruments.
     For now, returning common instrument models.
     """
-    instruments = [
-        lsm.InstrumentModel(id="piano", name="Piano"),
-        lsm.InstrumentModel(id="violin", name="Violin"),
-        lsm.InstrumentModel(id="flute", name="Flute"),
-        lsm.InstrumentModel(id="guitar", name="Guitar"),
-        lsm.InstrumentModel(id="synth", name="Synthesizer"),
-    ]
+    instruments = []
+    for file in INSTRUMENT_CONFIG_PATH.glob("*.json"):
+        inst_id = file.stem
+        inst_name = file.stem.capitalize()
+        instruments.append(lsm.InstrumentModel(id=inst_id, name=inst_name))
     return instruments
 
 
-def _run_loeric(config, tune_path, tempo, stop_event):
-    musician = None
-
-    try:
-        tune = tu.Tune(tune_path, 1)
-
-        musician = loeric.LOERIC(config=config)
-        musician.set_tune(tune)
-        musician.set_tempo(tempo)
-
-        musician.ready()
-        musician.start(stop_event)
-
-    finally:
-        if musician:
-            musician.reset()
-
-
 async def start_loeric(
-    tune: str, config: str, instrument_model: str, tempo: int
+    tune: str,
+    repetitions: int,
+    transpose: int,
+    config: str,
+    instrument_model: str,
+    tempo: int,
 ) -> bool:
     """Start loeric with the specified tune and parameters.
 
-    ADAPT THIS TO YOUR LOERIC SETUP:
-    - Replace command with appropriate loeric invocation
-    - Adjust parameter names/format to match loeric's CLI
-    - Handle environment setup if needed
+    LOERIC will be created with the following configurations, merged in this order:
+    - the base configuration `base.json`
+    - the tune type configuration, inferred from the tune's time signature
+    - the instrument model
+    - additional configuration snippets specified in `index.json`
+
+    Once LOERIC is created, a new thread is spawn and the system starts.
     """
-    global process
+    global musician
     try:
 
         # Update state
@@ -201,26 +198,46 @@ async def start_loeric(
         state.parameters = {
             "tempo": tempo,
             "instrument": instrument_model,
+            "repetitions": repetitions,
+            "transpose": transpose,
         }
 
-        with open(CONFIG_PATH / state.current_config, "r") as f:
-            config = json.load(f)
-            config = lc.process_config(config)
+        # open base config
+        with open(BASE_CONFIG, "r") as f:
+            base = json.load(f)
 
-        shutdown_event.clear()
+        # create tune
+        tune = tu.Tune(tune_list[tune].path, repetitions)
+        # tune type
+        with open(
+            TUNE_CONFIG_PATH / f"{loeric.LOERIC.infer_tune_type(tune)}.json"
+        ) as f:
+            tune_config = json.load(f)
 
-        process = multiprocessing.Process(
-            target=_run_loeric,
-            daemon=True,
-            args=(
-                config,
-                tune_list[state.current_tune].path,
-                state.parameters["tempo"],
-                shutdown_event,
-            ),
-        )
-        process.start()
+        # open instrument config
+        with open(INSTRUMENT_CONFIG_PATH / f"{instrument_model}.json", "r") as f:
+            instrument_config = json.load(f)
 
+        if config is not None:
+            # open tune config
+            with open(CONFIG_PATH / config, "r") as f:
+                config = json.load(f)
+        else:
+            config = {}
+
+        config = lc.join_configs([base, tune_config, instrument_config, config])
+        config = lc.process_config(config)
+        if "transpose" in config["modules"]:
+            config["modules"]["transpose"]["steps"] = transpose
+
+        # create LOERIC
+        if musician:
+            musician.stop()
+        musician = loeric.LOERIC(config=config, mode="thread")
+        musician.set_tune(tune)
+        musician.set_tempo(tempo)
+
+        musician.start()
         state.running = True
 
         return True
@@ -232,22 +249,14 @@ async def start_loeric(
 
 async def stop_loeric() -> bool:
     """Stop the running loeric process."""
-    global process
+    global musician
     try:
-        # TODO: Implement actual process termination
         logger.info("Stopping loeric")
 
-        shutdown_event.set()
+        if musician:
+            musician.stop()
 
-        if process:
-            process.join(timeout=1)
-
-            if process.is_alive():
-                logger.warning("Graceful shutdown timed out, terminating")
-                process.terminate()
-                process.join()
-
-        process = None
+        musician = None
 
         state.running = False
         state.current_tune = None
@@ -267,7 +276,7 @@ async def stop_loeric() -> bool:
 
 @app.get("/api/tunes", response_model=lsm.TunesResponse)
 async def get_tunes():
-    """GET /api/tunes - Get list of available tunes"""
+    """GET /api/tunes - Get list of available tunes."""
     return lsm.TunesResponse(tunes=list(tune_list.values()))
 
 
@@ -279,30 +288,35 @@ async def get_configs(tune_id: str):
     """
     default_config, configs = get_available_configs(tune_id)
 
+    """
     if default_config is None:
         raise HTTPException(
             status_code=404, detail=f"No configurations found for tune: {tune_id}"
         )
+    """
 
     return lsm.ConfigsResponse(default_config=default_config, configs=configs)
 
 
 @app.get("/api/instruments", response_model=lsm.InstrumentModelsResponse)
 async def get_instruments():
-    """GET /api/instruments - Get available instrument models"""
+    """GET /api/instruments - Get available instrument models."""
     instruments = get_available_instruments()
     return lsm.InstrumentModelsResponse(models=instruments)
 
 
 @app.post("/api/start")
 async def start(request: lsm.StartRequest):
-    """POST /api/start - Start loeric with specified tune and parameters"""
+    """POST /api/start - Start loeric with specified tune and parameters."""
+    print(request)
     if state.running:
         raise HTTPException(status_code=400, detail="LOERIC is already running")
 
     try:
         await start_loeric(
             tune=request.tune,
+            repetitions=request.repetitions,
+            transpose=request.transpose,
             config=request.config,
             instrument_model=request.instrument_model,
             tempo=request.tempo,
@@ -310,6 +324,8 @@ async def start(request: lsm.StartRequest):
         return {
             "status": "started",
             "tune": request.tune,
+            "repetitions": request.repetitions,
+            "transpose": request.transpose,
             "config": request.config,
             "instrument": request.instrument_model,
             "tempo": request.tempo,
@@ -322,7 +338,7 @@ async def start(request: lsm.StartRequest):
 
 @app.post("/api/stop")
 async def stop():
-    """POST /api/stop - Stop the running loeric process"""
+    """POST /api/stop - Stop the running loeric process."""
     if not state.running:
         raise HTTPException(status_code=400, detail="LOERIC is not running")
 
@@ -336,7 +352,7 @@ async def stop():
 
 @app.get("/api/status", response_model=lsm.StatusResponse)
 async def get_status():
-    """GET /api/status - Get current loeric status"""
+    """GET /api/status - Get current loeric status."""
     return lsm.StatusResponse(
         running=state.running,
         current_tune=state.current_tune,
@@ -353,18 +369,18 @@ async def get_status():
 
 @app.get("/")
 async def index():
-    """Serve the main GUI"""
+    """Serve the main GUI."""
     if not GUI_FILE.exists():
         logger.warning(f"GUI file not found at {GUI_FILE}, serving loeric-gui.html")
         return FileResponse("loeric-gui.html")
     return FileResponse(GUI_FILE)
 
 
-# Run with: uvicorn main:app --host 0.0.0.0 --port 8000
 def main():
+    """Start the server."""
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
 
 
 if __name__ == "__main__":

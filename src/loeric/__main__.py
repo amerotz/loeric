@@ -111,15 +111,13 @@ def main():
         lu.plot_contours(musician.contour_manager, tune, args["plot"])
 
     try:
-        musician.ready()
+        musician.start(wait_for_prompt=True)
+        musician.join()
 
-        input("Press any key to start...")
-
-        musician.start()
     except KeyboardInterrupt:
         print("Playback terminated.")
     finally:
-        musician.reset()
+        musician.stop()
 
 
 if __name__ == "__main__":

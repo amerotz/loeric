@@ -12,8 +12,10 @@ class LOERICState(pdt.BaseModel):
 
 class StartRequest(pdt.BaseModel):
     tune: str
-    config: str
+    config: Optional[str]
     instrument_model: str
+    repetitions: int
+    transpose: int
     tempo: int
 
 
@@ -33,7 +35,7 @@ class TunesResponse(pdt.BaseModel):
 
 
 class ConfigsResponse(pdt.BaseModel):
-    default_config: ConfigInfo
+    default_config: Optional[ConfigInfo]
     configs: list[ConfigInfo]
 
 

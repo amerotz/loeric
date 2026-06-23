@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loeric</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Loeric</title>
+        <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
         :root {
             --bg-dark: #0f0f0f;
@@ -59,23 +59,31 @@
             background: var(--bg-input);
             border: 1px solid var(--border);
             border-radius: 0.25rem;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+
             font-family: 'Courier New', monospace;
             font-size: 0.75rem;
-            text-align: center;
         }
 
         .status-display .label {
-            color: var(--text-secondary);
-            display: block;
+            margin: 0;
             font-size: 0.65rem;
-            margin-bottom: 0.25rem;
+            color: var(--text-secondary);
         }
 
         .status-display .value {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
             color: var(--accent);
             font-weight: 600;
             letter-spacing: 0.1em;
-            min-height: 1.2rem;
+            min-height: unset;
         }
 
         .status-display.running .value {
@@ -334,347 +342,497 @@
                 transition-duration: 0.01ms !important;
             }
         }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>◆ Loeric ◆</h1>
-        <div class="status-display">
-            <span class="label">Status</span>
-            <div class="value">
-                <span class="status-indicator"></span>
-                <span id="statusText">Idle</span>
-            </div>
-        </div>
-    </div>
 
-    <div class="content">
-        <div id="errorMessage" class="error-message"></div>
-        <div id="successMessage" class="success-message"></div>
-
-        <!-- Tune, Config, Instrument Selection -->
-        <div class="section-grid">
-            <!-- Tune Selection -->
-            <div class="panel">
-                <label class="panel-title">Tune</label>
-                <div class="form-group">
-                    <select id="tuneSelect">
-                        <option value="">Loading tunes...</option>
-                    </select>
-                </div>
-                <div class="info-text">Select a composition to run</div>
-            </div>
-
-            <!-- Configuration -->
-            <div class="panel">
-                <label class="panel-title">Configuration</label>
-                <div class="form-group">
-                    <select id="configSelect">
-                        <option value="">Loading...</option>
-                    </select>
-                </div>
-                <div class="info-text">Select configuration preset</div>
-            </div>
-        </div>
-
-        <!-- Instrument Model Selection -->
-        <div class="section-grid">
-            <div class="panel">
-                <label class="panel-title">Instrument Model (TODO)</label>
-                <div class="form-group">
-                    <select id="instrumentSelect">
-                        <option value="">Loading instruments...</option>
-                    </select>
-                </div>
-                <div class="info-text">Choose the instrument voice to synthesize</div>
-            </div>
-            <div class="panel">
-                <label class="panel-title">Repeats (TODO)</label>
-                <div class="form-group">
-                    <input id="repetitionInput" type="number" min=1 value=1></input>
-                </div>
-                <div class="info-text">Choose the number of repetitions for the tune</div>
-            </div>
-        </div>
-
-        <!-- Tempo Control -->
-        <div class="panel">
-            <label class="panel-title">Tempo</label>
-            <div class="form-group">
-                <div class="slider-label">
-                    <span>Quarters Per Minute</span>
-                    <span class="slider-label-value" id="tempoValue">160</span>
-                </div>
-                <input type="range" id="tempoSlider" min="40" max="250" value="160">
-            </div>
-        </div>
-
-        <!-- Controls -->
-        <div class="panel">
-            <div class="button-group">
-                <button id="startBtn" class="btn-primary">Start</button>
-                <button id="stopBtn" class="btn-danger">Stop/Pause</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // API base URL - adjust if FastAPI is on different host/port
-        const API_BASE = '';
-
-        // State
-        let state = {
-            running: false,
-            currentTune: null,
-            currentConfig: null,
-            currentInstrument: null,
-            tempo: 100
-        };
-
-        // DOM Elements
-        const elements = {
-            tuneSelect: document.getElementById('tuneSelect'),
-            configSelect: document.getElementById('configSelect'),
-            instrumentSelect: document.getElementById('instrumentSelect'),
-            tempoSlider: document.getElementById('tempoSlider'),
-            startBtn: document.getElementById('startBtn'),
-            stopBtn: document.getElementById('stopBtn'),
-            statusText: document.getElementById('statusText'),
-            statusIndicator: document.querySelector('.status-indicator'),
-            errorMessage: document.getElementById('errorMessage'),
-            successMessage: document.getElementById('successMessage'),
-            tempoValue: document.getElementById('tempoValue')
-        };
-
-        // Utility functions
-        function showError(message) {
-            elements.errorMessage.textContent = message;
-            elements.errorMessage.classList.add('show');
-            setTimeout(() => {
-                elements.errorMessage.classList.remove('show');
-            }, 5000);
+        .number-control {
+            display: grid;
+            grid-template-columns: 3rem 1fr 3rem;
+            gap: 0.5rem;
+            align-items: center;
         }
 
-        function showSuccess(message) {
-            elements.successMessage.textContent = message;
-            elements.successMessage.classList.add('show');
-            setTimeout(() => {
-                elements.successMessage.classList.remove('show');
-            }, 3000);
+        .number-control-btn,
+        .number-control-input {
+            height: 2.75rem;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            font-family: inherit;
+            text-align: center;
         }
 
-        async function apiCall(endpoint, method = 'GET', data = null) {
-            try {
-                const options = {
-                    method,
-                    headers: {
-                        'Content-Type': 'application/json'
+        .number-control-btn {
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .number-control-input {
+            width: 100%;
+            appearance: textfield;
+        }
+
+        .number-control-input::-webkit-outer-spin-button,
+        .number-control-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        @media (hover: hover) {
+            .number-control-btn:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+                background: var(--bg-panel);
+            }
+        }
+
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="status-display">
+                <h1>LOERIC</h1>
+                <span class="label">Status</span>
+                <div class="value">
+                    <span class="status-indicator"></span>
+                    <span id="statusText">Idle</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="errorMessage" class="error-message"></div>
+            <div id="successMessage" class="success-message"></div>
+
+            <!-- Tune, Config, Instrument Selection -->
+            <div class="section-grid">
+                <!-- Tune Selection -->
+                <div class="panel">
+                    <label class="panel-title">Tune</label>
+                    <div class="form-group">
+                        <select id="tuneSelect">
+                            <option value="">Loading tunes...</option>
+                        </select>
+                    </div>
+                    <div class="info-text">Select a tune</div>
+                </div>
+
+                <!-- Configuration -->
+                <div class="panel">
+                    <label class="panel-title">Configuration</label>
+                    <div class="form-group">
+                        <select id="configSelect">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    <div class="info-text">Select configuration preset</div>
+                </div>
+            </div>
+
+            <!-- Instrument Model Selection -->
+            <div class="section-grid">
+                <div class="panel">
+                    <label class="panel-title">Instrument Model</label>
+                    <div class="form-group">
+                        <select id="instrumentSelect">
+                            <option value="">Loading instruments...</option>
+                        </select>
+                    </div>
+                    <div class="info-text">Choose the instrument model</div>
+                </div>
+
+
+                <div class="panel repeats-panel">
+                    <label class="panel-title">Repeats</label>
+
+                    <div class="number-control">
+                        <button
+                            id="decRepeatBtn"
+                            class="number-control-btn"
+                            type="button">−</button>
+
+                        <input
+                            id="repetitionInput"
+                            class="number-control-input"
+                            type="number"
+                            min="1"
+                            value="1">
+
+                        <button
+                            id="incRepeatBtn"
+                            class="number-control-btn"
+                            type="button">+</button>
+                    </div>
+
+                    <div class="info-text">Choose number of repetitions</div>
+                </div>
+
+                <div class="panel transpose-panel">
+                    <label class="panel-title">Transpose</label>
+
+                    <div class="number-control">
+                        <button
+                            id="decTransposeBtn"
+                            class="number-control-btn"
+                            type="button">−</button>
+
+                        <input
+                            id="transposeInput"
+                            class="number-control-input"
+                            type="number"
+                            min="-24"
+                            max="24"
+                            value="0">
+
+                        <button
+                            id="incTransposeBtn"
+                            class="number-control-btn"
+                            type="button">+</button>
+                    </div>
+
+                    <div class="info-text">Semitone offset</div>
+                </div>
+
+
+            </div>
+
+            <!-- Tempo Control -->
+            <div class="panel">
+                <label class="panel-title">Tempo</label>
+                <div class="form-group">
+                    <div class="slider-label">
+                        <span>Quarters Per Minute</span>
+                        <span class="slider-label-value" id="tempoValue">160</span>
+                    </div>
+                    <input type="range" id="tempoSlider" min="40" max="250" value="160">
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="panel">
+                <div class="button-group">
+                    <button id="startBtn" class="btn-primary">Start</button>
+                    <button id="stopBtn" class="btn-danger">Stop/Pause</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // API base URL - adjust if FastAPI is on different host/port
+            const API_BASE = '';
+
+            // State
+            let state = {
+                running: false,
+                currentTune: null,
+                currentConfig: null,
+                currentInstrument: null,
+                repetitions: 1,
+                transpose: 0,
+                tempo: 160
+            };
+
+            // DOM Elements
+            const elements = {
+                tuneSelect: document.getElementById('tuneSelect'),
+                configSelect: document.getElementById('configSelect'),
+                instrumentSelect: document.getElementById('instrumentSelect'),
+                repetitionInput :document.getElementById("repetitionInput"),
+                decBtn : document.getElementById('decRepeatBtn'),
+                incBtn : document.getElementById('incRepeatBtn'),
+                tempoSlider: document.getElementById('tempoSlider'),
+                startBtn: document.getElementById('startBtn'),
+                stopBtn: document.getElementById('stopBtn'),
+                statusText: document.getElementById('statusText'),
+                statusIndicator: document.querySelector('.status-indicator'),
+                errorMessage: document.getElementById('errorMessage'),
+                successMessage: document.getElementById('successMessage'),
+                tempoValue: document.getElementById('tempoValue'),
+                transposeInput : document.getElementById('transposeInput'),
+                decTransposeBtn : document.getElementById('decTransposeBtn'),
+                incTransposeBtn : document.getElementById('incTransposeBtn'),
+            };
+
+            // Utility functions
+            function showError(message) {
+                elements.errorMessage.textContent = message;
+                elements.errorMessage.classList.add('show');
+                setTimeout(() => {
+                    elements.errorMessage.classList.remove('show');
+                }, 5000);
+            }
+
+            function showSuccess(message) {
+                elements.successMessage.textContent = message;
+                elements.successMessage.classList.add('show');
+                setTimeout(() => {
+                    elements.successMessage.classList.remove('show');
+                }, 3000);
+            }
+
+            async function apiCall(endpoint, method = 'GET', data = null) {
+                try {
+                    const options = {
+                        method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    };
+                    if (data) {
+                        options.body = JSON.stringify(data);
                     }
-                };
-                if (data) {
-                    options.body = JSON.stringify(data);
+                    const response = await fetch(`${API_BASE}${endpoint}`, options);
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.detail || 'Request failed');
+                    }
+                    return await response.json();
+                } catch (error) {
+                    showError(error.message);
+                    throw error;
                 }
-                const response = await fetch(`${API_BASE}${endpoint}`, options);
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Request failed');
-                }
-                return await response.json();
-            } catch (error) {
-                showError(error.message);
-                throw error;
-            }
-        }
-
-        function updateUI() {
-            elements.startBtn.disabled = state.running || !state.currentTune;
-            elements.stopBtn.disabled = !state.currentTune || !state.running;
-
-            elements.statusIndicator.classList.toggle('active', state.running);
-            elements.statusText.textContent = state.running ? 'Running' : 'Idle';
-
-            const statusDisplay = document.querySelector('.status-display');
-            statusDisplay.classList.toggle('running', state.running);
-
-            elements.tuneSelect.disabled = state.running;
-            elements.configSelect.disabled = state.running;
-            elements.instrumentSelect.disabled = state.running;
-            elements.tempoSlider.disabled = state.running;
-        }
-
-        // Load tunes using GET
-        async function loadTunes() {
-            try {
-                const response = await apiCall('/api/tunes', 'GET');
-                elements.tuneSelect.innerHTML = '';
-                if (response.tunes.length === 0) {
-                    elements.tuneSelect.innerHTML = '<option value="">No tunes found</option>';
-                } else {
-                    elements.tuneSelect.innerHTML = '<option value="">Select a tune...</option>';
-                    response.tunes.forEach(tune => {
-                        const option = document.createElement('option');
-                        option.value = tune.id;
-                        option.textContent = tune.name;
-                        elements.tuneSelect.appendChild(option);
-                    });
-                }
-            } catch (error) {
-                elements.tuneSelect.innerHTML = '<option value="">Error loading tunes</option>';
-            }
-        }
-
-        // Load configs for a tune using GET
-        async function loadConfigs(tuneId) {
-            if (!tuneId) {
-                elements.configSelect.innerHTML = '<option value="">Select a tune first</option>';
-                state.currentConfig = null;
-                return;
             }
 
-            try {
-                const response = await apiCall(`/api/configs/${tuneId}`, 'GET');
-                elements.configSelect.innerHTML = '';
+            function updateUI() {
+                elements.startBtn.disabled = state.running || !state.currentTune;
+                elements.stopBtn.disabled = !state.currentTune || !state.running;
 
-                // Add default config first
-                if (response.default_config) {
+                elements.statusIndicator.classList.toggle('active', state.running);
+                elements.statusText.textContent = state.running ? 'Running' : 'Idle';
+
+                const statusDisplay = document.querySelector('.status-display');
+                statusDisplay.classList.toggle('running', state.running);
+
+                elements.tuneSelect.disabled = state.running;
+                elements.configSelect.disabled = state.running;
+                elements.instrumentSelect.disabled = state.running;
+                elements.tempoSlider.disabled = state.running;
+            }
+
+            // Load tunes using GET
+            async function loadTunes() {
+                try {
+                    const response = await apiCall('/api/tunes', 'GET');
+                    elements.tuneSelect.innerHTML = '';
+                    if (response.tunes.length === 0) {
+                        elements.tuneSelect.innerHTML = '<option value="">No tunes found</option>';
+                    } else {
+                        elements.tuneSelect.innerHTML = '<option value="">Select a tune...</option>';
+                        response.tunes.forEach(tune => {
+                            const option = document.createElement('option');
+                            option.value = tune.id;
+                            option.textContent = tune.name;
+                            elements.tuneSelect.appendChild(option);
+                        });
+                    }
+                } catch (error) {
+                    elements.tuneSelect.innerHTML = '<option value="">Error loading tunes</option>';
+                }
+            }
+
+            // Load configs for a tune using GET
+            async function loadConfigs(tuneId) {
+                if (!tuneId) {
+                    elements.configSelect.innerHTML = '<option value="">Select a tune first</option>';
+                    state.currentConfig = null;
+                    return;
+                }
+
+                try {
+                    const response = await apiCall(`/api/configs/${tuneId}`, 'GET');
+                    elements.configSelect.innerHTML = '';
+
+                    // Add default config first
                     const option = document.createElement('option');
-                    option.value = response.default_config.id;
-                    option.textContent = `${response.default_config.name} (default)`;
+                    // if we have a specific default, link the config path
+                    if (response.default_config) {
+                        option.value = response.default_config.id;
+                        state.currentConfig = response.default_config.id;
+                    } else {
+                        option.value = "default";
+                        state.currentConfig = null
+                    }
+                    option.textContent = `Default`
                     option.selected = true;
                     elements.configSelect.appendChild(option);
-                    state.currentConfig = response.default_config.id;
+
+                    // Add other configs
+                    if (response.configs && response.configs.length > 0) {
+                        response.configs.forEach(config => {
+                            const option = document.createElement('option');
+                            option.value = config.id;
+                            option.textContent = config.name;
+                            elements.configSelect.appendChild(option);
+                        });
+                    }
+                } catch (error) {
+                    elements.configSelect.innerHTML = '<option value="">Error loading configs</option>';
+                    state.currentConfig = null;
                 }
+            }
 
-                // Add other configs
-                if (response.configs && response.configs.length > 0) {
-                    response.configs.forEach(config => {
-                        const option = document.createElement('option');
-                        option.value = config.id;
-                        option.textContent = config.name;
-                        elements.configSelect.appendChild(option);
-                    });
+            // Load instruments using GET
+            async function loadInstruments() {
+                try {
+                    const response = await apiCall('/api/instruments', 'GET');
+                    elements.instrumentSelect.innerHTML = '';
+
+                    if (response.models.length === 0) {
+                        elements.instrumentSelect.innerHTML = '<option value="">No instruments found</option>';
+                    } else {
+                        elements.instrumentSelect.innerHTML = '<option value="">Select an instrument...</option>';
+                        response.models.forEach(instrument => {
+                            const option = document.createElement('option');
+                            option.value = instrument.id;
+                            option.textContent = instrument.name;
+                            elements.instrumentSelect.appendChild(option);
+                        });
+                    }
+                } catch (error) {
+                    elements.instrumentSelect.innerHTML = '<option value="">Error loading instruments</option>';
                 }
-            } catch (error) {
-                elements.configSelect.innerHTML = '<option value="">Error loading configs</option>';
-                state.currentConfig = null;
             }
-        }
 
-        // Load instruments using GET
-        async function loadInstruments() {
-            try {
-                const response = await apiCall('/api/instruments', 'GET');
-                elements.instrumentSelect.innerHTML = '';
-
-                if (response.models.length === 0) {
-                    elements.instrumentSelect.innerHTML = '<option value="">No instruments found</option>';
-                } else {
-                    elements.instrumentSelect.innerHTML = '<option value="">Select an instrument...</option>';
-                    response.models.forEach(instrument => {
-                        const option = document.createElement('option');
-                        option.value = instrument.id;
-                        option.textContent = instrument.name;
-                        elements.instrumentSelect.appendChild(option);
-                    });
+            // Event listeners
+            elements.tuneSelect.addEventListener('change', async (e) => {
+                state.currentTune = e.target.value;
+                if (state.currentTune) {
+                    await loadConfigs(state.currentTune);
                 }
-            } catch (error) {
-                elements.instrumentSelect.innerHTML = '<option value="">Error loading instruments</option>';
-            }
-        }
-
-        // Event listeners
-        elements.tuneSelect.addEventListener('change', async (e) => {
-            state.currentTune = e.target.value;
-            if (state.currentTune) {
-                await loadConfigs(state.currentTune);
-            }
-            updateUI();
-        });
-
-        elements.configSelect.addEventListener('change', (e) => {
-            state.currentConfig = e.target.value;
-        });
-
-        elements.instrumentSelect.addEventListener('change', (e) => {
-            state.currentInstrument = e.target.value;
-        });
-
-        elements.tempoSlider.addEventListener('input', (e) => {
-            state.tempo = parseInt(e.target.value);
-            elements.tempoValue.textContent = state.tempo;
-        });
-
-        elements.startBtn.addEventListener('click', async () => {
-            if (!state.currentTune) {
-                showError('Please select a tune first');
-                return;
-            }
-            if (!state.currentInstrument) {
-                showError('Please select an instrument');
-                return;
-            }
-            try {
-                elements.startBtn.classList.add('loading');
-                const response = await apiCall('/api/start', 'POST', {
-                    tune: state.currentTune,
-                    config: state.currentConfig,
-                    instrument_model: state.currentInstrument,
-                    tempo: state.tempo
-                });
-                state.running = true;
                 updateUI();
-                showSuccess(`Started: ${state.currentTune}`);
-            } catch (error) {
-                showError('Failed to start loeric');
-            } finally {
-                elements.startBtn.classList.remove('loading');
-            }
-        });
+            });
 
-        elements.stopBtn.addEventListener('click', async () => {
-            try {
-                elements.stopBtn.classList.add('loading');
-                await apiCall('/api/stop', 'POST');
-                state.running = false;
-                updateUI();
-                showSuccess('Stopped');
-            } catch (error) {
-                showError('Failed to stop loeric');
-            } finally {
-                elements.stopBtn.classList.remove('loading');
-            }
-        });
+            elements.configSelect.addEventListener('change', (e) => {
+                state.currentConfig = e.target.value;
+            });
 
-        // Poll status periodically using GET
-        async function pollStatus() {
-            try {
-                const response = await apiCall('/api/status', 'GET');
-                if (response.running !== state.running) {
-                    state.running = response.running;
+            elements.instrumentSelect.addEventListener('change', (e) => {
+                state.currentInstrument = e.target.value;
+            });
+
+
+            elements.decBtn.addEventListener('click', () => {
+                state.repetitions = Math.max(1, (state.repetitions || 1) - 1);
+                elements.repetitionInput.value = state.repetitions;
+            });
+
+            elements.incBtn.addEventListener('click', () => {
+                state.repetitions = (state.repetitions || 1) + 1;
+                elements.repetitionInput.value = state.repetitions;
+            });
+
+            elements.repetitionInput.addEventListener('input', (e) => {
+                let value = parseInt(e.target.value, 10);
+
+                if (isNaN(value) || value < 1) {
+                    value = 1;
+                }
+
+                state.repetitions = value;
+                e.target.value = value;
+            });
+
+            elements.decTransposeBtn.addEventListener('click', () => {
+                state.transpose = Math.max(-24, (state.transpose ?? 0) - 1);
+                elements.transposeInput.value = state.transpose;
+            });
+
+            elements.incTransposeBtn.addEventListener('click', () => {
+                state.transpose = Math.min(24, (state.transpose ?? 0) + 1);
+                elements.transposeInput.value = state.transpose;
+            });
+
+            elements.transposeInput.addEventListener('input', (e) => {
+                let value = parseInt(e.target.value, 10);
+
+                if (isNaN(value)) value = 0;
+
+                value = Math.max(-24, Math.min(24, value));
+
+                state.transpose = value;
+                e.target.value = value;
+            });
+
+
+            elements.tempoSlider.addEventListener('input', (e) => {
+                state.tempo = parseInt(e.target.value);
+                elements.tempoValue.textContent = state.tempo;
+            });
+
+            elements.startBtn.addEventListener('click', async () => {
+                if (!state.currentTune) {
+                    showError('Please select a tune first');
+                    return;
+                }
+                if (!state.currentInstrument) {
+                    showError('Please select an instrument');
+                    return;
+                }
+                try {
+                    elements.startBtn.classList.add('loading');
+                    const response = await apiCall('/api/start', 'POST', {
+                        tune: state.currentTune,
+                        config: state.currentConfig,
+                        instrument_model: state.currentInstrument,
+                        tempo: state.tempo,
+                        repetitions: state.repetitions,
+                        transpose: state.transpose,
+                    });
+                    state.running = true;
                     updateUI();
+                    showSuccess(`Started: ${state.currentTune}`);
+                } catch (error) {
+                    showError('Failed to start loeric');
+                } finally {
+                    elements.startBtn.classList.remove('loading');
                 }
-                if (response.current_tune) {
-                    state.currentTune = response.current_tune;
+            });
+
+            elements.stopBtn.addEventListener('click', async () => {
+                try {
+                    elements.stopBtn.classList.add('loading');
+                    await apiCall('/api/stop', 'POST');
+                    state.running = false;
+                    updateUI();
+                    showSuccess('Stopped');
+                } catch (error) {
+                    showError('Failed to stop loeric');
+                } finally {
+                    elements.stopBtn.classList.remove('loading');
                 }
-            } catch (error) {
-                // Silent fail on status poll to avoid spam
+            });
+
+            // Poll status periodically using GET
+            async function pollStatus() {
+                try {
+                    const response = await apiCall('/api/status', 'GET');
+                    if (response.running !== state.running) {
+                        state.running = response.running;
+                        updateUI();
+                    }
+                    if (response.current_tune) {
+                        state.currentTune = response.current_tune;
+                    }
+                } catch (error) {
+                    // Silent fail on status poll to avoid spam
+                }
             }
-        }
 
-        // Initialize
-        function init() {
-            updateUI();
-            loadTunes();
-            loadInstruments();
-            setInterval(pollStatus, 2000);
-        }
+            // Initialize
+            function init() {
+                updateUI();
+                loadTunes();
+                loadInstruments();
+                setInterval(pollStatus, 2000);
+            }
 
-        // Start on DOM ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
-    </script>
-</body>
+            // Start on DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        </script>
+    </body>
 </html>

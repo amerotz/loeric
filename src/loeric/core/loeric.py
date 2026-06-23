@@ -1,5 +1,8 @@
 import logging
+import multiprocessing
+import threading
 import time
+import traceback
 
 import numpy as np
 
@@ -14,123 +17,206 @@ logger = logging.getLogger(__name__)
 
 class LOERIC:
 
-    def __init__(self, config: dict):
-        self._config = config
-        self._player = pl.Player(config["player"])
-        self._mapper = mp.Mapper(config["mapper"])
-        self._groover = gr.Groover(config["modules"])
+    def __init__(self, config: dict, mode: str = "process"):
 
+        assert mode in ["process", "thread"]
+        self._mode = mode
+        self._config = config
         self._tune = None
-        self._contour_manager = None
+        self._tune_type = None
 
         # for performance
-        self._tick = None
-        self._finish = False
         self._qpm = 120
+
+        self._process = None
+
+        if self._mode == "process":
+            self._stop_event = multiprocessing.Event()
+        else:
+            self._stop_event = threading.Event()
 
     def set_tune(self, tune):
         """Assign a tune to LOERIC and calculate the associated contours."""
         self._tune = tune
-        self._contour_manager = cnt.ContourManager(self._config["contours"], tune)
+
+    @staticmethod
+    def infer_tune_type(tune):
+        """Infer tune type from the tune's time signature."""
+        tunes = {
+            "2/2": "reel",
+            "2/4": "polka",
+            "3/4": "waltz",
+            "4/4": "hornpipe",
+            "6/8": "jig",
+            "9/8": "slipjig",
+            "12/8": "slide",
+        }
+        return tunes[tune.time_signatures[0].meter_string]
 
     def set_tempo(self, tempo: int):
         """Set tempo for LOERIC's performance in quarters per minute (QPM). Defaults to 120 QPM."""
         self._qpm = tempo
 
-    def ready(self):
-        """Initialise playback."""
-        assert (
-            self._tune is not None
-        ), "No tune to play. First call 'loeric.set_tune(tune)'"
+    def start(self, wait_for_prompt=False):
+        """Start LOERIC in a new process."""
+        # event to stop playback
+        self._stop_event.clear()
+
+        if self._mode == "process":
+            # event to start playback if wait for prompt
+            start_event = multiprocessing.Event()
+            # event to signal ready state
+            ready_event = multiprocessing.Event()
+            self._process = multiprocessing.Process(
+                target=self._run,
+                args=(
+                    self._config,
+                    self._tune,
+                    self._qpm,
+                    wait_for_prompt,
+                    start_event,
+                    ready_event,
+                    self._stop_event,
+                    self._mode,
+                ),
+            )
+        else:
+            start_event = threading.Event()
+            ready_event = threading.Event()
+            self._process = threading.Thread(
+                target=self._run,
+                args=(
+                    self._config,
+                    self._tune,
+                    self._qpm,
+                    wait_for_prompt,
+                    start_event,
+                    ready_event,
+                    self._stop_event,
+                    self._mode,
+                ),
+            )
+
+        start_event.clear()
+        ready_event.clear()
+
+        self._process.start()
+
+        if wait_for_prompt:
+            ready_event.wait()
+            input("Press any key to start...")
+
+        start_event.set()
+
+    def stop(self):
+        """Stop the LOERIC process."""
+        if self._process is not None:
+            while self._process.is_alive():
+                self._stop_event.set()
+                self._process.join()
+            self._process = None
+
+    def join(self, timeout=None):
+        """Wait for the LOERIC process to complete."""
+        if self._process and self._process.is_alive():
+            self._process.join(timeout)
+
+    @staticmethod
+    def _run(
+        config, tune, qpm, wait_for_prompt, start_event, ready_event, stop_event, mode
+    ):
+        """Create all LOERIC objects and start playback."""
+        if mode == "process":
+            import signal
+
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+        assert tune is not None, "No tune to play. First call 'loeric.set_tune(tune)'"
+
+        ########## INIT THINGS ###############
+
+        contour_manager = cnt.ContourManager(config["contours"], tune)
+        mapper = mp.Mapper(config["mapper"])
+        groover = gr.Groover(config["modules"])
+        player = pl.Player(config["player"])
 
         # init tune related things
-        self._groover.init_key_signature(self._tune.key_signatures[0])
-        self._groover.init_time_signature(self._tune.time_signatures[0])
+        groover.init_key_signature(tune.key_signatures[0])
+        groover.init_time_signature(tune.time_signatures[0])
 
         # tempo
-        start_time = self._tune.start_time.eighth_duration
-        self._groover.set_tempo(self._qpm, start_time)
+        start_time = tune.start_time.eighth_duration
+        groover.set_tempo(qpm, start_time)
 
         # timekeeping
-        self._tick = le.TimeDelta(
-            eighth_duration=start_time - self._groover.lookahead_size
-        )
-        time_division = le.TimeDelta(
-            eighth_duration=le.ONE_OVER_MINIMUM_QUARTER_DIVISION
-        )
-
-        while self._tick < start_time - self._groover.lookahead_size:
-            self._finish = self._player.step(
-                self._mapper,
-                self._contour_manager,
-                self._groover,
-                self._tune,
-                self._tick,
-            )
-            self._tick += time_division
-
-    def start(self, stop_event=None):
-        """Start playback."""
-        assert (
-            self._tune is not None
-        ), "No tune to play. First call 'loeric.set_tune(tune)'"
-        assert (
-            self._contour_manager is not None
-        ), "No contours for current tune. First call 'loeric.set_tune(tune)'"
-
+        tick = le.TimeDelta(eighth_duration=start_time - groover.lookahead_size)
         time_division = le.TimeDelta(
             eighth_duration=le.ONE_OVER_MINIMUM_QUARTER_DIVISION
         )
         time_division_f = time_division.eighth_duration
 
-        # start actual loop
-        while not self._finish:
+        ########## READY PLAYBACK ###############
 
-            if stop_event and stop_event.is_set():
-                logger.info("Stop requested")
-                break
+        try:
+            # run in advance until lookahead is reached
+            while tick < start_time - groover.lookahead_size:
+                finish = player.step(
+                    mapper,
+                    contour_manager,
+                    groover,
+                    tune,
+                    tick,
+                )
+                tick += time_division
 
-            start_time = time.perf_counter()
+            ########## WAIT FOR PROMPT ###############
 
-            self._finish = self._player.step(
-                self._mapper,
-                self._contour_manager,
-                self._groover,
-                self._tune,
-                self._tick,
-                null_events=True,
-            )
+            ready_event.set()
+            if wait_for_prompt:
+                start_event.wait()
 
-            self._tick += time_division
+            ########## PLAY ###############
 
-            # fraction of eight note converted to seconds
-            wait_time = time_division_f * self._player.eighth_duration_seconds
+            # start actual loop
+            finish = False
+            while not finish:
 
-            # compensate loop duration
-            delay_time = time.perf_counter() - start_time
-            if delay_time > wait_time:
-                logger.warning(
-                    f"Computation ({np.round(delay_time,4)}s) is taking more than time interval ({np.round(wait_time,4)}s)!"
+                if stop_event.is_set():
+                    logger.info("Stop requested")
+                    break
+
+                start_time = time.perf_counter()
+
+                # step
+                finish = player.step(
+                    mapper,
+                    contour_manager,
+                    groover,
+                    tune,
+                    tick,
+                    null_events=True,
                 )
 
-            wait_time -= delay_time
-            # cannot wait negative time
-            time.sleep(max(wait_time, 0))
+                tick += time_division
 
-    def reset(self):
-        """Reset LOERIC."""
-        self._player.reset()
-        self._mapper.reset()
-        self._groover.reset()
+                # fraction of eight note converted to seconds
+                wait_time = time_division_f * player.eighth_duration_seconds
 
-        self._tune = None
-        self._contour_manager = None
+                # compensate loop duration
+                delay_time = time.perf_counter() - start_time
+                if delay_time > wait_time:
+                    logger.warning(
+                        f"Computation ({np.round(delay_time,4)}s) is taking more than time interval ({np.round(wait_time,4)}s)!"
+                    )
 
-        # for performance
-        self._tick = None
-        self._finish = False
-        self._qpm = 120
+                wait_time -= delay_time
 
-    @property
-    def contour_manager(self):
-        return self._contour_manager
+                # cannot wait negative time
+                stop_event.wait(max(wait_time, 0))
+
+        except Exception as e:
+            traceback.print_exc(e)
+        finally:
+            player.reset()
+            mapper.reset()
+            groover.reset()

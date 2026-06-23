@@ -4,8 +4,22 @@ import json
 import jsonmerge
 
 
-def process_config(config):
+def join_configs(configs: list[dict]) -> dict:
+    """Merge multiple configuration snippets into one configuration."""
+    config = {}
+    for c in configs:
+        config = merge_configs(config, c)
 
+    return config
+
+
+def process_config(config):
+    """Process configuration variables.
+
+    The ``variables'' object of a configuration allows one to define variables
+    once and use them throughout the config. This utility performs a simple
+    text-based substitution of the variable name with its value.
+    """
     # compile variables by copying them explicitly
     if "variables" in config:
         variables = config["variables"]
@@ -24,6 +38,11 @@ def process_config(config):
 
 
 def merge_configs(original, new_config):
+    """Merge two configuration files.
+
+    This utility merges configuration files by merging each object in them.
+    The contours object is substituted instead.
+    """
     base = copy.deepcopy(original)
 
     base = jsonmerge.merge(base, new_config)
@@ -32,9 +51,5 @@ def merge_configs(original, new_config):
         for c in new_config["contours"]:
             if "recipe" in new_config["contours"][c]:
                 base["contours"][c]["recipe"] = new_config["contours"][c]["recipe"]
-
-    if "control_2_contour" in new_config:
-        if len(new_config["control_2_contour"]) != 0:
-            base["control_2_contour"] = new_config["control_2_contour"]
 
     return base
