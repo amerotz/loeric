@@ -19,17 +19,28 @@ import random
 import sys
 import threading
 import time
+import traceback
 from multiprocessing import shared_memory
 
 import mido
 import numpy as np
 import pandas as pd
-import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtWidgets
 
 import loeric.core.element as le
 
 logger = logging.getLogger(__name__)
+
+try:
+    import pyqtgraph as pg
+    from pyqtgraph.Qt import QtCore, QtWidgets
+
+    PYQT_AVAILABLE = True
+except Exception as e:
+    traceback.print_exc(e)
+    logger.error(
+        "Could not find packages PyQt-related packages. The 'VisualOutput' port will not be available."
+    )
+    PYQT_AVAILABLE = False
 
 
 class OutputInterface:
@@ -50,7 +61,7 @@ class OutputInterface:
                 velocity_range=config["velocity_range"],
                 pitchbend_range=config["pitchbend_range"],
             )
-        elif config["type"] == "visual":
+        elif config["type"] == "visual" and PYQT_AVAILABLE:
             return VisualOutput(
                 width=config["width"],
                 height=config["height"],
@@ -389,104 +400,117 @@ class MIDIOutput(OutputInterface):
                     break
 
 
-class VisualOutput(OutputInterface):
+if PYQT_AVAILABLE:
 
-    def __init__(
-        self, width: int, height: int, window_size: int, fps: int, controls: list[str]
-    ):
+    class VisualOutput(OutputInterface):
 
-        self._width = width
-        self._height = height
-        self._fps = fps
-        self._contours = controls
-        self._time_interval = 1000 // fps
-        self._window_size = window_size
+        def __init__(
+            self,
+            width: int,
+            height: int,
+            window_size: int,
+            fps: int,
+            controls: list[str],
+        ):
 
-        # create gui process
-        self._process = mp.Process(
-            target=self._graphic_loop, name="LOERIC visual", daemon=True
-        )
-        self._process.start()
+            self._width = width
+            self._height = height
+            self._fps = fps
+            self._contours = controls
+            self._time_interval = 1000 // fps
+            self._window_size = window_size
 
-        # create shared memory
-        array = np.ones(len(self._contours), dtype=float)
+            # create gui process
+            self._process = mp.Process(
+                target=self._graphic_loop, name="LOERIC visual", daemon=True
+            )
+            self._process.start()
 
-        self._memory = shared_memory.SharedMemory(
-            name="loeric-visual-shared-memory",
-            create=True,
-            size=sys.getsizeof(array),
-        )
+            # create shared memory
+            array = np.ones(len(self._contours), dtype=float)
 
-        # create shared buffer
-        self._array = np.ndarray(
-            array.shape, dtype=array.dtype, buffer=self._memory.buf
-        )
+            self._memory = shared_memory.SharedMemory(
+                name="loeric-visual-shared-memory",
+                create=True,
+                size=sys.getsizeof(array),
+            )
 
-    def _graphic_loop(self):
+            # create shared buffer
+            self._array = np.ndarray(
+                array.shape, dtype=array.dtype, buffer=self._memory.buf
+            )
 
-        # attach to shared memory
-        array = np.ones(len(self._contours), dtype=float)
-        self._memory = shared_memory.SharedMemory(
-            name="loeric-visual-shared-memory", size=sys.getsizeof(array)
-        )
-        # create shared buffer
-        self._array = np.ndarray(
-            array.shape, dtype=array.dtype, buffer=self._memory.buf
-        )
+        def _graphic_loop(self):
 
-        try:
-            # create app
-            app = QtWidgets.QApplication([])
+            # attach to shared memory
+            array = np.ones(len(self._contours), dtype=float)
+            self._memory = shared_memory.SharedMemory(
+                name="loeric-visual-shared-memory", size=sys.getsizeof(array)
+            )
+            # create shared buffer
+            self._array = np.ndarray(
+                array.shape, dtype=array.dtype, buffer=self._memory.buf
+            )
 
-            win = pg.GraphicsLayoutWidget(show=True, size=(self._width, self._height))
-            plot = win.addPlot(title="Real-Time Signal")
-            plot.enableAutoRange(y=False)
-            plot.setYRange(0, 1)
+            try:
+                # create app
+                app = QtWidgets.QApplication([])
 
-            self._curves = {
-                c: plot.plot(
-                    pen=pg.mkPen("#{:06x}".format(random.randint(0, 0xFFFFFF)), width=2)
+                win = pg.GraphicsLayoutWidget(
+                    show=True, size=(self._width, self._height)
                 )
-                for c in self._contours
-            }
+                plot = win.addPlot(title="Real-Time Signal")
+                plot.enableAutoRange(y=False)
+                plot.setYRange(0, 1)
 
-            self._x = np.arange(self._window_size)
-            self._ys = {c: np.zeros(self._window_size) for c in self._contours}
+                self._curves = {
+                    c: plot.plot(
+                        pen=pg.mkPen(
+                            "#{:06x}".format(random.randint(0, 0xFFFFFF)), width=2
+                        )
+                    )
+                    for c in self._contours
+                }
 
-            self._timer = QtCore.QTimer()
-            self._timer.timeout.connect(self._update)
-            self._timer.start(self._time_interval)  # ~60 FPS
+                self._x = np.arange(self._window_size)
+                self._ys = {c: np.zeros(self._window_size) for c in self._contours}
 
-            app.exec()
-        except Exception:
+                self._timer = QtCore.QTimer()
+                self._timer.timeout.connect(self._update)
+                self._timer.start(self._time_interval)  # ~60 FPS
+
+                app.exec()
+            except Exception:
+                self._memory.close()
+
+        def _update(self):
+
+            for i, c in enumerate(self._contours):
+                self._ys[c][:-1] = self._ys[c][1:]
+                self._ys[c][-1] = self._array[i]
+                self._curves[c].setData(self._x, self._ys[c])
+
+        def play_events(
+            self, events: list[le.LOERICElement], tick: le.TimeDelta | float
+        ):
+            """Send events to the output."""
+            pass
+
+        def reset(self):
+            """Reset output state."""
+            while self._process.is_alive():
+                self._process.terminate()
+            self._process.close()
             self._memory.close()
+            self._memory.unlink()
 
-    def _update(self):
+        def done(self):
+            return True
 
-        for i, c in enumerate(self._contours):
-            self._ys[c][:-1] = self._ys[c][1:]
-            self._ys[c][-1] = self._array[i]
-            self._curves[c].setData(self._x, self._ys[c])
-
-    def play_events(self, events: list[le.LOERICElement], tick: le.TimeDelta | float):
-        """Send events to the output."""
-        pass
-
-    def reset(self):
-        """Reset output state."""
-        while self._process.is_alive():
-            self._process.terminate()
-        self._process.close()
-        self._memory.close()
-        self._memory.unlink()
-
-    def done(self):
-        return True
-
-    def set(self, contour_values):
-        for i, c in enumerate(self._contours):
-            if c in self._contours:
-                self._array[i] = contour_values[c]
+        def set(self, contour_values):
+            for i, c in enumerate(self._contours):
+                if c in self._contours:
+                    self._array[i] = contour_values[c]
 
 
 class DataOutput(OutputInterface):
