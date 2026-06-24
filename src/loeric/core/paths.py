@@ -1,3 +1,19 @@
+# This file is part of LOERIC.
+#
+# LOERIC is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# LOERIC is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+
+
 import logging
 import typing
 from dataclasses import dataclass
@@ -20,14 +36,14 @@ def readonly(attr: str):
     return decorator
 
 
-def expose(private: str, public: str):
-    """Class decorator that adds a property aliasing private -> public."""
-
+def expose(private: str, public: str, validator=None):
     def decorator(cls):
         def getter(self):
             return getattr(self, private)
 
         def setter(self, value):
+            if validator is not None and not validator(value):
+                raise ValueError(f"Invalid value {value!r} for '{public}'")
             setattr(self, private, value)
 
         prop = property(getter, setter)

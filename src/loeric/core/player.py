@@ -142,6 +142,7 @@ class Player:
         if finished:
             for o in self._output_interfaces:
                 finished = finished and self._output_interfaces[o].done()
+            print(finished)
 
         return finished
 

@@ -1,3 +1,19 @@
+# This file is part of LOERIC.
+#
+# LOERIC is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# LOERIC is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+
+
 import faulthandler
 import logging
 import multiprocessing
@@ -99,7 +115,7 @@ class LOERIC:
             # event to signal ready state
             ready_event = multiprocessing.Event()
             self._process = multiprocessing.Process(
-                target=self._run,
+                target=LOERIC._run,
                 args=(
                     self._config,
                     self._tune,
@@ -113,7 +129,7 @@ class LOERIC:
         else:
             ready_event = threading.Event()
             self._process = threading.Thread(
-                target=self._run,
+                target=LOERIC._run,
                 args=(
                     self._config,
                     self._tune,
@@ -138,9 +154,15 @@ class LOERIC:
     def stop(self):
         """Stop the LOERIC process."""
         if self._process is not None:
+
+            # make sure that the process is not stuck
+            # waiting for start
+            self._command_queue.put(LOERICCommand(command="start"))
+
             while self._process.is_alive():
                 self._command_queue.put(LOERICCommand(command="stop"))
                 self._process.join()
+
             self._process = None
 
     def join(self, timeout=None):
@@ -154,7 +176,7 @@ class LOERIC:
         tune,
         qpm,
         wait_for_prompt,
-        queue,
+        command_queue,
         ready_event,
         mode,
     ):
@@ -197,16 +219,15 @@ class LOERIC:
 
         def wait_for_command(command):
             while True:
-                cmd = queue.get()
+                cmd = command_queue.get()
                 if cmd.command == command:
                     return cmd
 
         def handle_command(cmd: LOERICCommand):
+            logger.info(f"Received command: {cmd}")
             if cmd.command == "stop":
-                logger.info("Stop requested")
                 return True  # signal caller to break
             if cmd.command == "tempo":
-                logger.info("Tempo change")
                 groover.set_tempo(cmd.payload["tempo"], tick.eighth_duration)
             elif cmd.command == "set":
                 path: lp.LOERICPath = cmd.payload["path"]
@@ -247,8 +268,8 @@ class LOERIC:
 
                 # commands
                 cmd = None
-                if not queue.empty():
-                    cmd = queue.get_nowait()
+                if not command_queue.empty():
+                    cmd = command_queue.get_nowait()
                     logger.debug(cmd)
                     if handle_command(cmd):
                         break
@@ -282,8 +303,8 @@ class LOERIC:
                 # cannot wait negative time
                 time.sleep(max(wait_time, 0))
 
-        except Exception as e:
-            traceback.print_exc(e)
+        except Exception:
+            traceback.print_exc()
         finally:
             player.reset()
             mapper.reset()
