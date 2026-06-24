@@ -19,7 +19,6 @@ import random
 import sys
 import threading
 import time
-import traceback
 from multiprocessing import shared_memory
 
 import mido
@@ -35,8 +34,7 @@ try:
     from pyqtgraph.Qt import QtCore, QtWidgets
 
     PYQT_AVAILABLE = True
-except Exception as e:
-    traceback.print_exc(e)
+except Exception:
     logger.error(
         "Could not find packages PyQt-related packages. The 'VisualOutput' port will not be available."
     )
@@ -45,15 +43,18 @@ except Exception as e:
 
 class OutputInterface:
 
-    _contour_values = {}
+    def __init__(self, name):
+        self._contour_values = {}
+        self._name = name
 
     @staticmethod
-    def create_output(config: dict):
+    def create_output(config: dict, name=None):
 
         if not config["active"]:
             return None
         if config["type"] == "midi":
             return MIDIOutput(
+                name=name,
                 port=config["port"],
                 controls=config["controls"],
                 send_cc=config["send_cc"],
@@ -63,6 +64,7 @@ class OutputInterface:
             )
         elif config["type"] == "visual" and PYQT_AVAILABLE:
             return VisualOutput(
+                name=name,
                 width=config["width"],
                 height=config["height"],
                 window_size=config["window_size"],
@@ -71,6 +73,7 @@ class OutputInterface:
             )
         elif config["type"] == "data":
             return DataOutput(
+                name=name,
                 file_format=config["format"],
                 path=config["path"],
                 controls=config["controls"],
@@ -136,6 +139,7 @@ class MIDIOutput(OutputInterface):
 
     def __init__(
         self,
+        name: str,
         port: str,
         controls: dict,
         send_cc: bool,
@@ -143,6 +147,8 @@ class MIDIOutput(OutputInterface):
         velocity_range: list[int],
         pitchbend_range: int,
     ):
+
+        super().__init__(name)
 
         self._out = mido.open_output(port)
         self._contour_values = {}
@@ -406,12 +412,15 @@ if PYQT_AVAILABLE:
 
         def __init__(
             self,
+            name: str,
             width: int,
             height: int,
             window_size: int,
             fps: int,
             controls: list[str],
         ):
+
+            super().__init__(name)
 
             self._width = width
             self._height = height
@@ -515,7 +524,9 @@ if PYQT_AVAILABLE:
 
 class DataOutput(OutputInterface):
 
-    def __init__(self, file_format: str, path: str, contours: list[str]):
+    def __init__(self, name: str, file_format: str, path: str, contours: list[str]):
+
+        super().__init__(name)
 
         self._format = file_format
         self._path = path

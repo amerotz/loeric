@@ -177,7 +177,8 @@ async def start_loeric(
     transpose: int,
     config: str,
     instrument_model: str,
-    tempo: int,
+    tempo: float,
+    responsiveness: float,
 ) -> bool:
     """Start loeric with the specified tune and parameters.
 
@@ -200,6 +201,7 @@ async def start_loeric(
             "instrument": instrument_model,
             "repetitions": repetitions,
             "transpose": transpose,
+            "responsiveness": responsiveness,
         }
 
         # open base config
@@ -309,6 +311,19 @@ async def tempo_change(qpm: float):
     return await get_status()
 
 
+@app.post("/api/responsiveness/{value}", response_model=lsm.StatusResponse)
+async def responsiveness_change(value: float):
+    """POST /api/responsiveness/{value} - Change LOERIC's responsiveness."""
+    global musician
+    if musician:
+        musician.set_attribute(
+            "player/input/mic_input/analysers/loudness/responsiveness", value
+        )
+
+    state.parameters["responsiveness"] = value
+    return await get_status()
+
+
 @app.post("/api/start")
 async def start(request: lsm.StartRequest):
     """POST /api/start - Start loeric with specified tune and parameters."""
@@ -323,6 +338,7 @@ async def start(request: lsm.StartRequest):
             config=request.config,
             instrument_model=request.instrument_model,
             tempo=request.tempo,
+            responsiveness=request.responsiveness,
         )
         return {
             "status": "started",
@@ -332,6 +348,7 @@ async def start(request: lsm.StartRequest):
             "config": request.config,
             "instrument": request.instrument_model,
             "tempo": request.tempo,
+            "responsiveness": request.responsiveness,
         }
     except Exception as e:
         logger.error(f"Start failed: {e}")
@@ -370,6 +387,7 @@ async def get_status():
 # ============================================================================
 
 
+# TODO change this behaviour
 @app.get("/")
 async def index():
     """Serve the main GUI."""
@@ -391,7 +409,7 @@ def main():
     parser.add_argument(
         "-d",
         "--device",
-        help="Load device-specific configs (options: ['mandaloeric']",
+        help="Load device-specific configs (options: ['mandaloeric']).",
         type=str,
         default=None,
     )

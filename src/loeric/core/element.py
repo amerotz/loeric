@@ -15,12 +15,13 @@
 
 import heapq as hq
 import logging
+import os
 from dataclasses import dataclass
 from functools import cached_property
 
 import numpy as np
 
-MINIMUM_QUARTER_DIVISION = 48
+MINIMUM_QUARTER_DIVISION = int(os.getenv("LOERIC_QUARTER_DIVISION", 48))
 ONE_OVER_MINIMUM_QUARTER_DIVISION = 1 / MINIMUM_QUARTER_DIVISION
 NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
 CHORDS = {

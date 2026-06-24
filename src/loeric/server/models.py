@@ -16,6 +16,7 @@ class StartRequest(pdt.BaseModel):
     instrument_model: str
     repetitions: int
     transpose: int
+    responsiveness: float
     tempo: int
 
 

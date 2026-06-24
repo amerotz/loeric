@@ -24,23 +24,29 @@
 import loeric.core.element as le
 import loeric.core.inputs as li
 import loeric.core.outputs as lo
+import loeric.core.paths as lp
 
 
+@lp.expose("_input_interfaces", "input")
+@lp.expose("_output_interfaces", "output")
 class Player:
+
+    _input_interfaces: dict[li.InputInterface]
+    _output_interfaces: dict[li.OutputInterface]
 
     def __init__(self, config):
 
-        self._input_interfaces = []
+        self._input_interfaces = {}
         for i in config["input"]:
-            interface = li.InputInterface.create_input(config["input"][i])
+            interface = li.InputInterface.create_input(config["input"][i], name=i)
             if interface is not None:
-                self._input_interfaces.append(interface)
+                self._input_interfaces[i] = interface
 
-        self._output_interfaces = []
+        self._output_interfaces = {}
         for o in config["output"]:
-            interface = lo.OutputInterface.create_output(config["output"][o])
+            interface = lo.OutputInterface.create_output(config["output"][o], name=o)
             if interface is not None:
-                self._output_interfaces.append(interface)
+                self._output_interfaces[o] = interface
 
         self._tempo = le.Tempo(qpm=120)
         self._message_queue = le.LOERICQueue()
@@ -65,28 +71,24 @@ class Player:
     def _play_events(self, events: list[le.LOERICElement], tick):
 
         for o in self._output_interfaces:
-            o.play_events(events, tick)
+            self._output_interfaces[o].play_events(events, tick)
 
     def reset(self):
         """Close all interfaces."""
         for i in self._input_interfaces:
-            i.reset()
+            self._input_interfaces[i].reset()
         for o in self._output_interfaces:
-            o.reset()
-
-    @property
-    def eighth_duration_seconds(self) -> float:
-        return 30 / self._tempo.qpm
+            self._output_interfaces[o].reset()
 
     def _get(self):
         val = {}
-        for interface in self._input_interfaces:
-            val |= interface.get()
+        for i in self._input_interfaces:
+            val |= self._input_interfaces[i].get()
         return val
 
     def _set(self, contour_values: dict):
         for o in self._output_interfaces:
-            o.set(contour_values)
+            self._output_interfaces[o].set(contour_values)
 
     def step(self, mapper, contour_manager, groover, tune, tick, null_events=False):
 
@@ -139,6 +141,10 @@ class Player:
 
         if finished:
             for o in self._output_interfaces:
-                finished = finished and o.done()
+                finished = finished and self._output_interfaces[o].done()
 
         return finished
+
+    @property
+    def eighth_duration_seconds(self) -> float:
+        return 30 / self._tempo.qpm

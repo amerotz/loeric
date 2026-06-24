@@ -1,3 +1,4 @@
+import faulthandler
 import logging
 import multiprocessing
 import queue
@@ -12,7 +13,11 @@ import loeric.core.contour as cnt
 import loeric.core.element as le
 import loeric.core.groover as gr
 import loeric.core.mapper as mp
+import loeric.core.paths as lp
 import loeric.core.player as pl
+
+faulthandler.enable()
+# bad code goes here
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +80,14 @@ class LOERIC:
         self._qpm = tempo
         self._command_queue.put(
             LOERICCommand(command="tempo", payload={"tempo": tempo})
+        )
+
+    def set_attribute(self, path: str, value: float):
+        self._command_queue.put(
+            LOERICCommand(
+                command="set",
+                payload={"path": lp.LOERICPath(path=path), "value": value},
+            )
         )
 
     def start(self, wait_for_prompt=False):
@@ -160,6 +173,13 @@ class LOERIC:
         groover = gr.Groover(config["modules"])
         player = pl.Player(config["player"])
 
+        roots = {
+            "player": player,
+            "groover": groover,
+            "mapper": mapper,
+            "contour_manager": contour_manager,
+        }
+
         # init tune related things
         groover.init_key_signature(tune.key_signatures[0])
         groover.init_time_signature(tune.time_signatures[0])
@@ -180,6 +200,23 @@ class LOERIC:
                 cmd = queue.get()
                 if cmd.command == command:
                     return cmd
+
+        def handle_command(cmd: LOERICCommand):
+            if cmd.command == "stop":
+                logger.info("Stop requested")
+                return True  # signal caller to break
+            if cmd.command == "tempo":
+                logger.info("Tempo change")
+                groover.set_tempo(cmd.payload["tempo"], tick.eighth_duration)
+            elif cmd.command == "set":
+                path: lp.LOERICPath = cmd.payload["path"]
+                value = cmd.payload["value"]
+                root_obj = roots.get(path.top)
+                if root_obj is None:
+                    logger.warning(f"Unknown root '{path.top}' in path '{path.path}'")
+                else:
+                    lp.LOERICPath.set(root_obj, path.tail, value)
+            return False  # keep going
 
         ########## READY PLAYBACK ###############
 
@@ -208,21 +245,13 @@ class LOERIC:
             finish = False
             while not finish:
 
+                # commands
                 cmd = None
                 if not queue.empty():
                     cmd = queue.get_nowait()
-
-                if cmd:
-                    print(cmd)
-                    if cmd.command == "stop":
-                        logger.info("Stop requested")
+                    logger.debug(cmd)
+                    if handle_command(cmd):
                         break
-                    elif cmd.command == "tempo":
-                        logger.info("Changed tempo")
-                        groover.set_tempo(
-                            cmd.payload["tempo"],
-                            tick.eighth_duration,
-                        )
 
                 start_time = time.perf_counter()
 

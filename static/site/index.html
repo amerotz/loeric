@@ -509,6 +509,25 @@
                 </div>
             </div>
 
+            <!-- Responsiveness Control -->
+<div class="panel">
+    <label class="panel-title">Responsiveness</label>
+    <div class="form-group">
+        <div class="slider-label">
+            <span>Responsiveness</span>
+            <span class="slider-label-value" id="responsivenessValue">0.50</span>
+        </div>
+
+        <input
+            type="range"
+            id="responsivenessSlider"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.5">
+    </div>
+</div>
+
             <!-- Controls -->
             <div class="panel">
                 <div class="button-group">
@@ -530,7 +549,8 @@
                 currentInstrument: null,
                 repetitions: 1,
                 transpose: 0,
-                tempo: 160
+                tempo: 160,
+                responsiveness: 0.5,
             };
 
             // DOM Elements
@@ -552,6 +572,8 @@
                 transposeInput : document.getElementById('transposeInput'),
                 decTransposeBtn : document.getElementById('decTransposeBtn'),
                 incTransposeBtn : document.getElementById('incTransposeBtn'),
+                responsivenessSlider: document.getElementById('responsivenessSlider'),
+responsivenessValue: document.getElementById('responsivenessValue'),
             };
 
             // Utility functions
@@ -775,6 +797,26 @@
 
             });
 
+            elements.responsivenessSlider.addEventListener('input', async (e) => {
+    state.responsiveness = parseFloat(e.target.value);
+
+    elements.responsivenessValue.textContent =
+        state.responsiveness.toFixed(2);
+
+    try {
+        await apiCall(
+            `/api/responsiveness/${state.responsiveness}`,
+            'POST'
+        );
+
+        showSuccess(
+            `Updated responsiveness to ${state.responsiveness.toFixed(2)}.`
+        );
+    } catch (error) {
+        showError('Failed to update responsiveness.');
+    }
+});
+
             elements.startBtn.addEventListener('click', async () => {
                 if (!state.currentTune) {
                     showError('Please select a tune first');
@@ -793,6 +835,7 @@
                         tempo: state.tempo,
                         repetitions: state.repetitions,
                         transpose: state.transpose,
+                        responsiveness: state.responsiveness
                     });
                     state.running = true;
                     updateUI();
