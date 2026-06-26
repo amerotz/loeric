@@ -377,10 +377,7 @@
         "send_cc": true,
         "send_messages": true,
         "velocity_range": [32, 110],
-        "pitchbend_range": 2,
-        "controls": {
-          "velocity": 11
-        }
+        "pitchbend_range": 2
       }
     }
   },
