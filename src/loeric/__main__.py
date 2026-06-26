@@ -115,7 +115,7 @@ def main():
         musician.join()
 
     except KeyboardInterrupt:
-        print("Playback terminated.")
+        logger.info("Playback terminated.")
     finally:
         musician.stop()
 

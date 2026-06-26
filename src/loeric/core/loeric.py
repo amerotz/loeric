@@ -153,7 +153,7 @@ class LOERIC:
 
     def stop(self):
         """Stop the LOERIC process."""
-        if self._process is not None:
+        if self._process:
 
             # make sure that the process is not stuck
             # waiting for start

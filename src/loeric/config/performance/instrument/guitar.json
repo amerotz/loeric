@@ -1,4 +1,7 @@
 {
+  "variables": {
+    "var_instrument_program": 25
+  },
   "modules": {
     "ornament": {
       "data": {

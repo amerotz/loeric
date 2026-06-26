@@ -15,6 +15,7 @@
 
 import logging
 import multiprocessing as mp
+import os
 import random
 import sys
 import threading
@@ -24,6 +25,8 @@ from multiprocessing import shared_memory
 import mido
 import numpy as np
 import pandas as pd
+import pyaudio
+import tinysoundfont
 
 import loeric.core.element as le
 import loeric.core.paths as lp
@@ -52,6 +55,9 @@ class OutputInterface:
     :meth:`done` interface to the player.
     """
 
+    _active: bool
+    _type: str
+
     def __init__(self, name: str):
         """Initialise the output interface.
 
@@ -73,9 +79,8 @@ class OutputInterface:
         :raises ValueError: if ``config["type"]`` is not recognised.
         """
         if not config["active"]:
-            interface = OutputInterface()
+            interface = OutputInterface(name=None)
             interface._active = False
-            interface._type = config["type"] + "(uninitialised)"
             return interface
 
         if config["type"] == "midi":
@@ -88,6 +93,20 @@ class OutputInterface:
                 velocity_range=config["velocity_range"],
                 pitchbend_range=config["pitchbend_range"],
             )
+        elif config["type"] == "soundfont":
+            return SoundfontOutput(
+                name=name,
+                path=config["path"],
+                program=config["program"],
+                gain=config["gain"],
+                device=config["device"],
+                controls=config["controls"],
+                send_cc=config["send_cc"],
+                send_messages=config["send_messages"],
+                velocity_range=config["velocity_range"],
+                pitchbend_range=config["pitchbend_range"],
+            )
+
         elif config["type"] == "visual" and PYQT_AVAILABLE:
             return VisualOutput(
                 name=name,
@@ -132,7 +151,7 @@ class OutputInterface:
 
         :return: ``True`` if the output queue is empty and the interface is idle.
         """
-        return False
+        return True
 
 
 class MIDIQueue(le.Queue):
@@ -225,7 +244,10 @@ class MIDIOutput(OutputInterface):
     polyphonic voice allocation across 16 channels.
     """
 
+    _send_cc: bool
+    _send_messages: bool
     _velocity_range: list[int]
+    _pitchbend_range: list[int]
     _controls: dict[str, int]
 
     def __init__(
@@ -269,16 +291,17 @@ class MIDIOutput(OutputInterface):
             )
 
         self._type = "midi"
+
         self._port = port
-        self._out = mido.open_output(port)
-        self._contour_values = {}
         self._controls = controls
         self._send_cc = send_cc
         self._send_messages = send_messages
         self._velocity_range = velocity_range
-        self._free_channels = {i: (-np.inf, -np.inf) for i in range(16)}
         self._pitchbend_range = pitchbend_range
 
+        self._out = self._create_output()
+
+        self._free_channels = {i: (-np.inf, -np.inf) for i in range(16)}
         self._message_interval = 1 / 10
         self._done = threading.Event()
         self._out_lock = threading.Lock()
@@ -288,6 +311,9 @@ class MIDIOutput(OutputInterface):
             self._cc_thread.start()
 
         self._queue = MIDIQueue()
+
+    def _create_output(self):
+        return mido.open_output(self._port)
 
     def _midi_cc_thread(self):
         """Background thread that sends CC messages at a fixed rate.
@@ -489,7 +515,7 @@ class MIDIOutput(OutputInterface):
         # stop thread
         self._done.set()
 
-        if self._send_cc:
+        if self._send_cc and self._cc_thread.is_alive():
             self._cc_thread.join(timeout=2.0)
 
         with self._out_lock:
@@ -729,6 +755,10 @@ class DataOutput(OutputInterface):
     Supported formats are listed in :attr:`formats`.
     """
 
+    _path: str
+    _format: str
+    _controls: list[str]
+
     formats: list[str] = [
         "pickle",
         "csv",
@@ -824,3 +854,127 @@ class DataOutput(OutputInterface):
         self._done.set()
 
         return self._done_saving.is_set()
+
+
+class SynthOutput(mido.ports.BaseOutput):
+
+    def __init__(
+        self, name: str, path: str, program: int, gain: float, device: str, **kwargs
+    ):
+
+        self._name = name
+        self._path = path
+        self._program = program
+        self._gain = gain
+
+        self._synth = tinysoundfont.Synth()
+        self._soundfont_id = self._synth.sfload(self._path, gain=self._gain)
+
+        # find audio device index
+        p = pyaudio.PyAudio()
+        device_index = None
+        for i in range(p.get_device_count()):
+            info = p.get_device_info_by_index(i)
+            if device == info["name"]:
+                device_index = i
+                logger.info(f"Found audio device {info['name']} (index={i}).")
+                break
+        p.terminate()
+        if device_index is None:
+            logger.error(f"Audio device {device} not found.")
+
+        # start synth
+        self._synth.start(output_device_index=device_index)
+        self._synth_is_running = True
+
+        # select the right program
+        for channel in range(16):
+            self._synth.program_select(channel, self._soundfont_id, 0, self._program)
+
+        # init the output
+        mido.ports.BaseOutput.__init__(self, name=self._name, **kwargs)
+
+    def _send(self, msg):
+        if msg.type == "note_on":
+            self._synth.noteon(msg.channel, msg.note, msg.velocity)
+        elif msg.type == "note_off":
+            self._synth.noteoff(msg.channel, msg.note)
+        elif msg.type == "pitchwheel":
+            self._synth.pitchbend(msg.channel, msg.pitch + 8192)
+        elif msg.type == "control_change":
+            self._synth.control_change(msg.channel, msg.control, msg.value)
+        else:
+            logger.warning(
+                "\033[38;2;255;255;0m[WARN]\tUnknown MIDI message type: ",
+                msg.type,
+                "\033[0m",
+            )
+
+    def close(self):
+        # unload the soundfont
+        if self._synth_is_running:
+            if self._soundfont_id is not None:
+                self._synth.sfunload(self._soundfont_id)
+
+            # stop the synth
+            self._synth.stop()
+            self._synth_is_running = False
+
+        # close the output port
+        super().close()
+
+
+@lp.readonly("program")
+@lp.readonly("path")
+@lp.readonly("gain")
+@lp.readonly("device")
+class SoundfontOutput(MIDIOutput):
+
+    _program: int
+    _gain: float
+
+    def __init__(
+        self,
+        name: str,
+        path: str,
+        program: int,
+        gain: float,
+        device: str,
+        send_cc: bool,
+        send_messages: bool,
+        velocity_range: list[int],
+        pitchbend_range: int,
+        controls: dict[str, int],
+    ):
+
+        assert os.path.isfile(path), f"'{path}' is not a valid path."
+
+        self._path = path
+        self._program = program
+        self._controls = controls
+        self._gain = gain
+        self._soundfont_id = None
+        self._device = device
+
+        super().__init__(
+            name=name,
+            port=None,
+            controls=controls,
+            send_cc=send_cc,
+            send_messages=send_messages,
+            velocity_range=velocity_range,
+            pitchbend_range=pitchbend_range,
+        )
+
+        # unused
+        del self._port
+
+    def _create_output(self):
+        """Load the soundfont."""
+        return SynthOutput(
+            name="LOERIC Synth",
+            path=self._path,
+            program=self._program,
+            gain=self._gain,
+            device=self._device,
+        )

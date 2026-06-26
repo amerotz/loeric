@@ -50,10 +50,10 @@ threading.Thread(
 PORT = int(os.getenv("LOERIC_WEBAPP_PORT", 8080))
 
 if getattr(sys, "frozen", False):
-    print("Running compiled binary.")
+    logger.debug("Running compiled binary.")
     BASE_DIR = Path(sys._MEIPASS)
 else:
-    print("Running from cli.")
+    logger.debug("Running from cli.")
     BASE_DIR = Path(__file__).resolve().parents[2]
 
 STATIC_ROOT = Path(os.getenv("LOERIC_WEBAPP_DIR", BASE_DIR / "static")).resolve()

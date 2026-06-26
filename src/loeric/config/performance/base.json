@@ -1,5 +1,6 @@
 {
   "variables": {
+    "var_instrument_program": 1,
     "var_comping_pattern_period": 2,
     "var_drone_threshold": 0.5,
     "var_roll_2_prob": 0,

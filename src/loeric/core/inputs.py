@@ -58,7 +58,7 @@ class InputInterface:
         :raises ValueError: if ``config["type"]`` is not recognised.
         """
         if not config["active"]:
-            interface = InputInterface()
+            interface = InputInterface(name=None)
             interface._active = False
             interface._type = config["type"] + "(uninitialised)"
             return interface
