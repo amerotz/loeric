@@ -32,7 +32,7 @@ import loeric.core.paths as lp
 class Player:
 
     _input_interfaces: dict[li.InputInterface]
-    _output_interfaces: dict[li.OutputInterface]
+    _output_interfaces: dict[lo.OutputInterface]
 
     def __init__(self, config):
 
