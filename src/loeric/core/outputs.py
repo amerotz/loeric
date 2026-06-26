@@ -26,6 +26,7 @@ import mido
 import numpy as np
 import pandas as pd
 import pyaudio
+import sounddevice as sd
 import tinysoundfont
 
 import loeric.core.element as le
@@ -856,7 +857,7 @@ class DataOutput(OutputInterface):
         return self._done_saving.is_set()
 
 
-class SynthOutput(mido.ports.BaseOutput):
+class _SynthOutput(mido.ports.BaseOutput):
 
     def __init__(
         self, name: str, path: str, program: int, gain: float, device: str, **kwargs
@@ -978,3 +979,83 @@ class SoundfontOutput(MIDIOutput):
             gain=self._gain,
             device=self._device,
         )
+
+
+class SynthOutput(mido.ports.BaseOutput):
+    def __init__(
+        self, name: str, path: str, program: int, gain: float, device: str, **kwargs
+    ):
+        self._name = name
+        self._path = path
+        self._program = program
+        self._gain = gain
+        self._device = device
+        self._lock = threading.RLock()
+
+        self._synth = tinysoundfont.Synth(gain=self._gain, samplerate=44100)
+        self._soundfont_id = self._synth.sfload(self._path)
+        self._stream = None
+        self._synth_is_running = False
+
+        device_index = None
+        for i, info in enumerate(sd.query_devices()):
+            if info["max_output_channels"] > 0 and info["name"] == device:
+                device_index = i
+                logger.info(f"Found audio device {info['name']} (index={i}).")
+                break
+
+        if device_index is None:
+            raise RuntimeError(f"Audio device {device} not found.")
+
+        for channel in range(16):
+            self._synth.program_select(channel, self._soundfont_id, 0, self._program)
+
+        def callback(outdata, frames, time, status):
+            if status:
+                logger.warning("Audio callback status: %s", status)
+            with self._lock:
+                buf = self._synth.generate(samples=frames)
+            outdata[:] = buf
+
+        self._stream = sd.RawOutputStream(
+            samplerate=self._synth.samplerate,
+            blocksize=1024,
+            device=device_index,
+            channels=2,
+            dtype="float32",
+            callback=callback,
+        )
+        self._stream.start()
+        self._synth_is_running = True
+
+        mido.ports.BaseOutput.__init__(self, name=self._name, **kwargs)
+
+    def _send(self, msg):
+        with self._lock:
+            if msg.type == "note_on":
+                if msg.velocity == 0:
+                    self._synth.noteoff(msg.channel, msg.note)
+                else:
+                    self._synth.noteon(msg.channel, msg.note, msg.velocity)
+            elif msg.type == "note_off":
+                self._synth.noteoff(msg.channel, msg.note)
+            elif msg.type == "pitchwheel":
+                self._synth.pitchbend(msg.channel, msg.pitch + 8192)
+            elif msg.type == "control_change":
+                self._synth.control_change(msg.channel, msg.control, msg.value)
+            else:
+                logger.warning("Unknown MIDI message type: %s", msg.type)
+
+    def close(self):
+        if self._synth_is_running:
+            with self._lock:
+                self._synth.sounds_off()
+            if self._stream is not None:
+                self._stream.stop()
+                self._stream.close()
+                self._stream = None
+            if self._soundfont_id is not None:
+                self._synth.sfunload(self._soundfont_id)
+            self._synth_is_running = False
+
+        super().close()
