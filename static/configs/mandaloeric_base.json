@@ -369,7 +369,8 @@
       "soundfont": {
         "active": true,
         "type": "soundfont",
-        "device": "snd_rpi_hifiberry_dacplusadcpro",
+        "device": "snd_rpi_hifiberry_dacplusadcpro: HiFiBerry DAC+ADC Pro HiFi multicodec-0 (hw:3,0)",
+        "samplerate": 48000,
         "path": "/usr/share/sounds/sf2/FluidR3_GM.sf2",
         "gain": 0,
         "program": "var_instrument_program",

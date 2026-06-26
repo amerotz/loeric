@@ -106,6 +106,7 @@ class OutputInterface:
                 send_messages=config["send_messages"],
                 velocity_range=config["velocity_range"],
                 pitchbend_range=config["pitchbend_range"],
+                samplerate=config["samplerate"],
             )
 
         elif config["type"] == "visual" and PYQT_AVAILABLE:
@@ -928,6 +929,7 @@ class _SynthOutput(mido.ports.BaseOutput):
 @lp.readonly("program")
 @lp.readonly("path")
 @lp.readonly("gain")
+@lp.readonly("samplerate")
 @lp.readonly("device")
 class SoundfontOutput(MIDIOutput):
 
@@ -946,6 +948,7 @@ class SoundfontOutput(MIDIOutput):
         velocity_range: list[int],
         pitchbend_range: int,
         controls: dict[str, int],
+        samplerate: int,
     ):
 
         assert os.path.isfile(path), f"'{path}' is not a valid path."
@@ -956,6 +959,7 @@ class SoundfontOutput(MIDIOutput):
         self._gain = gain
         self._soundfont_id = None
         self._device = device
+        self._samplerate = samplerate
 
         super().__init__(
             name=name,
@@ -978,12 +982,20 @@ class SoundfontOutput(MIDIOutput):
             program=self._program,
             gain=self._gain,
             device=self._device,
+            samplerate=self._samplerate,
         )
 
 
 class SynthOutput(mido.ports.BaseOutput):
     def __init__(
-        self, name: str, path: str, program: int, gain: float, device: str, **kwargs
+        self,
+        name: str,
+        path: str,
+        program: int,
+        gain: float,
+        device: str,
+        samplerate: int,
+        **kwargs,
     ):
         self._name = name
         self._path = path
@@ -991,8 +1003,9 @@ class SynthOutput(mido.ports.BaseOutput):
         self._gain = gain
         self._device = device
         self._lock = threading.RLock()
+        self._samplerate = samplerate
 
-        self._synth = tinysoundfont.Synth(gain=self._gain, samplerate=44100)
+        self._synth = tinysoundfont.Synth(gain=self._gain, samplerate=self._samplerate)
         self._soundfont_id = self._synth.sfload(self._path)
         self._stream = None
         self._synth_is_running = False
