@@ -52,7 +52,7 @@
       "steps": 0.0
     },
     "drones": {
-      "bypass": true,
+      "bypass": false,
       "data": {}
     },
     "swing": {
