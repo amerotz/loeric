@@ -33,7 +33,6 @@ referencing==0.36.2
 requests==2.32.3
 roman-numerals-py==3.1.0
 rpds-py==0.24.0
-scipy==1.15.2
 six==1.17.0
 snowballstemmer==2.2.0
 Sphinx==8.2.3
