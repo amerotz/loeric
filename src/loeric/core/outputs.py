@@ -889,18 +889,13 @@ class SynthOutput(mido.ports.BaseOutput):
                 logger.warning("Audio callback status: %s", status)
             with self._lock:
                 buf = self._synth.generate(samples=frames)
+            outdata[:] = buf
 
-            buf = np.frombuffer(buf, dtype=np.float32).reshape(frames, 2)
-            ch = min(2, outdata.shape[1])
-
-            if ch == 1:
-                buf = np.mean(buf, axis=1).reshape(frames, 1)
-            outdata[:, :ch] = buf[:, :ch]
-
-        self._stream = sd.OutputStream(
+        self._stream = sd.RawOutputStream(
             samplerate=self._synth.samplerate,
             blocksize=1024,
             device=self._device,
+            channels=2,
             dtype="float32",
             callback=callback,
         )
