@@ -22,7 +22,7 @@ import nanoid as nid
 import numpy as np
 
 import loeric.core.element as le
-import loeric.core.path as lp
+import loeric.core.paths as lp
 import loeric.core.utils as lu
 
 logger = logging.getLogger(__name__)

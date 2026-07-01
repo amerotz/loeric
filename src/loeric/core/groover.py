@@ -18,7 +18,7 @@ import logging
 
 import loeric.core.element as le
 import loeric.core.module as lm
-import loeric.core.path as lp
+import loeric.core.paths as lp
 
 logger = logging.getLogger(__name__)
 

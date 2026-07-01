@@ -881,31 +881,37 @@ class SynthOutput(mido.ports.BaseOutput):
         self._stream = None
         self._synth_is_running = False
 
-        device_index = None
-        for i, info in enumerate(sd.query_devices()):
-            if info["max_output_channels"] > 0 and info["name"] == device:
-                device_index = i
-                logger.info(f"Found audio device {info['name']} (index={i}).")
-                break
-
-        if device_index is None:
-            raise RuntimeError(f"Audio device {device} not found.")
-
         for channel in range(16):
             self._synth.program_select(channel, self._soundfont_id, 0, self._program)
 
         def callback(outdata, frames, time, status):
             if status:
                 logger.warning("Audio callback status: %s", status)
+
             with self._lock:
                 buf = self._synth.generate(samples=frames)
-            outdata[:] = buf
 
-        self._stream = sd.RawOutputStream(
+            # convert memoryview -> float32 numpy array
+            buf = np.frombuffer(buf, dtype=np.float32)
+
+            # synth guarantees interleaved stereo
+            buf = buf.reshape(frames, 2)
+
+            out_ch = outdata.shape[1]
+
+            if out_ch == 1:
+                # mono: average L/R
+                outdata[:, 0] = buf.mean(axis=1)
+
+            else:
+                # stereo + multichannel: write only first two channels
+                outdata[:, 0] = buf[:, 0]
+                outdata[:, 1] = buf[:, 1]
+
+        self._stream = sd.OutputStream(
             samplerate=self._synth.samplerate,
             blocksize=1024,
-            device=device_index,
-            channels=2,
+            device=self._device,
             dtype="float32",
             callback=callback,
         )
