@@ -22,11 +22,13 @@ import nanoid as nid
 import numpy as np
 
 import loeric.core.element as le
+import loeric.core.path as lp
 import loeric.core.utils as lu
 
 logger = logging.getLogger(__name__)
 
 
+@lp.expose("_bypass", "bypass")
 class LOERICModule:
     """A performance module implementing a series of performance rules."""
 
@@ -257,6 +259,7 @@ class TaggerModule(LOERICModule):
         return [element]
 
 
+@lp.expose("_steps", "steps")
 class TransposeModule(LOERICModule):
     def __init__(self, steps: float, **kwargs):
         super().__init__(**kwargs)

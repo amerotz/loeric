@@ -324,6 +324,16 @@ async def responsiveness_change(value: float):
     return await get_status()
 
 
+@app.post("/api/change/{path}={value}", response_model=lsm.StatusResponse)
+async def change_param(value: float):
+    """POST /api/change/{path}={value} - Change LOERIC's responsiveness."""
+    global musician
+    if musician:
+        musician.set_attribute(path, value)
+
+    return await get_status()
+
+
 @app.post("/api/start")
 async def start(request: lsm.StartRequest):
     """POST /api/start - Start loeric with specified tune and parameters."""

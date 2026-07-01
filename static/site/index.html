@@ -788,8 +788,6 @@ responsivenessValue: document.getElementById('responsivenessValue'),
                 elements.tempoValue.textContent = state.tempo;
                 try {
                     const response = await apiCall(`/api/tempo/${state.tempo}`, 'POST');
-                    state.running = true;
-                    updateUI();
                     showSuccess(`Updated tempo to ${state.tempo} QPM.`);
                 } catch (error) {
                     showError('Failed to start update tempo.');
@@ -798,24 +796,24 @@ responsivenessValue: document.getElementById('responsivenessValue'),
             });
 
             elements.responsivenessSlider.addEventListener('input', async (e) => {
-    state.responsiveness = parseFloat(e.target.value);
+                state.responsiveness = parseFloat(e.target.value);
 
-    elements.responsivenessValue.textContent =
-        state.responsiveness.toFixed(2);
+                elements.responsivenessValue.textContent =
+                    state.responsiveness.toFixed(2);
 
-    try {
-        await apiCall(
-            `/api/responsiveness/${state.responsiveness}`,
-            'POST'
-        );
+                try {
+                    await apiCall(
+                        `/api/responsiveness/${state.responsiveness}`,
+                        'POST'
+                    );
 
-        showSuccess(
-            `Updated responsiveness to ${state.responsiveness.toFixed(2)}.`
-        );
-    } catch (error) {
-        showError('Failed to update responsiveness.');
-    }
-});
+                    showSuccess(
+                        `Updated responsiveness to ${state.responsiveness.toFixed(2)}.`
+                    );
+                } catch (error) {
+                    showError('Failed to update responsiveness.');
+                }
+            });
 
             elements.startBtn.addEventListener('click', async () => {
                 if (!state.currentTune) {

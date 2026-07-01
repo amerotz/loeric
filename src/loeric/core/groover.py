@@ -18,10 +18,12 @@ import logging
 
 import loeric.core.element as le
 import loeric.core.module as lm
+import loeric.core.path as lp
 
 logger = logging.getLogger(__name__)
 
 
+@lp.expose("_modules", "modules")
 class Groover:
     """The core of LOERIC's performance rules."""
 
@@ -31,11 +33,11 @@ class Groover:
         self._working_queue = le.LOERICQueue()
         self._contour_values = {}
 
-        self._modules = []
+        self._modules = {}
         logger.info("Loading following modules:")
         for m in config:
             logger.info(m)
-            self._modules.append(lm.LOERICModule.create_module(m, **config[m]))
+            self._modules[m] = lm.LOERICModule.create_module(m, **config[m])
 
     def push(self, event):
         """Add an element to the groover's working queue.
@@ -51,12 +53,12 @@ class Groover:
     def init_key_signature(self, key: le.KeySignature):
         """Initialise modules with a key signature."""
         for m in self._modules:
-            m.set_key_signature(key)
+            self._modules[m].set_key_signature(key)
 
     def init_time_signature(self, meter: le.TimeSignature):
         """Initialise modules with a time signature."""
         for m in self._modules:
-            m.set_time_signature(meter)
+            self._modules[m].set_time_signature(meter)
 
     def set(self, contours):
         self._contour_values.update(contours)
@@ -65,15 +67,15 @@ class Groover:
     def lookahead_size(self):
         size = 1
         for m in self._modules:
-            size = max(m.lookahead_size, size)
+            size = max(self._modules[m].lookahead_size, size)
         return size
 
     @property
     def window_size(self):
         size = 0
         for m in self._modules:
-            if m.window_size is not None:
-                size = max(m.window_size, size)
+            if self._modules[m].window_size is not None:
+                size = max(self._modules[m].window_size, size)
         return size
 
     def update(
@@ -119,7 +121,8 @@ class Groover:
 
         # run it through the modules
         to_be_processed_by_module = [event]
-        for i, module in enumerate(modules):
+        for i, m in enumerate(modules):
+            module = modules[m]
             spawned_elements = []
             for e in to_be_processed_by_module:
                 module_output = module(e, contour_values, window=window)
@@ -181,4 +184,4 @@ class Groover:
         self._contour_values = {}
 
         for m in self._modules:
-            m.reset()
+            self._modules[m].reset()
