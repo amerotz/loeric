@@ -887,26 +887,15 @@ class SynthOutput(mido.ports.BaseOutput):
         def callback(outdata, frames, time, status):
             if status:
                 logger.warning("Audio callback status: %s", status)
-
             with self._lock:
                 buf = self._synth.generate(samples=frames)
 
-            # convert memoryview -> float32 numpy array
-            buf = np.frombuffer(buf, dtype=np.float32)
+            buf = np.frombuffer(buf, dtype=np.float32).reshape(frames, 2)
+            ch = min(2, outdata.shape[1])
 
-            # synth guarantees interleaved stereo
-            buf = buf.reshape(frames, 2)
-
-            out_ch = outdata.shape[1]
-
-            if out_ch == 1:
-                # mono: average L/R
-                outdata[:, 0] = buf.mean(axis=1)
-
-            else:
-                # stereo + multichannel: write only first two channels
-                outdata[:, 0] = buf[:, 0]
-                outdata[:, 1] = buf[:, 1]
+            if ch == 1:
+                buf = np.mean(buf, axis=1).reshape(frames, 1)
+            outdata[:, :ch] = buf[:, :ch]
 
         self._stream = sd.OutputStream(
             samplerate=self._synth.samplerate,
