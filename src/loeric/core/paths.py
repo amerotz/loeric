@@ -18,6 +18,8 @@ import logging
 import typing
 from dataclasses import dataclass
 
+from collections.abc import Callable
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,8 +44,22 @@ def expose(private: str, public: str, validator=None):
             return getattr(self, private)
 
         def setter(self, value):
+
+            target_type = typing.get_type_hints(cls).get(private)
+
+            print("target:", target_type)
+            if target_type is not None and not isinstance(value, target_type):
+                try:
+                    print(type(value))
+                    value = _coerce(target_type, value)
+                    print(type(value))
+                    print(value)
+                except Exception:
+                    raise ValueError(f"Cannot coerce {value!r} to {target_type}")
+
             if validator is not None and not validator(value):
                 raise ValueError(f"Invalid value {value!r} for '{public}'")
+
             setattr(self, private, value)
 
         prop = property(getter, setter)
@@ -52,6 +68,100 @@ def expose(private: str, public: str, validator=None):
         return cls
 
     return decorator
+
+
+import json
+import re
+
+_INT_RE = re.compile(r"-?\d+")
+_FLOAT_RE = re.compile(r"-?\d+(\.\d+)?")
+
+
+def _coerce(expected: type | None, value):
+    """Strict coercion into expected type."""
+
+    if expected is None:
+        return value
+
+    # already correct type
+    if isinstance(value, expected):
+        return value
+
+    try:
+        if expected is bool:
+            if value == "True":
+                return True
+            if value == "False":
+                return False
+            raise TypeError(
+                f"Invalid bool literal {value!r} (expected 'True' or 'False')"
+            )
+
+        if expected is int:
+            if isinstance(value, str):
+                if not _INT_RE.fullmatch(value):
+                    raise TypeError(f"Invalid int literal {value!r}")
+                return int(value)
+            raise TypeError(f"Cannot coerce {type(value).__name__} to int safely")
+
+        if expected is float:
+            if isinstance(value, str):
+                if not _FLOAT_RE.fullmatch(value):
+                    raise TypeError(f"Invalid float literal {value!r}")
+                return float(value)
+            raise TypeError(f"Cannot coerce {type(value).__name__} to float safely")
+
+        if expected is str:
+            if isinstance(value, str):
+                return value
+            raise TypeError(f"Cannot coerce {type(value).__name__} to str safely")
+
+        if expected is list:
+            return _parse_list(value)
+
+        if expected is dict:
+            if isinstance(value, dict):
+                return value
+            if isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                    if not isinstance(parsed, dict):
+                        raise TypeError("JSON did not decode to dict")
+                    return parsed
+                except json.JSONDecodeError as e:
+                    raise TypeError(f"Invalid JSON dict: {value!r}") from e
+
+            raise TypeError(f"Cannot coerce {type(value).__name__} to dict safely")
+
+        if callable(expected):
+            return expected(value)
+
+        raise TypeError(f"Unsupported coercion target: {expected}")
+
+    except TypeError:
+        raise
+    except Exception as e:
+        raise TypeError(
+            f"Cannot coerce {value!r} ({type(value).__name__}) to {expected}"
+        ) from e
+
+
+def _parse_list(value):
+    if isinstance(value, list):
+        return value
+
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError as e:
+            raise TypeError(f"Invalid JSON list: {value!r}") from e
+
+        if not isinstance(parsed, list):
+            raise TypeError(f"JSON did not decode to list: {value!r}")
+
+        return parsed
+
+    raise TypeError(f"Cannot coerce {type(value).__name__} to list")
 
 
 @dataclass(frozen=True)

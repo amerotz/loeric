@@ -305,6 +305,7 @@ class Mapper:
         # create routing matrix
         self._rule_layer = RuleLayer(self._input_names, self._output_names)
 
+        print(rules)
         self._fill_matrices(rules)
 
         self._ranged_input_pairs = [

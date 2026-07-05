@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 class LOERICModule:
     """A performance module implementing a series of performance rules."""
 
+    _bypass: bool
+
     def __init__(
         self, bypass: bool = False, tag: str = None, required_tags: list[str] = None
     ):
@@ -261,6 +263,8 @@ class TaggerModule(LOERICModule):
 
 @lp.expose("_steps", "steps")
 class TransposeModule(LOERICModule):
+    _steps: float
+
     def __init__(self, steps: float, **kwargs):
         super().__init__(**kwargs)
 
@@ -493,7 +497,13 @@ class HarmonyModule(LOERICModule):
         return le.Chord.create_chord(root, chord_quality)
 
 
+@lp.expose("_contour", "bind")
+@lp.expose("_pattern", "pattern")
 class DynamicsModule(LOERICModule):
+
+    _contour: str
+    _pattern: str
+
     def __init__(self, bind: str, pattern: str, **kwargs):
         super().__init__(**kwargs)
 
@@ -522,7 +532,13 @@ class DynamicsModule(LOERICModule):
         return [element]
 
 
+@lp.expose("_contour", "bind")
+@lp.expose("_whitelist", "whitelis")
+@lp.readonly("data")
 class OrnamentModule(LOERICModule):
+
+    _contour: str
+    _whitelist: list[str]
 
     class OrnamentConfig:
 
@@ -1228,7 +1244,17 @@ class DroneModule(LOERICModule):
         return notes, delay
 
 
+@lp.expose("_contour", "bind")
+@lp.expose("_pattern", "pattern")
+@lp.expose("_amount_qpm", "amount_qpm")
+@lp.expose("_only_increase", "only_increase")
 class TimingModule(LOERICModule):
+
+    _contour: str
+    _pattern: str
+    _amount_qpm: float
+    _only_increase: bool
+
     def __init__(
         self, bind: str, pattern: str, qpm_amount: float, only_increase: bool, **kwargs
     ):

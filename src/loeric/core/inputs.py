@@ -282,9 +282,11 @@ class RMS(AudioInputFunction):
         self._max_level *= 1 - perc
         self._max_level += perc * max_l
 
+        print(self._min_level, self._max_level, level)
+
         diff = self._max_level - self._min_level
         if diff == 0:
-            value = 0
+            value = 0.5
         else:
             value = (level - self._min_level) / (self._max_level - self._min_level)
         value = max(value, 0)

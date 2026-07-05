@@ -4,7 +4,7 @@
       "mic_input": {
         "active": true,
         "type": "audio",
-        "device": "pulse",
+        "device": "default",
         "samplerate": 44100,
         "analysers": {
           "loudness": {

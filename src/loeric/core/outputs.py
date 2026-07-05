@@ -44,6 +44,9 @@ except Exception:
     )
     PYQT_AVAILABLE = False
 
+# set mp method
+mp.set_start_method("spawn", force=True)
+
 
 @lp.readonly("active")
 @lp.readonly("type")
@@ -106,6 +109,7 @@ class OutputInterface:
                 velocity_range=config["velocity_range"],
                 pitchbend_range=config["pitchbend_range"],
                 samplerate=config["samplerate"],
+                channels=config["channels"],
             )
 
         elif config["type"] == "visual" and PYQT_AVAILABLE:
@@ -817,7 +821,7 @@ class DataOutput(OutputInterface):
         while not self._done.is_set():
 
             # current time
-            t = time.perf_counter()
+            t = time.time()
 
             # add all relevant contours
             for c in contour_values:
@@ -866,6 +870,7 @@ class SynthOutput(mido.ports.BaseOutput):
         gain: float,
         device: str,
         samplerate: int,
+        channels: int,
         **kwargs,
     ):
         self._name = name
@@ -875,6 +880,7 @@ class SynthOutput(mido.ports.BaseOutput):
         self._device = device
         self._lock = threading.RLock()
         self._samplerate = samplerate
+        self._channels = channels
 
         self._synth = tinysoundfont.Synth(gain=self._gain, samplerate=self._samplerate)
         self._soundfont_id = self._synth.sfload(self._path)
@@ -884,18 +890,26 @@ class SynthOutput(mido.ports.BaseOutput):
         for channel in range(16):
             self._synth.program_select(channel, self._soundfont_id, 0, self._program)
 
+        CALLBACK_CHANNELS = min(self._channels, 2)
+
         def callback(outdata, frames, time, status):
             if status:
                 logger.warning("Audio callback status: %s", status)
-            with self._lock:
-                buf = self._synth.generate(samples=frames)
-            outdata[:] = buf
+            buf = self._synth.generate(samples=frames)
+            buf = np.frombuffer(buf, dtype=np.float32).reshape(-1, 2)
 
-        self._stream = sd.RawOutputStream(
+            # mono
+            if CALLBACK_CHANNELS == 1:
+                buf = buf.mean(axis=1).reshape(-1, 1)
+
+            outdata[:, :CALLBACK_CHANNELS] = buf
+
+        self._stream = sd.OutputStream(
             samplerate=self._synth.samplerate,
-            blocksize=1024,
+            blocksize=0,
             device=self._device,
-            channels=2,
+            channels=self._channels,
+            latency="high",
             dtype="float32",
             callback=callback,
         )
@@ -936,6 +950,7 @@ class SynthOutput(mido.ports.BaseOutput):
 
 
 @lp.readonly("program")
+@lp.readonly("channels")
 @lp.readonly("path")
 @lp.readonly("gain")
 @lp.readonly("samplerate")
@@ -958,6 +973,7 @@ class SoundfontOutput(MIDIOutput):
         pitchbend_range: int,
         controls: dict[str, int],
         samplerate: int,
+        channels: int,
     ):
 
         assert os.path.isfile(path), f"'{path}' is not a valid path."
@@ -969,6 +985,7 @@ class SoundfontOutput(MIDIOutput):
         self._soundfont_id = None
         self._device = device
         self._samplerate = samplerate
+        self._channels = channels
 
         super().__init__(
             name=name,
@@ -992,4 +1009,5 @@ class SoundfontOutput(MIDIOutput):
             gain=self._gain,
             device=self._device,
             samplerate=self._samplerate,
+            channels=self._channels,
         )

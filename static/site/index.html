@@ -527,6 +527,36 @@
             value="0.5">
     </div>
 </div>
+<!-- Manual API Test Panel -->
+<div class="panel">
+    <label class="panel-title">Manual API Change</label>
+
+    <div class="form-group">
+        <label>Param Path</label>
+        <input
+            id="apiPathInput"
+            type="text"
+            placeholder="e.g. groover/modules/drones/bypass"
+            style="width:100%; padding:0.625rem; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); border-radius:0.25rem;">
+    </div>
+
+    <div class="form-group">
+        <label>Value</label>
+        <input
+            id="apiValueInput"
+            type="text"
+            placeholder="e.g. true or 0.5"
+            style="width:100%; padding:0.625rem; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); border-radius:0.25rem;">
+    </div>
+
+    <button id="sendApiBtn" class="btn-primary" style="width:100%;">
+        Send POST
+    </button>
+
+    <div class="info-text">
+        Sends: <code>/api/change/{path}?value={value}</code>
+    </div>
+</div>
 
             <!-- Controls -->
             <div class="panel">
@@ -555,6 +585,9 @@
 
             // DOM Elements
             const elements = {
+                apiPathInput: document.getElementById('apiPathInput'),
+apiValueInput: document.getElementById('apiValueInput'),
+sendApiBtn: document.getElementById('sendApiBtn'),
                 tuneSelect: document.getElementById('tuneSelect'),
                 configSelect: document.getElementById('configSelect'),
                 instrumentSelect: document.getElementById('instrumentSelect'),
@@ -730,6 +763,35 @@ responsivenessValue: document.getElementById('responsivenessValue'),
                 }
                 updateUI();
             });
+            elements.sendApiBtn.addEventListener('click', async () => {
+    const path = elements.apiPathInput.value.trim();
+    const value = elements.apiValueInput.value.trim();
+
+    if (!path) {
+        showError("Path is required");
+        return;
+    }
+
+    if (value === "") {
+        showError("Value is required");
+        return;
+    }
+
+    try {
+        elements.sendApiBtn.classList.add('loading');
+
+        // encode path safely for URL
+        const encodedPath = encodeURIComponent(path);
+
+        await apiCall(`/api/change/${encodedPath}?value=${encodeURIComponent(value)}`, 'POST');
+
+        showSuccess(`Sent ${path} = ${value}`);
+    } catch (error) {
+        showError('Failed to send API request');
+    } finally {
+        elements.sendApiBtn.classList.remove('loading');
+    }
+});
 
             elements.configSelect.addEventListener('change', (e) => {
                 state.currentConfig = e.target.value;
@@ -761,17 +823,33 @@ responsivenessValue: document.getElementById('responsivenessValue'),
                 e.target.value = value;
             });
 
-            elements.decTransposeBtn.addEventListener('click', () => {
+            elements.decTransposeBtn.addEventListener('click', async () => {
                 state.transpose = Math.max(-24, (state.transpose ?? 0) - 1);
                 elements.transposeInput.value = state.transpose;
+                try {
+
+                    await apiCall(`/api/change/groover/modules/transpose/steps?value=${encodeURIComponent(state.transpose)}`, 'POST');
+
+                    showSuccess(`Changed transpose to ${state.transpose}`);
+                } catch (error) {
+                    showError('Failed to send API request');
+
+                }
             });
 
-            elements.incTransposeBtn.addEventListener('click', () => {
+            elements.incTransposeBtn.addEventListener('click', async () => {
                 state.transpose = Math.min(24, (state.transpose ?? 0) + 1);
                 elements.transposeInput.value = state.transpose;
+                try {
+                    await apiCall(`/api/change/groover/modules/transpose/steps?value=${encodeURIComponent(state.transpose)}`, 'POST');
+
+                    showSuccess(`Changed transpose to ${state.transpose}`);
+                } catch (error) {
+                    showError('Failed to send API request');
+                }
             });
 
-            elements.transposeInput.addEventListener('input', (e) => {
+            elements.transposeInput.addEventListener('input', async (e) => {
                 let value = parseInt(e.target.value, 10);
 
                 if (isNaN(value)) value = 0;
@@ -780,6 +858,13 @@ responsivenessValue: document.getElementById('responsivenessValue'),
 
                 state.transpose = value;
                 e.target.value = value;
+                try {
+                    await apiCall(`/api/change/groover/modules/transpose/steps?value=${encodeURIComponent(state.transpose)}`, 'POST');
+
+                    showSuccess(`Changed transpose to ${state.transpose}`);
+                } catch (error) {
+                    showError('Failed to send API request');
+                }
             });
 
 
