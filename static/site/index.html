@@ -510,53 +510,65 @@
             </div>
 
             <!-- Responsiveness Control -->
-<div class="panel">
-    <label class="panel-title">Responsiveness</label>
-    <div class="form-group">
-        <div class="slider-label">
-            <span>Responsiveness</span>
-            <span class="slider-label-value" id="responsivenessValue">0.50</span>
-        </div>
+            <div class="panel">
+                <label class="panel-title">Responsiveness</label>
+                <div class="form-group">
+                    <div class="slider-label">
+                        <span>Responsiveness</span>
+                        <span class="slider-label-value" id="responsivenessValue">0.50</span>
+                    </div>
 
-        <input
-            type="range"
-            id="responsivenessSlider"
-            min="0"
-            max="1"
-            step="0.01"
-            value="0.5">
-    </div>
-</div>
-<!-- Manual API Test Panel -->
-<div class="panel">
-    <label class="panel-title">Manual API Change</label>
+                    <input
+                        type="range"
+                        id="responsivenessSlider"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0.5">
+                </div>
+            </div>
 
-    <div class="form-group">
-        <label>Param Path</label>
-        <input
-            id="apiPathInput"
-            type="text"
-            placeholder="e.g. groover/modules/drones/bypass"
-            style="width:100%; padding:0.625rem; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); border-radius:0.25rem;">
-    </div>
+            <!-- Volume Control -->
+            <div class="panel">
+                <label class="panel-title">Volume</label>
+                <div class="form-group">
+                    <div class="slider-label">
+                        <span>%</span>
+                        <span class="slider-label-value" id="volumeValue">75</span>
+                    </div>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="75">
+                </div>
+            </div>
+            <!-- Manual API Test Panel -->
+            <div class="panel" style="display:none">
+                <label class="panel-title">Manual API Change</label>
 
-    <div class="form-group">
-        <label>Value</label>
-        <input
-            id="apiValueInput"
-            type="text"
-            placeholder="e.g. true or 0.5"
-            style="width:100%; padding:0.625rem; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); border-radius:0.25rem;">
-    </div>
+                <div class="form-group">
+                    <label>Param Path</label>
+                    <input
+                        id="apiPathInput"
+                        type="text"
+                        placeholder="e.g. groover/modules/drones/bypass"
+                        style="width:100%; padding:0.625rem; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); border-radius:0.25rem;">
+                </div>
 
-    <button id="sendApiBtn" class="btn-primary" style="width:100%;">
-        Send POST
-    </button>
+                <div class="form-group">
+                    <label>Value</label>
+                    <input
+                        id="apiValueInput"
+                        type="text"
+                        placeholder="e.g. true or 0.5"
+                        style="width:100%; padding:0.625rem; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); border-radius:0.25rem;">
+                </div>
 
-    <div class="info-text">
-        Sends: <code>/api/change/{path}?value={value}</code>
-    </div>
-</div>
+                <button id="sendApiBtn" class="btn-primary" style="width:100%;">
+                    Send POST
+                </button>
+
+                <div class="info-text">
+                    Sends: <code>/api/change/{path}?value={value}</code>
+                </div>
+            </div>
 
             <!-- Controls -->
             <div class="panel">
@@ -580,14 +592,15 @@
                 repetitions: 1,
                 transpose: 0,
                 tempo: 160,
+                volume: 75,
                 responsiveness: 0.5,
             };
 
             // DOM Elements
             const elements = {
                 apiPathInput: document.getElementById('apiPathInput'),
-apiValueInput: document.getElementById('apiValueInput'),
-sendApiBtn: document.getElementById('sendApiBtn'),
+                apiValueInput: document.getElementById('apiValueInput'),
+                sendApiBtn: document.getElementById('sendApiBtn'),
                 tuneSelect: document.getElementById('tuneSelect'),
                 configSelect: document.getElementById('configSelect'),
                 instrumentSelect: document.getElementById('instrumentSelect'),
@@ -595,6 +608,7 @@ sendApiBtn: document.getElementById('sendApiBtn'),
                 decBtn : document.getElementById('decRepeatBtn'),
                 incBtn : document.getElementById('incRepeatBtn'),
                 tempoSlider: document.getElementById('tempoSlider'),
+                volumeSlider: document.getElementById('volumeSlider'),
                 startBtn: document.getElementById('startBtn'),
                 stopBtn: document.getElementById('stopBtn'),
                 statusText: document.getElementById('statusText'),
@@ -602,11 +616,12 @@ sendApiBtn: document.getElementById('sendApiBtn'),
                 errorMessage: document.getElementById('errorMessage'),
                 successMessage: document.getElementById('successMessage'),
                 tempoValue: document.getElementById('tempoValue'),
+                volumeValue: document.getElementById('volumeValue'),
                 transposeInput : document.getElementById('transposeInput'),
                 decTransposeBtn : document.getElementById('decTransposeBtn'),
                 incTransposeBtn : document.getElementById('incTransposeBtn'),
                 responsivenessSlider: document.getElementById('responsivenessSlider'),
-responsivenessValue: document.getElementById('responsivenessValue'),
+                responsivenessValue: document.getElementById('responsivenessValue'),
             };
 
             // Utility functions
@@ -764,34 +779,34 @@ responsivenessValue: document.getElementById('responsivenessValue'),
                 updateUI();
             });
             elements.sendApiBtn.addEventListener('click', async () => {
-    const path = elements.apiPathInput.value.trim();
-    const value = elements.apiValueInput.value.trim();
+                const path = elements.apiPathInput.value.trim();
+                const value = elements.apiValueInput.value.trim();
 
-    if (!path) {
-        showError("Path is required");
-        return;
-    }
+                if (!path) {
+                    showError("Path is required");
+                    return;
+                }
 
-    if (value === "") {
-        showError("Value is required");
-        return;
-    }
+                if (value === "") {
+                    showError("Value is required");
+                    return;
+                }
 
-    try {
-        elements.sendApiBtn.classList.add('loading');
+                try {
+                    elements.sendApiBtn.classList.add('loading');
 
-        // encode path safely for URL
-        const encodedPath = encodeURIComponent(path);
+                    // encode path safely for URL
+                    const encodedPath = encodeURIComponent(path);
 
-        await apiCall(`/api/change/${encodedPath}?value=${encodeURIComponent(value)}`, 'POST');
+                    await apiCall(`/api/change/${encodedPath}?value=${encodeURIComponent(value)}`, 'POST');
 
-        showSuccess(`Sent ${path} = ${value}`);
-    } catch (error) {
-        showError('Failed to send API request');
-    } finally {
-        elements.sendApiBtn.classList.remove('loading');
-    }
-});
+                    showSuccess(`Sent ${path} = ${value}`);
+                } catch (error) {
+                    showError('Failed to send API request');
+                } finally {
+                    elements.sendApiBtn.classList.remove('loading');
+                }
+            });
 
             elements.configSelect.addEventListener('change', (e) => {
                 state.currentConfig = e.target.value;
@@ -880,6 +895,22 @@ responsivenessValue: document.getElementById('responsivenessValue'),
 
             });
 
+            elements.volumeSlider.addEventListener('input', async (e) => {
+                state.volume = parseFloat(e.target.value);
+
+                elements.volumeValue.textContent =
+                    state.volume.toFixed(2);
+
+                try {
+                    await apiCall(`/api/volume/${state.volume/100}`, 'POST');
+
+                    showSuccess(`Changed volume to ${state.volume}%`);
+                } catch (error) {
+                    showError('Failed to send API request');
+                }
+
+            });
+
             elements.responsivenessSlider.addEventListener('input', async (e) => {
                 state.responsiveness = parseFloat(e.target.value);
 
@@ -916,6 +947,7 @@ responsivenessValue: document.getElementById('responsivenessValue'),
                         config: state.currentConfig,
                         instrument_model: state.currentInstrument,
                         tempo: state.tempo,
+                        volume: state.volume,
                         repetitions: state.repetitions,
                         transpose: state.transpose,
                         responsiveness: state.responsiveness

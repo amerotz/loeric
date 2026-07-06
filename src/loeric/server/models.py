@@ -17,6 +17,7 @@ class StartRequest(pdt.BaseModel):
     repetitions: int
     transpose: int
     responsiveness: float
+    volume: float
     tempo: int
 
 

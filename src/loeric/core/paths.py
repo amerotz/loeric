@@ -17,6 +17,8 @@
 import logging
 import typing
 from dataclasses import dataclass
+import json
+import re
 
 from collections.abc import Callable
 
@@ -24,6 +26,15 @@ logger = logging.getLogger(__name__)
 
 
 def readonly(attr: str):
+    """Class decorator that makes a private attribute publicly readable but not writable.
+
+    Generates a property named *attr* that reads from ``_{attr}`` and raises
+    :exc:`AttributeError` on assignment.
+
+    :param attr: the public attribute name to expose as readonly.
+    :return: class decorator.
+    """
+
     def decorator(cls):
         prop = property(
             lambda self: getattr(self, f"_{attr}"),
@@ -39,21 +50,30 @@ def readonly(attr: str):
 
 
 def expose(private: str, public: str, validator=None):
+    """Class decorator that creates a public property backed by a private attribute.
+
+    The generated property reads from *private* and writes to it, with optional
+    type coercion (inferred from the class's type hints) and value validation.
+    A class may override the default getter or setter by defining ``_get_{public}``
+    or ``_set_{public}`` methods respectively.
+
+    :param private: name of the private backing attribute (e.g. ``'_samplerate'``).
+    :param public: name of the generated property (e.g. ``'samplerate'``).
+    :param validator: optional predicate ``(value) -> bool``. Raises :exc:`ValueError`
+        if it returns ``False``.
+    :return: class decorator.
+    """
+
     def decorator(cls):
-        def getter(self):
+        def default_getter(self):
             return getattr(self, private)
 
-        def setter(self, value):
-
+        def default_setter(self, value):
             target_type = typing.get_type_hints(cls).get(private)
 
-            print("target:", target_type)
             if target_type is not None and not isinstance(value, target_type):
                 try:
-                    print(type(value))
-                    value = _coerce(target_type, value)
-                    print(type(value))
-                    print(value)
+                    value = coerce(target_type, value)
                 except Exception:
                     raise ValueError(f"Cannot coerce {value!r} to {target_type}")
 
@@ -62,23 +82,39 @@ def expose(private: str, public: str, validator=None):
 
             setattr(self, private, value)
 
+        # classes can expose _set_{attr} or _get_{attr} to override
+        # default behaviour with properties, while still
+        # allowing for decorators
+        getter = getattr(cls, f"_get_{public}", default_getter)
+        setter = getattr(cls, f"_set_{public}", default_setter)
+
         prop = property(getter, setter)
         prop.__doc__ = f"``{public}`` exposes ``{private}``."
         setattr(cls, public, prop)
+
         return cls
 
     return decorator
 
 
-import json
-import re
-
 _INT_RE = re.compile(r"-?\d+")
 _FLOAT_RE = re.compile(r"-?\d+(\.\d+)?")
 
 
-def _coerce(expected: type | None, value):
-    """Strict coercion into expected type."""
+def coerce(expected: type | None, value):
+    """Coerce *value* to *expected* type using strict, explicit rules.
+
+    Supports ``bool``, ``int``, ``float``, ``str``, ``list``, and ``dict``.
+    String inputs are validated against literal patterns before conversion;
+    no silent widening or narrowing between numeric types is performed.
+    For ``list`` and ``dict``, JSON parsing is attempted on string inputs.
+    Any other callable *expected* is invoked directly as a constructor.
+
+    :param expected: the target type, or ``None`` to return *value* unchanged.
+    :param value: the value to coerce.
+    :return: *value* coerced to *expected*.
+    :raises TypeError: if coercion is not possible or the value is not a valid literal.
+    """
 
     if expected is None:
         return value
@@ -147,6 +183,14 @@ def _coerce(expected: type | None, value):
 
 
 def _parse_list(value):
+    """Parse *value* into a Python list.
+
+    Accepts an existing list (returned as-is) or a JSON-encoded string.
+
+    :param value: a ``list`` or JSON string representing a list.
+    :return: a Python ``list``.
+    :raises TypeError: if *value* is not a list or a valid JSON list string.
+    """
     if isinstance(value, list):
         return value
 
@@ -166,30 +210,55 @@ def _parse_list(value):
 
 @dataclass(frozen=True)
 class LOERICPath:
+    """Immutable dot-free path into a nested structure of objects, dicts, and lists.
+
+    Segments are separated by ``/``. Each segment is resolved in order against
+    the current node via attribute access, dict key lookup, or integer index,
+    making the path syntax uniform across heterogeneous nested structures.
+
+    Example: ``'player/input/mic_input/analysers/loudness/responsiveness'``
+    """
+
     path: str
 
     @property
     def parts(self) -> list[str]:
+        """Path segments split on ``/``.
+
+        :return: list of segment strings.
+        """
         return self.path.split("/")
 
     @property
     def top(self) -> str:
+        """First path segment (the root key).
+
+        :return: the leading segment string.
+        """
         return self.parts[0]
 
     @property
     def tail(self) -> "LOERICPath":
+        """Path with the first segment removed.
+
+        :return: a new :class:`LOERICPath` starting from the second segment.
+        """
         return LOERICPath("/".join(self.parts[1:]))
 
     @staticmethod
     def _resolve(obj, key: str):
-        """Resolve one path segment against *obj*.
+        """Resolve a single path segment *key* against *obj*.
 
-        Tries, in order:
-          1. attribute access  (object / namespace)
-          2. dict key          (config dicts)
-          3. integer index     (lists)
+        Tries in order:
 
-        Raises ``AttributeError`` if none succeeds.
+        1. Attribute access via :func:`getattr` (objects, namespaces).
+        2. Dict key lookup (config dicts).
+        3. Integer index (lists and tuples).
+
+        :param obj: the object to resolve against.
+        :param key: the segment to resolve.
+        :return: the child node.
+        :raises AttributeError: if none of the three strategies succeed.
         """
         if hasattr(obj, key):
             return getattr(obj, key)
@@ -205,7 +274,17 @@ class LOERICPath:
 
     @staticmethod
     def _assign(obj, key: str, value) -> bool:
-        """Assign *value* to the leaf node identified by *key* on *obj*."""
+        """Assign *value* to the child identified by *key* on *obj*.
+
+        Checks type consistency against the container's type hint before assigning.
+        Tries list/tuple index, then dict key, then :func:`setattr`.
+
+        :param obj: the parent object.
+        :param key: the attribute name, dict key, or list index (as string).
+        :param value: the value to assign.
+        :return: ``True`` on success, ``False`` if the key was not found,
+            the index was out of range, or the value failed the type check.
+        """
         # check type consistency based on hints
         expected = LOERICPath._container_type(obj, key)
         if expected and not isinstance(value, expected):
@@ -229,6 +308,16 @@ class LOERICPath:
         return False
 
     def _container_type(obj, key: str) -> type | None:
+        """Infer the expected value type for *key* on *obj* from type hints.
+
+        For generic containers such as ``dict[str, OutputInterface]``, returns
+        the last type argument (the value type). For plain annotations, returns
+        the annotation directly.
+
+        :param obj: the parent object.
+        :param key: the attribute or key name to look up.
+        :return: the expected type, or ``None`` if no hint is present.
+        """
         hints = typing.get_type_hints(type(obj))
         if key not in hints:
             return None
@@ -239,7 +328,13 @@ class LOERICPath:
 
     @staticmethod
     def get(obj, path: "LOERICPath"):
-        """Return the value at *path* starting from *obj*, or ``None``."""
+        """Retrieve the value at *path* starting from *obj*.
+
+        :param obj: the root object to traverse from.
+        :param path: the :class:`LOERICPath` to follow.
+        :return: the value at the end of the path, or ``None`` if any segment
+            could not be resolved.
+        """
         try:
             for key in path.parts:
                 obj = LOERICPath._resolve(obj, key)
@@ -252,7 +347,13 @@ class LOERICPath:
     def set(obj, path: "LOERICPath", value) -> bool:
         """Set the value at *path* starting from *obj*.
 
-        Returns ``True`` on success, ``False`` otherwise.
+        Traverses all but the last segment via :meth:`_resolve`, then calls
+        :meth:`_assign` on the leaf.
+
+        :param obj: the root object to traverse from.
+        :param path: the :class:`LOERICPath` identifying the target.
+        :param value: the value to assign.
+        :return: ``True`` on success, ``False`` if traversal or assignment failed.
         """
         parts = path.parts
         try:

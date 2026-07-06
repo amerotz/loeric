@@ -178,6 +178,7 @@ async def start_loeric(
     config: str,
     instrument_model: str,
     tempo: float,
+    volume: float,
     responsiveness: float,
 ) -> bool:
     """Start loeric with the specified tune and parameters.
@@ -198,6 +199,7 @@ async def start_loeric(
         state.current_config = config
         state.parameters = {
             "tempo": tempo,
+            "volume": volume,
             "instrument": instrument_model,
             "repetitions": repetitions,
             "transpose": transpose,
@@ -324,13 +326,88 @@ async def responsiveness_change(value: float):
     return await get_status()
 
 
+@app.post("/api/volume/{value}", response_model=lsm.StatusResponse)
+async def volume_change(value: float):
+    """POST /api/volume/{value} - Change LOERIC's volume."""
+
+    global musician
+
+    if not musician:
+        raise HTTPException(status_code=400, detail="LOERIC is not running")
+
+    outputs = _get_param("player/output")
+
+    if outputs is None:
+        raise HTTPException(status_code=404, detail=f"Path '{path}' not found")
+
+    for o in outputs["children"]:
+        p = f"player/output/{o}"
+        attrs = _get_param(p)
+        if attrs is not None and "children" in attrs and "volume" in attrs["children"]:
+            p += "/volume"
+            musician.set_attribute(p, value)
+
+    state.parameters["volume"] = value
+    return await get_status()
+
+
+@app.get("/api/get/{path:path}")
+async def get_param(path: str):
+    """GET /api/get/<path> - Retrieve a value or list indexable children.
+
+    If the value at *path* is a scalar, returns it directly.
+    If it is a container, returns the keys/indices one level deep.
+
+    :param path: slash-separated config path.
+    """
+    global musician
+
+    if not musician:
+        raise HTTPException(status_code=400, detail="LOERIC is not running")
+
+    value = _get_param(path)
+    if value is None:
+        raise HTTPException(status_code=404, detail=f"Path '{path}' not found")
+
+    return value
+
+
+def _get_param(path: str):
+    global musician
+
+    value = musician.get_attribute(path)
+
+    if value is None:
+        return None
+
+    if isinstance(value, (int, float, str, bool)):
+        return {"path": path, "value": value}
+
+    if isinstance(value, dict):
+        return {"path": path, "children": list(value.keys())}
+
+    if isinstance(value, (list, tuple)):
+        return {"path": path, "children": list(range(len(value)))}
+
+    # object: return exposed properties
+    children = [
+        name
+        for name in dir(type(value))
+        if isinstance(getattr(type(value), name, None), property)
+    ]
+    return {"path": path, "children": children}
+
+
 @app.post("/api/change/{path:path}")
 async def change_param(path: str, value: str):
     """POST /api/change/<anything>?value=..."""
+
     global musician
 
-    if musician:
-        musician.set_attribute(path, value)
+    if not musician:
+        raise HTTPException(status_code=400, detail="LOERIC is not running")
+
+    musician.set_attribute(path, value)
 
     return await get_status()
 
@@ -350,6 +427,7 @@ async def start(request: lsm.StartRequest):
             instrument_model=request.instrument_model,
             tempo=request.tempo,
             responsiveness=request.responsiveness,
+            volume=request.volume,
         )
         return {
             "status": "started",
@@ -360,6 +438,7 @@ async def start(request: lsm.StartRequest):
             "instrument": request.instrument_model,
             "tempo": request.tempo,
             "responsiveness": request.responsiveness,
+            "volume": request.volume,
         }
     except Exception as e:
         logger.error(f"Start failed: {e}")

@@ -9,6 +9,7 @@
         "type": "soundfont",
         "device": "default",
         "channels": 2,
+        "volume": 1,
         "samplerate": 41000,
         "path": "/usr/share/sounds/sf2/FluidR3_GM.sf2",
         "gain": 0,

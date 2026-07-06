@@ -70,8 +70,10 @@ class LOERIC:
 
         if self._mode == "process":
             self._command_queue = multiprocessing.Queue()
+            self._response_queue = multiprocessing.Queue()
         else:
             self._command_queue = queue.Queue()
+            self._response_queue = queue.Queue()
 
     def set_tune(self, tune):
         """Assign a tune to LOERIC and calculate the associated contours."""
@@ -105,6 +107,33 @@ class LOERIC:
                 payload={"path": lp.LOERICPath(path=path), "value": value},
             )
         )
+
+    def get_attribute(self, path: str, timeout: float = 1.0):
+        """Retrieve the value at a config-style path from the running instance.
+
+        The returned value may be a scalar (int, float, str, bool),
+        a dict, a list, or an object, depending on what lives at *path*.
+        Returns ``None`` if the path could not be resolved or the call times out.
+
+        :param path: slash-separated config path,
+            e.g. ``'player/output/headphones/volume'``.
+        :param timeout: seconds to wait for the running instance to respond.
+        :return: the value at *path*, or ``None``.
+        """
+        self._command_queue.put(
+            LOERICCommand(
+                command="get",
+                payload={
+                    "path": lp.LOERICPath(path=path),
+                    "response": self._response_queue,
+                },
+            )
+        )
+        try:
+            return self._response_queue.get(timeout=timeout)
+        except Exception:
+            logger.warning(f"get_attribute timed out for path '{path}'")
+            return None
 
     def start(self, wait_for_prompt=False):
         """Start LOERIC in a new process."""
@@ -237,6 +266,16 @@ class LOERIC:
                     logger.warning(f"Unknown root '{path.top}' in path '{path.path}'")
                 else:
                     lp.LOERICPath.set(root_obj, path.tail, value)
+            elif cmd.command == "get":
+                path: lp.LOERICPath = cmd.payload["path"]
+                response = cmd.payload["response"]
+                root_obj = roots.get(path.top)
+                if root_obj is None:
+                    logger.warning(f"Unknown root '{path.top}' in path '{path.path}'")
+                    response.put(None)
+                else:
+                    response.put(lp.LOERICPath.get(root_obj, path.tail))
+
             return False  # keep going
 
         ########## READY PLAYBACK ###############

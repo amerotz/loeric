@@ -103,6 +103,7 @@ class OutputInterface:
                 program=config["program"],
                 gain=config["gain"],
                 device=config["device"],
+                volume=config["volume"],
                 controls=config["controls"],
                 send_cc=config["send_cc"],
                 send_messages=config["send_messages"],
@@ -862,6 +863,7 @@ class DataOutput(OutputInterface):
 
 
 class SynthOutput(mido.ports.BaseOutput):
+
     def __init__(
         self,
         name: str,
@@ -869,6 +871,7 @@ class SynthOutput(mido.ports.BaseOutput):
         program: int,
         gain: float,
         device: str,
+        volume: float,
         samplerate: int,
         channels: int,
         **kwargs,
@@ -878,6 +881,7 @@ class SynthOutput(mido.ports.BaseOutput):
         self._program = program
         self._gain = gain
         self._device = device
+        self._volume = volume
         self._lock = threading.RLock()
         self._samplerate = samplerate
         self._channels = channels
@@ -901,6 +905,9 @@ class SynthOutput(mido.ports.BaseOutput):
             # mono
             if CALLBACK_CHANNELS == 1:
                 buf = buf.mean(axis=1).reshape(-1, 1)
+
+            # change volume by scaling signal
+            buf *= self._volume
 
             outdata[:, :CALLBACK_CHANNELS] = buf
 
@@ -948,6 +955,14 @@ class SynthOutput(mido.ports.BaseOutput):
 
         super().close()
 
+    @property
+    def volume(self):
+        return self._volume
+
+    @volume.setter
+    def volume(self, value):
+        self._volume = value
+
 
 @lp.readonly("program")
 @lp.readonly("channels")
@@ -955,10 +970,10 @@ class SynthOutput(mido.ports.BaseOutput):
 @lp.readonly("gain")
 @lp.readonly("samplerate")
 @lp.readonly("device")
+@lp.expose("_volume", "volume")
 class SoundfontOutput(MIDIOutput):
 
-    _program: int
-    _gain: float
+    _volume: float
 
     def __init__(
         self,
@@ -967,6 +982,7 @@ class SoundfontOutput(MIDIOutput):
         program: int,
         gain: float,
         device: str,
+        volume: float,
         send_cc: bool,
         send_messages: bool,
         velocity_range: list[int],
@@ -984,6 +1000,7 @@ class SoundfontOutput(MIDIOutput):
         self._gain = gain
         self._soundfont_id = None
         self._device = device
+        self._volume = volume
         self._samplerate = samplerate
         self._channels = channels
 
@@ -1008,6 +1025,16 @@ class SoundfontOutput(MIDIOutput):
             program=self._program,
             gain=self._gain,
             device=self._device,
+            volume=self._volume,
             samplerate=self._samplerate,
             channels=self._channels,
         )
+
+    def _set_volume(self, value: float):
+        """
+        Overrides the class' volume setter to propagate changes to the underlying synth.
+        """
+        value = lp.coerce(float, value)
+
+        self._out.volume = value
+        self._volume = value
