@@ -70,10 +70,8 @@ class LOERIC:
 
         if self._mode == "process":
             self._command_queue = multiprocessing.Queue()
-            self._response_queue = multiprocessing.Queue()
         else:
             self._command_queue = queue.Queue()
-            self._response_queue = queue.Queue()
 
     def set_tune(self, tune):
         """Assign a tune to LOERIC and calculate the associated contours."""
@@ -120,17 +118,20 @@ class LOERIC:
         :param timeout: seconds to wait for the running instance to respond.
         :return: the value at *path*, or ``None``.
         """
+        response_queue = (
+            multiprocessing.Queue() if self._mode == "process" else queue.Queue()
+        )
         self._command_queue.put(
             LOERICCommand(
                 command="get",
                 payload={
                     "path": lp.LOERICPath(path=path),
-                    "response": self._response_queue,
+                    "response": response_queue,
                 },
             )
         )
         try:
-            return self._response_queue.get(timeout=timeout)
+            return response_queue.get(timeout=timeout)
         except Exception:
             logger.warning(f"get_attribute timed out for path '{path}'")
             return None
