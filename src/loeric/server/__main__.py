@@ -346,7 +346,7 @@ async def volume_change(value: float):
 
     status = _change_volume(value)
     if status == -1:
-        raise HTTPException(status_code=404, detail=f"Path '{path}' not found")
+        raise HTTPException(status_code=404, detail=f"Path not found")
 
     state.parameters["volume"] = value
     return await get_status()
@@ -362,7 +362,6 @@ def _change_volume(value: float):
 
     for o in outputs["children"]:
         p = f"player/output/{o}"
-        print(p)
         attrs = _get_param(p)
         if attrs is not None and "children" in attrs and "volume" in attrs["children"]:
             p += "/volume"
