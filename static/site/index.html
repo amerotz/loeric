@@ -592,7 +592,7 @@
                 repetitions: 1,
                 transpose: 0,
                 tempo: 160,
-                volume: 100,
+                volume: 1.0,
                 responsiveness: 0.5,
             };
 
@@ -896,12 +896,12 @@
             });
 
             elements.volumeSlider.addEventListener('input', async (e) => {
-                state.volume = parseFloat(e.target.value);
-
-                elements.volumeValue.textContent = state.volume
+                val = parseFloat(e.target.value);
+                state.volume = val/100;
+                elements.volumeValue.textContent = val;
 
                 try {
-                    await apiCall(`/api/volume/${state.volume/100}`, 'POST');
+                    await apiCall(`/api/volume/${state.volume}`, 'POST');
 
                     showSuccess(`Changed volume to ${state.volume}%`);
                 } catch (error) {
