@@ -238,6 +238,14 @@ async def start_loeric(
         if musician:
             musician.stop()
         musician = loeric.LOERIC(config=config, mode="thread")
+
+        # change responsiveness and volume
+        musician.set_attribute(
+            "player/input/mic_input/analysers/loudness/responsiveness", responsiveness
+        )
+
+        _change_volume(volume)
+
         musician.set_tune(tune)
         musician.set_tempo(tempo)
 
@@ -335,6 +343,15 @@ async def volume_change(value: float):
     if not musician:
         raise HTTPException(status_code=400, detail="LOERIC is not running")
 
+    _change_volume(value)
+
+    state.parameters["volume"] = value
+    return await get_status()
+
+
+def _change_volume(value: float):
+    global musician
+
     outputs = _get_param("player/output")
 
     if outputs is None:
@@ -346,9 +363,6 @@ async def volume_change(value: float):
         if attrs is not None and "children" in attrs and "volume" in attrs["children"]:
             p += "/volume"
             musician.set_attribute(p, value)
-
-    state.parameters["volume"] = value
-    return await get_status()
 
 
 @app.get("/api/get/{path:path}")
