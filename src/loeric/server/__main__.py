@@ -362,6 +362,7 @@ def _change_volume(value: float):
 
     for o in outputs["children"]:
         p = f"player/output/{o}"
+        print(p)
         attrs = _get_param(p)
         if attrs is not None and "children" in attrs and "volume" in attrs["children"]:
             p += "/volume"
