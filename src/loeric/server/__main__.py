@@ -345,7 +345,7 @@ async def volume_change(value: float):
         raise HTTPException(status_code=400, detail="LOERIC is not running")
 
     status = _change_volume(value)
-    if status is -1:
+    if status == -1:
         raise HTTPException(status_code=404, detail=f"Path '{path}' not found")
 
     state.parameters["volume"] = value
