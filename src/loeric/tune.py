@@ -1,13 +1,786 @@
-import mido
-import os
-import numpy as np
-import muspy as mp
-import music21 as m21
+"""
+This file is part of LOERIC.
 
-from collections.abc import Callable
-from typing import Generator
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
+import copy
+import json
+import os
+import random
+
+import mido
+import music21 as m21
+import muspy as mp
+import numpy as np
 
 from . import loeric_utils as lu
+
+
+############################# CONSTANTS #########################
+
+MINIMUM_QUARTER_DIVISION = 48
+BEND_UP = 2
+BEND_DOWN = 2
+
+
+NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+CHORDS = {
+    "0_4_7": ("", 0),
+    "0_3_7": ("m", 1),
+    "0_3_6": ("dim", 2),
+    "0_4_8": ("aug", 3),
+    "0_4_7_10": ("7", 4),
+    "0_3_7_10": ("m7", 5),
+    "0_4_7_11": ("M7", 6),
+    "0_3_7_11": ("mM7", 7),
+}
+
+
+def note_list_to_midi(notes):
+
+    midi_messages = []
+    for note in notes:
+        note_messages = note.to_midi(absolute_time=True)
+        midi_messages.extend(note_messages)
+
+    # sort by time
+    midi_messages.sort(key=lambda x: x.time)
+
+    return midi_messages
+
+
+class TimeDelta:
+
+    def __init__(self, eighth_duration):
+        if isinstance(eighth_duration, int) or isinstance(eighth_duration, float):
+            self._eighth_duration = TimeDelta.quantize(eighth_duration)
+            if self._eighth_duration != 0:
+                self._absolute_duration = 8 / self._eighth_duration
+        else:
+            raise Exception(
+                f"Only ints and float are valid TimeDelta durations, not {type(eighth_duration)}"
+            )
+
+    @property
+    def eighth_duration(self):
+        return self._eighth_duration
+
+    def __repr__(self):
+        return f"d={np.round(self._eighth_duration, 4)}"
+
+    @eighth_duration.setter
+    def eighth_duration(self, value):
+        self._eighth_duration = TimeDelta.quantize(value)
+        if self._eighth_duration != 0:
+            self._absolute_duration = 8 / self._eighth_duration
+
+    @property
+    def absolute_duration(self):
+        return self._absolute_duration
+
+    @property
+    def divisions(self):
+        return np.round(2 * self._eighth_duration * MINIMUM_QUARTER_DIVISION)
+
+    @staticmethod
+    def quantize(value):
+        return np.round(value * MINIMUM_QUARTER_DIVISION / 2) / (
+            MINIMUM_QUARTER_DIVISION / 2
+        )
+
+    def __add__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration + other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration + other.eighth_duration
+            )
+
+    def __sub__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration - other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration - other.eighth_duration
+            )
+
+    def __mul__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration * other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration * other.eighth_duration
+            )
+
+    def __truediv__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration / other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration / other.eighth_duration
+            )
+
+    def __mod__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration % other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration % other.eighth_duration
+            )
+
+    def __iadd__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration + other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration + other.eighth_duration
+            )
+
+    def __isub__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration - other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration - other.eighth_duration
+            )
+
+    def __imul__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration * other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration * other.eighth_duration
+            )
+
+    def __itruediv__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return TimeDelta(eighth_duration=self._eighth_duration / other)
+        else:
+            return TimeDelta(
+                eighth_duration=self._eighth_duration / other.eighth_duration
+            )
+
+    def __lt__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration < other
+        else:
+            return self._eighth_duration < other.eighth_duration
+
+    def __gt__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration > other
+        else:
+            return self._eighth_duration > other.eighth_duration
+
+    def __le__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration <= other
+        else:
+            return self._eighth_duration <= other.eighth_duration
+
+    def __ge__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration >= other
+        else:
+            return self._eighth_duration >= other.eighth_duration
+
+    def __eq__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration == other
+        else:
+            return self._eighth_duration == other.eighth_duration
+
+    def __ne__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            return self._eighth_duration != other
+        else:
+            return self._eighth_duration != other.eighth_duration
+
+    def __neg__(self):
+        return TimeDelta(eighth_duration=-self._eighth_duration)
+
+
+class ScoreElement:
+
+    def __init__(self, time: float = 0):
+        self._time = TimeDelta(eighth_duration=time)
+        self._is_note = False
+        self._duration = TimeDelta(eighth_duration=0)
+
+    @property
+    def time(self):
+        return self._time
+
+    @time.setter
+    def time(self, value):
+        if isinstance(value, int) or isinstance(value, float):
+            self._time = TimeDelta(eighth_duration=value)
+        else:
+            self._time = TimeDelta(eighth_duration=value.eighth_duration)
+
+    @property
+    def is_note(self):
+        return self._is_note
+
+    @property
+    def duration(self):
+        return self._duration
+
+    @duration.setter
+    def duration(self, value):
+        if isinstance(value, TimeDelta):
+            self._duration = copy.deepcopy(value)
+        else:
+            self._duration = TimeDelta(eighth_duration=value)
+        if self._duration.eighth_duration < 0:
+            self._duration = TimeDelta(eighth_duration=0)
+            print("\033[38;2;255;255;0m[WARN]\tDuration cannot be negative!\033[0m")
+            # raise Exception("Duration cannot be negative")
+
+    def to_midi(self, absolute_time=False):
+        return []
+
+
+class Pause(ScoreElement):
+
+    def __init__(self, eighth_duration, time: float = 0):
+        super().__init__(time)
+
+        self.duration = eighth_duration
+
+    @property
+    def pitch(self):
+        return -1
+
+    def __repr__(self):
+        return f"(Pause {self._duration} t={self._time})"
+
+
+class Chord(ScoreElement):
+
+    def __init__(self, pitches: list, time: float = 0, is_user=False):
+
+        super().__init__(time)
+
+        self._number = None
+        self._root = None
+        self._bass = None
+        self._quality = None
+        self._pitches = []
+        self.is_user = is_user
+
+        if len(pitches) != 0:
+
+            # bring into octave
+            pitches = np.array(pitches)
+            pitches %= 12
+            pitches = pitches.reshape(len(pitches), 1).astype(int)
+
+            # check for possible inversions
+            options = np.repeat(pitches, len(pitches), axis=1).T
+            options -= pitches
+            options += 12
+            options %= 12
+
+            found = False
+            for i in range(len(options)):
+
+                # sort it to standard shape
+                options[i] = np.sort(options[i])
+
+                # if present in CHORDS
+                id_string = "_".join(options[i].astype(str))
+                if id_string in CHORDS:
+
+                    # we found it!
+                    self._quality, index = CHORDS[id_string]
+                    self._root = pitches[i][0]
+                    self._pitches = options[i]
+                    self._number = self._root + 12 * index
+                    self._bass = pitches[0][0]
+                    found = True
+
+                    break
+
+            if not found:
+                pitches = pitches.flatten()
+                pitches -= min(pitches)
+                pitches.sort()
+                print(
+                    f"\033[38;2;255;255;0m[WARN]\tChord shape {pitches} at time {self._time} not supported.\033[0m"
+                )
+
+    @property
+    def root(self):
+        return self._root
+
+    @property
+    def bass(self):
+        return self._bass
+
+    @property
+    def is_valid(self):
+        return self._number is not None
+
+    @property
+    def chord_number(self):
+        return self._number
+
+    @property
+    def pitches(self):
+        return self._pitches
+
+    @staticmethod
+    def from_harmony(harmony):
+        kind = harmony // 12
+        root = harmony % 12
+        for c in CHORDS:
+            _, number = CHORDS[c]
+            if kind == number:
+                pitches = [(root + int(n)) % 12 for n in c.split("_")]
+                return Chord(pitches=pitches)
+
+        print(f"[WARN]\tUnknown harmony {harmony} (kind = {kind}, root = {root}).")
+
+    def __repr__(self):
+        root = "n/a"
+        if self._root is not None:
+            root = NOTE_NAMES[self._root]
+        bass = ""
+        if self._bass is not None and self._root != self._bass:
+            bass = f"/{NOTE_NAMES[self._bass]} "
+        return f"(Chord {root}{self._quality}{bass} n={self._number} t={self._time})"
+
+
+class SongPosition(ScoreElement):
+
+    def __init__(self, position: int = 0, time: float = 0):
+        super().__init__(time)
+
+        self._position = position
+        self._is_note = False
+
+    @property
+    def position(self):
+        return self._position
+
+    def __repr__(self):
+        return f"(Position p={self._position} t={self._time})"
+
+    def to_midi(self, absolute_time=False):
+
+        time = self.duration
+        if absolute_time:
+            time += self._time
+        return [mido.Message("songpos", pos=self._position, time=time.eighth_duration)]
+
+
+class Tempo(ScoreElement):
+
+    def __init__(self, qpm: float = 0, time: float = 0):
+        super().__init__(time)
+
+        self._qpm = qpm
+
+    @property
+    def qpm(self):
+        return self._qpm
+
+    def __repr__(self):
+        return f"(Tempo q={self._qpm} t={self._time})"
+
+
+class KeySignature(ScoreElement):
+
+    def __init__(self, root: int = 0, mode: str = "major", time: float = 0):
+        super().__init__(time)
+
+        self._root = root
+        self._mode = mode
+        self._fifths = lu.number_of_fifths[self.major_root]
+
+    @property
+    def root(self):
+        return self._root
+
+    @property
+    def mode(self):
+        return self._mode
+
+    @property
+    def fifths(self):
+        return self._fifths
+
+    def semitones_from_root(self, pitch: int) -> int:
+        """
+        Compute the distance between the given note and the tonic of the tune in semitones.
+
+        :param pitch: the input note.
+
+        :return: the distance between note and the tonic in semitones.
+        """
+        return int((pitch - 7 * self._fifths) % 12)
+
+    def __repr__(self):
+        return (
+            f"(KeySignature k={NOTE_NAMES[self._root]} m={self._mode} t={self._time})"
+        )
+
+    def degree_from_root(self, pitch: int, with_octave=False):
+
+        indexes = np.argwhere(self.scale == (pitch - self.root) % 12)
+        accidental = 0
+
+        if len(indexes) == 0:
+
+            indexes = np.argwhere(self.scale == (pitch - 1 - self._root) % 12)
+            accidental = 1
+
+        indexes = indexes[0][0]
+        if with_octave:
+            indexes += 7 * ((pitch - self._root) // 12)
+
+        return int(indexes), accidental
+
+    def degree_difference(self, pitch1, pitch2):
+
+        a, acc1 = self.degree_from_root(pitch1, with_octave=True)
+        b, acc2 = self.degree_from_root(pitch2, with_octave=True)
+
+        is_chromatic = False
+        if acc1 + acc2 != 0:
+            is_chromatic = True
+
+        return b - a, is_chromatic
+
+    def degree_add(self, midi, degree):
+
+        note, acc = self.degree_from_root(midi)
+
+        midi += self.scale[int(note + degree) % 7]
+        midi -= self.scale[int(note)]
+        midi -= acc
+
+        midi += 12 * ((note + degree) // 7)
+
+        return midi
+
+    def to_midi(self, absolute_time=False):
+
+        time = self.duration
+        if absolute_time:
+            time += self._time
+        return [
+            mido.MetaMessage(
+                "key_signature",
+                key=NOTE_NAMES[self.major_root],
+                time=time.eighth_duration,
+            )
+        ]
+
+    @property
+    def major_root(self) -> int:
+        mode_offset = {
+            "major": 0,
+            "dorian": -2,
+            "phrygian": -3,
+            "mixolydian": 5,
+            "lydian": 7,
+            "minor": 3,
+            "locrian": 1,
+        }
+        return (12 + self._root + mode_offset[self._mode]) % 12
+
+    @property
+    def scale(self):
+        mode_degree = {
+            "major": 0,
+            "dorian": 1,
+            "phrygian": 2,
+            "mixolydian": 3,
+            "lydian": 4,
+            "minor": 5,
+            "locrian": 6,
+        }
+        scale = np.roll(lu.major_scale, -mode_degree[self._mode])
+        scale -= scale[0]
+        scale += 12
+        scale %= 12
+
+        return scale
+
+    @staticmethod
+    def root_from_string(key_signature: str) -> int:
+        """
+        Return the tonic of a given key signature.
+
+        :param key_signature: the key signature in the following format: [A-G](#|b)?m?
+        :return: the toinc of the key signature.
+        """
+
+        base = int(m21.pitch.Pitch(key_signature[0]).ps)
+
+        if "b" in key_signature:
+            base -= 1
+        elif "#" in key_signature:
+            base += 1
+
+        base += 12
+        base %= 12
+
+        return base
+
+
+class TimeSignature(ScoreElement):
+
+    def __init__(self, numerator: int, denominator: int, time: float):
+        super().__init__(time)
+
+        self._numerator = numerator
+        self._denominator = denominator
+        self._eighths_per_bar = TimeDelta(eighth_duration=8 * numerator / denominator)
+
+        if self._numerator % 3 == 0:
+            self._beat_count = self._numerator / 3
+        else:
+            self._beat_count = self._numerator
+
+    @property
+    def numerator(self):
+        return self._numerator
+
+    @property
+    def denominator(self):
+        return self._denominator
+
+    @property
+    def eighths_per_bar(self):
+        return self._eighths_per_bar
+
+    @property
+    def beat_count(self):
+        return self._beat_count
+
+    @property
+    def meter_string(self):
+        return f"{self._numerator}/{self._denominator}"
+
+    def __repr__(self):
+        return f"(TimeSignature {self.meter_string} t={self._time})"
+
+
+class Repetition(ScoreElement):
+
+    def __init__(self, number: int = 0, time: float = 0):
+        super().__init__(time)
+
+        self._number = number
+
+    @property
+    def number(self):
+        return self._number
+
+    def __repr__(self):
+        return f"(Repetition n={self._number} t={self._time})"
+
+
+class Barline(ScoreElement):
+
+    def __init__(self, number: int = 0, time: float = 0):
+        super().__init__(time)
+
+        self._number = number
+
+    @property
+    def number(self):
+        return self._number
+
+    def __repr__(self):
+        return f"(Barline n={self._number} t={self._time})"
+
+
+class Note(ScoreElement):
+
+    def __init__(
+        self,
+        pitch: float = 0,
+        eighth_duration: float = 1,
+        id: int = 0,
+        time: float = 0,
+        velocity=64,
+        slide=False,
+        channel=0,
+    ):
+        super().__init__(time)
+        self._pitch = pitch
+
+        self._duration = TimeDelta(eighth_duration=eighth_duration)
+
+        self._id = id
+        self._velocity = velocity
+        self._is_slide = slide
+        self._slide_targets = []
+        self.channel = channel
+        self._is_note = True
+        self._metadata = []
+
+    def __repr__(self):
+        s = f"(Note p={self._pitch} {self._duration} id={self._id} t={np.round(self._time.eighth_duration, 2)} c={self.channel}"
+        if self._is_slide:
+            s += f",\n\tslide={self._slide_targets}"
+
+        if self.has_metadata:
+            s += " meta=["
+            s += ",".join([str(m) for m in self.metadata])
+            s += "]"
+        s += ")"
+        return s
+
+    def add_metadata(self, data):
+        self._metadata.append(data)
+
+    @property
+    def has_metadata(self):
+        return len(self._metadata) != 0
+
+    @property
+    def metadata(self):
+        return self._metadata
+
+    def transpose(self, semitones):
+        self._pitch += semitones
+        if self._is_slide:
+            for note in self._slide_targets:
+                note.transpose(semitones)
+
+    def add_slide_target_pitch(self, note):
+        if not self._is_slide:
+            raise Exception(
+                "slide not permitted. This note was created with slide=False."
+            )
+        self._slide_targets.append(note)
+        self._duration += note.duration
+        duration = copy.deepcopy(self._slide_targets[0].duration)
+        for note in self._slide_targets[1:]:
+            duration += note.duration
+        assert (
+            duration <= self._duration
+        ), f"Duration of targets {duration} exceeds note duration {self._duration}"
+
+    @property
+    def duration(self):
+        return self._duration
+
+    @duration.setter
+    def duration(self, value):
+        original_duration = self._duration.eighth_duration
+        if isinstance(value, TimeDelta):
+            self._duration = copy.deepcopy(value)
+        else:
+            self._duration = TimeDelta(eighth_duration=value)
+
+        if self._is_slide:
+            ratio = value / original_duration
+            for note in self._slide_targets:
+                note.duration = note.duration * ratio
+
+    @property
+    def pitch(self):
+        return self._pitch
+
+    @property
+    def id(self):
+        return self._id
+
+    def to_midi(self, absolute_time=False):
+
+        overall_time = TimeDelta(eighth_duration=0)
+        if absolute_time:
+            overall_time = TimeDelta(eighth_duration=self._time.eighth_duration)
+
+        messages = []
+
+        bend_semitones = self._pitch - np.round(self._pitch)
+        if bend_semitones > 0:
+            bend_percentage = bend_semitones / BEND_UP
+        else:
+            bend_percentage = bend_semitones / BEND_DOWN
+
+        messages.append(
+            mido.Message(
+                "pitchwheel",
+                pitch=np.round(8192 * bend_percentage).astype(int),
+                channel=self.channel,
+                time=overall_time.eighth_duration,
+            )
+        )
+        messages.append(
+            mido.Message(
+                "note_on",
+                note=np.round(self._pitch).astype(int),
+                time=overall_time.eighth_duration.astype(float),
+                channel=self.channel,
+                velocity=self._velocity,
+            )
+        )
+
+        note_duration = TimeDelta(eighth_duration=self._duration.eighth_duration)
+        if self._is_slide:
+
+            previous_bend = bend_percentage
+            resolution = 24
+
+            for note in self._slide_targets:
+                slide_duration = TimeDelta(
+                    eighth_duration=note.duration.eighth_duration / resolution
+                )
+
+                bend_semitones = note.pitch - self._pitch
+                if bend_semitones > 0:
+                    bend_percentage = bend_semitones / BEND_UP
+                else:
+                    bend_percentage = bend_semitones / BEND_DOWN
+
+                # append messages
+                mult = random.uniform(0.25, 0.5)
+                for j in range(resolution):
+
+                    overall_time = overall_time + slide_duration
+
+                    perc = j / resolution
+                    perc **= mult
+                    pb = (1 - perc) * previous_bend + perc * bend_percentage
+                    pb = min(8191, max(np.round(pb * 8191).astype(int), -8192))
+                    messages.append(
+                        mido.Message(
+                            "pitchwheel",
+                            pitch=pb,
+                            channel=self.channel,
+                            time=float(overall_time.eighth_duration),
+                        )
+                    )
+                    note_duration = note_duration - slide_duration
+
+                previous_bend = bend_percentage
+
+        if self._duration == 0:
+            note_duration += 0.001
+
+        messages.append(
+            mido.Message(
+                "note_off",
+                note=np.round(self._pitch).astype(int),
+                channel=self.channel,
+                time=(overall_time + note_duration).eighth_duration.astype(float),
+                velocity=0,
+            )
+        )
+
+        return messages
 
 
 class Tune:
@@ -21,405 +794,587 @@ class Tune:
         meter=None,
         verbose: int = 0,
         sync_interval: float = None,
+        trim_end_eighths=0,
+        config=None,
     ):
         """
-        Initialize the class. A number of properties is computed:
-
-        * the duration of the pickup bar, if there is any;
-        * the key signature (only the first encountered is considered, key signature changes are not supported);
-        * the time signature (only the first encountered is considered, time signature changes are not supported);
+        Initialize the class.
 
         :param filename: the path to the midi file.
         :param repeats: how many times the tune should be repeated.
+        :param key: the key of the tune.
+        :param meter: the meter of the tune.
+        :param verbose: report info and errors.
+        :param sync_interval: the synchronization interval for the virtual session.
 
         """
         self._filename = filename
-        if filename.endswith(".mid"):
-            mido_source = mp.read_midi(filename)
-        elif filename.endswith(".abc"):
-            mido_source = mp.read_abc(filename)
-
         self._verbose = verbose
+        self._sync_interval = None
+        if sync_interval is not None:
+            self._sync_interval = TimeDelta(eighth_duration=sync_interval)
+        self._first_bar_length = 0
+        self._tune_type = None
+        self.repeats = repeats
+
+        # save filename of config
+        self.config = config
+        self.json_config = None
+        if config is not None and os.path.isfile(config):
+            with open(config, "r") as f:
+                # keep a loaded version for the server
+                self.json_config = json.load(f)
+
+        if filename.endswith(".mid") or filename.endswith(".midi"):
+            midi_source = mp.read_midi(filename)
+        elif filename.endswith(".mxl"):
+            midi_source = mp.read_musicxml(filename)
+            self._first_bar_length = (
+                midi_source.barlines[1].time - midi_source.barlines[0].time
+            ) / 12
+
+            # TODO obtain tune type
+            self._tune_type = None
+        elif filename.endswith(".abc"):
+            midi_source = mp.read_abc(filename)
+            self._first_bar_length = (
+                midi_source.barlines[1].time - midi_source.barlines[0].time
+            ) / 12
+
+            # TODO obtain tune type
+            self._tune_type = None
+        else:
+            raise Exception(
+                f"Cannot read {filename}. Make sure it is a MIDI or ABC file."
+            )
+
+        ############################# tempo #############################
+
+        self._tempos = [
+            Tempo(
+                qpm=t.qpm,
+                time=self.ticks_to_eighth_notes(t.time, midi_source.resolution),
+            )
+            for t in midi_source.tempos
+        ]
+        self._current_tempo = self._tempos[0]
+
+        ######################### key signature #########################
 
         # key signature
         self.forced_key = False
+        self._key_signatures = []
         if key is not None:
+
             root, mode = tuple(key.split(" "))
-            key_signature = mp.KeySignature(time=0, root=lu.get_root(root), mode=mode)
-            # reset key signatures
-            mido_source.key_signatures = []
+
+            self._key_signatures.append(
+                KeySignature(
+                    root=KeySignature.root_from_string(root), mode=mode, time=0
+                )
+            )
+
             self.forced_key = True
         else:
-            key_signature = mido_source.key_signatures[0]
+            for key in midi_source.key_signatures:
+                self._key_signatures.append(
+                    KeySignature(
+                        root=key.root,
+                        mode=key.mode,
+                        time=self.ticks_to_eighth_notes(
+                            key.time, midi_source.resolution
+                        ),
+                    )
+                )
 
-        self._key_signature = key_signature
-        self._root = self._key_signature.root
-        self._fifths = lu.number_of_fifths[
-            (self._root + lu.mode_offset[self._key_signature.mode]) % 12
-        ]
+        self._current_key = self._key_signatures[0]
 
-        mido_source = mido_source.to_mido(use_note_off_message=True)
-
-        # fix timing so that every note on has time=0 and every note off has its duration
-        notes = [msg for msg in mido_source]
-        first = True
-        for i in range(len(notes) - 1):
-
-            if lu.is_note_off(notes[i]) and lu.is_note_on(notes[i + 1]):
-                notes[i].time += notes[i + 1].time
-                notes[i + 1].time = 0
-
-        # load midi notes and repeat them
-        self._orig_midi = []
-        for i in range(repeats):
-            # should find another way to handle repetitions
-            self._orig_midi.append(mido.Message("sysex", data=[i], time=0))
-            self._orig_midi.extend(list(notes))
-
-        # some stats about midi
-        self._lowest_pitch = min(
-            [msg.note for msg in self._orig_midi if msg.type in ["note_on", "note_off"]]
-        )
-        self._highest_pitch = max(
-            [msg.note for msg in self._orig_midi if msg.type in ["note_on", "note_off"]]
-        )
+        ######################### time signature ########################
 
         # time signature
         self.forced_meter = False
+        self._time_signatures = []
         if meter is not None:
-            self._time_signature = m21.meter.TimeSignature(meter)
-            # reset key signatures
-            mido_source.time_signatures = []
+            num, den = meter.split("/")
+            self._time_signatures.append(
+                TimeSignature(numerator=int(num), denominator=int(den), time=0)
+            )
             self.forced_meter = True
         else:
             # time signature
-            self._time_signature = self._get_time_signature()
+            for sign in midi_source.time_signatures:
+                self._time_signatures.append(
+                    TimeSignature(
+                        numerator=sign.numerator,
+                        denominator=sign.denominator,
+                        time=self.ticks_to_eighth_notes(
+                            sign.time, midi_source.resolution
+                        ),
+                    )
+                )
 
-        # tempo in microseconds per quarter
-        self._tempo = self._get_original_tempo()
-
-        # number of quarter notes per bar
-        self._quarters_per_bar = (
-            4 * self._time_signature.numerator / self._time_signature.denominator
-        )
-        # bar and beat duration in seconds
-        self._bar_duration = self._quarters_per_bar * self._quarter_duration
-        self._beat_duration = self._bar_duration / self._time_signature.beatCount
-
-        # pickup bar
-        self._offset = self._get_performance_offset()
-
-        # to keep track of the performance
-        self._performance_time = -self._offset
-
-        # intertwine songpos messages every given interval
-        # 16383 is the max value for songpos
-        # every_n = max(6, round(len(self._midi) / 16383))
-        self._sync_interval = sync_interval
         if self._sync_interval is None:
-            every_duration = self._quarters_per_bar / self._time_signature.beatCount
-        else:
-            every_duration = self._sync_interval
-
-        if self._verbose > 0:
-            print(
-                f"[INFO]\tSynchronizing every:\t{every_duration} quarters.",
+            time_signature = self._time_signatures[0]
+            self._sync_interval = (
+                time_signature.eighths_per_bar / time_signature.beat_count
             )
 
-        # obtain alla events
-        all_events = [m.copy() for m in self._orig_midi]
+        self._first_bar_length %= self.time_signature.eighths_per_bar.eighth_duration
+        if self._verbose > 0:
+            print(
+                f"[INFO]\tSynchronizing every:\t{self._sync_interval/2} quarters.",
+            )
 
-        # convert to cumulative time
-        cumulative_time = 0
-        for i, m in enumerate(all_events):
-            cumulative_time += m.time
-            all_events[i].time = cumulative_time
+        ######################### barlines ######################
+        midi_source_barlines = []
+        for i in range(len(midi_source.tracks)):
+            midi_source_barlines.extend(midi_source.barlines)
 
-        # arange songpos messages independently
-        songpos_timestamps = np.arange(
-            start=0, stop=cumulative_time, step=every_duration
-        )
-        all_events.extend(
+        barline_times = np.array(
             [
-                mido.Message("songpos", pos=p, time=t)
-                for p, t in enumerate(songpos_timestamps)
+                self.ticks_to_eighth_notes(msg.time, midi_source.resolution)
+                for msg in midi_source_barlines
             ]
         )
 
-        # sort everything by cumulative time
-        all_events = sorted(all_events, key=lambda x: x.time)
+        self._barlines = [
+            Barline(number=i, time=t) for i, t in enumerate(barline_times)
+        ]
 
-        # convert to time delta representation
-        all_timestamps = [m.time for m in all_events]
-        all_timestamps = np.diff(
-            [m.time for m in all_events], prepend=all_timestamps[0]
+        ######################### create the chords ######################
+
+        midi_source_chords = []
+        for i in range(len(midi_source.tracks)):
+            midi_source_chords.extend(midi_source.tracks[i].chords)
+
+        chord_pitches = [msg.pitches for msg in midi_source_chords]
+
+        chord_times = np.array(
+            [
+                self.ticks_to_eighth_notes(msg.time, midi_source.resolution)
+                for msg in midi_source_chords
+            ]
         )
-        for i in range(len(all_events)):
-            all_events[i].time = float(all_timestamps[i])
 
-        self.index_map = {}
-        contour_index = 0
-        cumulative_duration = 0
-        self.duration_map = {}
-        for i, msg in enumerate(all_events):
+        self._original_chords = [
+            Chord(pitches=p, time=t, is_user=True)
+            for p, t in zip(chord_pitches, chord_times)
+        ]
 
-            cumulative_duration += msg.time
+        ######################### create the notes ######################
 
-            if lu.is_note_on(msg):
-                contour_index += 1
-            elif msg.type == "songpos":
-                # map songpos to next note and contour index
-                self.index_map[msg.pos] = (i, contour_index)
-                self.duration_map[msg.pos] = cumulative_duration - self._offset
+        midi_source_notes = []
+        for i in range(len(midi_source.tracks)):
+            midi_source_notes.extend(midi_source.tracks[i].notes)
 
-        self._midi = all_events
-        self._max_songpos = max(self.index_map.keys())
+        # pitches
+        note_pitches = np.array([msg.pitch for msg in midi_source_notes]).astype(float)
+
+        # quantize durations
+        note_durations = [
+            self.ticks_to_eighth_notes(msg.duration, midi_source.resolution)
+            for msg in midi_source_notes
+        ]
+
+        # id
+        note_ids = np.arange(len(note_pitches))
+
+        # time
+        note_times = np.array(
+            [
+                self.ticks_to_eighth_notes(msg.time, midi_source.resolution)
+                for msg in midi_source_notes
+            ]
+        )
+
+        # pitch, duration, note id, time
+        _score = [
+            Note(pitch=p, eighth_duration=d, id=i, time=t)
+            for p, d, i, t in zip(note_pitches, note_durations, note_ids, note_times)
+        ]
+
+        ######################### handle repetitions ######################
+
+        # add repetitions
+        score_duration = _score[-1].time + _score[-1].duration
+
+        tmp_score = []
+        repetitions = []
+        chords = []
+        key_signatures = []
+        tempos = []
+        barlines = []
+        # add notes and repetitions
+        for r in range(repeats):
+            new_score = copy.deepcopy(_score)
+            for n in new_score:
+                n.time += score_duration * r - self._first_bar_length
+            repetitions.append(
+                Repetition(number=r + 1, time=new_score[0].time.eighth_duration)
+            )
+            for k in self._key_signatures:
+                key_signatures.append(
+                    KeySignature(
+                        root=k.root,
+                        mode=k.mode,
+                        time=(
+                            k.time + score_duration * r - self._first_bar_length
+                        ).eighth_duration,
+                    )
+                )
+            for t in self._tempos:
+                tempos.append(
+                    Tempo(
+                        qpm=t.qpm,
+                        time=(
+                            t.time + score_duration * r - self._first_bar_length
+                        ).eighth_duration,
+                    )
+                )
+            for b in self._barlines:
+                barlines.append(
+                    Barline(
+                        number=b.number + r * len(self._barlines),
+                        time=(
+                            b.time + score_duration * r - self._first_bar_length
+                        ).eighth_duration,
+                    )
+                )
+            for c in self._original_chords:
+                new_c = copy.deepcopy(c)
+                new_c.time = c.time + score_duration * r - self._first_bar_length
+                chords.append(new_c)
+            tmp_score.extend(new_score)
+
+        _score = tmp_score
+        self._original_chords = chords
+        self._key_signatures = key_signatures
+        self._tempos = tempos
+        self._barlines = barlines
+
+        # calculate end time for score with optional end trim
+        self._score_end_time = _score[-1].time + _score[-1].duration - trim_end_eighths
+        # remove anything beyond end time (actually happens only if trimming)
+        _score = [el for el in _score if el.time < self._score_end_time]
+
+        # recompute
+        self._score_end_time = _score[-1].time + _score[-1].duration
+
+        ############# score with repetition signs, songpos etc ###########
+
+        self._chords = []  # will be calculated later
+
+        self._annotated_score = []
+
+        # add tempos
+        print(self._tempos)
+        self._annotated_score.extend(self._tempos)
+
+        # add barlines
+        self._annotated_score.extend(self._barlines)
+
+        # add repetitions
+        self._annotated_score.extend(repetitions)
+
+        # add key signatures
+        self._annotated_score.extend(self._key_signatures)
+
+        # arange songpos messages independently
+        self._position_times = np.arange(
+            start=-self._first_bar_length,
+            stop=self._score_end_time.eighth_duration,
+            step=self._sync_interval.eighth_duration,
+        )
+        song_positions = np.array(
+            [
+                SongPosition(position=p, time=t)
+                for p, t in enumerate(self._position_times)
+            ]
+        )
+
+        self.maximum_songpos = len(self._position_times) - 1
+
+        # divide add songpos in messages that contain a sync interval
+        should_add_position = np.ones_like(song_positions).astype(bool)
+
+        self._annotated_score.extend(song_positions[should_add_position])
+        self._annotated_score.extend(_score)
+
+        self._annotated_score.sort(key=lambda x: x.time)
+
+        self.create_index_map()
 
         if self._verbose > 0:
             print(f"[INFO]\tPlaying:\t\t{os.path.basename(filename)}")
             print(
-                f"[INFO]\tMeter:\t\t\t{self._time_signature.numerator}/{self._time_signature.denominator}"
+                f"[INFO]\tMeter:\t\t\t{self._time_signatures[0].numerator}/{self._time_signatures[0].denominator}"
             )
             print(
-                f"[INFO]\tKey:\t\t\t{self._key_signature.root} {self._key_signature.mode}"
+                f"[INFO]\tKey:\t\t\t{self._key_signatures[0].root} {self._key_signatures[0].mode}"
             )
 
-    @property
-    def beat_count(self) -> int:
-        """
-        :return: the numebr of beats in the tune.
-        """
-        return self._time_signature.beatCount
+    def create_index_map(self):
+        # create index map to jump
+        self.index_map = {}
+        contour_index = -1
+        for i, el in enumerate(self._annotated_score):
 
-    @property
-    def quarter_duration(self) -> float:
-        """
-        :return: the duration of a quarter note in the tune given its original tempo.
-        """
-        return self._quarter_duration
+            # if song position add it
+            if isinstance(el, SongPosition):
+                self.index_map[el.position] = (i, contour_index)
+            """
+            # if song position inside a note
+            elif isinstance(el, Note) and el.has_metadata:
+                for m in el.metadata:
+                    if isinstance(m, SongPosition):
+                        self.index_map[m.position] = (i, contour_index)
+            """
 
-    @property
-    def root(self) -> int:
-        """
-        :return: the tune's key signature root in pitch space.
-        """
-        return self._root
+            if el.is_note:
+                contour_index += 1
 
-    @property
-    def ambitus(self) -> tuple[int]:
-        """
-        :return: the tune's lowest and highest pitches in a tuple (low, high)
-        """
-        return (self._lowest_pitch, self._highest_pitch)
-
-    @property
-    def key_signature(self) -> str:
-        """
-        :return: the tune's key signature.
-        """
-        return self._key_signature
-
-    @property
-    def time_signature(self) -> m21.meter.TimeSignature:
-        """
-        :return: the tune's time signature.
-        """
-        return self._time_signature
-
-    @property
-    def tempo(self) -> int:
-        """
-        :return: the tune's tempo in microseconds per quarter.
-        """
-        return self._tempo
-
-    @property
-    def bar_duration(self) -> float:
-        """
-        :return: the tune's bar duration in seconds.
-        """
-        return self._bar_duration
-
-    @property
-    def beat_duration(self) -> float:
-        """
-        :return: the tune's beat duration in seconds.
-        """
-        return self._beat_duration
-
-    @property
-    def offset(self) -> float:
-        """
-        :return: the tune's performance offset (i.e. the length of the pickup bar) in seconds.
-        """
-        return self._offset
-
-    def set_key_signature(self, key_signature):
-        """
-        Set the tune's key signature.
-
-        :param key_signature: the key signature.
-        """
-        self._key_signature = mp.KeySignature(
-            time=0, root=key_signature.key, mode="major"
+    def ticks_to_eighth_notes(self, duration: int, ticks_per_quarter: int):
+        return (
+            2
+            * np.round(MINIMUM_QUARTER_DIVISION * duration / ticks_per_quarter)
+            / MINIMUM_QUARTER_DIVISION
         )
-        self._root = lu.get_root(key_signature.key)
-        self._fifths = lu.number_of_fifths[
-            (self._root + lu.mode_offset[self._key_signature.mode]) % 12
-        ]
 
-    def reset_performance_time(self) -> None:
-        """
-        :return: the current performance time
-        """
-        self._performance_time = -self._offset
+    def calculate_chords(
+        self,
+        chord_score: np.array,
+        chords_per_bar: int = 2,
+        allowed_chords: np.array = np.zeros(12),
+    ):
 
-    def get_performance_time(self) -> float:
-        """
-        :return: the current performance time
-        """
-        return self._performance_time
+        pitches = self.pitches
+        notes = pitches % 12
+
+        # message length
+        lengths = np.array([n.eighth_duration for n in self.durations])
+        times = np.array([t.eighth_duration for t in self.times])
+
+        t = times.min()
+
+        key_changes = self.key_signatures
+        self._chords = copy.deepcopy(self._original_chords)
+        chord_changes = self._chords
+
+        current_key = None
+        current_chord = None
+
+        calculated_chords = []
+
+        while t <= times.max():
+            start = t
+            stop = self.time_signature.eighths_per_bar / chords_per_bar + t
+            if t < 0:
+                stop = 0
+
+            while len(chord_changes) != 0 and t >= chord_changes[0].time:
+                current_chord = chord_changes[0]
+                chord_changes = chord_changes[1:]
+
+            while len(key_changes) != 0 and t >= key_changes[0].time:
+                current_key = key_changes[0]
+                key_changes = key_changes[1:]
+
+            indexes = np.where((times >= start) & (times < stop))
+
+            if current_chord is None or not current_chord.is_valid:
+                # select bar range
+                bar_notes = notes[indexes].astype(int)
+                bar_lengths = lengths[indexes]
+
+                # init counts
+                chords = np.zeros(12)
+                note_count = np.zeros(12)
+
+                # add chord score for each note
+                for i, n in enumerate(bar_notes):
+                    chords += np.roll(chord_score, n) * bar_lengths[i]
+                    note_count[n % 12] += 1
+
+                # filter out chords that are not allowed
+                chords_filtered = np.multiply(
+                    chords,
+                    np.roll(allowed_chords, current_key.root),
+                )
+
+                # choose the chord with the highest score
+                root = np.random.choice(
+                    np.argwhere(chords_filtered == chords_filtered.max())[0]
+                )
+
+                # check if the selected chord should be major according to the mode
+                chord_quality = np.roll(lu.chord_quality, current_key.major_root)[root]
+
+                harmony_value = root
+
+                # check if the note score suggests major chord
+                if note_count[(root + 4) % 12] > note_count[(root + 3) % 12]:
+                    chord_quality = 0
+                # check if the note score suggests minor chord
+                elif note_count[(root + 3) % 12] > note_count[(root + 4) % 12]:
+                    chord_quality = 1
+
+                # check if the note score suggests diminished chord
+                if (
+                    note_count[(root + 6) % 12] > 2 * note_count[(root + 7) % 12]
+                    and chord_quality == 1
+                ):
+                    chord_quality = 2
+
+                # check if the note score suggests augmented chord
+                elif (
+                    note_count[(root + 8) % 12] > 2 * note_count[(root + 7) % 12]
+                    and chord_quality == 0
+                ):
+                    chord_quality = 3
+
+                # check if the note score suggests minor seventh chord
+                elif (
+                    note_count[(root + 10) % 12] > 2 * np.mean(note_count)
+                    and note_count[(root + 10) % 12] > note_count[(root + 11) % 12]
+                ):
+                    chord_quality += 4
+
+                # check if the note score suggests major seventh chord
+                elif (
+                    note_count[(root + 11) % 12] > 2 * np.mean(note_count)
+                    and note_count[(root + 11) % 12] > note_count[(root + 10) % 12]
+                ):
+                    chord_quality += 6
+
+                harmony_value = root + 12 * chord_quality
+                new_chord = Chord.from_harmony(harmony_value)
+                new_chord.time = start
+                calculated_chords.append(new_chord)
+
+            t = stop
+
+        # add chords
+        calculated_chords.extend([c for c in self._chords if c.is_valid])
+        calculated_chords.sort(key=lambda x: x.time)
+        self._chords = calculated_chords
+
+        # remove all chords from score
+        self._annotated_score = list(
+            filter(lambda x: not isinstance(x, Chord), self._annotated_score)
+        )
+        calculated_chords.extend(self._annotated_score)
+        calculated_chords.sort(key=lambda x: x.time)
+        self._annotated_score = calculated_chords
+
+        self._current_chord = self._chords[0]
+
+        # update map
+        self.create_index_map()
 
     @property
-    def _quarter_duration(self) -> float:
-        """
-        Return the duration of a quarter note in seconds given the current tempo.
+    def time_signature(self):
+        return self._time_signatures[0]
 
-        :return: the amount of seconds corresponding to a quarter note given the current tempo.
-        """
-        return self._tempo / 1e6
+    @property
+    def key_signature(self):
+        return self._current_key
 
-    def semitones_from_tonic(self, midi_note: int) -> int:
-        """
-        Compute the distance between the given note and the tonic of the tune in semitones.
+    @property
+    def key_signatures(self):
+        return self._key_signatures
 
-        :param midi_note: the input note.
+    @property
+    def chords(self):
+        return self._chords
 
-        :return: the distance between note and the tonic in semitones.
-        """
-        return (midi_note - 7 * self._fifths) % 12
+    def set_key_signature(self, key):
+        self._current_key = key
 
-    def _get_performance_offset(self) -> float:
-        """
-        Return the length of the pickup bar, if there is any.
+    def set_tempo(self, tempo):
+        self._current_tempo = tempo
 
-        :return: the length of the pickup bar in seconds.
-        """
-        # retrieve duration of first bar
-        m21_source = m21.converter.parse(self._filename)
+    def set_chord(self, chord):
+        self._current_chord = chord
 
-        # performance offset in quarter length
-        offset = list(m21_source.recurse().getElementsByClass("Measure"))[
-            0
-        ].duration.quarterLength
+    @property
+    def pitches(self):
+        return np.array(
+            [
+                note.pitch
+                for note in list(
+                    filter(lambda x: isinstance(x, Note), self._annotated_score)
+                )
+            ]
+        )
 
-        # convert quarter length to seconds
-        offset *= self._quarter_duration
-        offset %= self._bar_duration
+    @property
+    def durations(self):
+        return np.array(
+            [
+                note.duration
+                for note in list(
+                    filter(lambda x: isinstance(x, Note), self._annotated_score)
+                )
+            ]
+        )
 
-        return offset
+    @property
+    def times(self):
+        return np.array(
+            [
+                note.time
+                for note in list(
+                    filter(lambda x: isinstance(x, Note), self._annotated_score)
+                )
+            ]
+        )
 
-    def _get_original_tempo(self) -> int:
-        """
-        Retrieve the tempo of the tune, if there is any.
-        Only the first tempo change will be retrieved.
+    @property
+    def float_times(self):
+        return np.array(
+            [
+                note.time.eighth_duration
+                for note in list(
+                    filter(lambda x: isinstance(x, Note), self._annotated_score)
+                )
+            ]
+        )
 
-        :return: the first tempo change if there is any, else 120 bpm.
-        """
-        msg = self.filter(lambda x: x.type == "set_tempo")
-        if len(msg) == 0:
-            if self._verbose > 0:
-                print("[INFO]\tSetting default tempo to 120 BPM")
-            return mido.bpm2tempo(120)
-        if self._verbose > 0:
-            print(f"[INFO]\tFile tempo is {mido.tempo2bpm(msg[0].tempo)} BPM")
-        return msg[0].tempo
+    def position_time(self, position):
+        return self._position_times[position]
 
-    def _get_time_signature(self) -> m21.meter.TimeSignature:
-        """
-        Retrieve the time signature of the tune, if there is any.
-        Only the first time signature will be retrieved.
+    @property
+    def tempo(self):
+        return self._current_tempo
 
-        :return: the first time signature if there is any, else None.
-        """
-
-        # msg = [m for m in self._midi if m.type == "time_signature"][0]
-        msg = self.filter(lambda x: x.type == "time_signature")
-        if len(msg) == 0:
-            return None
-        time_signature = m21.meter.TimeSignature()
-        time_signature.numerator = msg[0].numerator
-        time_signature.denominator = msg[0].denominator
-        return time_signature
-
-    def _get_key_signature(self) -> str:
-        """
-        Retrieve the key signature of the tune, if there is any.
-        Only the first key signature will be retrieved.
-
-        :return: the first key signature if there is any, else None.
-        """
-
-        # msg = [m for m in self._midi if m.type == "key_signature"]
-        msg = self.filter(lambda x: x.type == "key_signature")
-        if len(msg) == 0:
-            return None
-        return msg[0].key
-
-    def filter(
-        self, filtering_function: Callable[[mido.Message], bool]
-    ) -> list[mido.Message]:
-        """
-        Retrieve the midi events that fullfill the given filtering function.
-        This function acts on the raw representation of the input tune without any songpos/meta/sysex messages, but with explicit repetitions.
-
-        :param filtering_function: the function filtering the midi events.
-
-        :return: a list of midi events fullfilling the filtering function.
-        """
-        return [msg for msg in self._orig_midi if filtering_function(msg)]
-
-    def events(self) -> Generator[mido.Message, None, None]:
-        """
-        A generator returning each midi event in the tune. Each time an event is retrieved, the performance time is updated.
-
-        :return: the sequence of midi events one by one
-        """
-        # for each note
-        for event in self._midi:
-            # update the performance time
-            self._performance_time += event.time
-
-            # return the event
-            yield event
-
-    def is_on_a_beat(self) -> bool:
-        """
-        Decide if we are on a beat or not, given the current cumulative performance time.
-
-        :return: True if we are on a beat.
-        """
-        beat_position = (
-            self._performance_time % self._bar_duration
-        ) / self._beat_duration
-        diff = abs(beat_position - round(beat_position))
-
-        return diff <= lu.TRIGGER_DELTA
+    @property
+    def tune_type(self):
+        if self._tune_type is None:
+            tunes = {
+                "2/2": "reel",
+                "2/4": "polka",
+                "3/4": "waltz",
+                "4/4": "hornpipe",
+                "6/8": "jig",
+                "9/8": "slipjig",
+                "12/8": "slide",
+            }
+            return tunes[self.time_signature.meter_string]
+        else:
+            return self._tune_type
 
     def __len__(self) -> int:
-        """
-        Return the length of the list of midi messages.
+        return len(self._annotated_score)
 
-        :return: the number of midi messages in this tune.
-        """
-        return len(self._midi)
+    def __getitem__(self, idx: int):
+        return self._annotated_score[idx]
 
-    def __getitem__(self, idx: int) -> mido.Message:
-        """
-        Return the item in the midi event list corresponding to the given index.
 
-        :param idx: the element index.
+"""
+parser = argparse.ArgumentParser()
+parser.add_argument("source", help="the midi file to play.", nargs="?", default="")
+args = parser.parse_args()
+args = vars(args)
 
-        :return: the midi message corresponding to that index.
-        """
-        return self._midi[idx]
+tune = Tune(args["source"], 1, key=None, meter=None, verbose=1, sync_interval=None)
+"""

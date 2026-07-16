@@ -1,0 +1,64 @@
+{
+    "ornamentation": {
+        "variation_tr_1": {
+            "cases": [
+                [ [ 0, 1 ], [ -2, 1 ], [ -1, 1 ] ] ],
+            "pitches_mean": [ -4, -3, -2, -1 ],
+            "pitches_std": [ 0, 0, 0, 0 ],
+            "velocities_mean": [ 1, 1, 1, 1 ],
+            "velocities_std": [ 0.01, 0.01, 0.01, 0.01 ],
+            "durations_mean": [ 0.5, 0.5, 1, 1 ],
+            "durations_std": [ 0.01, 0.01, 0.01, 0.01 ],
+            "probability": 1,
+            "length": 3,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "variation_tr_2": {
+            "cases": [
+                [ [ 0, 1 ], [ 1, 1 ], [ 2, 1 ] ] ],
+            "pitches_mean": [ -1, 0, 1, 2 ],
+            "pitches_std": [ 0, 0, 0, 0 ],
+            "velocities_mean": [ 1, 1, 1, 1 ],
+            "velocities_std": [ 0.01, 0.01, 0.01, 0.01 ],
+            "durations_mean": [ 0.5, 0.5, 1, 1 ],
+            "durations_std": [ 0.01, 0.01, 0.01, 0.01 ],
+            "probability": 1,
+            "length": 3,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "variation_tr_3": {
+            "cases": [
+                [ [ 0, 1 ], [ 2, 1 ] ] ],
+            "pitches_mean": [ 0, 1, 2 ],
+            "pitches_std": [ 0, 0, 0 ],
+            "velocities_mean": [ 1, 1, 1 ],
+            "velocities_std": [ 0.01, 0.01, 0.01 ],
+            "durations_mean": [ 0.5, 0.5, 1 ],
+            "durations_std": [ 0.01, 0.01, 0.01 ],
+            "probability": 1,
+            "length": 2,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        },
+        "variation_tr_4": {
+            "cases": [
+                [ [ 0, 2 ], [ 3, 1 ] ] ],
+            "pitches_mean": [ 0, 1, 2, 3 ],
+            "pitches_std": [ 0, 0, 0, 0 ],
+            "velocities_mean": [ 1, 1, 1, 1 ],
+            "velocities_std": [ 0.01, 0.01, 0.01, 0.01 ],
+            "durations_mean": [ 0.5, 0.5, 1, 1 ],
+            "durations_std": [ 0.01, 0.01, 0.01, 0.01 ],
+            "probability": 1,
+            "length": 3,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+        }
+    }
+}

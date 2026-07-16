@@ -21,7 +21,7 @@ Features
 Installation
 ------------
 
-Create a virtual Python environment:
+Create a virtual Python environment with Python 3.13.7:
 
 ``python3 -m venv ~/loeric-env``
 
@@ -29,17 +29,29 @@ Activate it:
 
 ``source ~/loeric-env/bin/activate``
 
+On Windows: install `python-rtmidi` using the `CPython 3.12 Windows x86-64 version<https://pypi.org/project/python-rtmidi/1.5.8/#files>`_:
+
+``python -m pip install python_rtmidi-1.5.8-cp312-cp312-win_amd64.whl``
+
 Install the library `portaudio`:
 
 ``sudo apt install portaudio19-dev # debian``
 
 ``sudo dnf install portaudio # fedora``
 
-``brew install portaudio #mac``
+``brew install portaudio # mac``
 
-Build and install:
+Install requirements:
+
+``python -m pip install -r requirements.txt``
+
+Install in virtual env:
 
 ``sh compile.sh``
+
+or alternatively, build frontend:
+``sh build.sh``
+
 
 Creative Works
 --------------

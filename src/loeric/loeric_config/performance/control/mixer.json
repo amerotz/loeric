@@ -1,14 +1,67 @@
 {
-	"contour_2_control": {
-	},	
+	"contours": {
+		"ornament": {
+			"human_impact_scale": 1
+		},
+		"legato": {
+			"human_impact_scale": 1
+		},
+		"velocity": {
+			"human_impact_scale": 1
+		},
+		"tempo": {
+			"human_impact_scale": 1
+		}
+	},
+	"contour_2_control": {},
 	"control_2_contour": {
-		"velocity_intensity": 77,
-		"tempo_intensity": 78,
-		"ornament_intensity": 79,
-		"legato_intensity": 80,
-		"velocity_human_impact": 81,
-		"tempo_human_impact": 82,
-		"ornament_human_impact": 83,
-		"legato_human_impact": 84
+		"velocity_intensity":{
+			"control":77,
+			"contours":[
+				"velocity_intensity"
+			]
+		},
+		"tempo_intensity":{
+			"control":78,
+			"contours":[
+				"tempo_intensity"
+			]
+		},
+		"ornament_intensity":{
+			"control":79,
+			"contours":[
+				"ornament_intensity"
+			]
+		},
+		"legato_intensity":{
+			"control":80,
+			"contours":[
+				"legato_intensity"
+			]
+		},
+		"velocity_human_impact":{
+			"control":81,
+			"contours":[
+				"velocity_human_impact"
+			]
+		},
+		"tempo_human_impact":{
+			"control":82,
+			"contours":[
+				"tempo_human_impact"
+			]
+		},
+		"ornament_human_impact":{
+			"control":83,
+			"contours":[
+				"ornament_human_impact"
+			]
+		},
+		"legato_human_impact":{
+			"control":84,
+			"contours":[
+				"legato_human_impact"
+			]
+		}
 	}
 }

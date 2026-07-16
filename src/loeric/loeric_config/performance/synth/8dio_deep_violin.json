@@ -2,27 +2,10 @@
     "contour_2_control": {
 		"velocity": {
 			"control": 1,
-			"min": 90,
+			"min": 80,
 			"max": 127
 		}
 	},
-    "ornamentation": {
-        "roll_1": {
-            "slide": true
-        },
-        "roll_2": {
-            "slide": true
-        },
-        "roll_3": {
-            "slide": true
-        },
-        "cut_1": {
-            "slide": true
-        },
-        "cut_2": {
-            "slide": true
-        }
-    },
     "keyswitches": {
         "marcato": {
             "bind": "legato",

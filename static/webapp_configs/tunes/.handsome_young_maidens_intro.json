@@ -1,0 +1,83 @@
+{
+    "variables": {
+        "var_drone_threshold": 0.0
+    },
+    "contours": {
+        "drone": {
+            "human_impact_scale": 1.0
+        },
+        "velocity": {
+            "human_impact_scale": 1.0
+        },
+        "velocity_pattern": {
+            "human_impact_scale": 0.0
+        },
+        "tempo": {
+            "human_impact_scale": 0.0
+        },
+        "tempo_pattern": {
+            "recipe": {
+                "pattern": {
+                    "mean": [ 1.14, 0.85, 1.14 ],
+                    "std": [ 0.05, 0.05, 0.05 ],
+                    "std_scale": 1,
+                    "normalize": true,
+                    "period": 0.5
+                }
+            },
+            "human_impact_scale": 0
+        },
+        "ornament": {
+            "recipe": {
+                "pattern": {
+                    "mean": [0],
+                    "std": null,
+                    "std_scale": 1,
+                    "normalize": false,
+                    "period": 1
+                }
+            },
+            "human_impact_scale": 0.0
+        },
+        "legato": {
+            "human_impact_scale": 1.0
+        }
+    },
+    "control_2_contour": {
+        "ornaments": {
+            "control": 77,
+            "contours": [
+                "ornament_intensity" ]
+        },
+        "errors": {
+            "control": 78,
+            "contours": [
+                "orn_error_diatonic",
+                "orn_error_diatonic_prob",
+                "orn_error_chromatic",
+                "orn_error_chromatic_prob",
+                "orn_error_slide",
+                "orn_error_slide_prob" ]
+        },
+        "drones": {
+            "control": 79,
+            "contours": [
+                "drone_intensity" ]
+        },
+        "legato": {
+            "control": 80,
+            "contours": [
+                "legato_intensity" ]
+        },
+        "dynamics": {
+            "control": 81,
+            "contours": [
+                "velocity_intensity" ]
+        }
+
+    },
+
+    "drone": {
+        "active": false
+    }
+}

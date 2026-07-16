@@ -1,0 +1,340 @@
+{
+    "variables": {
+        "var_drone_threshold": 0.5,
+        "var_webapp_intensity_control": 49,
+        "var_roll_2_prob": 0,
+        "var_webapp_human_impact_control": 50,
+        "var_phrase_length_2": 2,
+        "var_phrase_length_1": 4,
+        "var_velocity_weight": [ 0, 1, 0, 1, 0 ],
+        "var_drone_bind": "drone",
+        "var_notes_per_bar_bind": "notes_per_bar",
+        "var_legato_pattern": {
+            "mean": [ 1, 1, 0.9, 1, 1, 0.8, 1, 1, 0.9, 1, 1, 0.8 ],
+            "std": [ 0, 0, 0.1, 0, 0, 0.1, 0, 0, 0.1, 0, 0, 0.1 ],
+            "std_scale": 1,
+            "period": 2,
+            "normalize": false
+        },
+        "var_ornament_pattern": {
+            "mean": [ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+            "std": null,
+            "period": 8,
+            "std_scale": 1,
+            "normalize": false
+        },
+        "major_allowed_chords": [ 2, 0, 0.5, 0, 0.5, 2, 0, 2, 0, 1, 0, 0 ],
+        "minor_allowed_chords": [ 2, 0, 0.5, 2, 0, 2, 0, 2, 1, 0, 1, 0.5 ],
+        "dorian_allowed_chords": [ 2, 0, 0.5, 2, 0, 0.5, 0, 1, 0, 1, 2, 0 ],
+        "mixolydian_allowed_chords": [ 2, 0, 0.5, 0, 0.5, 1, 0, 0.5, 0, 0.5, 1, 0 ],
+        "var_notes_per_bar": [ 6, 3, 1 ],
+        "var_comping_notes_per_bar": [ 6 ],
+        "var_upper_comping_pattern": [ 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1 ],
+        "var_lower_comping_pattern": [ 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0 ]
+    },
+    "contours": {
+        "drone": {
+            "recipe": {
+                "weighted_sum": {
+                    "contours": {
+                        "o_canainn": {
+                            "weights": [ 0, 1, 1, 1, -1 ],
+                            "savgol": false,
+                            "scale": true,
+                            "shift": true
+                        },
+                        "pattern": {
+                            "mean": [ 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1 ],
+                            "std": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                            "std_scale": 1,
+                            "normalize": false,
+                            "period": 2
+                        }
+                    },
+                    "weights": [ 1, 1 ]
+                }
+            }
+        },
+        "notes_per_bar": {
+            "recipe": {
+                "o_canainn": {
+                    "weights": "var_velocity_weight",
+                    "savgol": false,
+                    "scale": true,
+                    "shift": true
+                }
+            }
+        },
+        "velocity": {
+            "recipe": {
+                "weighted_sum": {
+                    "contours": {
+                        "o_canainn": {
+                            "weights": "var_velocity_weight",
+                            "savgol": false,
+                            "scale": true,
+                            "shift": false
+                        },
+                        "weighted_sum": {
+                            "contours": {
+                                "scale#low_pitch": {
+                                    "contours": {
+                                        "clamp": {
+                                            "contours": {
+                                                "linear": {
+                                                    "contours": {
+                                                        "pitch": {
+                                                            "scale": true,
+                                                            "shift": true
+                                                        }
+                                                    },
+                                                    "a": -1,
+                                                    "b": 0.5
+                                                }
+                                            },
+                                            "low": 0
+                                        }
+                                    },
+                                    "min": 0,
+                                    "max": 1
+                                },
+                                "scale#high_pitch": {
+                                    "contours": {
+                                        "clamp": {
+                                            "contours": {
+                                                "linear": {
+                                                    "contours": {
+                                                        "pitch": {
+                                                            "scale": true,
+                                                            "shift": true
+                                                        }
+                                                    },
+                                                    "a": 1,
+                                                    "b": -0.5
+                                                }
+                                            },
+                                            "low": 0
+                                        }
+                                    },
+                                    "min": 0,
+                                    "max": 1
+                                }
+                            },
+                            "weights": [ 1, 1 ],
+                            "normalize": false
+                        },
+                        "scale#3": {
+                            "contours": {
+                                "multiply": {
+                                    "contours": {
+                                        "phrasing#2": {
+                                            "accelerando": 0.5,
+                                            "ritardando": 1,
+                                            "last": 0.2,
+                                            "turn": 0.4,
+                                            "power": 2,
+                                            "phrase_length": "var_phrase_length_2",
+                                            "shift": null,
+                                            "mode": "contour"
+                                        },
+                                        "phrasing#1": {
+                                            "accelerando": 1,
+                                            "ritardando": 1,
+                                            "last": 0.2,
+                                            "turn": 0.4,
+                                            "power": 2,
+                                            "phrase_length": "var_phrase_length_1",
+                                            "shift": null,
+                                            "mode": "contour"
+                                        }
+                                    }
+                                }
+                            },
+                            "min": 0.5,
+                            "max": 1
+                        }
+                    },
+                    "weights": [ 0.25, 0.25, 0.5 ]
+                }
+            }
+        },
+        "velocity_pattern": {
+            "recipe": {
+                "pattern": {
+                    "mean": [ 1.06, 0.999, 1.012, 0.997, 1.003, 0.99 ],
+                    "std": [ 0.14, 0.092, 0.096, 0.097, 0.092, 0.161 ],
+                    "std_scale": 1,
+                    "normalize": false,
+                    "period": 1
+                }
+            },
+            "human_impact_scale": 0
+        },
+        "tempo": {
+            "recipe": {
+                "scale": {
+                    "contours": {
+                        "multiply": {
+                            "contours": {
+                                "phrasing#2": {
+                                    "accelerando": 0.5,
+                                    "ritardando": 1,
+                                    "last": 0.2,
+                                    "turn": 0.4,
+                                    "power": 2,
+                                    "phrase_length": "var_phrase_length_2",
+                                    "shift": null,
+                                    "mode": "contour"
+                                },
+                                "phrasing#1": {
+                                    "accelerando": 1,
+                                    "ritardando": 1,
+                                    "last": 0.2,
+                                    "turn": 0.4,
+                                    "power": 2,
+                                    "phrase_length": "var_phrase_length_1",
+                                    "shift": null,
+                                    "mode": "contour"
+                                }
+                            }
+                        }
+                    },
+                    "min": 0,
+                    "max": 0.5
+                }
+            },
+            "human_impact_scale": 0
+        },
+        "swing": {
+            "recipe": {
+                "weighted_sum": {
+                    "contours": {
+                        "o_canainn": {
+                            "weights": [ 1, 1, 1, 1, 1 ],
+                            "savgol": false,
+                            "scale": true,
+                            "shift": true
+                        },
+                        "multiply": {
+                            "contours": {
+                                "phrasing#2": {
+                                    "accelerando": 0.5,
+                                    "ritardando": 1,
+                                    "last": 0.2,
+                                    "turn": 0.4,
+                                    "power": 2,
+                                    "phrase_length": "var_phrase_length_2",
+                                    "shift": null,
+                                    "mode": "contour"
+                                },
+                                "phrasing#1": {
+                                    "accelerando": 1,
+                                    "ritardando": 1,
+                                    "last": 0.2,
+                                    "turn": 0.4,
+                                    "power": 2,
+                                    "phrase_length": "var_phrase_length_1",
+                                    "shift": null,
+                                    "mode": "contour"
+                                }
+                            }
+                        }
+                    },
+                    "weights": [ 0.7, 0.3 ]
+                }
+            },
+            "human_impact_scale": 0
+        },
+        "tempo_pattern": {
+            "recipe": {
+                "pattern": {
+                    "mean": [ 1, 0.9, 1 ],
+                    "std": [ 0.02, 0.02, 0.02 ],
+                    "std_scale": 1,
+                    "normalize": true,
+                    "period": 0.5
+                }
+            },
+            "human_impact_scale": 0
+        },
+        "ornament": {
+            "recipe": {
+                "multiply": {
+                    "contours": {
+                        "o_canainn": {
+                            "weights": [ 1, 1, 1, 1, 1 ],
+                            "savgol": false,
+                            "scale": true,
+                            "shift": false
+                        },
+                        "pattern": "var_ornament_pattern"
+                    }
+                }
+            }
+        },
+        "legato": {
+            "recipe": {
+                "shift": {
+                    "contours": {
+                        "weighted_sum": {
+                            "contours": {
+                                "o_canainn": {
+                                    "weights": [ 1, 1, 0, -1, -0.25 ],
+                                    "savgol": false,
+                                    "scale": true,
+                                    "shift": false
+                                },
+                                "pattern": "var_legato_pattern"
+                            },
+                            "weights": [ 0.5, 0.5 ]
+                        }
+                    },
+                    "offset": -1
+                }
+            },
+            "human_impact_scale": 0
+        }
+    },
+    "swing": {
+        "min": 1,
+        "max": 1,
+        "bind": "swing",
+        "locations": []
+    },
+    "legato": {
+        "min": 0.8,
+        "max": 1.0,
+        "bind": "legato"
+    },
+    "keyswitches": {},
+    "ornamentation": {},
+    "values": {
+        "bend_up_semitones": 2,
+        "bend_down_semitones": 2,
+        "bend_resolution": 32,
+        "beat_velocity_increase": 16,
+        "min_velocity": 64,
+        "max_velocity": 127,
+        "pitch_deviation_cents": 1
+    },
+    "tempo_control": {
+        "increasing": false,
+        "tempo_warp_bpms": 1,
+        "slow_start_percentage": 0.3,
+        "slow_end_percentage": 0.8
+    },
+    "contour_2_control": {},
+    "control_2_contour": {},
+    "harmony": {
+        "chord_score": [ 2, -1, 0, 0, 0, 1, -1, 0, 1, 1, 0, -1 ],
+        "chords_per_bar": 2
+    },
+    "drone": {
+        "active": false,
+        "allow_root": false,
+        "probability_scale": true,
+        "drone_sets": {}
+    },
+    "approach_from_above": {},
+    "approach_from_below": {}
+}

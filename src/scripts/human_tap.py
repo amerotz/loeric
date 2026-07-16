@@ -1,7 +1,18 @@
-import mido
+"""
+This file is part of LOERIC.
+
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
 import threading
-import numpy as np
 import time
+
+import mido
+import numpy as np
+
 
 inport = mido.get_input_names()[2]
 outport = mido.get_output_names()[0]
@@ -14,7 +25,6 @@ sync_duration = 2
 
 
 def send_songpos():
-    global tempo
     with mido.open_output(outport) as out:
         i = 0
         while True:
@@ -43,7 +53,7 @@ with mido.open_output(f"HUMAN SYNC #{id}#", virtual=True) as out:
                 pos_thread.start()
             """
 
-            if last_time == None:
+            if last_time is None:
                 last_time = now
             else:
                 deltas.append(now - last_time)

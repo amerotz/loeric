@@ -1,8 +1,17 @@
-import loeric.loeric_utils as lu
+"""
+This file is part of LOERIC.
+
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
+import argparse
 import threading
 import time
+
 import mido
-import argparse
 
 
 def main() -> None:
@@ -23,7 +32,11 @@ def main() -> None:
         "-i2", "--input_2", help="the second input MIDI port.", type=int
     )
     parser.add_argument("-o", "--output", help="the output MIDI port.", type=int)
-    parser.add_argument("--create_output", help="whether a new output MIDI port should be created.", action="store_true")
+    parser.add_argument(
+        "--create-out",
+        help="whether a new output MIDI port should be created.",
+        action="store_true",
+    )
     parser.add_argument(
         "-i1c",
         "--input-1-control",
@@ -72,9 +85,8 @@ def main() -> None:
 
     input_1 = mido.get_input_names()[args.input_1]
     input_2 = mido.get_input_names()[args.input_2]
-    if not args.create_output:
+    if not args.create_out:
         output = mido.get_output_names()[args.output]
-    intensity = 64
 
     values[input_1] = 64
     values[input_2] = 64
@@ -85,8 +97,8 @@ def main() -> None:
     t2.start()
 
     try:
-        if args.create_output:
-            out = mido.open_output(f"HUMAN out COMBINE", virtual=True)
+        if args.create_out:
+            out = mido.open_output("HUMAN out COMBINE", virtual=True)
         else:
             out = mido.open_output(output)
         while True:
@@ -94,11 +106,17 @@ def main() -> None:
             v2 = values[input_2]
             if args.mode == "through":
                 message = mido.Message(
-                    "control_change", channel=0, control=int(args.input_1_control), value=int(v1)
+                    "control_change",
+                    channel=0,
+                    control=int(args.input_1_control),
+                    value=int(v1),
                 )
                 out.send(message)
                 message = mido.Message(
-                    "control_change", channel=0, control=int(args.input_2_control), value=int(v2)
+                    "control_change",
+                    channel=0,
+                    control=int(args.input_2_control),
+                    value=int(v2),
                 )
                 out.send(message)
                 print(v1, v2, sep="\t")

@@ -5,15 +5,17 @@
 dist/
 mid/
 abc/
-*.mid
 *.scl
 loeric-env/
 mini-session/
 paper-examples/
 cc-test/
-src/configs
 mini_session.sh
 generate.sh
+.flake8
+.idea
+.DS_Store
+
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/
@@ -42,11 +44,10 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
-lib/
+./lib/
 lib64/
 parts/
 sdist/
@@ -167,3 +168,12 @@ dmypy.json
 cython_debug/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks
+
+/client/.svelte-kit/
+/client/build/
+/client/node_modules/
+/static/site
+/static/sound
+/configs
+/src/scripts
+/src/new

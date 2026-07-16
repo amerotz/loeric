@@ -1,14 +1,49 @@
+"""
+This file is part of LOERIC.
+
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
 import argparse
-import re
-import jsonmerge
+import copy
+import importlib.resources as ir
 import json
 import os
+import re
+import textwrap
+
+import jsonmerge
+
+
+def merge_configs(original, new_config):
+    base = copy.deepcopy(original)
+
+    base = jsonmerge.merge(base, new_config)
+
+    if "contours" in new_config:
+        for c in new_config["contours"]:
+            if "recipe" in new_config["contours"][c]:
+                base["contours"][c]["recipe"] = new_config["contours"][c]["recipe"]
+
+    if "control_2_contour" in new_config:
+        if len(new_config["control_2_contour"]) != 0:
+            base["control_2_contour"] = new_config["control_2_contour"]
+
+    return base
 
 
 def main():
-    dir_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = ir.files(
+        "loeric.loeric_config"
+    )  # os.path.dirname(os.path.realpath(__file__))
 
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--list", help="List options and possible values.", action="store_true"
+    )
     # loeric args
     parser.add_argument(
         "--tune-type",
@@ -70,14 +105,36 @@ def main():
     )
     args = vars(parser.parse_args())
 
+    if args["list"]:
+
+        print("{:=^50}".format(" LOERIC OPTIONS "))
+        print()
+
+        p_path = dir_path / "performance"
+        for folder in os.listdir(p_path):
+            if os.path.isdir(p_path / folder):
+                options = []
+                for file in sorted(os.listdir(p_path / folder)):
+                    options.append(file.replace(".json", ""))
+
+                s = " ".join(options)
+                """
+                print(
+                    f"--{'{: <10}'.format(folder.replace("_", "-"))}{textwrap.fill(s, width=32, initial_indent="\t", subsequent_indent="\t\t")}"
+                )
+                print()
+                """
+
+        return
+
     # if configuring the shell
     if args["shell"]:
-        dir_path += "/shell"
+        dir_path = dir_path / "shell"
     else:
-        dir_path += "/performance"
+        dir_path = dir_path / "performance"
 
     # load base config
-    with open(f"{dir_path}/base.json", "r") as f:
+    with open(dir_path / "base.json", "r") as f:
         base = json.load(f)
 
     # which args?
@@ -100,17 +157,14 @@ def main():
             continue
         else:
             for option in args[a].split("-"):
-                name = f"{dir_path}/{a}/{option}.json"
+                name = dir_path / f"{a}" / f"{option}.json"
                 print("Using", f"{a}/{option}.json")
                 config_name.append(args[a])
+
                 with open(name, "r") as f:
                     selected = json.load(f)
-                    base = jsonmerge.merge(base, selected)
 
-                    if "contours" in selected:
-                        for c in selected["contours"]:
-                            if "recipe" in selected["contours"][c]:
-                                base["contours"][c]["recipe"] = selected["contours"][c]["recipe"]
+                base = merge_configs(base, selected)
 
     # specific values for shell
     if args["shell"]:
@@ -120,7 +174,7 @@ def main():
     config_name = "_".join(config_name) + ".json"
 
     if args["output"] is None:
-        config_name = f"{dir_path}/config.json"
+        config_name = dir_path / "config.json"
     else:
         config_name = args["output"]
 

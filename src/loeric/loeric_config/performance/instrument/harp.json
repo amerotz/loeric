@@ -1,27 +1,21 @@
 {
-	"probabilities": {
-		"roll": 1,
-		"slide": 0,
-		"cut": 1
-	},
-	"old_ornaments": {
-		"cut_velocity_fraction": 0.9,
-		"roll_velocity_fraction": 0.9
-	},
-	"approach_from_above": {
-	},
-	"approach_from_below": {
-	},
 	"drone": {
-		"active": false,
-		"threshold": 0.5,
-		"bind": "velocity",
-		"midi_channel": 1,
-		"velocity_multiplier": 0.9, 
-		"strings_min": 0,
-		"strings_max": 0,
-		"free_strings": [53, 55, 56, 58, 60, 62, 63, 65, 67, 68, 70, 72, 74, 75, 77, 79, 80, 82, 84, 86, 87, 89, 91, 92, 94] ,
-		"free_strings_min": 3,
-		"free_strings_max": 5
+		"drone_sets": {
+			"free": {
+                "threshold": "var_drone_threshold",
+				"velocity_multiplier": 0.9,
+				"bind": "var_drone_bind",
+				"old_notes": [ 38, 40, 42, 43, 45, 47, 49, 50, 52, 54, 55, 57, 59, 61, 62, 64, 66, 67, 69, 71, 73 ],
+				"notes": [ 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60 ],
+				"polyphony_min": 1,
+				"polyphony_max": 3,
+				"notes_per_bar_bind": "var_notes_per_bar_bind",
+				"notes_per_bar": "var_notes_per_bar",
+				"midi_channel": "var_drone_midi_channel",
+				"delay_range": 0.02,
+				"transpose": false,
+				"use_legato": false
+			}
+		}
 	}
 }

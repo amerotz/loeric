@@ -1,10 +1,20 @@
-import loeric.loeric_utils as lu
-import mido
-import time
+"""
+This file is part of LOERIC.
+
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
 import argparse
-import numpy as np
-from scipy.fftpack import fft, dct, idct
+import time
+
 import matplotlib.pyplot as plt
+import mido
+import numpy as np
+
+import loeric.loeric_utils as lu
 
 
 def main() -> None:
@@ -66,7 +76,7 @@ def main() -> None:
                 magnitude /= max(magnitude)
 
                 # 4. Find dominant frequency
-                dominant_index = np.argsort(magnitude[magnitude > 0.75])
+                # dominant_index = np.argsort(magnitude[magnitude > 0.75])
 
                 plt.plot(1 / frequencies[1:], magnitude[1:])
                 plt.show()

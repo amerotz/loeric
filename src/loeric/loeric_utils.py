@@ -1,7 +1,22 @@
+"""
+This file is part of LOERIC.
+
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
+import copy
+import pathlib
+import sys
+import time
+
 import mido
-import muspy as mp
 import numpy as np
-import music21 as m21
+
+from . import tune as tu
+
 
 # how to approach a note from above or below in a major scale
 above_approach_scale = [2, 1, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1]
@@ -14,84 +29,196 @@ TRIGGER_DELTA = 0.05
 
 MAX_TEMPO = 2**24 - 1
 
+# to handle builds
+if hasattr(sys, "_MEIPASS"):
+    general_configs_path = pathlib.Path(sys._MEIPASS) / "loeric"
+else:
+    general_configs_path = pathlib.Path(__file__).parent
+
+general_configs_path = general_configs_path / "loeric_config" / "performance"
+# general_configs_path = ir.files("loeric.loeric_config.performance")
 
 # key signatures
 number_of_fifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5]
-mode_offset = {
-    "major": 0,
-    "minor": 3,
-    "dorian": 10,
-    "mixolydian": 5,
-}
-"""
-number_of_fifths = {
-    "Cb": -7,
-    "Abm": -7,
-    "Gb": -6,
-    "Ebm": -6,
-    "Db": -5,
-    "Bbm": -5,
-    "Ab": -4,
-    "Fm": -4,
-    "Eb": -3,
-    "Cm": -3,
-    "Bb": -2,
-    "Gm": -2,
-    "F": -1,
-    "Dm": -1,
-    "C": 0,
-    "Am": 0,
-    "G": 1,
-    "Em": 1,
-    "D": 2,
-    "Bm": 2,
-    "A": 3,
-    "F#m": 3,
-    "E": 4,
-    "C#m": 4,
-    "B": 5,
-    "G#m": 5,
-    "F#": 6,
-    "D#m": 6,
-    "C#": 7,
-    "A#m": 7,
-}
-"""
+
+major_scale = np.array([0, 2, 4, 5, 7, 9, 11])
 
 
-def get_root(key_signature: str) -> int:
+def midi_to_freq(midi):
+    return 440 * 2 ** ((midi - 69) / 12)
+
+
+def freq_to_midi(freq):
+    return 69 + 12 * np.log2(freq / 440)
+
+
+# play midi file
+def play(
+    groover,
+    player,
+    loop_condition=lambda: True,
+    note_callback=None,
+    songpos_callback=None,
+    repetition_callback=None,
+    **kwargs,
+) -> None:
     """
-    Return the tonic of a given key signature.
+    Play the given tune with the given groover.
 
-    :param key_signature: the key signature in the following format: [A-G](#|b)?m?
-    :return: the toinc of the key signature.
+    :param groover: the groover object
+    :param player: the player object
+    :param loop_condition: a function evaluating when to stop
+    :param note_callback: callback on a note message
+    :param songpos_callback: callback on a song position message
+    :param repetition_callback: callback on a repetition message
+    :param kwargs: the performance arguments
     """
 
-    base = int(m21.pitch.Pitch(key_signature[0]).ps)
+    player.set_song_time(groover._tune._annotated_score[0].time.eighth_duration)
 
-    if "b" in key_signature:
-        base -= 1
-    elif "#" in key_signature:
-        base += 1
+    average_loop_time = 0
+    next_event_time = 0
+    previous_message = None
+    original_message = None
 
-    base += 12
-    base %= 12
+    # iterate over messages
+    while loop_condition():
 
-    return base
+        previous_message = copy.copy(original_message)
+        original_message = groover.next_event()
 
+        player.set_tempo_scale(groover.tempo_scale)
 
-def major_root(root, mode) -> int:
+        # no more messages to perform, exit
+        if original_message is None:
+            next_event_time = previous_message.time + previous_message.duration
+            print(next_event_time)
+            player.wake_me_up_at(next_event_time)
+            groover.reset()
+            break
+
+        # calculate time to wake up for next message
+        # next_event_time = original_message.time + original_message.duration
+        next_event_time = original_message.time
+        time_to_think = next_event_time - 2 * (
+            average_loop_time / groover._eighth_duration_seconds
+        )
+        # wake up slightly before next note
+        player.wake_me_up_at(time_to_think)
+
+        # wait to be awaken by player
+        while loop_condition() and not player.has_reached_wake_time.is_set():
+            player.has_reached_wake_time.wait()
+        player.has_reached_wake_time.clear()
+
+        # wait to be awaken by user / other loeric instance in session
+        while groover.stopped.is_set() and loop_condition():
+            groover.playback_resumed.wait()
+
+        # start measuring loop
+        loop_start_time = time.time()
+
+        new_messages = []
+        # perform notes
+        if original_message.is_note:
+            # make the groover play the messages
+            midi_headers, new_messages = groover.perform(original_message)
+            if note_callback is not None:
+                note_callback(original_message)
+        # keep meta messages intact
+        # handle score elements
+        else:
+            # barlines
+            if isinstance(original_message, tu.Barline):
+                groover.reset_accidentals()
+            # tempos
+            elif isinstance(original_message, tu.Tempo):
+                groover._tune.set_tempo(original_message)
+                if kwargs["verbose"] > 0:
+                    print(f"[INFO]\tChanging tempo. {groover.tempo}")
+            # song positions
+            elif isinstance(original_message, tu.SongPosition):
+                if songpos_callback is not None:
+                    songpos_callback(original_message)
+            # repetitions
+            elif isinstance(original_message, tu.Repetition):
+                if repetition_callback is not None:
+                    repetition_callback(original_message)
+                if groover.skip_repetition:
+                    break
+            # key signature
+            elif isinstance(original_message, tu.KeySignature):
+                if groover._tune.forced_key:
+                    if kwargs["verbose"] > 0:
+                        print(
+                            f"[INFO]\tIgnoring key change (forced key). {original_message}"
+                        )
+                else:
+                    if kwargs["verbose"] > 0:
+                        print(f"[INFO]\tChanging key. {original_message}")
+                    groover._tune.set_key_signature(original_message)
+            # chords
+            elif isinstance(original_message, tu.Chord):
+                if kwargs["verbose"] > 0:
+                    if original_message.is_user:
+                        print(f"[INFO]\tForcing chord: {original_message}")
+                    else:
+                        print(f"[INFO]\tPlaying chord: {original_message}")
+                groover._tune.set_chord(original_message)
+            else:
+                if kwargs["verbose"] > 0:
+                    print(
+                        f"\033[38;2;255;255;0m[WARN]\tUnknown message type {type(original_message)}.\033[0m"
+                    )
+
+            midi_headers = original_message.to_midi(absolute_time=True)
+
+        player.add_notes(new_messages)
+        player.add_midi(midi_headers)
+
+        # stop measuring loop
+        loop_end_time = time.time()
+        loop_duration = loop_end_time - loop_start_time
+        average_loop_time *= 0.2
+        average_loop_time += 0.8 * loop_duration
+
+        message_duration_seconds = (
+            original_message.duration.eighth_duration * groover._eighth_duration_seconds
+        )
+
+        if (
+            average_loop_time > message_duration_seconds
+            and original_message.duration != 0
+        ):
+            if kwargs["verbose"]:
+                print(
+                    f"\033[38;2;255;255;0m[WARN] Intra-note computations are taking too much time ({np.round(average_loop_time, 3)} vs {np.round(message_duration_seconds, 3)}). Free your CPU!\033[0m"
+                )
+
+    if groover.do_end_note:
+        groover.reset()
+        groover.advance_contours()
+        end_notes = groover.get_end_notes()
+        player.add_notes(end_notes)
+
+        final_wake_time = end_notes[-1].time + end_notes[-1].duration
+        player.wake_me_up_at(final_wake_time)
     """
-    :return: the root of the relative major of the key signature in pitch space.
+    else:
+        final_wake_time = groover.performance_time
+        print(final_wake_time)
     """
-    return (root + mode_offset[mode]) % 12
+
+    while loop_condition() and not player.has_reached_wake_time.is_set():
+        player.has_reached_wake_time.wait()
+    player.has_reached_wake_time.clear()
 
 
 # 0 = major
 # 1 = minor
 # 2 = diminished
 # 3 = augmented
-##########################C C#  D Eb  E  F F#  G G#  A A#  B
+# ####################### C C#  D Eb  E  F F#  G G#  A A#  B
 chord_quality = np.array([0, 2, 1, 2, 1, 0, 2, 0, 2, 1, 0, 2])
 
 
@@ -110,38 +237,6 @@ needs_pitch_quantization = [
     True,  # A#
     False,  # B
 ]
-
-
-def get_chord_pitches(harmony: int) -> np.array:
-    """
-    Return the pitches of a major or minor chord in semitones from the root.
-
-    :param harmony: the chord. Values 0-11 indicate a major chord. Values 12-23 indicate a minor chord. Values 24-35 indicate a diminished chord. Values 36-48 indicate an augmented chord.
-
-    :return: the pitches that are part of the input chord.
-    """
-    third = 4
-    fifth = 7
-
-    chord_quality = int(harmony / 12)
-    if chord_quality == 1:
-        third = 3
-    elif chord_quality == 2:
-        third = 3
-        fifth = 6
-    elif chord_quality == 3:
-        fifth = 8
-
-    return np.array([0, third, fifth])
-
-
-'''
-def is_contour_valid(msg: mido.Message) -> bool:
-    """
-    Check if a midi event is to be considered to calculate a contour.
-    """
-    return is_note_on(msg)
-'''
 
 
 def is_note_on(msg: mido.Message) -> bool:
@@ -254,18 +349,3 @@ def get_ports(
         outport = mido.get_output_names()[out_index]
 
     return inport, outport
-
-
-def is_aligned_with(time: float, interval: float, threshold: float) -> bool:
-    """
-    Checks whether a given time position in the tune aligns with some subdivision using a given threshold.
-
-    :param time: the time position to check.
-    :param interval: the time interval to check alignement for.
-    :param threshold: the time threshold to consider the position aligned with the interval.
-
-    :return: whether the time interval is aligned or not.
-    """
-
-    half_i = interval * 0.5
-    return abs(((time - half_i) % interval) - half_i) <= threshold

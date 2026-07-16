@@ -1,10 +1,20 @@
-import sounddevice as sd
-import time
-import math
+"""
+This file is part of LOERIC.
+
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
 import argparse
-import mido
+import time
+
 import aubio
+import mido
 import numpy as np
+import sounddevice as sd
+
 
 hop_size = None
 onsets = []
@@ -30,7 +40,6 @@ max_level = -100000000
 
 
 def pitch_analysis(samples, responsiveness=0.75):
-    global old_index, last_midi, pitch_confidence, transpose_octaves
 
     # analyze
     midi = pitch_o(samples)[0]
@@ -65,10 +74,7 @@ def pitch_analysis(samples, responsiveness=0.75):
 
 
 def loudness_analysis(samples, responsiveness=1, control=11, invert=False):
-    global level, min_level, max_level, old_cc_value, messages_per_second, min_db_level, pitch_o
-
-    # store old level
-    old_level = level
+    global level, min_level, max_level, old_cc_value, min_db_level
 
     # calculate current rms and db
     level = np.sqrt(np.mean(samples**2))
@@ -128,7 +134,7 @@ buffer = []
 
 
 def callback(indata, frames, ctime, status):
-    global buffer, port, old_index, intonation, loudness_responsiveness, loudness_control, loudness_invert, intonation_responsiveness, messages_per_second, hop_size
+    global buffer
 
     buffer.append(np.float32(np.mean(indata, axis=1)))
     if len(buffer) == messages_per_second:
@@ -144,7 +150,7 @@ def callback(indata, frames, ctime, status):
         int_note = pitch_analysis(
             samples[-hop_size:], responsiveness=intonation_responsiveness
         )
-        if int_note is not None and not int_note in callback.intonation_queue:
+        if int_note is not None and int_note not in callback.intonation_queue:
             callback.intonation_queue.append(int_note)
 
     # check loudness
@@ -195,7 +201,7 @@ callback.intonation_queue = []
 
 
 def main():
-    global port, transpose_octaves, loudness_responsiveness, loudness_control, loudness_invert, intonation_responsiveness, pitch_o, pitch_confidence, messages_per_second, min_levels, max_levels, levels, hop_size
+    global port, transpose_octaves, loudness_responsiveness, loudness_control, loudness_invert, intonation_responsiveness, pitch_o, pitch_confidence, messages_per_second, hop_size
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output", help="the output MIDI port.", type=int)
     parser.add_argument(

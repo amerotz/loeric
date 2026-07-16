@@ -1,0 +1,62 @@
+{
+    "contours": {
+        "lower_drone": {
+            "recipe": {
+                "pattern": {
+                    "mean": "var_lower_comping_pattern",
+                    "std": null,
+                    "std_scale": 1,
+                    "normalize": false,
+                    "period": "var_comping_pattern_period"
+                }
+            },
+            "human_impact_scale": 0
+        },
+        "upper_drone": {
+            "recipe": {
+                "pattern": {
+                    "mean": "var_upper_comping_pattern",
+                    "std": null,
+                    "std_scale": 1,
+                    "normalize": false,
+                    "period": "var_comping_pattern_period"
+                }
+            },
+            "human_impact_scale": 0
+        }
+    },
+	"drone": {
+        "active": true,
+        "allow_root": false,
+        "drone_sets": {
+            "free#lower": {
+                "threshold": 0.5,
+                "velocity_multiplier": 0.9,
+                "bind": "lower_drone",
+                "notes": [ 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
+                "polyphony_min": 1,
+                "polyphony_max": 1,
+                "notes_per_bar_bind": "var_notes_per_bar_bind",
+                "notes_per_bar": "var_comping_notes_per_bar",
+                "midi_channel": "var_drone_midi_channel",
+                "delay_range": 0.00,
+                "transpose": true,
+                "use_legato": true
+            },
+            "free#upper": {
+                "threshold": 0.5,
+                "velocity_multiplier": 0.9,
+                "bind": "upper_drone",
+                "notes": [ 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 ],
+                "polyphony_min": 3,
+                "polyphony_max": 3,
+                "notes_per_bar_bind": "var_notes_per_bar_bind",
+                "notes_per_bar": "var_comping_notes_per_bar",
+                "midi_channel": "var_drone_midi_channel",
+                "delay_range": 0.00,
+                "transpose": true,
+                "use_legato": true
+            }
+        }
+    }
+}

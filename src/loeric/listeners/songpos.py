@@ -1,6 +1,15 @@
-import mido
+"""
+This file is part of LOERIC.
+
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
 import argparse
-import time
+
+import mido
 
 
 def main():
@@ -28,7 +37,6 @@ def main():
 
     positions = args.positions
 
-    id = int(time.time())
     with mido.open_output(mido.get_output_names()[args.output]) as out:
         with mido.open_input(mido.get_input_names()[args.input]) as in_:
             i = -1

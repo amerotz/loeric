@@ -1,10 +1,17 @@
-import loeric.loeric_utils as lu
+"""
+This file is part of LOERIC.
+
+LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+"""
 import mido
-import time
-import argparse
 import numpy as np
-from scipy.fftpack import fft, dct, idct
-import matplotlib.pyplot as plt
+
+import loeric.loeric_utils as lu
+
 
 filename = "/home/marco/git/loeric-align/AMT/COMP_fiddle_reels_aisling_amt.mid"
 midi = mido.MidiFile(filename)
@@ -22,10 +29,8 @@ for msg in midi:
 
 times = np.array(onsets)
 new_times = np.arange()
-"""
 times -= min(times)
 durations = np.diff(times)
-"""
 
 """
 durations = np.round(
@@ -46,13 +51,13 @@ wraps = [2, 3, 4, 6, 8, 9, 12, 16]  # , 18, 24 , 32, 36]
 for i in wraps:
     if i >= len(durations):
         continue
-    l = len(durations)
-    tot = i * (1 + l // i)
+    length = len(durations)
+    tot = i * (1 + length // i)
     # print(i, l, tot, 1 + l // i)
 
     swing = durations.copy()
-    if l % i != 0:
-        swing = np.pad(durations, (0, tot - l))
+    if length % i != 0:
+        swing = np.pad(durations, (0, tot - length))
 
     # print()
 
