@@ -35,6 +35,7 @@ requests==2.32.3
 roman-numerals-py==3.1.0
 six==1.17.0
 snowballstemmer==2.2.0
+sounddevice==0.5.5
 Sphinx==8.2.3
 sphinx-rtd-theme==3.0.2
 sphinxcontrib-applehelp==2.0.0
