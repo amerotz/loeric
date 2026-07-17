@@ -254,10 +254,10 @@ class RMS(AudioInputFunction):
         Applies exponential smoothing to the level and to the running min/max,
         then normalises the result to [0, 1].
 
-        :return: normalised RMS value in [0, 1], or 0 if the buffer is empty.
+        :return: normalised RMS value in [0, 1], or 0.5 if the buffer is empty.
         """
         if self._buffer is None:
-            return 0
+            return 0.5
 
         # compute new level
         new_level = np.sqrt(np.mean(self._buffer**2))
@@ -281,8 +281,6 @@ class RMS(AudioInputFunction):
         max_l = max(self._max_level, self._level)
         self._max_level *= 1 - perc
         self._max_level += perc * max_l
-
-        print(self._min_level, self._max_level, level)
 
         diff = self._max_level - self._min_level
         if diff == 0:
