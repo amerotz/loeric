@@ -1,5 +1,7 @@
 {
-    "drone": {
-        "active": false
+  "modules": {
+    "drones": {
+      "bypass": true
     }
+  }
 }

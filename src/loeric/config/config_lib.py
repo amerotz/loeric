@@ -41,7 +41,7 @@ def merge_configs(original, new_config):
     """Merge two configuration files.
 
     This utility merges configuration files by merging each object in them.
-    The contours object is substituted instead.
+    The contours and mapper rules objects are substituted instead.
     """
     base = copy.deepcopy(original)
 
@@ -51,5 +51,8 @@ def merge_configs(original, new_config):
         for c in new_config["contours"]:
             if "recipe" in new_config["contours"][c]:
                 base["contours"][c]["recipe"] = new_config["contours"][c]["recipe"]
+
+    if "mapper" in new_config:
+        base["mapper"]["rules"] = new_config["mapper"]["rules"]
 
     return base

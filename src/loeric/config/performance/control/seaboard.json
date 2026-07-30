@@ -1,0 +1,30 @@
+{
+  "modules": {
+    "timing": {
+      "bind": "$tempo",
+      "qpm_amount": 50
+    }
+  },
+  "player": {
+    "input": {
+      "main": {
+        "active": true,
+        "type": "midi",
+        "port": "Seaboard BLOCK MIDI 1",
+        "analysers": {
+          "vertical": {
+            "type": "midi_cc",
+            "controls": {
+              "intensity": 74
+            }
+          }
+        }
+      }
+    }
+  },
+  "mapper": {
+    "sources": ["tempo", "intensity"],
+    "targets": [],
+    "rules": ["intensity ~ tempo", "1 : %tempo"]
+  }
+}

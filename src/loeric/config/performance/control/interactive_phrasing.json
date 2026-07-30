@@ -31,12 +31,14 @@
             "type": "rms",
             "responsiveness": 1,
             "controls": ["global_intensity", "velocity_tempo_impact"],
+            "windows_per_second": 30,
             "updates_per_second": 30
           },
           "tempo": {
             "type": "rms",
             "responsiveness": 0.7,
             "controls": ["tempo_intensity"],
+            "windows_per_second": 30,
             "updates_per_second": 30
           }
         }

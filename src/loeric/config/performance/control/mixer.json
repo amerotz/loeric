@@ -22,15 +22,20 @@
         "active": true,
         "type": "midi",
         "port": "Launch Control XL Launch Contro",
-        "controls": {
-          "velocity_i": 77,
-          "tempo_i": 78,
-          "ornament_i": 79,
-          "legato_i": 80,
-          "velocity_a": 77,
-          "tempo_a": 78,
-          "ornament_a": 79,
-          "legato_a": 80
+        "analysers": {
+          "control_changes": {
+            "type": "midi_cc",
+            "controls": {
+              "velocity_i": 77,
+              "tempo_i": 78,
+              "ornament_i": 79,
+              "legato_i": 80,
+              "velocity_a": 77,
+              "tempo_a": 78,
+              "ornament_a": 79,
+              "legato_a": 80
+            }
+          }
         }
       }
     }

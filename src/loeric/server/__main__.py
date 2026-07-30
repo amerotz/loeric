@@ -21,7 +21,6 @@ import loeric.config as lc
 import loeric.core.tune as tu
 import loeric.server.models as lsm
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 musician = None
 
@@ -105,6 +104,7 @@ def load_tunes() -> dict[str, lsm.TuneInfo]:
     else:
         logger.warning(f"Tunes directory not found: {TUNES_PATH}")
 
+    tunes = dict(sorted(tunes.items()))
     return tunes
 
 
@@ -338,7 +338,6 @@ async def responsiveness_change(value: float):
 @app.post("/api/volume/{value}", response_model=lsm.StatusResponse)
 async def volume_change(value: float):
     """POST /api/volume/{value} - Change LOERIC's volume."""
-
     global musician
 
     if not musician:
@@ -346,7 +345,7 @@ async def volume_change(value: float):
 
     status = _change_volume(value)
     if status == -1:
-        raise HTTPException(status_code=404, detail=f"Path not found")
+        raise HTTPException(status_code=404, detail="Path not found")
 
     state.parameters["volume"] = value
     return await get_status()
@@ -420,7 +419,6 @@ def _get_param(path: str):
 @app.post("/api/change/{path:path}")
 async def change_param(path: str, value: str):
     """POST /api/change/<anything>?value=..."""
-
     global musician
 
     if not musician:

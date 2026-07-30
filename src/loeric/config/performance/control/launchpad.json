@@ -39,14 +39,19 @@
         "active": true,
         "type": "midi",
         "port": "Launch Control XL Launch Contro",
-        "controls": {
-          "ornament_i": 21,
-          "drone_i": 22,
-          "legato_i": 23,
-          "error_i": 24,
-          "swing_i": 25,
-          "velocity_i": 26,
-          "tempo_i": 27
+        "analysers": {
+          "control_changes": {
+            "type": "midi_cc",
+            "controls": {
+              "ornament_i": 21,
+              "drone_i": 22,
+              "legato_i": 23,
+              "error_i": 24,
+              "swing_i": 25,
+              "velocity_i": 26,
+              "tempo_i": 27
+            }
+          }
         }
       }
     }

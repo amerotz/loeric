@@ -7,7 +7,7 @@
     "var_phrase_length_2": 2,
     "var_phrase_length_1": 4,
     "var_velocity_weight": [1, 1, 1, 1, 1],
-    "var_drone_bind": "$drone",
+    "var_drone_bind": "drone",
     "var_notes_per_bar_bind": "notes_per_bar",
     "var_legato_pattern": {
       "mean": [1],
@@ -17,7 +17,7 @@
       "normalize": false
     },
     "var_ornament_pattern": {
-      "mean": [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      "mean": [0, 1, 1, 1, 1, 1, 1, 0],
       "std": null,
       "period": 8,
       "std_scale": 1,
@@ -25,6 +25,9 @@
     }
   },
   "modules": {
+    "tagger": {
+      "tag": "SCORE"
+    },
     "harmony": {
       "bypass": false,
       "chord_score": [2, -1, 0, 0, 0, 1, -1, 0, 1, 1, 0, -1],
@@ -38,12 +41,12 @@
       }
     },
     "dynamics": {
-      "bind": "$velocity",
+      "bind": "velocity",
       "pattern": "velocity_pattern"
     },
     "ornament": {
       "required_tags": ["SCORE"],
-      "bind": "$ornament",
+      "bind": "ornament",
       "whitelist": null,
       "bypass": false,
       "data": {}
@@ -58,12 +61,12 @@
     "swing": {
       "min": 1,
       "max": 1,
-      "bind": "$swing",
+      "bind": "swing",
       "locations": [0]
     },
     "timing": {
       "bypass": false,
-      "bind": "$tempo",
+      "bind": "tempo",
       "pattern": "tempo_pattern",
       "qpm_amount": 1,
       "only_increase": false
@@ -71,7 +74,7 @@
     "legato": {
       "min": 0.5,
       "max": 1,
-      "bind": "$legato"
+      "bind": "legato"
     },
     "logger": {
       "notes": false,
@@ -339,7 +342,14 @@
     }
   },
   "player": {
-    "input": {},
+    "input": {
+      "main": {
+        "active": false,
+        "type": "midi",
+        "port": "Midi Through Port-0",
+        "controls": {}
+      }
+    },
     "output": {
       "main": {
         "active": true,

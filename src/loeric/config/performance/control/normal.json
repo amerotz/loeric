@@ -1,4 +1,24 @@
 {
+  "variables": {
+    "var_drone_bind": "$drone"
+  },
+  "modules": {
+    "dynamics": {
+      "bind": "$velocity"
+    },
+    "ornament": {
+      "bind": "$ornament"
+    },
+    "swing": {
+      "bind": "$swing"
+    },
+    "timing": {
+      "bind": "$tempo"
+    },
+    "legato": {
+      "bind": "$legato"
+    }
+  },
   "player": {
     "input": {
       "mic_input": {
@@ -11,6 +31,7 @@
             "type": "rms",
             "responsiveness": 0.5,
             "controls": ["intensity"],
+            "windows_per_second": 30,
             "updates_per_second": 30
           }
         }
@@ -19,12 +40,12 @@
   },
   "mapper": {
     "sources": [
-      "legato",
       "velocity",
       "ornament",
-      "tempo",
       "drone",
       "swing",
+      "tempo",
+      "legato",
       "intensity"
     ],
     "targets": [],

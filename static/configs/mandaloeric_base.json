@@ -25,6 +25,9 @@
     }
   },
   "modules": {
+    "tagger": {
+      "tag": "SCORE"
+    },
     "harmony": {
       "bypass": false,
       "chord_score": [2, -1, 0, 0, 0, 1, -1, 0, 1, 1, 0, -1],
@@ -350,6 +353,7 @@
             "type": "rms",
             "responsiveness": 0.5,
             "controls": ["intensity"],
+            "windows_per_second": 30,
             "updates_per_second": 10
           }
         }

@@ -16,6 +16,8 @@
 
 import logging
 
+import pydantic as pdt
+
 import loeric.core.element as le
 import loeric.core.module as lm
 import loeric.core.paths as lp
@@ -23,21 +25,44 @@ import loeric.core.paths as lp
 logger = logging.getLogger(__name__)
 
 
+class GrooverConfig(pdt.BaseModel):
+    """Configuration that maps pipeline stage names → Config model instances."""
+
+    model_config = {"arbitrary_types_allowed": True}
+    modules: dict[str, lm.base.ModuleConfig]
+
+    @pdt.field_validator("modules", mode="before")
+    @classmethod
+    def validate_modules(cls, v: dict) -> dict:
+        validated = {}
+        for name, raw in v.items():
+            base_name = name.split("#")[0]
+            module_cls = lm.LOERICModule.class_registry().get(base_name)
+            if module_cls is None:
+                raise ValueError(f"Unknown module '{base_name}'")
+            validated[name] = module_cls.config_class.model_validate(raw)
+        return validated
+
+
 @lp.expose("_modules", "modules")
 class Groover:
     """The core of LOERIC's performance rules."""
 
-    def __init__(self, config) -> None:
+    def __init__(self, config: dict | GrooverConfig) -> None:
         """Initialise a groover instance."""
         self._queue = le.LOERICQueue()
         self._working_queue = le.LOERICQueue()
-        self._contour_values = {}
+
+        if not isinstance(config, GrooverConfig):
+            config = GrooverConfig(modules=config)
 
         self._modules = {}
         logger.info("Loading following modules:")
-        for m in config:
-            logger.info(m)
-            self._modules[m] = lm.LOERICModule.create_module(m, **config[m])
+        for name, module_config in config.modules.items():
+            logger.info(name)
+            self._modules[name] = lm.LOERICModule.create_module(
+                name, **module_config.model_dump()
+            )
 
     def push(self, event):
         """Add an element to the groover's working queue.
@@ -59,9 +84,6 @@ class Groover:
         """Initialise modules with a time signature."""
         for m in self._modules:
             self._modules[m].set_time_signature(meter)
-
-    def set(self, contours):
-        self._contour_values.update(contours)
 
     @property
     def lookahead_size(self):
@@ -103,21 +125,20 @@ class Groover:
         window: list[le.LOERICElement] = None,
         null_events: bool = False,
     ) -> None:
-        # get element
-        # is it now? great go on
 
         wq = self._working_queue
-        contour_values = self._contour_values
-        modules = self._modules
-        out_queue = self._queue
 
+        # get element
         can_process = not wq.is_empty() and wq.peek().time <= time
         if can_process:
             event = wq.pop()
         elif null_events:
-            event = le.NullEvent(time=time.eighth_duration)
+            event = le.NullEvent(time=time)
         else:
             return can_process
+
+        modules = self._modules
+        out_queue = self._queue
 
         # run it through the modules
         to_be_processed_by_module = [event]
@@ -125,12 +146,12 @@ class Groover:
             module = modules[m]
             spawned_elements = []
             for e in to_be_processed_by_module:
-                module_output = module(e, contour_values, window=window)
+                module_output = module(e, window=window)
 
                 for out in module_output:
                     # module output is at same time
                     # can be processed by next module
-                    if out.time.eighth_duration <= time:
+                    if out.time <= time:
                         spawned_elements.append(out)
                     # module output is later
                     # should be added to queue for later
@@ -181,7 +202,6 @@ class Groover:
         """Reset all variables."""
         self._queue = le.LOERICQueue()
         self._working_queue = le.LOERICQueue()
-        self._contour_values = {}
 
         for m in self._modules:
             self._modules[m].reset()

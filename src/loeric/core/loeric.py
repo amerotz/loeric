@@ -31,6 +31,7 @@ import loeric.core.groover as gr
 import loeric.core.mapper as mp
 import loeric.core.paths as lp
 import loeric.core.player as pl
+import loeric.core.tune as tu
 
 faulthandler.enable()
 # bad code goes here
@@ -66,19 +67,20 @@ class LOERIC:
         # for performance
         self._qpm = 120
 
-        self._process = None
+        self._instance = None
+        self._running = False
 
         if self._mode == "process":
             self._command_queue = multiprocessing.Queue()
         else:
             self._command_queue = queue.Queue()
 
-    def set_tune(self, tune):
-        """Assign a tune to LOERIC and calculate the associated contours."""
+    def set_tune(self, tune: tu.Tune):
+        """Assign a tune to LOERIC."""
         self._tune = tune
 
     @staticmethod
-    def infer_tune_type(tune):
+    def infer_tune_type(tune: tu.Tune):
         """Infer tune type from the tune's time signature."""
         tunes = {
             "2/2": "reel",
@@ -92,13 +94,19 @@ class LOERIC:
         return tunes[tune.time_signatures[0].meter_string]
 
     def set_tempo(self, tempo: float):
-        """Set tempo for LOERIC's performance in quarters per minute (QPM). Defaults to 120 QPM."""
+        """Set tempo for LOERIC's performance in quarters per minute (QPM).
+
+        Defaults to 120 QPM.
+        """
         self._qpm = tempo
         self._command_queue.put(
             LOERICCommand(command="tempo", payload={"tempo": tempo})
         )
 
     def set_attribute(self, path: str, value: float):
+        assert (
+            self._running
+        ), "'set_attribute' can only be used on a running LOERIC instance. Make sure to call 'start' first."
         self._command_queue.put(
             LOERICCommand(
                 command="set",
@@ -144,7 +152,7 @@ class LOERIC:
             # event to start playback if wait for prompt
             # event to signal ready state
             ready_event = multiprocessing.Event()
-            self._process = multiprocessing.Process(
+            self._instance = multiprocessing.Process(
                 target=LOERIC._run,
                 args=(
                     self._config,
@@ -158,7 +166,7 @@ class LOERIC:
             )
         else:
             ready_event = threading.Event()
-            self._process = threading.Thread(
+            self._instance = threading.Thread(
                 target=LOERIC._run,
                 args=(
                     self._config,
@@ -173,7 +181,7 @@ class LOERIC:
 
         ready_event.clear()
 
-        self._process.start()
+        self._instance.start()
 
         if wait_for_prompt:
             ready_event.wait()
@@ -181,34 +189,39 @@ class LOERIC:
 
         self._command_queue.put(LOERICCommand(command="start"))
 
+        self._running = True
+
     def stop(self):
         """Stop the LOERIC process."""
-        if self._process:
+        if self._instance:
 
             # make sure that the process is not stuck
             # waiting for start
-            self._command_queue.put(LOERICCommand(command="start"))
+            if not self._running:
+                self._command_queue.put(LOERICCommand(command="start"))
 
-            while self._process.is_alive():
+            while self._instance.is_alive():
                 self._command_queue.put(LOERICCommand(command="stop"))
-                self._process.join()
+                self._instance.join()
 
-            self._process = None
+            self._instance = None
+
+            self._running = False
 
     def join(self, timeout=None):
         """Wait for the LOERIC process to complete."""
-        if self._process and self._process.is_alive():
-            self._process.join(timeout)
+        if self._instance and self._instance.is_alive():
+            self._instance.join(timeout)
 
     @staticmethod
     def _run(
-        config,
-        tune,
-        qpm,
-        wait_for_prompt,
-        command_queue,
-        ready_event,
-        mode,
+        config: dict,
+        tune: tu.Tune,
+        qpm: float,
+        wait_for_prompt: bool,
+        command_queue: queue.Queue | multiprocessing.Queue,
+        ready_event: threading.Event | multiprocessing.Event,
+        mode: str,
     ):
         """Create all LOERIC objects and start playback."""
         if mode == "process":
@@ -237,7 +250,7 @@ class LOERIC:
         groover.init_time_signature(tune.time_signatures[0])
 
         # tempo
-        start_time = tune.start_time.eighth_duration
+        start_time = tune.start_time
         groover.set_tempo(qpm, start_time)
 
         # timekeeping
@@ -258,7 +271,7 @@ class LOERIC:
             if cmd.command == "stop":
                 return True  # signal caller to break
             if cmd.command == "tempo":
-                groover.set_tempo(cmd.payload["tempo"], tick.eighth_duration)
+                groover.set_tempo(cmd.payload["tempo"], tick)
             elif cmd.command == "set":
                 path: lp.LOERICPath = cmd.payload["path"]
                 value = cmd.payload["value"]
@@ -284,10 +297,11 @@ class LOERIC:
         try:
             # run in advance until lookahead is reached
             while tick < start_time:
-                finish = player.step(
+                finish = LOERIC._step(
                     mapper,
                     contour_manager,
                     groover,
+                    player,
                     tune,
                     tick,
                 )
@@ -317,10 +331,11 @@ class LOERIC:
                 start_time = time.perf_counter()
 
                 # step
-                finish = player.step(
+                finish = LOERIC._step(
                     mapper,
                     contour_manager,
                     groover,
+                    player,
                     tune,
                     tick,
                     null_events=True,
@@ -349,3 +364,71 @@ class LOERIC:
             player.reset()
             mapper.reset()
             groover.reset()
+
+    @staticmethod
+    def _step(
+        mapper: mp.Mapper,
+        contour_manager: cnt.ContourManager,
+        groover: gr.Groover,
+        player: pl.Player,
+        tune: tu.Tune,
+        tick: le.TimeDelta,
+        null_events: bool = False,
+    ):
+
+        # update performance time
+        performance_tick = tick + groover.lookahead_size
+        le.PerformanceClock.set(performance_tick)
+
+        # obtain user inputs and update the mapper
+        user_inputs = player.get()
+        mapper.set(user_inputs)
+
+        # obtain contours and update the mapper
+        raw_contour_values = contour_manager.at(performance_tick)
+        mapper.set(raw_contour_values)
+
+        mapper.update()
+
+        # obtain processed control values
+        contour_values = mapper.get()
+
+        # obtain elements to process
+        score_elements = tune.at(performance_tick)
+        window = tune.window(time=performance_tick, size=groover.window_size)
+
+        # feed everything in the groover
+        for c in contour_values:
+            groover.push(c)
+
+        for u in user_inputs:
+            groover.push(u)
+
+        # feed them through the groover
+        for s in score_elements:
+            groover.push(s)
+
+        # make the groover compute
+        groover.update(performance_tick, window, null_events=null_events)
+
+        # set control outputs for the player
+        player.set(contour_values)
+
+        # get performed things
+        groover_out = groover.pop(tick)
+
+        # update player
+        player.update(groover_out, tick)
+
+        # play them
+        player.play_events(groover_out, tick)
+
+        # check if groover output end of score
+        finished = False
+        for s in groover_out:
+            finished = finished or isinstance(s, le.EndOfScore)
+
+        # check if player is done playing
+        finished = finished and player.done()
+
+        return finished

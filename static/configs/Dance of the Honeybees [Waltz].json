@@ -1,44 +1,17 @@
 {
-    "contours": {
-        "drone": {
-            "human_impact_scale": 0.0
-        },
-        "velocity": {
-            "human_impact_scale": 1.0
-        },
-        "velocity_pattern": {
-            "human_impact_scale": 0.0
-        },
-        "tempo": {
-            "human_impact_scale": 1
-        },
-        "swing": {
-            "human_impact_scale": 0
-        },
-        "tempo_pattern": {
-            "human_impact_scale": 0.0
-        },
-        "ornament": {
-            "human_impact_scale": 0.0
-        },
-        "legato": {
-            "human_impact_scale": 0.0
-        }
-    },
-    "values": {
-        "min_velocity": 1,
-        "max_velocity": 127
-    },
-    "tempo_control": {
-        "tempo_warp_bpms": 20
-    },
-    "control_2_contour": {
-        "tempo / dynamics": {
-            "control": 49,
-            "contours": [
-                "tempo_intensity", "velocity_intensity"
-            ]
-        }
-
+  "mapper": {
+    "rules": ["1 : %velocity,%tempo", "intensity ~ tempo,velocity"]
+  },
+  "player": {
+    "output": {
+      "main": {
+        "velocity_range": [1, 127]
+      }
     }
+  },
+  "modules": {
+    "timing": {
+      "qpm_amount": 20
+    }
+  }
 }

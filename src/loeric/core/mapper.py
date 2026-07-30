@@ -52,6 +52,8 @@ from collections import defaultdict
 
 import numpy as np
 
+import loeric.core.element as le
+
 logger = logging.getLogger(__name__)
 
 
@@ -656,13 +658,19 @@ class Mapper:
         params = self._parameters
         return np.array([params[n].get() for n in self._impact_names])
 
-    def set(self, inputs: dict):
-        for key in inputs:
-            self.__setitem__(key, inputs[key])
+    def set(self, inputs: list[le.LOERICElement]):
+        for el in inputs:
+            if isinstance(el, le.ContourValue):
+                self.__setitem__(el.name, el.value)
 
     def get(self, as_array=False):
         params = self._parameters
         if as_array:
             return np.array([params[p].get() for p in params])
         else:
-            return {p: params[p].get() for p in params}
+            return [
+                le.ContourValue(
+                    name=p, value=params[p].get(), time=le.PerformanceClock.now()
+                )
+                for p in params
+            ]

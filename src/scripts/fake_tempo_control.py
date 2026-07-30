@@ -12,7 +12,6 @@ import time
 
 import mido
 
-
 # generate a fake control signal
 
 

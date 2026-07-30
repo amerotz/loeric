@@ -14,13 +14,11 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 
+import json
 import logging
+import re
 import typing
 from dataclasses import dataclass
-import json
-import re
-
-from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +113,6 @@ def coerce(expected: type | None, value):
     :return: *value* coerced to *expected*.
     :raises TypeError: if coercion is not possible or the value is not a valid literal.
     """
-
     if expected is None:
         return value
 

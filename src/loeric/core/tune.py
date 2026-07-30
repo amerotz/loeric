@@ -205,10 +205,7 @@ class NullTune(Score):
         super().__init__()
 
     def at(time: float | le.TimeDelta):
-        t = time
-        if isinstance(time, le.TimeDelta):
-            t = time.eighth_duration
-        return le.NullEvent(time=t)
+        return le.NullEvent(time=time)
 
 
 class Tune(Score):
@@ -394,17 +391,13 @@ class Tune(Score):
             new_score = copy.deepcopy(_score)
             for n in new_score:
                 n.time += score_duration * r - self._first_bar_length
-            repetitions.append(
-                le.Repetition(number=r + 1, time=new_score[0].time.eighth_duration)
-            )
+            repetitions.append(le.Repetition(number=r + 1, time=new_score[0].time))
             for k in self._key_signatures:
                 key_signatures.append(
                     le.KeySignature(
                         root=k.root,
                         mode=k.mode,
-                        time=(
-                            k.time + score_duration * r - self._first_bar_length
-                        ).eighth_duration,
+                        time=(k.time + score_duration * r - self._first_bar_length),
                     )
                 )
             for T in self._time_signatures:
@@ -412,27 +405,21 @@ class Tune(Score):
                     le.TimeSignature(
                         numerator=T.numerator,
                         denominator=T.denominator,
-                        time=(
-                            T.time + score_duration * r - self._first_bar_length
-                        ).eighth_duration,
+                        time=(T.time + score_duration * r - self._first_bar_length),
                     )
                 )
             for t in self._tempos:
                 tempos.append(
                     le.Tempo(
                         qpm=t.qpm,
-                        time=(
-                            t.time + score_duration * r - self._first_bar_length
-                        ).eighth_duration,
+                        time=(t.time + score_duration * r - self._first_bar_length),
                     )
                 )
             for b in self._barlines:
                 barlines.append(
                     le.Barline(
                         number=b.number + r * len(self._barlines),
-                        time=(
-                            b.time + score_duration * r - self._first_bar_length
-                        ).eighth_duration,
+                        time=(b.time + score_duration * r - self._first_bar_length),
                     )
                 )
             for c in self._original_chords:
@@ -501,17 +488,9 @@ class Tune(Score):
 
         self._annotated_score.extend(song_positions[should_add_position])
         self._annotated_score.extend(_score)
-        self._annotated_score.append(
-            le.EndOfScore(time=_score_end_time.eighth_duration)
-        )
+        self._annotated_score.append(le.EndOfScore(time=_score_end_time))
 
         self._annotated_score.sort(key=lambda x: x.time)
-
-        # add tune internal tag
-        for e in self._annotated_score:
-            e.add_tag("SCORE")
-
-        # self.create_index_map()
 
         logger.info(f"Playing:\t{os.path.basename(filename)}")
         logger.info(

@@ -1,90 +1,69 @@
 {
-    "variables": {
-        "var_drone_threshold": 0.4,
-        "var_notes_per_bar": [3]
-    },
-    "contours": {
-        "drone": {
-            "recipe": {
-                "pattern": {
-                    "mean": [1, -1, 1],
-                    "std": null,
-                    "period": 1,
-                    "std_scale": 1,
-                    "normalize": false
-                }
-            },
-            "human_impact_scale": 1
-        },
-        "velocity": {
-            "human_impact_scale": 0.0
-        },
-        "velocity_pattern": {
-            "human_impact_scale": 0.0
-        },
-        "tempo": {
-            "human_impact_scale": 0
-        },
-        "swing": {
-            "human_impact_scale": 0
-        },
-        "tempo_pattern": {
-            "recipe": {
-                "multiply": {
-                    "contours": {
-                        "phrasing#1": {
-                            "accelerando": 0.5,
-                            "ritardando": 0.5,
-                            "last": 0.2,
-                            "turn": 0.3,
-                            "power": 2,
-                            "phrase_length": 1,
-                            "shift": -4,
-                            "mode": "ratio"
-                        },
-                        "phrasing#2": {
-                            "accelerando": 0.5,
-                            "ritardando": 0.5,
-                            "last": 0.2,
-                            "turn": 0.3,
-                            "power": 2,
-                            "phrase_length": 4,
-                            "shift": -2,
-                            "mode": "ratio"
-                        }
-                    }
-                }
-            },
-            "human_impact_scale": 0.0
-        },
-        "ornament": {
-            "recipe": {
-                "pattern": {
-                    "mean": [0],
-                    "std": null,
-                    "std_scale": 1,
-                    "period": 1,
-                    "normalize": false
-                }
-            },
-            "human_impact_scale": 0.0
-        },
-        "legato": {
-            "human_impact_scale": 0.0
+  "variables": {
+    "var_drone_threshold": 0.4,
+    "var_notes_per_bar": [3]
+  },
+  "contours": {
+    "drone": {
+      "recipe": {
+        "pattern": {
+          "mean": [1, -1, 1],
+          "std": null,
+          "period": 1,
+          "std_scale": 1,
+          "normalize": false
         }
+      }
     },
-    "control_2_contour": {
-        "drones": {
-            "control": 49,
-            "contours": [
-                "drone_intensity"
-            ]
+    "tempo_pattern": {
+      "recipe": {
+        "multiply": {
+          "contours": {
+            "phrasing#1": {
+              "accelerando": 0.5,
+              "ritardando": 0.5,
+              "last": 0.2,
+              "turn": 0.3,
+              "power": 2,
+              "phrase_length": 1,
+              "shift": -4,
+              "mode": "ratio"
+            },
+            "phrasing#2": {
+              "accelerando": 0.5,
+              "ritardando": 0.5,
+              "last": 0.2,
+              "turn": 0.3,
+              "power": 2,
+              "phrase_length": 4,
+              "shift": -2,
+              "mode": "ratio"
+            }
+          }
         }
+      }
     },
-    "swing": {
-        "min": 1,
-        "max": 1,
-        "bind": "tempo",
-        "locations": [ 1, 3, 5 ]
+    "ornament": {
+      "recipe": {
+        "pattern": {
+          "mean": [0],
+          "std": null,
+          "std_scale": 1,
+          "period": 1,
+          "normalize": false
+        }
+      }
     }
+  },
+  "modules": {
+    "swing": {
+      "min": 1,
+      "max": 1,
+      "bind": "$swing",
+      "locations": [1, 3, 5]
+    }
+  },
+  "mapper": {
+    "rules": ["1 : %drone", "intensity ~ drone"]
+  }
 }

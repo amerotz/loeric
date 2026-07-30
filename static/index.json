@@ -1,7 +1,19 @@
 {
   "Hardiman's Jig": {
-    "configs": [],
+    "configs": ["Hardiman's Jig [Old Version].json"],
     "default": ""
+  },
+  "Hardiman's Jig [Set Version]": {
+    "configs": ["Hardiman's Jig [Set Version].json"],
+    "default": ""
+  },
+  "Handsome Young Maidens [Set Version]": {
+    "configs": ["Handsome Young Maidens [Set Version].json"],
+    "default": ""
+  },
+  "Dan Dowd's": {
+    "configs": [],
+    "default": "Dan Dowd's.json"
   },
   "Cronin's": {
     "configs": [],

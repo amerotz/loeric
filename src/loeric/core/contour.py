@@ -15,7 +15,6 @@
 
 import logging
 import math
-from collections import defaultdict
 from functools import cached_property
 
 import numpy as np
@@ -44,8 +43,6 @@ class ContourManager:
                 tune, self._config[c]["recipe"], parent=c
             )
 
-        self._return_values = defaultdict(float)
-
     def __setitem__(self, key: str, value: float):
         """Set the contour named ``key`` to ``value``."""
 
@@ -57,11 +54,14 @@ class ContourManager:
         """Return a dictionary of all contours."""
         return self._contours
 
-    def at(self, time: float = None):
+    def at(self, time: le.TimeDelta):
         """Return contour values at a specific time."""
+        events = []
         for c in self._contours:
-            self._return_values[c] = self._contours[c].at(time)
-        return self._return_values
+            events.append(
+                le.ContourValue(name=c, value=self._contours[c].at(time), time=time)
+            )
+        return events
 
     def reset(self):
         """Reset all variables."""
@@ -628,7 +628,7 @@ class PatternContour(Contour):
         self._normalize = normalize
         self._pattern_size = len(self._mean)
 
-        # obtain time pedios
+        # obtain time periods
         # TODO multiple time signatures
         self._time_period = midi.time_signatures[
             0

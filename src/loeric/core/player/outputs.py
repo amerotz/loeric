@@ -145,12 +145,14 @@ class OutputInterface:
         """Reset the output to its initial state, releasing any held resources."""
         pass
 
-    def set(self, contour_values: dict):
+    def set(self, inputs: list[le.LOERICElement]):
         """Update the internal contour value store.
 
         :param contour_values: mapping of contour names to their current float values.
         """
-        self._contour_values.update(contour_values)
+        for i in inputs:
+            if isinstance(i, le.ContourValue):
+                self._contour_values[i.name] = i.value
 
     def done(self) -> bool:
         """Return whether all pending output has been flushed.
@@ -423,7 +425,7 @@ class MIDIOutput(OutputInterface):
 
             overall_time = le.TimeDelta(eighth_duration=0)
             if absolute_time:
-                overall_time = le.TimeDelta(eighth_duration=event._time.eighth_duration)
+                overall_time = le.TimeDelta(eighth_duration=event.time)
 
             messages = []
 
@@ -453,9 +455,7 @@ class MIDIOutput(OutputInterface):
                 )
             )
 
-            note_duration = le.TimeDelta(
-                eighth_duration=event._duration.eighth_duration
-            )
+            note_duration = le.TimeDelta(eighth_duration=event.duration)
             if event._is_slide:
 
                 previous_bend = bend_percentage
@@ -463,7 +463,7 @@ class MIDIOutput(OutputInterface):
 
                 for note in event._slide_targets:
                     slide_duration = le.TimeDelta(
-                        eighth_duration=note.duration.eighth_duration / resolution
+                        eighth_duration=note.duration / resolution
                     )
 
                     bend_semitones = note.pitch - event._pitch
@@ -739,13 +739,17 @@ if PYQT_AVAILABLE:
             """
             return True
 
-        def set(self, contour_values: dict):
+        def set(self, inputs: list[le.LOERICElement]):
             """Write current contour values into shared memory for the GUI process.
 
-            :param contour_values: mapping of contour names to float values in [0, 1].
+            :param inputs: list of events to process
             """
+            # create dict
+            contour_values = {
+                i.name: i.value for i in inputs if isinstance(i, le.ContourValue)
+            }
             for i, c in enumerate(self._controls):
-                if c in self._controls:
+                if c in contour_values:
                     self._array[i] = contour_values[c]
 
 
@@ -1031,9 +1035,7 @@ class SoundfontOutput(MIDIOutput):
         )
 
     def _set_volume(self, value: float):
-        """
-        Overrides the class' volume setter to propagate changes to the underlying synth.
-        """
+        """Overrides the class' volume setter to propagate changes to the underlying synth."""
         value = lp.coerce(float, value)
 
         self._out.volume = value

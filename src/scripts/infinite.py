@@ -14,7 +14,6 @@ from collections import defaultdict
 
 from loeric.__main__ import main as loeric
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--data-dir")
 args = parser.parse_args()

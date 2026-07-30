@@ -22,9 +22,9 @@
 
 
 import loeric.core.element as le
-import loeric.core.inputs as li
-import loeric.core.outputs as lo
 import loeric.core.paths as lp
+import loeric.core.player.inputs as li
+import loeric.core.player.outputs as lo
 
 
 @lp.expose("_input_interfaces", "input")
@@ -34,7 +34,7 @@ class Player:
     _input_interfaces: dict[li.InputInterface]
     _output_interfaces: dict[lo.OutputInterface]
 
-    def __init__(self, config):
+    def __init__(self, config: dict):
 
         self._input_interfaces = {}
         for i in config["input"]:
@@ -51,7 +51,7 @@ class Player:
         self._tempo = le.Tempo(qpm=120)
         self._message_queue = le.LOERICQueue()
 
-    def _update(self, events: list[le.LOERICElement], tick):
+    def update(self, events: list[le.LOERICElement], tick: le.TimeDelta):
 
         # update own tempo
         for e in events:
@@ -68,7 +68,7 @@ class Player:
                 if isinstance(e, le.Tempo):
                     self._tempo = e
 
-    def _play_events(self, events: list[le.LOERICElement], tick):
+    def play_events(self, events: list[le.LOERICElement], tick: le.TimeDelta):
 
         for o in self._output_interfaces:
             self._output_interfaces[o].play_events(events, tick)
@@ -80,70 +80,22 @@ class Player:
         for o in self._output_interfaces:
             self._output_interfaces[o].reset()
 
-    def _get(self):
-        val = {}
+    def get(self) -> list[le.LOERICElement]:
+        events = []
         for i in self._input_interfaces:
-            val |= self._input_interfaces[i].get()
-        return val
+            events.extend(self._input_interfaces[i].get())
+        return events
 
-    def _set(self, contour_values: dict):
+    def set(self, contour_values: list[le.LOERICElement]):
         for o in self._output_interfaces:
             self._output_interfaces[o].set(contour_values)
 
-    def step(self, mapper, contour_manager, groover, tune, tick, null_events=False):
+    def done(self):
+        done = True
+        for o in self._output_interfaces:
+            done = done and self._output_interfaces[o].done()
 
-        performance_tick = tick + groover.lookahead_size
-
-        # obtain user inputs and update the mapper
-        user_inputs = self._get()
-        mapper.set(user_inputs)
-
-        # obtain contours and update the mapper
-        raw_contour_values = contour_manager.at(performance_tick)
-        mapper.set(raw_contour_values)
-
-        mapper.update()
-
-        # obtain processed control values
-        contour_values = mapper.get()
-
-        # obtain elements to process
-        score_elements = tune.at(performance_tick)
-        window = tune.window(time=performance_tick, size=groover.window_size)
-
-        # feed everything in the groover
-        groover.set(contour_values)
-        groover.set(user_inputs)
-
-        # feed them through the groover
-        for s in score_elements:
-            groover.push(s)
-
-        # make the groover compute
-        groover.update(performance_tick, window, null_events=null_events)
-
-        # set control outputs for the player
-        self._set(contour_values)
-
-        # get performed things
-        groover_out = groover.pop(tick)
-
-        # update internal
-        self._update(groover_out, tick)
-
-        # play them
-        self._play_events(groover_out, tick)
-
-        # check if groover output end of score
-        finished = False
-        for s in groover_out:
-            finished = finished or isinstance(s, le.EndOfScore)
-
-        if finished:
-            for o in self._output_interfaces:
-                finished = finished and self._output_interfaces[o].done()
-
-        return finished
+        return done
 
     @property
     def eighth_duration_seconds(self) -> float:

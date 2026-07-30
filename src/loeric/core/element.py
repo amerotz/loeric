@@ -45,14 +45,23 @@ class TimeDelta:
     eighth_duration: float
 
     def __post_init__(self):
-        if not (isinstance(self.eighth_duration, (int, float))):
-            raise TypeError(
-                f"TimeDelta requires int/float, got {type(self.eighth_duration)}"
+
+        # auto convert time delta to float
+        # and skip quantise
+        if isinstance(self.eighth_duration, TimeDelta):
+            object.__setattr__(
+                self, "eighth_duration", self.eighth_duration.eighth_duration
             )
 
-        quantized = TimeDelta.quantize(self.eighth_duration)
+        else:
+            if not (isinstance(self.eighth_duration, (int, float))):
+                raise TypeError(
+                    f"TimeDelta requires int/float, got {type(self.eighth_duration)}"
+                )
 
-        object.__setattr__(self, "eighth_duration", quantized)
+            quantized = TimeDelta.quantize(self.eighth_duration)
+
+            object.__setattr__(self, "eighth_duration", quantized)
 
     @staticmethod
     def quantize(value: float) -> float:
@@ -62,6 +71,9 @@ class TimeDelta:
 
     def __repr__(self):
         return str(self.eighth_duration)
+
+    def __abs__(self):
+        return abs(self.eighth_duration)
 
     def __add__(self, other):
         if isinstance(other, (int, float)):
@@ -136,6 +148,19 @@ class TimeDelta:
         return float(self.eighth_duration)
 
 
+class PerformanceClock:
+
+    _tick = TimeDelta(eighth_duration=0)
+
+    @staticmethod
+    def set(tick):
+        PerformanceClock._tick = tick
+
+    @staticmethod
+    def now() -> le.TimeDelta:
+        return PerformanceClock._tick
+
+
 class LOERICElement:
 
     __slots__ = (
@@ -187,10 +212,7 @@ class LOERICElement:
 
     @time.setter
     def time(self, value):
-        if isinstance(value, (int, float)):
-            self._time = TimeDelta(eighth_duration=value)
-        else:
-            self._time = TimeDelta(eighth_duration=value.eighth_duration)
+        self._time = TimeDelta(eighth_duration=value)
 
     @property
     def is_performable(self):
@@ -206,7 +228,7 @@ class LOERICElement:
             self._duration = value
         else:
             self._duration = TimeDelta(eighth_duration=value)
-        if self._duration.eighth_duration < 0:
+        if self._duration < 0:
             self._duration = TimeDelta(eighth_duration=0)
             logger.warning("Duration cannot be negative!")
             # raise Exception("Duration cannot be negative")
@@ -233,6 +255,26 @@ class Pause(LOERICElement):
 
     def __repr__(self):
         return f"(Pause {self._duration} t={self._time})"
+
+
+class ContourValue(LOERICElement):
+
+    def __init__(self, name: str, value: float = None, time: float = 0):
+        super().__init__(time)
+
+        self._name = name
+        self._value = value
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def value(self):
+        return self._value
+
+    def __repr__(self):
+        return f"(ContourValue n={self._name} v={self._value} t={self._time})"
 
 
 class EndOfScore(LOERICElement):
@@ -326,7 +368,7 @@ class Chord(LOERICElement):
                 pitches = [(root + int(n)) % 12 for n in c.split("_")]
                 return Chord(pitches=pitches)
 
-        print(f"[WARN]\tUnknown harmony kind = {kind}, root = {root}.")
+        logger.warning(f"Unknown harmony kind = {kind}, root = {root}.")
 
     def __repr__(self):
         root = "n/a"
@@ -701,6 +743,7 @@ class LOERICQueue(Queue):
     def __init__(self):
         super().__init__()
         order = [
+            ContourValue,
             Chord,
             SongPosition,
             Barline,
@@ -722,7 +765,7 @@ class LOERICQueue(Queue):
         hq.heappush(
             self._q,
             (
-                item.time.eighth_duration,
+                item.time,
                 self._item_order[type(item)],
                 self._seq,
                 item,

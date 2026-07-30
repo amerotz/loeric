@@ -1,16 +1,15 @@
 {
-    "contours": {
-        "tempo_pattern": {
-            "recipe": {
-                "pattern": {
-                    "mean": [ 1.14, 0.85, 1.14 ],
-                    "std": [ 0.05, 0.05, 0.05 ],
-                    "std_scale": 1,
-                    "normalize": true,
-                    "period": 0.5
-                }
-            },
-            "human_impact_scale": 0
+  "contours": {
+    "tempo_pattern": {
+      "recipe": {
+        "pattern": {
+          "mean": [1.14, 0.85, 1.14],
+          "std": [0.05, 0.05, 0.05],
+          "std_scale": 1,
+          "normalize": true,
+          "period": 0.5
         }
+      }
     }
+  }
 }
