@@ -1,7 +1,7 @@
 from pydantic import field_validator
 
 import loeric.core.element as le
-import loeric.core.module.base as lmb
+import loeric.core.modules.base as lmb
 
 
 class DelayBufferConfig(lmb.ModuleConfig):

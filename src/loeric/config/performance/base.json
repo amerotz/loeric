@@ -347,7 +347,7 @@
         "active": false,
         "type": "midi",
         "port": "Midi Through Port-0",
-        "controls": {}
+        "analysers": {}
       }
     },
     "output": {

@@ -19,8 +19,6 @@
 # pop(): obtain next event
 # push: add an element to the working queue
 # update: process the queue
-
-
 import loeric.core.element as le
 import loeric.core.paths as lp
 import loeric.core.player.inputs as li
@@ -38,13 +36,13 @@ class Player:
 
         self._input_interfaces = {}
         for i in config["input"]:
-            interface = li.InputInterface.create_input(config["input"][i], name=i)
+            interface = li.create_input(config["input"][i])
             if interface is not None:
                 self._input_interfaces[i] = interface
 
         self._output_interfaces = {}
         for o in config["output"]:
-            interface = lo.OutputInterface.create_output(config["output"][o], name=o)
+            interface = lo.create_output(config["output"][o])
             if interface is not None:
                 self._output_interfaces[o] = interface
 

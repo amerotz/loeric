@@ -19,7 +19,7 @@ import logging
 import pydantic as pdt
 
 import loeric.core.element as le
-import loeric.core.module as lm
+import loeric.core.modules as lm
 import loeric.core.paths as lp
 
 logger = logging.getLogger(__name__)
@@ -28,20 +28,7 @@ logger = logging.getLogger(__name__)
 class GrooverConfig(pdt.BaseModel):
     """Configuration that maps pipeline stage names → Config model instances."""
 
-    model_config = {"arbitrary_types_allowed": True}
     modules: dict[str, lm.base.ModuleConfig]
-
-    @pdt.field_validator("modules", mode="before")
-    @classmethod
-    def validate_modules(cls, v: dict) -> dict:
-        validated = {}
-        for name, raw in v.items():
-            base_name = name.split("#")[0]
-            module_cls = lm.LOERICModule.class_registry().get(base_name)
-            if module_cls is None:
-                raise ValueError(f"Unknown module '{base_name}'")
-            validated[name] = module_cls.config_class.model_validate(raw)
-        return validated
 
 
 @lp.expose("_modules", "modules")
@@ -60,9 +47,7 @@ class Groover:
         logger.info("Loading following modules:")
         for name, module_config in config.modules.items():
             logger.info(name)
-            self._modules[name] = lm.LOERICModule.create_module(
-                name, **module_config.model_dump()
-            )
+            self._modules[name] = lm.create_module(name, **module_config.model_dump())
 
     def push(self, event):
         """Add an element to the groover's working queue.

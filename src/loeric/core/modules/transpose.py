@@ -1,5 +1,5 @@
 import loeric.core.element as le
-import loeric.core.module.base as lmb
+import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
 
 
@@ -16,7 +16,6 @@ class TransposeConfig(lmb.ModuleConfig):
 class TransposeModule(lmb.LOERICModule):
 
     config_class = TransposeConfig
-    _steps: float
 
     def __init__(self, steps: float, **kwargs):
         super().__init__(**kwargs)

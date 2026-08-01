@@ -1,7 +1,7 @@
 import copy
 
 import loeric.core.element as le
-import loeric.core.module.base as lmb
+import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
 
 
@@ -27,10 +27,6 @@ class TimingConfig(lmb.ModuleConfig):
 class TimingModule(lmb.LOERICModule):
 
     config_class = TimingConfig
-    _contour: str
-    _pattern: str
-    _qpm_amount: float
-    _only_increase: bool
 
     def __init__(
         self, bind: str, pattern: str, qpm_amount: float, only_increase: bool, **kwargs

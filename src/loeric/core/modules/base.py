@@ -5,7 +5,6 @@ import nanoid as nid
 from pydantic import BaseModel
 
 import loeric.core.element as le
-import loeric.core.module as lm
 import loeric.core.paths as lp
 
 
@@ -28,7 +27,6 @@ class ModuleConfig(BaseModel):
 class LOERICModule:
     """A performance module implementing a series of performance rules."""
 
-    _bypass: bool
     config_class: type[ModuleConfig] = ModuleConfig
 
     def __init__(
@@ -163,42 +161,3 @@ class LOERICModule:
     @property
     def window_size(self):
         return self._window_size
-
-    @staticmethod
-    def class_registry():
-        return {
-            "legato": lm.LegatoModule,
-            "swing": lm.SwingModule,
-            "dynamics": lm.DynamicsModule,
-            "transpose": lm.TransposeModule,
-            "timing": lm.TimingModule,
-            "delay_buffer": lm.DelayBufferModule,
-            "history_buffer": lm.HistoryBufferModule,
-            "ornament": lm.OrnamentModule,
-            "drones": lm.DroneModule,
-            "harmony": lm.HarmonyModule,
-            "logger": lm.LoggerModule,
-            "conditional": lm.ConditionalModule,
-            "tagger": lm.TaggerModule,
-        }
-
-    @staticmethod
-    def create_module(module_name: str, **kwargs):
-        """Instantiate a module by name, validating *kwargs* against its config model.
-
-        :param module_name: registered module name (``#`` suffixes are stripped).
-        :param kwargs: raw config values; validated and coerced by the module's
-            :class:`ModuleConfig` subclass before the module is constructed.
-        :return: a configured :class:`LOERICModule` instance.
-        :raises ValueError: if *module_name* is not registered.
-        :raises pydantic.ValidationError: if *kwargs* fail config validation.
-        """
-        module_name = module_name.split("#")[0]
-
-        cls = LOERICModule.class_registry().get(module_name)
-        if cls is None:
-            raise ValueError(f"Invalid module name '{module_name}'.")
-
-        config = cls.config_class.model_validate(kwargs)
-
-        return cls(**config.model_dump())

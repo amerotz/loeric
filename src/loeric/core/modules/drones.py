@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 
 import loeric.core.element as le
-import loeric.core.module.base as lmb
+import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
 import loeric.core.utils as lu
 

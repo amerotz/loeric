@@ -4,14 +4,71 @@ from collections import defaultdict
 from typing import Any
 
 import numpy as np
+import pydantic as pdt
 
 import loeric.core.element as le
-import loeric.core.module.base as lmb
+import loeric.core.modules.base as lmb
 
 logger = logging.getLogger(__name__)
 
 
-class OrnamentModuleConfig(lmb.ModuleConfig):
+class SingleOrnamentConfig(pdt.BaseModel):
+    """Config for a single ornament entry inside :class:`OrnamentModule`.
+
+    :param bind: optional contour name overriding the module-level contour.
+    :param probability: base probability of applying this ornament.
+    :param threshold: contour value below which the ornament is suppressed.
+    :param length: total duration of the ornament in eighths.
+    :param cases: list of melodic contexts in which the ornament applies.
+    :param pitches_mean: mean pitch intervals for each ornament note.
+    :param pitches_std: std of pitch intervals; ``null`` means no noise.
+    :param velocities_mean: mean velocity multipliers for each note.
+    :param velocities_std: std of velocity multipliers; ``null`` means no noise.
+    :param durations_mean: mean duration proportions for each note.
+    :param durations_std: std of duration proportions; ``null`` means no noise.
+    :param diatonic: if ``True``, pitch intervals are in diatonic steps.
+    :param slide: if ``True``, notes are connected by a pitch slide.
+    """
+
+    name: str
+    bind: str | None = None
+    probability_contour: str | None = None
+    probability: float = 1.0
+    threshold: float = 0.0
+    length: float = 1.0
+    cases: list[Any] = []
+    pitches_mean: list[float] = []
+    pitches_std: list[float] | None = None
+    velocities_mean: list[float] = []
+    velocities_std: list[float] | None = None
+    durations_mean: list[float] = []
+    durations_std: list[float] | None = None
+    diatonic: bool = True
+    slide: bool = False
+
+    model_config = {"extra": "allow"}
+
+    @pdt.model_validator(mode="after")
+    def consistent_lengths(self) -> "SingleOrnamentConfig":
+        """Ensure pitch, velocity, and duration arrays are the same length."""
+        lengths = {
+            "pitches_mean": len(self.pitches_mean),
+            "velocities_mean": len(self.velocities_mean),
+            "durations_mean": len(self.durations_mean),
+        }
+        unique = set(lengths.values())
+        if len(unique) > 1:
+            raise ValueError(
+                f"pitches_mean, velocities_mean, and durations_mean must have "
+                f"the same length: {lengths}"
+            )
+        return self
+
+    def __repr__(self):
+        return f"(Ornament {self.name} slide={self.slide} thr={self.threshold} p={self.probability})"
+
+
+class OrnamentConfig(lmb.ModuleConfig):
     """Config for :class:`OrnamentModule`.
 
     :param bind: contour name controlling ornament probability.
@@ -26,43 +83,7 @@ class OrnamentModuleConfig(lmb.ModuleConfig):
 
 class OrnamentModule(lmb.LOERICModule):
 
-    config_class = OrnamentModuleConfig
-
-    _contour: str
-    _whitelist: list[str]
-
-    class OrnamentConfig:
-
-        __slots__ = (
-            "name",
-            "probability_contour",
-            "bind",
-            "cases",
-            "pitches_mean",
-            "pitches_std",
-            "velocities_mean",
-            "velocities_std",
-            "durations_mean",
-            "durations_std",
-            "probability",
-            "length",
-            "diatonic",
-            "threshold",
-            "slide",
-        )
-
-        def __init__(self, name: str, config: dict):
-
-            self.name = name
-
-            for key in config:
-                setattr(self, key, config[key])
-
-            self.probability_contour = config.get("bind")
-            self.bind = config.get("bind")
-
-        def __repr__(self):
-            return f"(Ornament {self.name} slide={self.slide} thr={self.threshold} p={self.probability})"
+    config_class = OrnamentConfig
 
     def __init__(self, bind: str, data: dict, whitelist: list[str], **kwargs):
 
@@ -70,7 +91,7 @@ class OrnamentModule(lmb.LOERICModule):
 
         self._name = "ornament"
         self._contour = bind
-        self._ornaments = [self.OrnamentConfig(o, data[o]) for o in data]
+        self._ornaments = [SingleOrnamentConfig(name=o, **data[o]) for o in data]
         self._window_size = 0
         self._is_online = True
 

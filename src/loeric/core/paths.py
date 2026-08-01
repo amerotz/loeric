@@ -305,23 +305,33 @@ class LOERICPath:
         return False
 
     def _container_type(obj, key: str) -> type | None:
-        """Infer the expected value type for *key* on *obj* from type hints.
+        """Infer the expected value type for *key* on *obj*.
 
         For generic containers such as ``dict[str, OutputInterface]``, returns
         the last type argument (the value type). For plain annotations, returns
-        the annotation directly.
+        the annotation directly. Uses the model configuration where available.
 
         :param obj: the parent object.
         :param key: the attribute or key name to look up.
         :return: the expected type, or ``None`` if no hint is present.
         """
+        # first try the object's own hints (for plain attributes)
         hints = typing.get_type_hints(type(obj))
-        if key not in hints:
-            return None
-        hint = hints[key]
-        # e.g. dict[str, OutputInterface] -> (str, OutputInterface)
-        args = typing.get_args(hint)
-        return args[-1] if args else hint
+        if key in hints:
+            hint = hints[key]
+            args = typing.get_args(hint)
+            return args[-1] if args else hint
+
+        # fall back to the config model if one exists
+        config_cls = getattr(type(obj), "config_class", None)
+        if config_cls is not None:
+            config_hints = typing.get_type_hints(config_cls)
+            if key in config_hints:
+                hint = config_hints[key]
+                args = typing.get_args(hint)
+                return args[-1] if args else hint
+
+        return None
 
     @staticmethod
     def get(obj, path: "LOERICPath"):

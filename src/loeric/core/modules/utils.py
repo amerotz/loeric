@@ -18,7 +18,7 @@ from typing import Any
 from pydantic import BaseModel, field_validator
 
 import loeric.core.element as le
-import loeric.core.module.base as lmb
+import loeric.core.modules.base as lmb
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,8 @@ class LoggerConfig(lmb.ModuleConfig):
 
 
 class LOERICCondition:
+
+    class_config = ConditionConfig
 
     def __init__(self, **kwargs):
 

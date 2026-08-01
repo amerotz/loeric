@@ -1,5 +1,5 @@
 import loeric.core.element as le
-import loeric.core.module.base as lmb
+import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
 
 
@@ -19,8 +19,6 @@ class DynamicsConfig(lmb.ModuleConfig):
 class DynamicsModule(lmb.LOERICModule):
 
     config_class = DynamicsConfig
-    _contour: str
-    _pattern: str
 
     def __init__(self, bind: str, pattern: str, **kwargs):
         super().__init__(**kwargs)
