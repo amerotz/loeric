@@ -24,6 +24,7 @@
         "port": "Launch Control XL Launch Contro",
         "analysers": {
           "control_changes": {
+            "active": true,
             "type": "midi_cc",
             "controls": {
               "velocity_i": 77,

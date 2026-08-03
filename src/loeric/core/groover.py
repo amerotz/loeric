@@ -35,6 +35,8 @@ class GrooverConfig(pdt.BaseModel):
 class Groover:
     """The core of LOERIC's performance rules."""
 
+    config_class = GrooverConfig
+
     def __init__(self, config: dict | GrooverConfig) -> None:
         """Initialise a groover instance."""
         self._queue = le.LOERICQueue()

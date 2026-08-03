@@ -11,11 +11,13 @@ logger = logging.getLogger(__name__)
 
 class MIDIAnalyserConfig(AnalyserConfig):
     """Base config for MIDI analysers."""
+
     pass
 
 
 class MIDILoggerConfig(MIDIAnalyserConfig):
     """Config for :class:`MIDILogger`. No additional fields."""
+
     pass
 
 
@@ -84,6 +86,8 @@ class MIDILogger(MIDIAnalyser):
 
         :param message: the message to log.
         """
+        if not self._active:
+            return
         logger.info(f"{message}")
 
 
@@ -111,6 +115,8 @@ class MIDIContourAnalyser(MIDIAnalyser):
 
         :param message: the MIDI message to process.
         """
+        if not self._active:
+            return
         if not message.is_cc():
             return
 

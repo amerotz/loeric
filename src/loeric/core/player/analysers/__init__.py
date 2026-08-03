@@ -29,7 +29,11 @@ __all__ = [
 ]
 
 
-def create_analyser(config: dict, samplerate: int = None) -> Analyser:
+def create_analyser(
+    config: dict,
+    active: bool,
+    samplerate: int = None,
+) -> Analyser:
     """Instantiate an analyser from a raw config dict.
 
     The registry lives here rather than in ``base.py`` to avoid circular
@@ -45,6 +49,11 @@ def create_analyser(config: dict, samplerate: int = None) -> Analyser:
         "midi_cc": MIDIContourAnalyser,
         "midi_logger": MIDILogger,
     }
+
+    # make sure that analyser is active
+    # only when the interface is active
+    # and the user enabled that analyser
+    config["active"] = config["active"] and active
 
     cls = _registry.get(config["type"])
     if cls is None:

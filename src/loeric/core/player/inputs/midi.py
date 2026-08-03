@@ -31,21 +31,22 @@ class MIDIInput(lib.InputInterface):
 
     config_class = MIDIInputConfig
 
-    def __init__(self, port: str, analysers: dict, **kwargs):
+    def __init__(self, port: str, **kwargs):
         """Open a MIDI input port and register the CC callback.
 
         :param port: name of the MIDI input port to open.
         :param controls: mapping of control names to MIDI CC numbers.
         """
-        self._type = "midi"
+        self._port = port
 
-        try:
-            self._midi_in = mido.open_input(port)
-        except Exception:
-            raise UnknownMIDIPortException(port)
-        self._midi_in.callback = self._callback
+        if kwargs["active"]:
+            try:
+                self._midi_in = mido.open_input(port)
+            except Exception:
+                raise UnknownMIDIPortException(port)
+            self._midi_in.callback = self._callback
 
-        super().__init__(analysers)
+        super().__init__(**kwargs)
 
         for a in self._analysers:
             assert isinstance(
@@ -54,5 +55,7 @@ class MIDIInput(lib.InputInterface):
 
     def reset(self):
         """Close the MIDI input port."""
+        if not self._active:
+            return
         self._midi_in.close()
         logger.info("Closed midi input.")

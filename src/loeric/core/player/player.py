@@ -19,30 +19,43 @@
 # pop(): obtain next event
 # push: add an element to the working queue
 # update: process the queue
+import pydantic as pdt
+
 import loeric.core.element as le
 import loeric.core.paths as lp
 import loeric.core.player.inputs as li
 import loeric.core.player.outputs as lo
 
 
+class PlayerConfig(pdt.BaseModel):
+
+    input_interfaces: dict[str, li.InputInterfaceConfig]
+    output_interfaces: dict[str, lo.OutputInterfaceConfig]
+
+
 @lp.expose("_input_interfaces", "input")
 @lp.expose("_output_interfaces", "output")
 class Player:
 
-    _input_interfaces: dict[li.InputInterface]
-    _output_interfaces: dict[lo.OutputInterface]
+    config_class = PlayerConfig
 
     def __init__(self, config: dict):
 
+        if not isinstance(config, PlayerConfig):
+            config = PlayerConfig(
+                input_interfaces=config["input"], output_interfaces=config["output"]
+            )
+        print(config.dict())
+
         self._input_interfaces = {}
-        for i in config["input"]:
-            interface = li.create_input(config["input"][i])
+        for i in config.input_interfaces:
+            interface = li.create_input(config.input_interfaces[i])
             if interface is not None:
                 self._input_interfaces[i] = interface
 
         self._output_interfaces = {}
-        for o in config["output"]:
-            interface = lo.create_output(config["output"][o])
+        for o in config.output_interfaces:
+            interface = lo.create_output(config.output_interfaces[o])
             if interface is not None:
                 self._output_interfaces[o] = interface
 

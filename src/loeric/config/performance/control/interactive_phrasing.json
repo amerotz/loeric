@@ -28,6 +28,7 @@
         "samplerate": 44100,
         "analysers": {
           "loudness": {
+            "active": true,
             "type": "rms",
             "responsiveness": 1,
             "controls": ["global_intensity", "velocity_tempo_impact"],
@@ -35,6 +36,7 @@
             "updates_per_second": 30
           },
           "tempo": {
+            "active": true,
             "type": "rms",
             "responsiveness": 0.7,
             "controls": ["tempo_intensity"],

@@ -8,7 +8,7 @@ from loeric.core.player.inputs.midi import MIDIInput
 __all__ = [InputInterface, InputInterfaceConfig]
 
 
-def create_input(config: dict) -> "InputInterface":
+def create_input(config: dict | InputInterfaceConfig) -> InputInterface:
     """Instantiate the appropriate input from a config dict.
 
     :param config: interface configuration.
@@ -17,16 +17,13 @@ def create_input(config: dict) -> "InputInterface":
         or ``InputInterface`` (uninitialised) if ``active`` is false.
     :raises ValueError: if ``config["type"]`` is not recognised.
     """
-    if not config["active"]:
-        interface = InputInterface(analysers={})
-        return interface
-
-    del config["active"]
+    if not isinstance(config, InputInterfaceConfig):
+        config = InputInterfaceConfig(config)
 
     _registry = {"midi": MIDIInput, "audio": AudioInput}
-    cls = _registry.get(config["type"])
+    cls = _registry.get(config.type)
     if cls is None:
-        raise ValueError(f"Unknown input interface type {config['type']}.")
+        raise ValueError(f"Unknown input interface type {config.type}.")
 
     cfg = dict(config)
 

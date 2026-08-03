@@ -23,6 +23,7 @@ import loeric.core.player.analysers as la
 
 class InputInterfaceConfig(pdt.BaseModel):
 
+    active: bool
     analysers: dict[str, la.AnalyserConfig]
     model_config = {"extra": "allow"}
 
@@ -36,16 +37,19 @@ class InputInterface:
     Subclasses represent concrete input modalities (MIDI, audio, etc.) and
     expose a uniform :meth:`get` / :meth:`reset` interface to the player.
     """
-    config_class=InputInterfaceConfig
 
-    def __init__(self, analysers: dict):
+    config_class = InputInterfaceConfig
+
+    def __init__(self, analysers: dict, type: str, active: bool):
         """Initialise the input interface."""
-        self._type = "uninitialised"
+        self._type = type
+        self._active = active
 
         self._analysers = {
             a: la.create_analyser(
                 analysers[a],
                 samplerate=self._samplerate if hasattr(self, "_samplerate") else None,
+                active=active,
             )
             for a in analysers
         }
@@ -64,6 +68,8 @@ class InputInterface:
 
         :return: a list of events.
         """
+        if not self._active:
+            return []
         events = []
         for a in self._analysers:
             events.extend(self._analysers[a].get())

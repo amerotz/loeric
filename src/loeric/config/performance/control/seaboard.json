@@ -13,6 +13,7 @@
         "port": "Seaboard BLOCK MIDI 1",
         "analysers": {
           "vertical": {
+            "active": true,
             "type": "midi_cc",
             "controls": {
               "intensity": 74

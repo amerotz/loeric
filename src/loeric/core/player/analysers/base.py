@@ -14,6 +14,7 @@ class AnalyserConfig(pdt.BaseModel):
     """
 
     type: str
+    active: bool
     model_config = {"extra": "allow"}
 
 
@@ -26,12 +27,13 @@ class Analyser:
 
     config_class: type[AnalyserConfig] = AnalyserConfig
 
-    def __init__(self, type: str, **kwargs):
+    def __init__(self, type: str, active: bool):
         """Initialise the analyser.
 
         :param type: analyser type identifier.
         """
         self._type = type
+        self._active = active
 
     def update(self, x):
         """Update the internal state with new input data.

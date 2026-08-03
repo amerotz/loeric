@@ -152,6 +152,7 @@ class SoundfontOutput(lom.MIDIOutput):
         samplerate: int,
         channels: int,
         port=None,
+        **kwargs,
     ):
 
         assert os.path.isfile(path), f"'{path}' is not a valid path."
@@ -172,6 +173,7 @@ class SoundfontOutput(lom.MIDIOutput):
             send_messages=send_messages,
             velocity_range=velocity_range,
             pitchbend_range=pitchbend_range,
+            **kwargs,
         )
 
         # unused
@@ -191,7 +193,12 @@ class SoundfontOutput(lom.MIDIOutput):
         )
 
     def _set_volume(self, value: float):
-        """Overrides the class' volume setter to propagate changes to the underlying synth."""
+        """Override the class' volume setter.
+
+        Propagates changes to the underlying synth.
+        """
+        if not self._active:
+            return
         value = lp.coerce(float, value)
 
         self._out.volume = value

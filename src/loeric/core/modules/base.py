@@ -53,6 +53,7 @@ class LOERICModule:
         self._key_signature = None
         self._time_signature = None
         self._tempo = None
+        self._is_end_of_score = False
 
         self._contour_values = {}
 
@@ -61,6 +62,7 @@ class LOERICModule:
         self._key_signature = None
         self._time_signature = None
         self._tempo = None
+        self._is_end_of_score = False
 
     def set_key_signature(self, key: le.KeySignature):
         self._key_signature = key
@@ -112,6 +114,12 @@ class LOERICModule:
         element: le.LOERICElement,
         window: list[le.LOERICElement] = None,
     ):
+
+        # don't accept anything after
+        # the first end of score
+        if isinstance(element, le.EndOfScore):
+            self._is_end_of_score = True
+
         # if I saw this already, don't run again
         if (
             # bypass this module
@@ -121,7 +129,7 @@ class LOERICModule:
             # does not have required tags
             or not self._contains_required_tags(element)
             # is end of score
-            or isinstance(element, le.EndOfScore)
+            or self._is_end_of_score
         ):
             return [element]
 

@@ -56,7 +56,7 @@ class DataOutput(lob.OutputInterface):
 
     config_class = DataOutputConfig
 
-    def __init__(self, format: str, path: str, controls: list[str]):
+    def __init__(self, format: str, path: str, controls: list[str], **kwargs):
         """Initialise the data output and start the background recording thread.
 
         :param file_format: output file format; must be a value in :attr:`formats`.
@@ -64,9 +64,8 @@ class DataOutput(lob.OutputInterface):
         :param controls: list of contour names to record.
         :raises AssertionError: if *file_format* is not in :attr:`formats`.
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
-        self._type = "data"
         self._format = format
         self._path = path
         self._controls = controls
@@ -78,7 +77,8 @@ class DataOutput(lob.OutputInterface):
 
         self._df = pd.DataFrame(columns=["contour", "time", "value"])
 
-        self._thread.start()
+        if self._active:
+            self._thread.start()
 
     def _data_thread(self):
         """Add contour values to database every fixed interval.
@@ -116,6 +116,9 @@ class DataOutput(lob.OutputInterface):
 
     def reset(self):
         """Reset output state."""
+        if not self._active:
+            return
+
         while self._thread.is_alive():
             self._done.set()
 
@@ -129,6 +132,8 @@ class DataOutput(lob.OutputInterface):
 
         :return: whether the thread has saved the file
         """
+        if not self._active:
+            return True
         self._done.set()
 
         return self._done_saving.is_set()

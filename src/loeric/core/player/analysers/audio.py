@@ -89,6 +89,8 @@ class AudioAnalyser(Analyser):
         :param indata: audio frame array from the sounddevice callback,
             shape ``(frames, channels)``.
         """
+        if not self._active:
+            return
         chunk = np.asarray(indata, dtype=np.float32).T.copy()
 
         if self._buffer is None:
@@ -99,7 +101,7 @@ class AudioAnalyser(Analyser):
         if self._buffer.shape[1] >= self._window_size:
             window = self._buffer[:, : self._window_size]
             self._value = self._compute(window)
-            self._buffer = self._buffer[:, self._hop_size:]
+            self._buffer = self._buffer[:, self._hop_size :]
 
     def reset(self):
         """Clear the internal audio buffer."""
@@ -182,7 +184,11 @@ class RMS(AudioAnalyser):
             self._max_level += alpha * (max(level, self._max_level) - self._max_level)
 
         diff = self._max_level - self._min_level
-        value = 0.0 if diff < 1e-9 else float(np.clip((level - self._min_level) / diff, 0.0, 1.0))
+        value = (
+            0.0
+            if diff < 1e-9
+            else float(np.clip((level - self._min_level) / diff, 0.0, 1.0))
+        )
 
         for c in self._controls:
             logger.info(f"{c}: {value:.2f}")

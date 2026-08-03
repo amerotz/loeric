@@ -57,6 +57,7 @@ class VisualOutput(lob.OutputInterface):
         window_size: int,
         fps: int,
         controls: list[str],
+        **kwargs,
     ):
         """Open a graphical output window in a child process.
 
@@ -66,9 +67,8 @@ class VisualOutput(lob.OutputInterface):
         :param fps: target refresh rate in frames per second.
         :param controls: list of contour names to display.
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
-        self._type = "visual"
         self._width = width
         self._height = height
         self._fps = fps
@@ -76,25 +76,26 @@ class VisualOutput(lob.OutputInterface):
         self._time_interval = 1000 // fps
         self._window_size = window_size
 
-        # create gui process
-        self._process = mp.Process(
-            target=self._graphic_loop, name="LOERIC visual", daemon=True
-        )
-        self._process.start()
+        if self._active:
+            # create gui process
+            self._process = mp.Process(
+                target=self._graphic_loop, name="LOERIC visual", daemon=True
+            )
+            self._process.start()
 
-        # create shared memory
-        array = np.ones(len(self._controls), dtype=float)
+            # create shared memory
+            array = np.ones(len(self._controls), dtype=float)
 
-        self._memory = shared_memory.SharedMemory(
-            name="loeric-visual-shared-memory",
-            create=True,
-            size=sys.getsizeof(array),
-        )
+            self._memory = shared_memory.SharedMemory(
+                name="loeric-visual-shared-memory",
+                create=True,
+                size=sys.getsizeof(array),
+            )
 
-        # create shared buffer
-        self._array = np.ndarray(
-            array.shape, dtype=array.dtype, buffer=self._memory.buf
-        )
+            # create shared buffer
+            self._array = np.ndarray(
+                array.shape, dtype=array.dtype, buffer=self._memory.buf
+            )
 
     def _graphic_loop(self):
         """Entry point for the child GUI process.
@@ -152,6 +153,8 @@ class VisualOutput(lob.OutputInterface):
 
     def reset(self):
         """Reset output state."""
+        if not self._active:
+            return
         while self._process.is_alive():
             self._process.terminate()
         self._process.close()
@@ -170,6 +173,8 @@ class VisualOutput(lob.OutputInterface):
 
         :param inputs: list of events to process
         """
+        if not self._active:
+            return
         # create dict
         contour_values = {
             i.name: i.value for i in inputs if isinstance(i, le.ContourValue)

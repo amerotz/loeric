@@ -26,30 +26,30 @@ class AudioInput(lib.InputInterface):
     control values via :meth:`get`.
     """
 
-    config_class= AudioInputConfig
+    config_class = AudioInputConfig
 
-    def __init__(self, device: str, samplerate: int, analysers: dict, **kwargs):
+    def __init__(self, device: str, samplerate: int, **kwargs):
         """Open an audio input stream and initialise all configured analysers.
 
         :param device: sounddevice device name or index.
         :param samplerate: sampling rate in Hz.
         :param analysers: mapping of analyser names to their config dicts.
         """
-        self._type = "audio"
-
         self._samplerate = samplerate
         self._device = device
-        self._stream = sd.InputStream(
-            callback=self._callback,
-            samplerate=samplerate,
-            device=device,
-            dtype="float32",
-            channels=1,
-        )
 
-        self._stream.start()
+        if kwargs["active"]:
+            self._stream = sd.InputStream(
+                callback=self._callback,
+                samplerate=samplerate,
+                device=device,
+                dtype="float32",
+                channels=1,
+            )
 
-        super().__init__(analysers)
+            self._stream.start()
+
+        super().__init__(**kwargs)
 
         for a in self._analysers:
             assert isinstance(
@@ -69,6 +69,8 @@ class AudioInput(lib.InputInterface):
 
     def reset(self):
         """Stop and close the audio input stream."""
+        if not self._active:
+            return
         # stop and close the stream
         self._stream.stop()
         self._stream.close()

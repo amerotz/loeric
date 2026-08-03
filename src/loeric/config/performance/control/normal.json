@@ -28,6 +28,7 @@
         "samplerate": 44100,
         "analysers": {
           "loudness": {
+            "active": true,
             "type": "rms",
             "responsiveness": 0.5,
             "controls": ["intensity"],

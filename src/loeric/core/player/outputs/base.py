@@ -28,7 +28,10 @@ mp.set_start_method("spawn", force=True)
 
 
 class OutputInterfaceConfig(pdt.BaseModel):
-    pass
+
+    type: str
+    active: bool
+    model_config = {"extra": "allow"}
 
 
 @lp.readonly("active")
@@ -43,10 +46,11 @@ class OutputInterface:
 
     config_class = OutputInterfaceConfig
 
-    def __init__(self):
+    def __init__(self, type: str, active: bool):
         """Initialise the output interface."""
+        self._type = type
+        self._active = active
         self._contour_values = {}
-        self._type = "uninitialised"
 
     def play_events(self, events: list[le.LOERICElement], tick: le.TimeDelta | float):
         """Send a list of events to the output at the given tick.
@@ -65,6 +69,8 @@ class OutputInterface:
 
         :param contour_values: mapping of contour names to their current float values.
         """
+        if not self._active:
+            return
         for i in inputs:
             if isinstance(i, le.ContourValue):
                 self._contour_values[i.name] = i.value

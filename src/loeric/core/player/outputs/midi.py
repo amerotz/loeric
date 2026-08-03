@@ -126,6 +126,7 @@ class MIDIOutput(lob.OutputInterface):
         send_messages: bool,
         velocity_range: list[int],
         pitchbend_range: int,
+        **kwargs,
     ):
         """Open a MIDI output port and initialise the playback state.
 
@@ -139,9 +140,7 @@ class MIDIOutput(lob.OutputInterface):
         :raises ValueError: if *velocity_range* is not a valid ``[min, max]`` pair.
         :raises ValueError: if *pitchbend_range* is outside 1–48.
         """
-        super().__init__()
-
-        self._type = "midi"
+        super().__init__(**kwargs)
 
         self._port = port
         self._controls = controls
@@ -150,7 +149,8 @@ class MIDIOutput(lob.OutputInterface):
         self._velocity_range = velocity_range
         self._pitchbend_range = pitchbend_range
 
-        self._out = self._create_output()
+        if self._active:
+            self._out = self._create_output()
 
         self._free_channels = {i: (-np.inf, -np.inf) for i in range(16)}
         self._message_interval = 1 / 10
@@ -159,7 +159,8 @@ class MIDIOutput(lob.OutputInterface):
 
         if self._send_cc:
             self._cc_thread = threading.Thread(target=self._midi_cc_thread)
-            self._cc_thread.start()
+            if self._active:
+                self._cc_thread.start()
 
         self._queue = MIDIQueue()
 
@@ -362,6 +363,8 @@ class MIDIOutput(lob.OutputInterface):
     def reset(self):
         """Stop the CC thread, reset the MIDI port, and close it."""
         # stop thread
+        if not self._active:
+            return
         self._done.set()
 
         if self._send_cc and self._cc_thread.is_alive():
@@ -377,6 +380,8 @@ class MIDIOutput(lob.OutputInterface):
 
         :return: ``True`` if all queued MIDI messages have been sent.
         """
+        if not self._active:
+            return True
         return self._queue.is_empty()
 
     def _allocate_channel(self, event: le.LOERICElement) -> int:
@@ -412,7 +417,7 @@ class MIDIOutput(lob.OutputInterface):
         :param events: list of :class:`~loeric.core.element.LOERICElement` to process.
         :param tick: current playback position; messages with time <= tick are sent.
         """
-        if not self._send_messages:
+        if not self._active or not self._send_messages:
             return
 
         # obtain all midi messages
