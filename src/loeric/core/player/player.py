@@ -45,7 +45,6 @@ class Player:
             config = PlayerConfig(
                 input_interfaces=config["input"], output_interfaces=config["output"]
             )
-        print(config.dict())
 
         self._input_interfaces = {}
         for i in config.input_interfaces:

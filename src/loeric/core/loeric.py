@@ -318,6 +318,8 @@ class LOERIC:
 
             # start actual loop
             finish = False
+            warned = False
+
             while not finish:
 
                 # commands
@@ -349,9 +351,14 @@ class LOERIC:
                 # compensate loop duration
                 delay_time = time.perf_counter() - start_time
                 if delay_time > wait_time:
-                    logger.warning(
-                        f"Computation ({np.round(delay_time,4)}s) is taking more than time interval ({np.round(wait_time,4)}s)!"
-                    )
+                    if True:  # not warned:
+                        logger.warning(
+                            f"Computation ({np.round(delay_time,4)}s) is taking more than time interval ({np.round(wait_time,4)}s)!"
+                        )
+
+                        warned = True
+                else:
+                    warned = False
 
                 wait_time -= delay_time
 
@@ -361,6 +368,7 @@ class LOERIC:
         except Exception:
             traceback.print_exc()
         finally:
+
             player.reset()
             mapper.reset()
             groover.reset()

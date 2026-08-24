@@ -1,0 +1,14 @@
+{
+  "modules": {
+    "drones": {
+      "data": {
+        "strings_with_melody": {
+          "notes": [64, 57, 55, 50, 45, 38]
+        },
+        "other": {
+          "notes": [64, 57, 55, 50, 45, 38]
+        }
+      }
+    }
+  }
+}

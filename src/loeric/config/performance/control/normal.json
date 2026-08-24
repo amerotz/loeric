@@ -9,9 +9,6 @@
     "ornament": {
       "bind": "$ornament"
     },
-    "swing": {
-      "bind": "$swing"
-    },
     "timing": {
       "bind": "$tempo"
     },
@@ -44,15 +41,14 @@
       "velocity",
       "ornament",
       "drone",
-      "swing",
       "tempo",
       "legato",
       "intensity"
     ],
     "targets": [],
     "rules": [
-      "0.5 : %velocity,%ornament,%tempo,%drone,%swing",
-      "intensity ~ velocity,ornament,tempo,drone,swing"
+      "0.5 : %velocity,%ornament,%tempo,%drone,%legato",
+      "intensity ~ velocity,ornament,tempo,drone,legato"
     ]
   }
 }

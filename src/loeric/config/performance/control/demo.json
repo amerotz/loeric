@@ -7,16 +7,52 @@
       "bind": "velocity_i"
     },
     "ornament": {
-      "bind": "ornament_i",
+      "bind": "ornament_i"
+    },
+    "ornament#errors": {
+      "bind": "error_i",
       "data": {
         "error_chromatic": {
-          "bind": "error_i"
+          "cases": ["not beat"],
+          "pitches_mean": [0],
+          "pitches_std": [4],
+          "velocities_mean": [1],
+          "velocities_std": [0.25],
+          "durations_mean": [1],
+          "durations_std": [0.5],
+          "probability": 1,
+          "length": 1,
+          "diatonic": false,
+          "threshold": 0,
+          "slide": false
         },
         "error_diatonic": {
-          "bind": "error_i"
+          "cases": ["not beat"],
+          "pitches_mean": [0],
+          "pitches_std": [4],
+          "velocities_mean": [1],
+          "velocities_std": [0.25],
+          "durations_mean": [1],
+          "durations_std": [0.5],
+          "probability": 1,
+          "length": 1,
+          "diatonic": true,
+          "threshold": 0,
+          "slide": false
         },
         "error_slide": {
-          "bind": "error_i"
+          "cases": ["not beat"],
+          "pitches_mean": [0],
+          "pitches_std": [4],
+          "velocities_mean": [1],
+          "velocities_std": [0.25],
+          "durations_mean": [1],
+          "durations_std": [0.5],
+          "probability": 1,
+          "length": 1,
+          "diatonic": false,
+          "threshold": 0,
+          "slide": true
         }
       }
     },
