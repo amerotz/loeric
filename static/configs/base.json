@@ -24,64 +24,66 @@
       "normalize": false
     }
   },
-  "modules": {
-    "tagger": {
-      "tag": "SCORE"
-    },
-    "harmony": {
-      "bypass": false,
-      "chord_score": [2, -1, 0, 0, 0, 1, -1, 0, 1, 1, 0, -1],
-      "chords_per_bar": 2,
-      "weights": {
-        "default": [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1],
-        "major": [2, 0, 0.5, 0, 0.5, 2, 0, 2, 0, 1, 0, 0],
-        "minor": [2, 0, 0.5, 2, 0, 2, 0, 2, 1, 0, 1, 0.5],
-        "dorian": [2, 0, 0.5, 2, 0, 0.5, 0, 1, 0, 1, 2, 0],
-        "mixolydian": [2, 0, 0.5, 0, 0.5, 1, 0, 0.5, 0, 0.5, 1, 0]
+  "groover": {
+    "modules": {
+      "tagger": {
+        "tag": "SCORE"
+      },
+      "harmony": {
+        "bypass": false,
+        "chord_score": [2, -1, 0, 0, 0, 1, -1, 0, 1, 1, 0, -1],
+        "chords_per_bar": 2,
+        "weights": {
+          "default": [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1],
+          "major": [2, 0, 0.5, 0, 0.5, 2, 0, 2, 0, 1, 0, 0],
+          "minor": [2, 0, 0.5, 2, 0, 2, 0, 2, 1, 0, 1, 0.5],
+          "dorian": [2, 0, 0.5, 2, 0, 0.5, 0, 1, 0, 1, 2, 0],
+          "mixolydian": [2, 0, 0.5, 0, 0.5, 1, 0, 0.5, 0, 0.5, 1, 0]
+        }
+      },
+      "dynamics": {
+        "bind": "$velocity",
+        "pattern": "velocity_pattern"
+      },
+      "ornament": {
+        "required_tags": ["SCORE"],
+        "bind": "$ornament",
+        "whitelist": null,
+        "bypass": false,
+        "data": {}
+      },
+      "transpose": {
+        "steps": 0.0
+      },
+      "drones": {
+        "bypass": true,
+        "data": {}
+      },
+      "swing": {
+        "min": 1,
+        "max": 1,
+        "bind": "$swing",
+        "locations": [0]
+      },
+      "timing": {
+        "bypass": false,
+        "bind": "$tempo",
+        "pattern": "tempo_pattern",
+        "qpm_amount": 1,
+        "only_increase": false
+      },
+      "legato": {
+        "min": 0.5,
+        "max": 1,
+        "bind": "$legato"
+      },
+      "logger": {
+        "notes": false,
+        "chords": true,
+        "time_signatures": true,
+        "key_signatures": true,
+        "tempos": false
       }
-    },
-    "dynamics": {
-      "bind": "$velocity",
-      "pattern": "velocity_pattern"
-    },
-    "ornament": {
-      "required_tags": ["SCORE"],
-      "bind": "$ornament",
-      "whitelist": null,
-      "bypass": false,
-      "data": {}
-    },
-    "transpose": {
-      "steps": 0.0
-    },
-    "drones": {
-      "bypass": true,
-      "data": {}
-    },
-    "swing": {
-      "min": 1,
-      "max": 1,
-      "bind": "$swing",
-      "locations": [0]
-    },
-    "timing": {
-      "bypass": false,
-      "bind": "$tempo",
-      "pattern": "tempo_pattern",
-      "qpm_amount": 1,
-      "only_increase": false
-    },
-    "legato": {
-      "min": 0.5,
-      "max": 1,
-      "bind": "$legato"
-    },
-    "logger": {
-      "notes": false,
-      "chords": true,
-      "time_signatures": true,
-      "key_signatures": true,
-      "tempos": false
     }
   },
   "contours": {

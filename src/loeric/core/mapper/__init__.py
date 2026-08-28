@@ -13,6 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
-from loeric.core.mapper.mapper import Mapper
+from loeric.core.mapper.mapper import Mapper, MapperConfig
 
-__all__ = [Mapper]
+__all__ = [Mapper, MapperConfig]

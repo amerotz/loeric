@@ -1,8 +1,10 @@
 {
-  "modules": {
-    "timing": {
-      "bind": "$tempo",
-      "qpm_amount": 50
+  "groover": {
+    "modules": {
+      "timing": {
+        "bind": "$tempo",
+        "qpm_amount": 50
+      }
     }
   },
   "player": {

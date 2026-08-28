@@ -29,8 +29,8 @@ import loeric.core.player.outputs as lo
 
 class PlayerConfig(pdt.BaseModel):
 
-    input_interfaces: dict[str, li.InputInterfaceConfig]
-    output_interfaces: dict[str, lo.OutputInterfaceConfig]
+    input: dict[str, li.InputInterfaceConfig]
+    output: dict[str, lo.OutputInterfaceConfig]
 
 
 @lp.expose("_input_interfaces", "input")
@@ -42,19 +42,17 @@ class Player:
     def __init__(self, config: dict):
 
         if not isinstance(config, PlayerConfig):
-            config = PlayerConfig(
-                input_interfaces=config["input"], output_interfaces=config["output"]
-            )
+            config = PlayerConfig(config)
 
         self._input_interfaces = {}
-        for i in config.input_interfaces:
-            interface = li.create_input(config.input_interfaces[i])
+        for i in config.input:
+            interface = li.create_input(config.input[i])
             if interface is not None:
                 self._input_interfaces[i] = interface
 
         self._output_interfaces = {}
-        for o in config.output_interfaces:
-            interface = lo.create_output(config.output_interfaces[o])
+        for o in config.output:
+            interface = lo.create_output(config.output[o])
             if interface is not None:
                 self._output_interfaces[o] = interface
 

@@ -17,27 +17,42 @@
 
 import logging
 
+import pydantic as pdt
+
 import loeric.core.element as le
 import loeric.core.mapper.engines.matrix as lme
-import loeric.core.mapper.parser as lmP
+import loeric.core.mapper.parser as lmp
+import loeric.core.mapper.parser.models as lmpm
 
 logger = logging.getLogger(__name__)
 
 
+class MapperConfig(pdt.BaseModel):
+    sources: list[str]
+    targets: list[str]
+    rules: list[lmpm.LOERICRuleObject]
+
+
 class Mapper:
 
-    def __init__(self, config):
+    config_class = MapperConfig
 
-        self._parser = lmP.LOERICMapperParser()
-        self._engine = lme.MatrixEngine(
-            sources=config["sources"], targets=config["targets"]
-        )
+    def __init__(self, config: MapperConfig | dict):
+
+        if not isinstance(config, MapperConfig):
+            config = MapperConfig(
+                sources=config["sources"],
+                targets=config["targets"],
+                rules=[self._parser.parse(r) for r in config["rules"]],
+            )
+
+        self._parser = lmp.LOERICMapperParser()
+        self._engine = lme.MatrixEngine(sources=config.sources, targets=config.targets)
 
         # parse rules
-        for rule in config["rules"]:
-            obj = self._parser.parse(rule)
+        for rule in config.rules:
             # process in the engine
-            self._engine.process(obj)
+            self._engine.process(rule)
 
     def reset(self):
         self._engine.reset()
@@ -60,4 +75,5 @@ class Mapper:
 
     def get(self, as_array=False):
         """Get output values."""
-        return self._engine.get(as_array=as_array)
+        values = self._engine.get(as_array=as_array)
+        return values

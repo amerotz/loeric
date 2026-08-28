@@ -55,12 +55,14 @@
       }
     }
   },
-  "modules": {
-    "swing": {
-      "min": 1,
-      "max": 1,
-      "bind": "$swing",
-      "locations": [1, 3, 5]
+  "groover": {
+    "modules": {
+      "swing": {
+        "min": 1,
+        "max": 1,
+        "bind": "$swing",
+        "locations": [1, 3, 5]
+      }
     }
   },
   "mapper": {

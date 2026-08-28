@@ -1,4 +1,5 @@
 {
+  "groover": {
   "modules": {
     "ornament": {
       "data": {
@@ -143,5 +144,6 @@
         }
       }
     }
+  }
   }
 }

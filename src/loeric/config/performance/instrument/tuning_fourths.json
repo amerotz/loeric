@@ -1,12 +1,14 @@
-46{
-  "modules": {
-    "drones": {
-      "data": {
-        "strings_with_melody": {
-          "notes": [47, 52, 57, 62, 67]
-        },
-        "other": {
-          "notes": [47, 52, 57, 62, 67]
+{
+  "groover": {
+    "modules": {
+      "drones": {
+        "data": {
+          "strings_with_melody": {
+            "notes": [47, 52, 57, 62, 67]
+          },
+          "other": {
+            "notes": [47, 52, 57, 62, 67]
+          }
         }
       }
     }

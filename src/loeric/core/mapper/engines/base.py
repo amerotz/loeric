@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+import time
+
 import numpy as np
 
 import loeric.core.element as le
@@ -49,6 +51,8 @@ class LOERICMapperEngine:
             lmpm.MapperRouter: self._process_mapper_router,
         }
 
+        self._last_read_timestamp = -1
+
     def __setitem__(self, key: str, value: float) -> None:
         """Set the control named ``key`` to ``value``."""
         if key not in self._parameters:
@@ -66,23 +70,31 @@ class LOERICMapperEngine:
                 self.__setitem__(el.name, el.value)
 
     def get(self, as_array=False):
-        """Get output values."""
+        """Get output values.
+
+        If using events (``as_array=False``),
+        only return contours that have changed
+        since last ``meth:get()`` event.
+        """
         params = self._parameters
+        values = []
         if as_array:
-            return np.array([params[p].get() for p in params])
+            values = np.array([params[p].get() for p in params])
         else:
-            return [
+            values = [
                 le.ContourValue(
                     name=p, value=params[p].get(), time=le.PerformanceClock.now()
                 )
                 for p in params
+                if params[p].has_changed_since(self._last_read_timestamp)
             ]
+        self._last_read_timestamp = time.time()
+        return values
 
     def reset(self):
         """Reset all parameters."""
         for p in self._parameters:
             self._parameters[p].reset()
-
 
     def _process_mapper_range(self, obj: lmpm.MapperRange):
         pass

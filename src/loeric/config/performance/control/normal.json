@@ -2,18 +2,21 @@
   "variables": {
     "var_drone_bind": "$drone"
   },
-  "modules": {
-    "dynamics": {
-      "bind": "$velocity"
-    },
-    "ornament": {
-      "bind": "$ornament"
-    },
-    "timing": {
-      "bind": "$tempo"
-    },
-    "legato": {
-      "bind": "$legato"
+
+  "groover": {
+    "modules": {
+      "dynamics": {
+        "bind": "$velocity"
+      },
+      "ornament": {
+        "bind": "$ornament"
+      },
+      "timing": {
+        "bind": "$tempo"
+      },
+      "legato": {
+        "bind": "$legato"
+      }
     }
   },
   "player": {

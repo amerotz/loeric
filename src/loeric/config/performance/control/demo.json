@@ -2,71 +2,73 @@
   "variables": {
     "var_drone_bind": "drone_i"
   },
-  "modules": {
-    "dynamics": {
-      "bind": "velocity_i"
-    },
-    "ornament": {
-      "bind": "ornament_i"
-    },
-    "ornament#errors": {
-      "bind": "error_i",
-      "data": {
-        "error_chromatic": {
-          "cases": ["not beat"],
-          "pitches_mean": [0],
-          "pitches_std": [4],
-          "velocities_mean": [1],
-          "velocities_std": [0.25],
-          "durations_mean": [1],
-          "durations_std": [0.5],
-          "probability": 1,
-          "length": 1,
-          "diatonic": false,
-          "threshold": 0,
-          "slide": false
-        },
-        "error_diatonic": {
-          "cases": ["not beat"],
-          "pitches_mean": [0],
-          "pitches_std": [4],
-          "velocities_mean": [1],
-          "velocities_std": [0.25],
-          "durations_mean": [1],
-          "durations_std": [0.5],
-          "probability": 1,
-          "length": 1,
-          "diatonic": true,
-          "threshold": 0,
-          "slide": false
-        },
-        "error_slide": {
-          "cases": ["not beat"],
-          "pitches_mean": [0],
-          "pitches_std": [4],
-          "velocities_mean": [1],
-          "velocities_std": [0.25],
-          "durations_mean": [1],
-          "durations_std": [0.5],
-          "probability": 1,
-          "length": 1,
-          "diatonic": false,
-          "threshold": 0,
-          "slide": true
+  "groover": {
+    "modules": {
+      "dynamics": {
+        "bind": "velocity_i"
+      },
+      "ornament": {
+        "bind": "ornament_i"
+      },
+      "ornament#errors": {
+        "bind": "error_i",
+        "data": {
+          "error_chromatic": {
+            "cases": ["not beat"],
+            "pitches_mean": [0],
+            "pitches_std": [4],
+            "velocities_mean": [1],
+            "velocities_std": [0.25],
+            "durations_mean": [1],
+            "durations_std": [0.5],
+            "probability": 1,
+            "length": 1,
+            "diatonic": false,
+            "threshold": 0,
+            "slide": false
+          },
+          "error_diatonic": {
+            "cases": ["not beat"],
+            "pitches_mean": [0],
+            "pitches_std": [4],
+            "velocities_mean": [1],
+            "velocities_std": [0.25],
+            "durations_mean": [1],
+            "durations_std": [0.5],
+            "probability": 1,
+            "length": 1,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false
+          },
+          "error_slide": {
+            "cases": ["not beat"],
+            "pitches_mean": [0],
+            "pitches_std": [4],
+            "velocities_mean": [1],
+            "velocities_std": [0.25],
+            "durations_mean": [1],
+            "durations_std": [0.5],
+            "probability": 1,
+            "length": 1,
+            "diatonic": false,
+            "threshold": 0,
+            "slide": true
+          }
         }
+      },
+      "swing": {
+        "bind": "swing_i"
+      },
+      "timing": {
+        "bind": "tempo_i",
+        "qpm_amount": 50
+      },
+      "legato": {
+        "bind": "legato_i",
+        "min": 0.1,
+        "max": 1
       }
-    },
-    "swing": {
-      "bind": "swing_i"
-    },
-    "timing": {
-      "bind": "tempo_i",
-      "qpm_amount": 50
-    },
-    "legato": {
-      "bind": "legato_i",
-      "min": 0.1,
-      "max": 1
     }
   },
   "player": {

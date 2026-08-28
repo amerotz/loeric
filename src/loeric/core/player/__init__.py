@@ -13,4 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
-from loeric.core.player.player import Player
+from loeric.core.player.player import Player, PlayerConfig
+
+__all__ = [Player, PlayerConfig]

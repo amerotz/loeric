@@ -9,9 +9,11 @@
       }
     }
   },
-  "modules": {
-    "timing": {
-      "qpm_amount": 20
+  "groover": {
+    "modules": {
+      "timing": {
+        "qpm_amount": 20
+      }
     }
   }
 }

@@ -24,6 +24,7 @@ import traceback
 from dataclasses import dataclass
 
 import numpy as np
+import pydantic as pdt
 
 import loeric.core.contour as cnt
 import loeric.core.element as le
@@ -49,7 +50,17 @@ class LOERICCommand:
         return f"(LOERICCommand cmd={self.command} payload={self.payload})"
 
 
+class LOERICConfig(pdt.BaseModel):
+
+    modules: gr.GrooverConfig
+    contours: dict
+    player: pl.PlayerConfig
+    mapper: mp.MapperConfig
+
+
 class LOERIC:
+
+    config_class = LOERICConfig
 
     def __init__(self, config: dict, mode: str = "process"):
         """Initialise internal variables.
@@ -60,7 +71,16 @@ class LOERIC:
         """
         assert mode in ["process", "thread"]
         self._mode = mode
+
         self._config = config
+        if not isinstance(self._config, LOERICConfig):
+            self._config = LOERICConfig(
+                modules=config["groover"],
+                contours=config["contours"],
+                player=config["player"],
+                mapper=config["mapper"],
+            )
+
         self._tune = None
         self._tune_type = None
 
@@ -233,10 +253,10 @@ class LOERIC:
 
         ########## INIT THINGS ###############
 
-        contour_manager = cnt.ContourManager(config["contours"], tune)
-        mapper = mp.Mapper(config["mapper"])
-        groover = gr.Groover(config["modules"])
-        player = pl.Player(config["player"])
+        contour_manager = cnt.ContourManager(config.contours, tune)
+        mapper = mp.Mapper(config.mapper)
+        groover = gr.Groover(config.modules)
+        player = pl.Player(config.player)
 
         roots = {
             "player": player,

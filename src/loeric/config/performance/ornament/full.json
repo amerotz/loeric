@@ -2,6 +2,7 @@
   "variables": {
     "var_roll_2_prob": 1
   },
+  "groover": {
   "modules": {
     "ornament": {
       "data": {
@@ -259,5 +260,6 @@
         }
       }
     }
+  }
   }
 }

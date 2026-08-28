@@ -13,12 +13,14 @@
     "var_upper_comping_pattern": [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
     "var_lower_comping_pattern": [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
   },
-  "modules": {
-    "harmony": {
-      "chords_per_bar": 2
-    },
-    "swing": {
-      "bypass": true
+  "groover": {
+    "modules": {
+      "harmony": {
+        "chords_per_bar": 2
+      },
+      "swing": {
+        "bypass": true
+      }
     }
   },
   "contours": {

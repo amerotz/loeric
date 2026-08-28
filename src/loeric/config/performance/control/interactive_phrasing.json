@@ -4,19 +4,21 @@
     "var_phrase_length_1": 8,
     "var_velocity_multiplier": 0.75
   },
-  "modules": {
-    "ornament": {
-      "bind": "ornament"
-    },
-    "swing": {
-      "bypass": true
-    },
-    "timing": {
-      "qpm_amount": 20
-    },
-    "legato": {
-      "min": 0.6,
-      "max": 1
+  "groover": {
+    "modules": {
+      "ornament": {
+        "bind": "ornament"
+      },
+      "swing": {
+        "bypass": true
+      },
+      "timing": {
+        "qpm_amount": 20
+      },
+      "legato": {
+        "min": 0.6,
+        "max": 1
+      }
     }
   },
   "player": {

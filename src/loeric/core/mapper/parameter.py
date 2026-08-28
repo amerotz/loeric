@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+import time
+
 import numpy as np
 
 
@@ -22,10 +24,11 @@ class Parameter:
     Supports division in multiple ranges.
     """
 
-    __slots__ = ("_name", "_min_value", "_max_value", "_value")
+    __slots__ = ("_name", "_min_value", "_max_value", "_value", "_update_timestamp")
 
     def __init__(self, name, min_value=-np.inf, max_value=np.inf):
         self._name = name
+        self._update_timestamp = np.inf
 
         self._min_value, self._max_value = np.round(min_value, 2).astype(
             float
@@ -33,12 +36,19 @@ class Parameter:
 
         self._value = np.nan
 
+    def has_changed_since(self, timestamp):
+        """Check if the parameter has been updated since a timestamp."""
+        return self._update_timestamp >= timestamp
+
     def set(self, value):
         """Set the parameter."""
+        old_value = self._value
         if value >= self._min_value and value <= self._max_value:
             self._value = value
         else:
             self._value = np.nan
+        if self._value != old_value:
+            self._update_timestamp = time.time()
 
     def get(self):
         """Get the parameter value, optionally a dict with value for every range where it fits, otherwise 0."""

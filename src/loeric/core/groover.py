@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class GrooverConfig(pdt.BaseModel):
-    """Configuration that maps pipeline stage names → Config model instances."""
+    """Configuration that maps pipeline stage names to config model instances."""
 
     modules: dict[str, lm.base.ModuleConfig]
 

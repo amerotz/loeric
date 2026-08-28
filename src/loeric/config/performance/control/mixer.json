@@ -1,19 +1,21 @@
 {
-  "modules": {
-    "dynamics": {
-      "bind": "$velocity"
-    },
-    "ornament": {
-      "bind": "$ornament"
-    },
-    "timing": {
-      "bind": "$tempo",
-      "qpm_amount": 50
-    },
-    "legato": {
-      "bind": "$legato",
-      "min": 0.1,
-      "max": 1
+  "groover": {
+    "modules": {
+      "dynamics": {
+        "bind": "$velocity"
+      },
+      "ornament": {
+        "bind": "$ornament"
+      },
+      "timing": {
+        "bind": "$tempo",
+        "qpm_amount": 50
+      },
+      "legato": {
+        "bind": "$legato",
+        "min": 0.1,
+        "max": 1
+      }
     }
   },
   "player": {
