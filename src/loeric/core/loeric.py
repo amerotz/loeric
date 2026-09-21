@@ -26,7 +26,7 @@ from dataclasses import dataclass
 import numpy as np
 import pydantic as pdt
 
-import loeric.core.contour as cnt
+import loeric.core.contour_manager as cnt
 import loeric.core.element as le
 import loeric.core.groover as gr
 import loeric.core.mapper as mp
@@ -84,9 +84,6 @@ class LOERIC:
         self._tune = None
         self._tune_type = None
 
-        # for performance
-        self._qpm = 120
-
         self._instance = None
         self._running = False
 
@@ -118,7 +115,6 @@ class LOERIC:
 
         Defaults to 120 QPM.
         """
-        self._qpm = tempo
         self._command_queue.put(
             LOERICCommand(command="tempo", payload={"tempo": tempo})
         )
@@ -177,7 +173,6 @@ class LOERIC:
                 args=(
                     self._config,
                     self._tune,
-                    self._qpm,
                     wait_for_prompt,
                     self._command_queue,
                     ready_event,
@@ -191,7 +186,6 @@ class LOERIC:
                 args=(
                     self._config,
                     self._tune,
-                    self._qpm,
                     wait_for_prompt,
                     self._command_queue,
                     ready_event,
@@ -237,7 +231,6 @@ class LOERIC:
     def _run(
         config: dict,
         tune: tu.Tune,
-        qpm: float,
         wait_for_prompt: bool,
         command_queue: queue.Queue | multiprocessing.Queue,
         ready_event: threading.Event | multiprocessing.Event,
@@ -271,7 +264,6 @@ class LOERIC:
 
         # tempo
         start_time = tune.start_time
-        groover.set_tempo(qpm, start_time)
 
         # timekeeping
         tick = le.TimeDelta(eighth_duration=start_time - groover.lookahead_size)
@@ -280,17 +272,12 @@ class LOERIC:
         )
         time_division_f = time_division.eighth_duration
 
-        def wait_for_command(command):
-            while True:
-                cmd = command_queue.get()
-                if cmd.command == command:
-                    return cmd
-
         def handle_command(cmd: LOERICCommand):
             logger.info(f"Received command: {cmd}")
             if cmd.command == "stop":
                 return True  # signal caller to break
             if cmd.command == "tempo":
+                le.TempoKeeper.set(cmd.payload["tempo"])
                 groover.set_tempo(cmd.payload["tempo"], tick)
             elif cmd.command == "set":
                 path: lp.LOERICPath = cmd.payload["path"]
@@ -312,11 +299,26 @@ class LOERIC:
 
             return False  # keep going
 
+        def wait_for_command(command):
+            while True:
+                cmd = command_queue.get()
+                if cmd.command == command:
+                    return cmd
+
         ########## READY PLAYBACK ###############
 
         try:
             # run in advance until lookahead is reached
             while tick < start_time:
+
+                # commands
+                cmd = None
+                if not command_queue.empty():
+                    cmd = command_queue.get_nowait()
+                    logger.debug(cmd)
+                    if handle_command(cmd):
+                        break
+
                 finish = LOERIC._step(
                     mapper,
                     contour_manager,

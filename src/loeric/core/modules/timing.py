@@ -60,7 +60,6 @@ class TimingModule(lmb.LOERICModule):
         self._is_online = True
 
         self._first_tempo = None
-        self._user_tempo_to_original_ratio = 1
 
     def _process(
         self,
@@ -72,7 +71,7 @@ class TimingModule(lmb.LOERICModule):
         :param element: the element to process.
         """
         if isinstance(element, le.UserTempo):
-            self._user_tempo_to_original_ratio = element.qpm / self._first_tempo.qpm
+            self._user_tempo = element
         elif isinstance(element, le.Tempo):
             if self._first_tempo is None:
                 self._first_tempo = element
@@ -120,7 +119,9 @@ class TimingModule(lmb.LOERICModule):
 
     def _process_tempo(self):
 
-        bpm = self._tempo.qpm * self._user_tempo_to_original_ratio
+        user_tempo_to_original_ratio = self._user_tempo.qpm / self._first_tempo.qpm
+
+        bpm = self._tempo.qpm * user_tempo_to_original_ratio
         value = 2 * self.qpm_amount * (self._contour_values[self._contour] - 0.5)
 
         calculated_tempo = bpm + value

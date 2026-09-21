@@ -161,6 +161,19 @@ class PerformanceClock:
         return PerformanceClock._tick
 
 
+class TempoKeeper:
+
+    _tempo = None
+
+    @staticmethod
+    def set(tempo):
+        TempoKeeper._tempo = tempo
+
+    @staticmethod
+    def tempo() -> float:
+        return Tempo(qpm=TempoKeeper._tempo, time=PerformanceClock.now())
+
+
 class LOERICElement:
 
     __slots__ = (

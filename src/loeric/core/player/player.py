@@ -56,7 +56,6 @@ class Player:
             if interface is not None:
                 self._output_interfaces[o] = interface
 
-        self._tempo = le.Tempo(qpm=120)
         self._message_queue = le.LOERICQueue()
 
     def update(self, events: list[le.LOERICElement], tick: le.TimeDelta):
@@ -74,7 +73,7 @@ class Player:
             else:
                 e = self._message_queue.pop()
                 if isinstance(e, le.Tempo):
-                    self._tempo = e
+                    le.TempoKeeper.set(e.qpm)
 
     def play_events(self, events: list[le.LOERICElement], tick: le.TimeDelta):
 
@@ -107,4 +106,4 @@ class Player:
 
     @property
     def eighth_duration_seconds(self) -> float:
-        return 30 / self._tempo.qpm
+        return 30 / le.TempoKeeper.tempo().qpm

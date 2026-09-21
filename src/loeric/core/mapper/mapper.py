@@ -22,7 +22,6 @@ import pydantic as pdt
 import loeric.core.element as le
 import loeric.core.mapper.engines.matrix as lme
 import loeric.core.mapper.parser as lmp
-import loeric.core.mapper.parser.models as lmpm
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ logger = logging.getLogger(__name__)
 class MapperConfig(pdt.BaseModel):
     sources: list[str]
     targets: list[str]
-    rules: list[lmpm.LOERICRuleObject]
+    rules: list[str]
 
 
 class Mapper:
@@ -43,7 +42,7 @@ class Mapper:
             config = MapperConfig(
                 sources=config["sources"],
                 targets=config["targets"],
-                rules=[self._parser.parse(r) for r in config["rules"]],
+                rules=config["rules"],
             )
 
         self._parser = lmp.LOERICMapperParser()
@@ -52,6 +51,7 @@ class Mapper:
         # parse rules
         for rule in config.rules:
             # process in the engine
+            rule = self._parser.parse(rule)
             self._engine.process(rule)
 
     def reset(self):

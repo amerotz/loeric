@@ -46,7 +46,9 @@ class LOERICMapperParser:
         modulation_rule : modulation_source "~" modulation_targets
 
         range : "[" number "," number "]"
-        ?pre_processing_rule : select
+        ?pre_processing_rule :
+            | source
+            | select
             | pre_processing_rule ">" range -> map
             | pre_processing_rule "!" -> invert
 

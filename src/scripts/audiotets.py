@@ -121,7 +121,8 @@ def calculate_loudness(
             )
         )
 
-        loudness.append(db)
+        # loudness.append(db)
+        loudness.append(energy)
 
         times.append(start / sr)
 
@@ -143,6 +144,7 @@ def adaptive_loudness(
     max_recovery,
     min_slack_factor,
     max_slack_factor,
+    max_step_db=40,
 ):
     """Convert loudness to a stable 0-1 control.
 
@@ -189,6 +191,7 @@ def adaptive_loudness(
             if level < minimum:
 
                 jump = minimum - level
+
                 minimum = level - jump * min_slack_factor
 
             else:
@@ -286,9 +289,19 @@ def main():
         default=0.3,
         help="fraction of loud jump added above maximum",
     )
+    parser.add_argument(
+        "--frequency", type=float, default=440.0, help="sine wave frequency in Hz"
+    )
+    parser.add_argument(
+        "--max-step-db",
+        type=float,
+        default=40.0,
+        help="per-update dB limit on how far minimum/maximum may move (jumps above this are ignored)",
+    )
 
     args = parser.parse_args()
 
+    frequency = args.frequency
     # -------------------------------
     # Load
     # -------------------------------
@@ -325,14 +338,17 @@ def main():
         args.max_recovery,
         args.min_slack_factor,
         args.max_slack_factor,
+        max_step_db=args.max_step_db,
     )
 
     # -------------------------------
     # Playback
     # -------------------------------
 
+    print(control.shape)
     position = [0]
     cursor = [0]
+    sample_pos = times * sr
 
     def callback(
         outdata,
@@ -348,7 +364,12 @@ def main():
 
         chunk = audio[start:end]
 
-        outdata[: len(chunk), 0] = chunk
+        x = np.arange(start, end)
+        volumes = np.interp(x, sample_pos, control)
+
+        sine = np.multiply(volumes, np.sin(2 * np.pi * (frequency / sr) * x))
+
+        outdata[:frames, 0] = 0.125 * sine + 0.875 * chunk
 
         position[0] = end
         cursor[0] = end / sr

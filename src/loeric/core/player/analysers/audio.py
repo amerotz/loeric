@@ -15,8 +15,10 @@
 
 import logging
 
+import librosa
 import numpy as np
 import pydantic as pdt
+from scipy.signal import butter, sosfilt
 
 import loeric.core.element as le
 import loeric.core.paths as lp
@@ -221,3 +223,299 @@ class RMS(AudioAnalyser):
             le.ContourValue(name=c, value=self._value, time=le.PerformanceClock.now())
             for c in self._controls
         ]
+
+
+class BetterRMSConfig(AudioAnalyserConfig):
+    """Config for :class:`BetterRMS`.
+
+    :param controls: list of control names this analyser publishes values to.
+    :param responsiveness: exponential smoothing factor in [0, 1].
+    :param max_recovery: recovery rate of max value towards the current signal.
+    :param min_recovery: recovery rate of min value towards the current signal.
+    :param max_slack_factor: slack added to new maximum values
+    (fraction of latest delta).
+    :param min_slack_factor: slack added to new minimum values
+    (fraction of latest delta).
+    """
+
+    controls: list[str]
+    responsiveness: float
+    max_recovery: float
+    min_recovery: float
+    max_slack_factor: float
+    min_slack_factor: float
+
+
+@lp.expose("_responsiveness", "responsiveness")
+@lp.expose("_controls", "controls")
+@lp.expose("_min_recovery", "min_recovery")
+@lp.expose("_max_recovery", "max_recovery")
+@lp.expose("_min_slack_factor", "min_slack_factor")
+@lp.expose("_max_slack_factor", "max_slack_factor")
+class BetterRMS(AudioAnalyser):
+    """Root mean square analyser with exponential smoothing and dynamic normalisation.
+
+    Tracks a smoothed RMS level and normalises it against a running min/max,
+    producing a value in [0, 1]. The speed of adaptation is controlled by
+    :attr:`responsiveness`.
+    """
+
+    config_class = BetterRMSConfig
+
+    def __init__(
+        self,
+        responsiveness: float,
+        controls: list[str],
+        max_recovery: float,
+        min_recovery: float,
+        max_slack_factor: float,
+        min_slack_factor: float,
+        **kwargs,
+    ):
+        """Initialise the RMS analyser.
+
+        :param responsiveness: exponential smoothing factor in [0, 1].
+            Higher values track changes faster.
+        :param controls: list of control names this analyser publishes values to.
+        :param kwargs: forwarded to :class:`AudioAnalyser`.
+        """
+        super().__init__(**kwargs)
+
+        self._responsiveness = responsiveness
+        self._controls = controls
+        self._max_slack_factor = max_slack_factor
+        self._min_slack_factor = min_slack_factor
+        self._max_recovery = max_recovery
+        self._min_recovery = min_recovery
+        self._level = None
+        self._min_level = None
+        self._max_level = None
+
+    def _k_weighting(self, audio):
+        """BS.1770-style K-weighting approximation.
+
+        Stage 1:
+            RLB high-pass (~38 Hz)
+
+        Stage 2:
+            high frequency emphasis
+
+        This removes inaudible low-frequency energy and
+        better approximates perceived loudness than raw energy.
+        """
+        hp = butter(
+            2,
+            38 / (self._samplerate / 2),
+            btype="highpass",
+            output="sos",
+        )
+
+        audio = sosfilt(
+            hp,
+            audio,
+        )
+
+        shelf = butter(
+            2,
+            1500 / (self._samplerate / 2),
+            btype="highpass",
+            output="sos",
+        )
+
+        audio = audio + 0.25 * sosfilt(
+            shelf,
+            audio,
+        )
+
+        return audio
+
+    def _compute(self, buffer):
+        """Compute the normalised RMS level from the accumulated buffer.
+
+        Applies exponential smoothing to the level and running min/max,
+        then normalises the result to [0, 1].
+
+        :param buffer: audio window array of shape ``(channels, window_size)``.
+        :return: normalised RMS value in [0, 1].
+        """
+        buffer = np.asarray(buffer, dtype=np.float32)
+
+        # perceptual weighting
+        buffer = self._k_weighting(buffer)
+
+        loudness_value = np.mean(
+            buffer * buffer,
+            dtype=np.float64,
+        )
+
+        db = 10 * np.log10(max(loudness_value, 1e-12))
+        if db < -45:
+            return 0.5
+
+        # smooth perceptual loudness
+        if self._level is None:
+            self._level = loudness_value
+        else:
+            self._level += self._responsiveness * (loudness_value - self._level)
+
+        if self._min_level is None:
+            self._min_level = self._level
+            self._max_level = self._level
+
+        else:
+            # minimum envelope
+            if self._level < self._min_level:
+                jump = self._min_level - self._level
+                self._min_level = self._level - jump * self._min_slack_factor
+            else:
+                self._min_level += self._min_recovery * (self._level - self._min_level)
+
+            # maximum envelope
+            if self._level > self._max_level:
+                jump = self._level - self._max_level
+                self._max_level = self._level + jump * self._max_slack_factor
+            else:
+                self._max_level += self._max_recovery * (self._level - self._max_level)
+
+        value = np.clip(
+            (self._level - self._min_level)
+            / max(
+                self._max_level - self._min_level,
+                1e-9,
+            ),
+            0,
+            1,
+        )
+
+        for c in self._controls:
+            logger.info(f"{c}: {value:.2f}")
+
+        return value
+
+    def get(self) -> list[le.ContourValue]:
+        """Return the current RMS value mapped to all declared controls.
+
+        :return: list of :class:`~loeric.core.element.ContourValue` events.
+        """
+        return [
+            le.ContourValue(name=c, value=self._value, time=le.PerformanceClock.now())
+            for c in self._controls
+        ]
+
+
+class TempoAnalyserConfig(AudioAnalyserConfig):
+    """Config for :class:`BetterRMS`.
+
+    :param responsiveness: exponential smoothing factor in [0, 1].
+    (fraction of latest delta).
+    """
+
+    responsiveness: float
+
+
+@lp.expose("_controls", "controls")
+@lp.expose("_responsiveness", "responsiveness")
+class TempoAnalyser(AudioAnalyser):
+
+    config_class = TempoAnalyserConfig
+
+    def __init__(
+        self,
+        responsiveness: float,
+        **kwargs,
+    ):
+        """Initialise the RMS analyser.
+
+        :param responsiveness: exponential smoothing factor in [0, 1].
+            Higher values track changes faster.
+        :param controls: list of control names this analyser publishes values to.
+        :param kwargs: forwarded to :class:`AudioAnalyser`.
+        """
+        super().__init__(**kwargs)
+
+        self._responsiveness = responsiveness
+        self._value = None
+
+    def _k_weighting(self, audio):
+        """BS.1770-style K-weighting approximation.
+
+        Stage 1:
+            RLB high-pass (~38 Hz)
+
+        Stage 2:
+            high frequency emphasis
+
+        This removes inaudible low-frequency energy and
+        better approximates perceived loudness than raw energy.
+        """
+        hp = butter(
+            2,
+            38 / (self._samplerate / 2),
+            btype="highpass",
+            output="sos",
+        )
+
+        audio = sosfilt(
+            hp,
+            audio,
+        )
+
+        shelf = butter(
+            2,
+            1500 / (self._samplerate / 2),
+            btype="highpass",
+            output="sos",
+        )
+
+        audio = audio + 0.25 * sosfilt(
+            shelf,
+            audio,
+        )
+
+        return audio
+
+    def _compute(self, buffer):
+
+        buffer = self._k_weighting(buffer)
+        pitches, magnitudes = librosa.piptrack(y=buffer, sr=self._samplerate)
+
+        # get indexes of the maximum value in each time slice
+        max_indexes = np.argmax(magnitudes, axis=0)
+        # get the pitches of the max indexes per time slice
+        pitches = pitches[max_indexes, :]
+
+        print(pitches)
+        """
+        hop_length = 512
+        oenv = librosa.onset.onset_strength(
+            y=buffer, sr=self._samplerate, hop_length=hop_length
+        )
+        tempogram = librosa.feature.tempogram(
+            onset_envelope=oenv, sr=self._samplerate, hop_length=hop_length
+        )
+        # Compute global onset autocorrelation
+        ac_global = librosa.autocorrelate(oenv, max_size=tempogram.shape[0])
+        ac_global = librosa.util.normalize(ac_global)
+        # Estimate the global tempo for display purposes
+        chosen = librosa.feature.tempo(
+            onset_envelope=oenv, sr=self._samplerate, hop_length=hop_length
+        )[0][0]
+
+        current = le.TempoKeeper.tempo().qpm
+
+        tempo = current * (1 - self._responsiveness) + chosen * self._responsiveness
+
+        logger.info(tempo)
+        return tempo
+        """
+        return None
+
+    def get(self) -> list[le.ContourValue]:
+        """Return the current RMS value mapped to all declared controls.
+
+        :return: list of :class:`~loeric.core.element.ContourValue` events.
+        """
+        if self._value is None:
+            return []
+
+        return [le.UserTempo(qpm=self._value, time=le.PerformanceClock.now())]

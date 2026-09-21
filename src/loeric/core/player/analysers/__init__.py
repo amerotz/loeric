@@ -26,6 +26,8 @@ from loeric.core.player.analysers.base import Analyser, AnalyserConfig
 from loeric.core.player.analysers.audio import (
     RMS,
     AudioAnalyser,
+    BetterRMS,
+    TempoAnalyser,
 )
 from loeric.core.player.analysers.midi import (
     MIDIAnalyser,
@@ -38,6 +40,8 @@ __all__ = [
     AnalyserConfig,
     AudioAnalyser,
     RMS,
+    BetterRMS,
+    TempoAnalyser,
     MIDIAnalyser,
     MIDIContourAnalyser,
     MIDILogger,
@@ -61,8 +65,10 @@ def create_analyser(
     """
     _registry: dict[str, type[Analyser]] = {
         "rms": RMS,
+        "better_rms": BetterRMS,
         "midi_cc": MIDIContourAnalyser,
         "midi_logger": MIDILogger,
+        "tempo": TempoAnalyser,
     }
 
     # make sure that analyser is active
