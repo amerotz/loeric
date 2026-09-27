@@ -92,6 +92,11 @@ class LOERIC:
         else:
             self._command_queue = queue.Queue()
 
+    @property
+    def config(self):
+        """Return LOERIC's current config."""
+        return self._config
+
     def set_tune(self, tune: tu.Tune):
         """Assign a tune to LOERIC."""
         self._tune = tune

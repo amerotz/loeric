@@ -41,25 +41,21 @@
   },
   "contours": {
     "lower_drone": {
-      "recipe": {
-        "pattern": {
-          "mean": "var_lower_comping_pattern",
-          "std": null,
-          "std_scale": 1,
-          "normalize": false,
-          "period": "var_comping_pattern_period"
-        }
+      "pattern": {
+        "mean": "var_lower_comping_pattern",
+        "std": null,
+        "std_scale": 1,
+        "normalize": false,
+        "period": "var_comping_pattern_period"
       }
     },
     "upper_drone": {
-      "recipe": {
-        "pattern": {
-          "mean": "var_upper_comping_pattern",
-          "std": null,
-          "std_scale": 1,
-          "normalize": false,
-          "period": "var_comping_pattern_period"
-        }
+      "pattern": {
+        "mean": "var_upper_comping_pattern",
+        "std": null,
+        "std_scale": 1,
+        "normalize": false,
+        "period": "var_comping_pattern_period"
       }
     }
   }

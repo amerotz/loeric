@@ -2,37 +2,53 @@ import numpy as np
 from scipy.signal import savgol_filter
 
 import loeric.core.tune as tu
-from loeric.core.contours.base import Contour
+from loeric.core.contours.base import NotewiseContour, NotewiseContourConfig
 
 
-class IntensityContour(Contour):
+class IntensityContourConfig(NotewiseContourConfig):
+
+    weights: list = None
+    savgol: bool = True
+    shift: bool = False
+    scale: bool = False
+
+
+class IntensityContour(NotewiseContour):
     """A contour given by the weighted sum of O'Canainn components."""
 
-    def __init__(self):
-        super().__init__()
+    config_class = IntensityContourConfig
 
-    def calculate(
+    def __init__(
         self,
-        midi: tu.Tune,
         weights: list = None,
         savgol: bool = True,
         shift: bool = False,
         scale: bool = False,
+    ):
+        super().__init__()
+        self._weights = weights
+        self._savgol = savgol
+        self._shift = shift
+        self._scale = scale
+
+    def calculate(
+        self,
+        tune: tu.Tune,
     ) -> None:
         """Compute the contour as the weighted sum of O'Canainn component.
 
-        :param midi: the input tune.
+        :param tune: the input tune.
         :param weights: the weights for the components
         :param savgol: apply a final savgol filtering step
         :param shift: bring the mean of the array close to 0.5.
 
         """
-        super().calculate(midi)
+        super().calculate(tune)
 
-        weights = np.array(weights).astype(float)
+        weights = np.array(self._weights).astype(float)
 
         # calculate the components
-        components = self.ocanainn_scores(midi)
+        components = self.ocanainn_scores(tune)
         # stack them
         stacked_components = np.stack(components, axis=0)
         size = stacked_components.shape[0]
@@ -57,7 +73,7 @@ class IntensityContour(Contour):
 
         # savgol filtering
         self._contour = self.scale_and_savgol(
-            self._contour, savgol=savgol, shift=shift, scale=scale
+            self._contour, savgol=self._savgol, shift=self._shift, scale=self._scale
         )
 
     def scale_and_savgol(
@@ -100,7 +116,7 @@ class IntensityContour(Contour):
         return array
 
     def ocanainn_scores(
-        self, midi: tu.Tune
+        self, tune: tu.Tune
     ) -> tuple[np.array, np.array, np.array, np.array, np.array]:
         """Compute the individual components for the ocanainn score.
 
@@ -111,12 +127,12 @@ class IntensityContour(Contour):
         * leap score;
         * length score.
 
-        :param midi: the input tune used to compute the individual scores.
+        :param tune: the input tune used to compute the individual scores.
 
         :return: the computed scores
         """
-        pitches = midi.pitches
-        durations = midi.durations
+        pitches = tune.pitches
+        durations = tune.durations
 
         # o canainn score
         notes = pitches % 12
@@ -136,8 +152,8 @@ class IntensityContour(Contour):
             self._contour_times
             % (
                 # TODO make this keep track of time signatures
-                midi.time_signatures[0].eighths_per_bar.eighth_duration
-                / midi.time_signatures[0].beat_count
+                tune.time_signatures[0].eighths_per_bar.eighth_duration
+                / tune.time_signatures[0].beat_count
             )
             == 0
         )

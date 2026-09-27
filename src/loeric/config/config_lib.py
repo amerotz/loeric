@@ -64,8 +64,7 @@ def merge_configs(original, new_config):
 
     if "contours" in new_config:
         for c in new_config["contours"]:
-            if "recipe" in new_config["contours"][c]:
-                base["contours"][c]["recipe"] = new_config["contours"][c]["recipe"]
+            base["contours"][c] = new_config["contours"][c]
 
     if "mapper" in new_config:
         base["mapper"]["rules"] = new_config["mapper"]["rules"]

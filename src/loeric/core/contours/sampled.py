@@ -1,28 +1,41 @@
 import numpy as np
 
 import loeric.core.tune as tu
-from loeric.core.contours.base import Contour
+from loeric.core.contours.base import NotewiseContour, NotewiseContourConfig
 
 
-class RandomContour(Contour):
+class RandomContourConfig(NotewiseContourConfig):
+
+    min: float = 0
+    max: float = 1
+
+
+class RandomContour(NotewiseContour):
     """A randomly initialized contour."""
 
-    def __init__(self):
-        super().__init__()
+    config_class = RandomContourConfig
 
-    def calculate(self, midi: tu.Tune, min: float = 0, max: float = 1) -> None:
+    def __init__(self, min: float = 0, max: float = 1):
+        super().__init__()
+        self._min = min
+        self._max = max
+
+    def calculate(
+        self,
+        tune: tu.Tune,
+    ) -> None:
         """Compute a random contour following a uniform distribution.
 
         Default range is between 0 and 1.
 
-        :param midi: the input tune.
+        :param tune: the input tune.
         :param extremes: the upper and lower bound for the random contour.
         """
-        super().calculate(midi)
+        super().calculate(tune)
 
-        size = len(midi.pitches)
-        r_min = min
-        r_max = max
+        size = len(tune.pitches)
+        r_min = self._min
+        r_max = self._max
         self._contour = np.clip(
             np.random.normal(loc=0.5, scale=0.5 / 3, size=size),
             a_min=r_min,
@@ -30,20 +43,42 @@ class RandomContour(Contour):
         )
 
 
-class PatternContour(Contour):
+class PatternContourConfig(NotewiseContourConfig):
+
+    mean: list = [1]
+    std: None | list = [0]
+    std_scale: float = 1
+    normalize: bool = False
+    period: float = 1
+
+
+class PatternContour(NotewiseContour):
     """A contour made of a repeating pattern."""
 
-    def __init__(self):
-        super().__init__()
+    config_class = PatternContourConfig
 
-    def calculate(
+    def __init__(
         self,
-        midi: tu.Tune,
         mean: list = [1],
         std: list = [0],
         std_scale: float = 1,
         normalize: bool = False,
         period: float = 1,
+    ):
+        super().__init__()
+        self._normalize = normalize
+        self._mean = mean
+        self._std = std
+        self._std_scale = std_scale
+        self._period = period
+
+        if self._std is None:
+            self._std = np.zeros(len(self._mean))
+        assert len(self._mean) == len(self._std)
+
+    def calculate(
+        self,
+        tune: tu.Tune,
     ) -> None:
         """Create the contour by repeating the input weights over the specified period.
 
@@ -54,25 +89,21 @@ class PatternContour(Contour):
         :param std: the std of the pattern to repeat, for every item.
         :param period: the length of the pattern, in bars.
         """
-        super().calculate(midi)
-
-        if std is None:
-            std = np.zeros(len(mean))
-        assert len(mean) == len(std)
+        super().calculate(tune)
 
         self._is_real_time = True
 
-        self._mean = np.array(mean).astype(float)
-        self._std = np.array(std).astype(float)
-        self._std_scale = std_scale
-        self._normalize = normalize
+        self._mean = np.array(self._mean).astype(float)
+        self._std = np.array(self._std).astype(float)
+        self._std_scale = self._std_scale
+        self._normalize = self._normalize
         self._pattern_size = len(self._mean)
 
         # obtain time periods
         # TODO multiple time signatures
-        self._time_period = midi.time_signatures[
+        self._time_period = tune.time_signatures[
             0
-        ].eighths_per_bar.eighth_duration * float(period)
+        ].eighths_per_bar.eighth_duration * float(self._period)
 
         # position in time period
         bar_position = self._contour_times / self._time_period
@@ -92,7 +123,7 @@ class PatternContour(Contour):
         # add missing indexes together only if
         # normalising, otherwise use whatever value
         # was already there
-        if normalize:
+        if self._normalize:
             for index in index_diff:
                 source_index = pattern_indexes[index].item()
                 add_indexes = (
@@ -108,9 +139,9 @@ class PatternContour(Contour):
             size=len(pattern_means),
         )
 
-        if normalize:
+        if self._normalize:
             bars = self._contour_times // self._time_period
-            durations = midi.float_durations
+            durations = tune.float_durations
 
             for i in np.unique(bars):
                 indexes = np.argwhere(bars == i)

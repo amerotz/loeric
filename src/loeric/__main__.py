@@ -20,6 +20,7 @@ import logging
 
 import loeric
 import loeric.config as lc
+import loeric.core.contour_manager as cnt
 import loeric.core.tune as tu
 import loeric.core.utils as lu
 
@@ -111,7 +112,14 @@ def main():
     musician.set_tempo(args["qpm"])
 
     if args["plot"] is not None:
-        lu.plot_contours(musician.contour_manager, tune, args["plot"])
+
+        _config = musician.config.model_dump()["contours"]
+        config = {}
+        for key in _config:
+            if key in args["plot"]:
+                config[key] = _config[key]
+        contour_manager = cnt.ContourManager(config, tune)
+        lu.plot_contours(contour_manager, tune, args["plot"])
 
     try:
         musician.start(wait_for_prompt=True)

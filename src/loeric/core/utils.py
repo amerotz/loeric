@@ -28,22 +28,32 @@ _MIDI_TO_FREQ_FACTOR = 440.0 * (2.0 ** (-69.0 / 12.0))
 def plot_contours(manager, tune, plot_keys):
     """Plot the specified contours."""
     x = tune.float_times
-    pitches = tune.pitches
     x /= max(x)
+    pitches = tune.pitches
+
     plot_num = len(plot_keys)
     fig = plt.figure(figsize=(20, 5 * plot_num))
     axs = fig.subplots(plot_num, 1, sharex=True)
+
     if plot_num == 1:
         axs = [axs]
+
     for ax, contour in zip(axs, plot_keys):
+        min_y = min(manager.contours[contour].values)
+        max_y = max(manager.contours[contour].values)
         ax.step(
             x,
-            (pitches - min(pitches)) / (max(pitches) - min(pitches)),
+            min_y
+            + (max_y - min_y)
+            * (pitches - min(pitches))
+            / (max(pitches) - min(pitches)),
             linestyle=":",
             where="post",
         )
         ax.step(x, manager.contours[contour].values, where="post", marker="x")
+
         ax.set_xlim(min(x) - 0.01, 1 + 0.01)
+
     plt.tight_layout()
     plt.show()
 

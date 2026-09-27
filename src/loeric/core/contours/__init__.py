@@ -1,9 +1,53 @@
-import loeric.core.element as le
 import loeric.core.tune as tu
-from loeric.core.contours.bar import BarLengthContour
-from loeric.core.contours.base import Contour, InvalidRecipeError
-from loeric.core.contours.note import DurationContour, PitchContour
+from loeric.core.contours.bar import BarLengthContour, BarLengthContourConfig
+from loeric.core.contours.base import (
+    LOERICContour,
+    LOERICContourConfig,
+    NotewiseContour,
+)
+from loeric.core.contours.note import (
+    DurationContour,
+    DurationContourConfig,
+    PitchContour,
+    PitchContourConfig,
+)
 from loeric.core.contours.operations import (
+    ClampOperationContour,
+    ClampOperationContourConfig,
+    DivideOperationContour,
+    DivideOperationContourConfig,
+    LinearTransformOperationContour,
+    LinearTransformOperationContourConfig,
+    MultiplyOperationContour,
+    MultiplyOperationContourConfig,
+    PowerOperationContour,
+    PowerOperationContourConfig,
+    ScaleOperationContour,
+    ScaleOperationContourConfig,
+    ShiftOperationContour,
+    ShiftOperationContourConfig,
+    SmoothOperationContour,
+    SmoothOperationContourConfig,
+    ToMeanOperationContour,
+    ToMeanOperationContourConfig,
+    WeightedSumOperationContour,
+    WeightedSumOperationContourConfig,
+)
+from loeric.core.contours.phrase import PhraseContour, PhraseContourConfig
+from loeric.core.contours.sampled import (
+    PatternContour,
+    PatternContourConfig,
+    RandomContour,
+    RandomContourConfig,
+)
+from loeric.core.contours.score import IntensityContour, IntensityContourConfig
+
+__all__ = [
+    LOERICContour,
+    LOERICContourConfig,
+    BarLengthContour,
+    DurationContour,
+    PitchContour,
     ClampOperationContour,
     DivideOperationContour,
     LinearTransformOperationContour,
@@ -14,23 +58,16 @@ from loeric.core.contours.operations import (
     SmoothOperationContour,
     ToMeanOperationContour,
     WeightedSumOperationContour,
-)
-from loeric.core.contours.phrase import PhraseContour
-from loeric.core.contours.sampled import PatternContour, RandomContour
-from loeric.core.contours.score import IntensityContour
+    PhraseContour,
+    PhraseContour,
+    RandomContour,
+    IntensityContour,
+]
 
 
-def create_contour(
-    tune: tu.Tune, contour_program: dict, key=None, parent=None
-) -> Contour:
-    """Programmatically create a contour given its definition.
+def validate_config(config: dict):
 
-    :param tune: the input tune for the contour.
-    :param contour_program: the dictionary containing the contour definition.
-
-    :return: the final assembled contour.
-    """
-    eval_dict = {
+    _registry = {
         "o_canainn": IntensityContour,
         "pitch": PitchContour,
         "duration": DurationContour,
@@ -38,9 +75,6 @@ def create_contour(
         "phrasing": PhraseContour,
         "bar_length": BarLengthContour,
         "random": RandomContour,
-    }
-
-    operation_dict = {
         "weighted_sum": WeightedSumOperationContour,
         "multiply": MultiplyOperationContour,
         "divide": DivideOperationContour,
@@ -52,43 +86,84 @@ def create_contour(
         "scale": ScaleOperationContour,
         "smooth": SmoothOperationContour,
     }
+    # only one top level contour
+    assert len(config) == 1
 
-    if key is not None:
-        key = key.split("#")[0]
+    key = list(config.keys())[0]
+    cls_key = key.split("#")[0]
+    cls = _registry.get(cls_key)
 
-    # check
-    if key is None:
-        c = list(contour_program.keys())
-        if len(c) != 1:
-            raise InvalidRecipeError(
-                f"Only one contour can be provided. Make sure that 'recipe' in contour {parent} only has one item in the configuration file."
-            )
-        c = c[0]
-        return create_contour(tune, contour_program[c], key=c, parent=parent)
+    if cls is None:
+        raise ValueError(f"Invalid contour name '{cls_key}'.")
 
-    # create the contour, leaf
-    elif key in eval_dict:
-        contour = eval_dict[key]()
-        contour.calculate(tune, **contour_program)
-        return contour
-
-    # aggregate calculated contours
-    elif key in operation_dict:
-        all_contours = []
-
-        for c in contour_program["contours"]:
-            all_contours.append(
-                create_contour(
-                    tune, contour_program["contours"][c], key=c, parent=parent
-                )
-            )
-
-        program = contour_program.copy()
-        program["contours"] = all_contours
-        print(program)
-        return operation_dict[key](**program)
+    # is it a leaf contour or operation?
+    if issubclass(cls, NotewiseContour):
+        # create leaf
+        config = cls.config_class.model_validate(config[key])
+        return config
 
     else:
-        raise InvalidRecipeError(
-            "Recipe argument {key} is invalid. Check your configuration file."
-        )
+        # create operation
+        obj_configs = []
+        items = config[key]["contours"].items()
+        for obj_key, obj_val in items:
+            obj_cfg = validate_config({obj_key: obj_val})
+            obj_configs.append(obj_cfg)
+
+        config[key]["contours"] = obj_configs
+        config = cls.config_class.model_validate(config[key])
+
+        return config
+
+
+def create_contour(tune: tu.Tune, contour_program: dict) -> LOERICContour:
+    """Programmatically create a contour given its definition.
+
+    :param tune: the input tune for the contour.
+    :param contour_program: the dictionary containing the contour definition.
+
+    :return: the final assembled contour.
+    """
+    _registry = {
+        IntensityContourConfig: IntensityContour,
+        PitchContourConfig: PitchContour,
+        DurationContourConfig: DurationContour,
+        PatternContourConfig: PatternContour,
+        PhraseContourConfig: PhraseContour,
+        BarLengthContourConfig: BarLengthContour,
+        RandomContourConfig: RandomContour,
+        WeightedSumOperationContourConfig: WeightedSumOperationContour,
+        MultiplyOperationContourConfig: MultiplyOperationContour,
+        DivideOperationContourConfig: DivideOperationContour,
+        ShiftOperationContourConfig: ShiftOperationContour,
+        ToMeanOperationContourConfig: ToMeanOperationContour,
+        PowerOperationContourConfig: PowerOperationContour,
+        ClampOperationContourConfig: ClampOperationContour,
+        ScaleOperationContourConfig: ScaleOperationContour,
+        SmoothOperationContourConfig: SmoothOperationContour,
+        LinearTransformOperationContourConfig: LinearTransformOperationContour,
+    }
+
+    # validate
+    cls = _registry.get(type(contour_program))
+    if cls is None:
+        raise ValueError(f"Invalid contour name '{contour_program}'.")
+
+    # is it a leaf contour or operation?
+    if issubclass(cls, NotewiseContour):
+        # create leaf
+        obj = cls(**contour_program.model_dump())
+        obj.calculate(tune)
+        return obj
+
+    else:
+        # create operation
+        objs = []
+        for c in contour_program.contours:
+            obj = create_contour(tune, c)
+            objs.append(obj)
+
+        contour_program = contour_program.model_dump()
+        contour_program["contours"] = objs
+
+        return cls(**contour_program)

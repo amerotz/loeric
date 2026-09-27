@@ -38,7 +38,6 @@
   },
   "contours": {
     "notes_per_bar": {
-      "recipe": {
         "pattern": {
           "mean": [
             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0,
@@ -50,10 +49,8 @@
           "normalize": false,
           "period": 4
         }
-      }
     },
     "drone": {
-      "recipe": {
         "multiply": {
           "contours": {
             "scale": {
@@ -81,10 +78,8 @@
             }
           }
         }
-      }
     },
     "velocity_pattern": {
-      "recipe": {
         "pattern": {
           "mean": [1.5, 0.8, 1.2],
           "std": [0.1, 0.1, 0.1],
@@ -92,10 +87,8 @@
           "normalize": false,
           "period": 0.25
         }
-      }
     },
     "tempo_pattern": {
-      "recipe": {
         "pattern": {
           "mean": [1.25, 1, 1.25],
           "std": [0.1, 0.1, 0.1],
@@ -103,7 +96,6 @@
           "normalize": true,
           "period": 0.25
         }
-      }
     }
   }
 }

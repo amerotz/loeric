@@ -18,6 +18,7 @@ from typing import Any
 from pydantic import BaseModel, field_validator
 
 import loeric.core.element as le
+import loeric.core.modules as lm
 import loeric.core.modules.base as lmb
 
 logger = logging.getLogger(__name__)
@@ -131,7 +132,7 @@ class ConditionalModule(lmb.LOERICModule):
         self._name = "conditional"
 
         name = list(module.keys())[0]
-        self._module = lmb.LOERICModule.create_module(name, **module[name])
+        self._module = lm.create_module(name, **module[name])
         self._condition = LOERICCondition(**condition)
 
         self._is_online = self._module.is_online

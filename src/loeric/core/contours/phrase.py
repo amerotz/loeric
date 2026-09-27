@@ -2,18 +2,29 @@ import numpy as np
 
 import loeric.core.element as le
 import loeric.core.tune as tu
-from loeric.core.contours.base import Contour
+from loeric.core.contours.base import NotewiseContour, NotewiseContourConfig
 
 
-class PhraseContour(Contour):
+class PhraseContourConfig(NotewiseContourConfig):
+
+    accelerando: float = 0.5
+    ritardando: float = 1
+    turn: float = 0.3
+    last: float = 0.2
+    power: float = 2
+    phrase_length: float = 2
+    shift: None | int = None
+    mode: str = "contour"
+    kind: str = "arch"
+
+
+class PhraseContour(NotewiseContour):
     """A contour representing phrase arcs."""
 
-    def __init__(self):
-        super().__init__()
+    config_class = PhraseContourConfig
 
-    def calculate(
+    def __init__(
         self,
-        midi: tu.Tune,
         accelerando=0.5,
         ritardando=1,
         turn=0.3,
@@ -23,21 +34,37 @@ class PhraseContour(Contour):
         shift=None,
         mode="contour",
         kind="arch",
-    ) -> None:
-        """Compute a phrasing contour.
-
-        :param midi: the input tune.
-        """
+    ):
         assert mode in ["contour", "ratio"]
         assert kind in ["arch", "gesture"]
 
-        super().calculate(midi)
+        super().__init__()
 
-        if shift is None:
-            shift = -midi._first_bar_length
+        self._phrase_length = phrase_length
+        self._accelerando = accelerando
+        self._ritardando = ritardando
+        self._turn = turn
+        self._last = last
+        self._power = power
+        self._shift = shift
+        self._mode = mode
+        self._kind = kind
 
-        time_signatures = midi.time_signatures
-        note_durations = midi.float_durations
+    def calculate(
+        self,
+        tune: tu.Tune,
+    ) -> None:
+        """Compute a phrasing contour.
+
+        :param tune: the input tune.
+        """
+        super().calculate(tune)
+
+        if self._shift is None:
+            shift = -tune._first_bar_length
+
+        time_signatures = tune.time_signatures
+        note_durations = tune.float_durations
 
         phrase_position = []
         # iterate over time signatures
@@ -51,7 +78,7 @@ class PhraseContour(Contour):
                 t2 = np.inf
 
             bar_length = ts_1.eighths_per_bar.eighth_duration
-            phrase_eighths = bar_length * phrase_length
+            phrase_eighths = bar_length * self._phrase_length
 
             indexes = np.argwhere(
                 (self._contour_times >= t1) & (self._contour_times < t2)
@@ -69,10 +96,18 @@ class PhraseContour(Contour):
 
         phrase_position = np.concat(phrase_position)
 
-        if kind == "arch":
-            acc = 0.1 * accelerando * (1 - (phrase_position / turn)) ** power
-            rit = 0.2 * ritardando * ((phrase_position - turn) / (1 - turn)) ** power
-            perc = np.maximum(np.minimum(1, np.floor(phrase_position / turn)), 0)
+        if self._kind == "arch":
+            acc = (
+                0.1
+                * self._accelerando
+                * (1 - (phrase_position / self._turn)) ** self._power
+            )
+            rit = (
+                0.2
+                * self._ritardando
+                * ((phrase_position - self._turn) / (1 - self._turn)) ** self._power
+            )
+            perc = np.maximum(np.minimum(1, np.floor(phrase_position / self._turn)), 0)
             last_perc = np.maximum(
                 np.minimum(
                     1,
@@ -85,7 +120,9 @@ class PhraseContour(Contour):
                 ),
                 0,
             )
-            tmp = (1 - last_perc + last * last_perc) * ((1 - perc) * acc + perc * rit)
+            tmp = (1 - last_perc + self._last * last_perc) * (
+                (1 - perc) * acc + perc * rit
+            )
 
             # no need to account for another phrase
             last_phrase_index = np.argwhere(phrase_position == 0)
@@ -96,15 +133,17 @@ class PhraseContour(Contour):
                 ] + perc[last_phrase_index:] * rit[last_phrase_index:]
 
             tmp += 1
-        elif kind == "gesture":
+        elif self._kind == "gesture":
             k = 0.229402
-            perc = np.maximum(np.minimum(1, np.floor(phrase_position / turn)), 0)
+            perc = np.maximum(np.minimum(1, np.floor(phrase_position / self._turn)), 0)
             phrase_position = (1 - perc) * (
-                phrase_position * (0.5 - k) / turn + k
-            ) + perc * ((phrase_position - turn) * (1 - k - 0.5) / (1 - turn) + 0.5)
+                phrase_position * (0.5 - k) / self._turn + k
+            ) + perc * (
+                (phrase_position - self._turn) * (1 - k - 0.5) / (1 - self._turn) + 0.5
+            )
             tmp = 1 / (16 * (phrase_position - 1) ** 2 * phrase_position**2)
 
-        if mode == "contour":
+        if self._mode == "contour":
             self._contour = 1 / tmp
-        elif mode == "ratio":
+        elif self._mode == "ratio":
             self._contour = tmp

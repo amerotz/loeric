@@ -1,30 +1,36 @@
 import numpy as np
 
 import loeric.core.tune as tu
-from loeric.core.contours.base import Contour
+from loeric.core.contours.base import NotewiseContour, NotewiseContourConfig
 
 
-class BarLengthContour(Contour):
+class BarLengthContourConfig(NotewiseContourConfig):
+    pass
+
+
+class BarLengthContour(NotewiseContour):
     """A contour holding the length of each note in the tune."""
+
+    config_class = BarLengthContourConfig
 
     def __init__(self):
         super().__init__()
 
-    def calculate(self, midi: tu.Tune) -> None:
+    def calculate(self, tune: tu.Tune) -> None:
         """Contains the length of the bar each note occupies.
 
-        :param midi: the input tune object.
+        :param tune: the input tune object.
         """
-        super().calculate(midi)
+        super().calculate(tune)
 
         self._contour = np.empty(self._contour_times.shape)
         # iterate over time signatures
-        for i in range(len(midi.time_signatures)):
-            ts_1 = midi.time_signatures[i]
+        for i in range(len(tune.time_signatures)):
+            ts_1 = tune.time_signatures[i]
             t1 = float(ts_1.time)
 
-            if i < len(midi.time_signatures) - 1:
-                t2 = float(midi.time_signatures[i + 1].time)
+            if i < len(tune.time_signatures) - 1:
+                t2 = float(tune.time_signatures[i + 1].time)
             else:
                 t2 = np.inf
 

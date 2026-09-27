@@ -88,258 +88,238 @@
   },
   "contours": {
     "ones": {
-      "recipe": {
-        "pattern": {
-          "mean": [1],
-          "period": 1,
-          "normalize": false,
-          "std": null,
-          "std_scale": 0
-        }
+      "pattern": {
+        "mean": [1],
+        "period": 1,
+        "normalize": false,
+        "std": null,
+        "std_scale": 0
       }
     },
     "drone": {
-      "recipe": {
-        "o_canainn": {
-          "weights": "var_velocity_weight",
-          "savgol": false,
-          "scale": true,
-          "shift": true
-        }
+      "o_canainn": {
+        "weights": "var_velocity_weight",
+        "savgol": false,
+        "scale": true,
+        "shift": true
       }
     },
     "notes_per_bar": {
-      "recipe": {
-        "o_canainn": {
-          "weights": "var_velocity_weight",
-          "savgol": false,
-          "scale": true,
-          "shift": true
-        }
+      "o_canainn": {
+        "weights": "var_velocity_weight",
+        "savgol": false,
+        "scale": true,
+        "shift": true
       }
     },
     "velocity": {
-      "recipe": {
-        "weighted_sum": {
-          "contours": {
-            "o_canainn": {
-              "weights": "var_velocity_weight",
-              "savgol": false,
-              "scale": true,
-              "shift": false
-            },
-            "weighted_sum": {
-              "contours": {
-                "scale#low_pitch": {
-                  "contours": {
-                    "clamp": {
-                      "contours": {
-                        "linear": {
-                          "contours": {
-                            "pitch": {
-                              "scale": true,
-                              "shift": true
-                            }
-                          },
-                          "a": -1,
-                          "b": 0.5
-                        }
-                      },
-                      "low": 0
-                    }
-                  },
-                  "min": 0,
-                  "max": 1
-                },
-                "scale#high_pitch": {
-                  "contours": {
-                    "clamp": {
-                      "contours": {
-                        "linear": {
-                          "contours": {
-                            "pitch": {
-                              "scale": true,
-                              "shift": true
-                            }
-                          },
-                          "a": 1,
-                          "b": -0.5
-                        }
-                      },
-                      "low": 0
-                    }
-                  },
-                  "min": 0,
-                  "max": 1
-                }
-              },
-              "weights": [1, 1],
-              "normalize": false
-            },
-            "scale#3": {
-              "contours": {
-                "multiply": {
-                  "contours": {
-                    "phrasing#2": {
-                      "accelerando": 0.5,
-                      "ritardando": 1,
-                      "last": 0.2,
-                      "turn": 0.4,
-                      "power": 2,
-                      "phrase_length": "var_phrase_length_2",
-                      "shift": null,
-                      "mode": "contour"
+      "weighted_sum": {
+        "contours": {
+          "o_canainn": {
+            "weights": "var_velocity_weight",
+            "savgol": false,
+            "scale": true,
+            "shift": false
+          },
+          "weighted_sum": {
+            "contours": {
+              "scale#low_pitch": {
+                "contours": {
+                  "clamp": {
+                    "contours": {
+                      "linear": {
+                        "contours": {
+                          "pitch": {
+                            "scale": true,
+                            "shift": true
+                          }
+                        },
+                        "a": -1,
+                        "b": 0.5
+                      }
                     },
-                    "phrasing#1": {
-                      "accelerando": 1,
-                      "ritardando": 1,
-                      "last": 0.2,
-                      "turn": 0.4,
-                      "power": 2,
-                      "phrase_length": "var_phrase_length_1",
-                      "shift": null,
-                      "mode": "contour"
-                    }
+                    "low": 0
+                  }
+                },
+                "min": 0,
+                "max": 1
+              },
+              "scale#high_pitch": {
+                "contours": {
+                  "clamp": {
+                    "contours": {
+                      "linear": {
+                        "contours": {
+                          "pitch": {
+                            "scale": true,
+                            "shift": true
+                          }
+                        },
+                        "a": 1,
+                        "b": -0.5
+                      }
+                    },
+                    "low": 0
+                  }
+                },
+                "min": 0,
+                "max": 1
+              }
+            },
+            "weights": [1, 1],
+            "normalize": false
+          },
+          "scale#3": {
+            "contours": {
+              "multiply": {
+                "contours": {
+                  "phrasing#2": {
+                    "accelerando": 0.5,
+                    "ritardando": 1,
+                    "last": 0.2,
+                    "turn": 0.4,
+                    "power": 2,
+                    "phrase_length": "var_phrase_length_2",
+                    "shift": null,
+                    "mode": "contour"
+                  },
+                  "phrasing#1": {
+                    "accelerando": 1,
+                    "ritardando": 1,
+                    "last": 0.2,
+                    "turn": 0.4,
+                    "power": 2,
+                    "phrase_length": "var_phrase_length_1",
+                    "shift": null,
+                    "mode": "contour"
                   }
                 }
-              },
-              "min": 0.5,
-              "max": 1
-            }
-          },
-          "weights": [0.25, 0.25, 0.5]
-        }
+              }
+            },
+            "min": 0.5,
+            "max": 1
+          }
+        },
+        "weights": [0.25, 0.25, 0.5]
       }
     },
     "velocity_pattern": {
-      "recipe": {
-        "pattern": {
-          "mean": [1.0],
-          "std": [0.0],
-          "std_scale": 1,
-          "normalize": false,
-          "period": 1
-        }
+      "pattern": {
+        "mean": [1.0],
+        "std": [0.0],
+        "std_scale": 1,
+        "normalize": false,
+        "period": 1
       }
     },
     "tempo": {
-      "recipe": {
-        "scale": {
-          "contours": {
-            "multiply": {
-              "contours": {
-                "phrasing#2": {
-                  "accelerando": 0.5,
-                  "ritardando": 1,
-                  "last": 0.2,
-                  "turn": 0.4,
-                  "power": 2,
-                  "phrase_length": "var_phrase_length_2",
-                  "shift": null,
-                  "mode": "contour"
-                },
-                "phrasing#1": {
-                  "accelerando": 1,
-                  "ritardando": 1,
-                  "last": 0.2,
-                  "turn": 0.4,
-                  "power": 2,
-                  "phrase_length": "var_phrase_length_1",
-                  "shift": null,
-                  "mode": "contour"
-                }
+      "scale": {
+        "contours": {
+          "multiply": {
+            "contours": {
+              "phrasing#2": {
+                "accelerando": 0.5,
+                "ritardando": 1,
+                "last": 0.2,
+                "turn": 0.4,
+                "power": 2,
+                "phrase_length": "var_phrase_length_2",
+                "shift": null,
+                "mode": "contour"
+              },
+              "phrasing#1": {
+                "accelerando": 1,
+                "ritardando": 1,
+                "last": 0.2,
+                "turn": 0.4,
+                "power": 2,
+                "phrase_length": "var_phrase_length_1",
+                "shift": null,
+                "mode": "contour"
               }
             }
-          },
-          "min": 0,
-          "max": 0.5
-        }
+          }
+        },
+        "min": 0,
+        "max": 0.5
       }
     },
     "swing": {
-      "recipe": {
-        "weighted_sum": {
-          "contours": {
-            "o_canainn": {
-              "weights": [1, 1, 1, 1, 1],
-              "savgol": false,
-              "scale": true,
-              "shift": true
-            },
-            "multiply": {
-              "contours": {
-                "phrasing#2": {
-                  "accelerando": 0.5,
-                  "ritardando": 1,
-                  "last": 0.2,
-                  "turn": 0.4,
-                  "power": 2,
-                  "phrase_length": "var_phrase_length_2",
-                  "shift": null,
-                  "mode": "contour"
-                },
-                "phrasing#1": {
-                  "accelerando": 1,
-                  "ritardando": 1,
-                  "last": 0.2,
-                  "turn": 0.4,
-                  "power": 2,
-                  "phrase_length": "var_phrase_length_1",
-                  "shift": null,
-                  "mode": "contour"
-                }
+      "weighted_sum": {
+        "contours": {
+          "o_canainn": {
+            "weights": [1, 1, 1, 1, 1],
+            "savgol": false,
+            "scale": true,
+            "shift": true
+          },
+          "multiply": {
+            "contours": {
+              "phrasing#2": {
+                "accelerando": 0.5,
+                "ritardando": 1,
+                "last": 0.2,
+                "turn": 0.4,
+                "power": 2,
+                "phrase_length": "var_phrase_length_2",
+                "shift": null,
+                "mode": "contour"
+              },
+              "phrasing#1": {
+                "accelerando": 1,
+                "ritardando": 1,
+                "last": 0.2,
+                "turn": 0.4,
+                "power": 2,
+                "phrase_length": "var_phrase_length_1",
+                "shift": null,
+                "mode": "contour"
               }
             }
-          },
-          "weights": [0.7, 0.3]
-        }
+          }
+        },
+        "weights": [0.7, 0.3]
       }
     },
     "tempo_pattern": {
-      "recipe": {
-        "pattern": {
-          "mean": [1.0],
-          "std": [0.0],
-          "std_scale": 1,
-          "normalize": true,
-          "period": 1
-        }
+      "pattern": {
+        "mean": [1.0],
+        "std": [0.0],
+        "std_scale": 1,
+        "normalize": true,
+        "period": 1
       }
     },
     "ornament": {
-      "recipe": {
-        "multiply": {
-          "contours": {
-            "o_canainn": {
-              "weights": [1, 1, 1, 1, 1],
-              "savgol": false,
-              "scale": true,
-              "shift": false
-            },
-            "pattern": "var_ornament_pattern"
-          }
+      "multiply": {
+        "contours": {
+          "o_canainn": {
+            "weights": [1, 1, 1, 1, 1],
+            "savgol": false,
+            "scale": true,
+            "shift": false
+          },
+          "pattern": "var_ornament_pattern"
         }
       }
     },
     "legato": {
-      "recipe": {
-        "shift": {
-          "contours": {
-            "weighted_sum": {
-              "contours": {
-                "o_canainn": {
-                  "weights": [1, 1, 0, -1, -0.25],
-                  "savgol": false,
-                  "scale": true,
-                  "shift": false
-                },
-                "pattern": "var_legato_pattern"
+      "shift": {
+        "contours": {
+          "weighted_sum": {
+            "contours": {
+              "o_canainn": {
+                "weights": [1, 1, 0, -1, -0.25],
+                "savgol": false,
+                "scale": true,
+                "shift": false
               },
-              "weights": [0.5, 0.5]
-            }
-          },
-          "offset": -1
-        }
+              "pattern": "var_legato_pattern"
+            },
+            "weights": [0.5, 0.5]
+          }
+        },
+        "offset": -1
       }
     }
   },

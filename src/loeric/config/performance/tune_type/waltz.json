@@ -32,53 +32,47 @@
   },
   "contours": {
     "drone": {
-      "recipe": {
-        "weighted_sum": {
-          "contours": {
-            "o_canainn": {
-              "weights": [1, 2, 2, 1, -1],
-              "savgol": false,
-              "scale": true,
-              "shift": true
-            },
-            "pattern": {
-              "mean": [
-                1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1,
-                0, 1, 0
-              ],
-              "std": [
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0
-              ],
-              "std_scale": 1,
-              "normalize": false,
-              "period": 4
-            }
+      "weighted_sum": {
+        "contours": {
+          "o_canainn": {
+            "weights": [1, 2, 2, 1, -1],
+            "savgol": false,
+            "scale": true,
+            "shift": true
           },
-          "weights": [0.5, 1]
-        }
+          "pattern": {
+            "mean": [
+              1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0,
+              1, 0
+            ],
+            "std": [
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0
+            ],
+            "std_scale": 1,
+            "normalize": false,
+            "period": 4
+          }
+        },
+        "weights": [0.5, 1]
       }
     },
     "velocity_pattern": {
-      "recipe": {
-        "pattern": {
-          "mean": [1.5, 1, 1],
-          "std": [0.1, 0.1, 0.1],
-          "std_scale": 1,
-          "normalize": false,
-          "period": 1
-        }
+      "pattern": {
+        "mean": [1.5, 1, 1],
+        "std": [0.1, 0.1, 0.1],
+        "std_scale": 1,
+        "normalize": false,
+        "period": 1
       }
     },
     "tempo_pattern": {
-      "recipe": {
-        "pattern": {
-          "mean": [1, 1, 1],
-          "std": [0.01, 0.01, 0.01],
-          "std_scale": 0.1,
-          "normalize": true,
-          "period": 1
-        }
+      "pattern": {
+        "mean": [1, 1, 1],
+        "std": [0.01, 0.01, 0.01],
+        "std_scale": 0.1,
+        "normalize": true,
+        "period": 1
       }
     }
   }

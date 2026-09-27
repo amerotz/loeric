@@ -21,14 +21,12 @@
   },
   "contours": {
     "legato": {
-      "recipe": {
-        "pattern": {
-          "mean": [1.0],
-          "std": [0.0],
-          "std_scale": 1,
-          "normalize": false,
-          "period": 1
-        }
+      "pattern": {
+        "mean": [1.0],
+        "std": [0.0],
+        "std_scale": 1,
+        "normalize": false,
+        "period": 1
       }
     }
   }

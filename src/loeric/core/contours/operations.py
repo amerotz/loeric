@@ -4,62 +4,24 @@ import math
 import numpy as np
 from scipy.signal import savgol_filter
 
-from loeric.core.contours.base import Contour
+from loeric.core.contours.base import (
+    LOERICContour,
+    OperationContour,
+    OperationContourConfig,
+)
 
 logger = logging.getLogger(__name__)
 
 
-"""
-class OperationContourConfig(pdt.BaseModel):
-
-    contours: list["OperationContourConfig" | ContourConfig]
-"""
-
-
-class OperationContour(Contour):
-    """A contour holding an aggregation of other contours."""
-
-    # config_class = OperationContourConfig
-
-    def __init__(self, contours):
-
-        super().__init__()
-
-        self._member_contours = contours
-        self._contour = self._operation([c._contour for c in self._member_contours])
-        self._contour_times = contours[0]._contour_times
-        self._is_real_time = np.any([c.is_real_time for c in self._member_contours])
-
-    def _at(self, time):
-        if self.is_real_time:
-
-            # retrieve the at value of every member
-            values = [[c.at(time)] for c in self._member_contours]
-            values = np.array(values)
-            # values = np.nan_to_num(values, nan=0.5)
-
-            # aggregate
-            res = self._operation(values)
-
-            if np.isnan(res[0]):
-                logger.error(self._operation)
-                raise Exception
-
-            t = float(time)
-            pos = int(np.searchsorted(self._contour_times, t, side="right")) - 1
-            index = -1 if pos < 0 else pos
-
-            return res[0], index
-        else:
-            return super()._at(time)
-
-    def _operation(self, contours: list[Contour] = []) -> Contour:
-        return None
+class MultiplyOperationContourConfig(OperationContourConfig):
+    pass
 
 
 class MultiplyOperationContour(OperationContour):
 
-    def _operation(self, contours: list[Contour] = []) -> Contour:
+    config_class = MultiplyOperationContourConfig
+
+    def _operation(self, contours: list[LOERICContour] = []) -> LOERICContour:
         """Return a new contour that holds the product of the input contours.
 
         :param contours: the contours to multiply.
@@ -73,8 +35,15 @@ class MultiplyOperationContour(OperationContour):
         return result
 
 
+class DivideOperationContourConfig(OperationContourConfig):
+    pass
+
+
 class DivideOperationContour(OperationContour):
-    def _operation(self, contours: list[Contour] = []) -> Contour:
+
+    config_class = DivideOperationContourConfig
+
+    def _operation(self, contours: list[LOERICContour] = []) -> LOERICContour:
         """Return a new contour that holds the quotient between two input contours.
 
         :param contours: the contours to divide.
@@ -86,7 +55,14 @@ class DivideOperationContour(OperationContour):
         return np.divide(contours[0], contours[1])
 
 
+class WeightedSumOperationContourConfig(OperationContourConfig):
+    weights: list[float]
+    normalize: bool = True
+
+
 class WeightedSumOperationContour(OperationContour):
+
+    config_class = WeightedSumOperationContourConfig
 
     def __init__(self, contours, weights: list = [], normalize: bool = True):
 
@@ -97,7 +73,7 @@ class WeightedSumOperationContour(OperationContour):
 
         super().__init__(contours)
 
-    def _operation(self, contours: list[Contour] = []) -> Contour:
+    def _operation(self, contours: list[LOERICContour] = []) -> LOERICContour:
         """Return a new contour that holds the weighted sum of the input contours.
 
         :param contours: the contours to add.
@@ -135,7 +111,14 @@ class WeightedSumOperationContour(OperationContour):
         return result
 
 
+class LinearTransformOperationContourConfig(OperationContourConfig):
+    a: float = 1
+    b: float = 0
+
+
 class LinearTransformOperationContour(OperationContour):
+
+    config_class = LinearTransformOperationContourConfig
 
     def __init__(self, contours, a: float = 1, b: float = 0):
 
@@ -146,8 +129,8 @@ class LinearTransformOperationContour(OperationContour):
 
     def _operation(
         self,
-        contours: Contour = None,
-    ) -> Contour:
+        contours: LOERICContour = None,
+    ) -> LOERICContour:
         """Apply a linear transformation of the input contour f(x)= ax + b.
 
         :param contour: the input contour.
@@ -161,7 +144,15 @@ class LinearTransformOperationContour(OperationContour):
         return self._a * contours[0] + self._b
 
 
+class ClampOperationContourConfig(OperationContourConfig):
+
+    low: float = 0
+    high: float = 1
+
+
 class ClampOperationContour(OperationContour):
+
+    config_class = ClampOperationContourConfig
 
     def __init__(self, contours, low: float = 0, high: float = 1):
 
@@ -174,8 +165,8 @@ class ClampOperationContour(OperationContour):
 
     def _operation(
         self,
-        contours: Contour = None,
-    ) -> Contour:
+        contours: LOERICContour = None,
+    ) -> LOERICContour:
         """Clamp the contour in the given range.
 
         :param contour: the input contour.
@@ -187,7 +178,14 @@ class ClampOperationContour(OperationContour):
         return np.clip(contours[0], a_min=self._low, a_max=self._high)
 
 
+class ShiftOperationContourConfig(OperationContourConfig):
+
+    offset: int = -1
+
+
 class ShiftOperationContour(OperationContour):
+
+    config_class = ShiftOperationContourConfig
 
     def __init__(self, contours, offset: int = -1):
 
@@ -197,8 +195,8 @@ class ShiftOperationContour(OperationContour):
 
     def _operation(
         self,
-        contours: list[Contour] = None,
-    ) -> Contour:
+        contours: list[LOERICContour] = None,
+    ) -> LOERICContour:
         """Shift the contour by offset.
 
         :param contour: the input contour.
@@ -211,7 +209,14 @@ class ShiftOperationContour(OperationContour):
         return np.roll(contours[0], self._offset)
 
 
+class ToMeanOperationContourConfig(OperationContourConfig):
+
+    mean: float = 0.5
+
+
 class ToMeanOperationContour(OperationContour):
+
+    config_class = ToMeanOperationContourConfig
 
     def __init__(self, contours, mean: float = 0.5):
 
@@ -223,8 +228,8 @@ class ToMeanOperationContour(OperationContour):
 
     def to_mean(
         self,
-        contours: list[Contour] = None,
-    ) -> Contour:
+        contours: list[LOERICContour] = None,
+    ) -> LOERICContour:
         """Shift the contour so that it has a specific mean.
 
         :param contour: the input contour.
@@ -235,7 +240,14 @@ class ToMeanOperationContour(OperationContour):
         return contours[0] - contours[0].mean() + self._mean
 
 
+class PowerOperationContourConfig(OperationContourConfig):
+
+    exp: float = 1
+
+
 class PowerOperationContour(OperationContour):
+
+    config_class = PowerOperationContourConfig
 
     def __init__(self, contours, exp: float = 1):
 
@@ -247,8 +259,8 @@ class PowerOperationContour(OperationContour):
 
     def power(
         self,
-        contours: list[Contour] = None,
-    ) -> Contour:
+        contours: list[LOERICContour] = None,
+    ) -> LOERICContour:
         """Elevate the contour to the specified power.
 
         :param contour: the input contour.
@@ -259,22 +271,30 @@ class PowerOperationContour(OperationContour):
         return math.pow(contours[0], self._exp)
 
 
+class SmoothOperationContourConfig(OperationContourConfig):
+
+    window: int = 15
+
+
 class SmoothOperationContour(OperationContour):
 
-    def __init__(self, contours, window: float = 15):
+    config_class = SmoothOperationContourConfig
+
+    def __init__(self, contours, window: int = 15):
 
         assert len(contours) == 1
         self._window = window
         super().__init__(contours)
 
-    def smooth(
+    def _operation(
         self,
-        contours: list[Contour] = None,
-    ) -> Contour:
-        """Elevate the contour to the specified power.
+        contours: list[LOERICContour] = None,
+    ) -> LOERICContour:
+        """Smooth the contour averaging over a given window.
 
-        :param contour: the input contour.
-        :param exp: the exponent.
+        Uses Savitzky-Golay filterig.
+
+        :param contours: the input contour.
 
         :return: the modified input contour.
         """
@@ -285,7 +305,15 @@ class SmoothOperationContour(OperationContour):
         return x
 
 
+class ScaleOperationContourConfig(OperationContourConfig):
+
+    min: float = 0
+    max: float = 1
+
+
 class ScaleOperationContour(OperationContour):
+
+    config_class = ScaleOperationContourConfig
 
     def __init__(self, contours, min: float = 0, max: float = 1):
 
@@ -300,8 +328,8 @@ class ScaleOperationContour(OperationContour):
 
     def _operation(
         self,
-        contours: list[Contour] = None,
-    ) -> Contour:
+        contours: list[LOERICContour] = None,
+    ) -> LOERICContour:
         """Scale a contour to cover a specific interval.
 
         :param contour: the input contour.

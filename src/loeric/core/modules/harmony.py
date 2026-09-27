@@ -31,7 +31,7 @@ class HarmonyConfig(lmb.ModuleConfig):
     """
 
     chord_score: list[float]
-    chords_per_bar: float
+    chords_per_bar: None | float
     weights: dict[str, list[float]]
 
     @field_validator("chord_score")
@@ -88,6 +88,9 @@ class HarmonyModule(lmb.LOERICModule):
     def window_size(self):
         if self._time_signature is not None:
             c_per_bar = self._chords_per_bar
+            # if no chords per bar is provided,
+            # defaults to current
+            # time signature's beat count
             if c_per_bar is None:
                 c_per_bar = self._time_signature.beat_count
             self._window_size = self._time_signature.eighths_per_bar / c_per_bar

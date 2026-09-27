@@ -2,36 +2,42 @@ import numpy as np
 from scipy.signal import savgol_filter
 
 import loeric.core.tune as tu
-from loeric.core.contours.base import Contour, ContourConfig
+from loeric.core.contours.base import NotewiseContour, NotewiseContourConfig
 
 
-class PitchContourConfig(ContourConfig):
+class PitchContourConfig(NotewiseContourConfig):
     pass
 
 
-class PitchContour(Contour):
+class PitchContour(NotewiseContour):
     """A contour holding the pitch of notes in the tune."""
 
     config_class = PitchContourConfig
 
-    def __init__(self):
-        super().__init__()
-
-    def calculate(
+    def __init__(
         self,
-        midi: tu.Tune,
         savgol: bool = True,
         shift: bool = True,
         scale: bool = True,
+    ):
+
+        super().__init__()
+        self._savgol = savgol
+        self._shift = shift
+        self._scale = scale
+
+    def calculate(
+        self,
+        tune: tu.Tune,
     ) -> None:
 
-        super().calculate(midi)
+        super().calculate(tune)
 
-        self._contour = midi.pitches
+        self._contour = tune.pitches
 
-        if savgol or shift or scale:
+        if self._savgol or self._shift or self._scale:
             self._contour = self.scale_and_savgol(
-                self._contour, savgol=savgol, shift=shift, scale=scale
+                self._contour, savgol=self._savgol, shift=self._shift, scale=self._scale
             )
 
     def scale_and_savgol(
@@ -74,19 +80,27 @@ class PitchContour(Contour):
         return array
 
 
-class DurationContour(Contour):
+class DurationContourConfig(NotewiseContourConfig):
+
+    absolute: bool
+
+
+class DurationContour(NotewiseContour):
     """A contour holding the length of each note in the tune."""
 
-    def __init__(self):
-        super().__init__()
+    config_class = DurationContourConfig
 
-    def calculate(self, midi: tu.Tune, absolute: bool) -> None:
+    def __init__(self, absolute: bool):
+        super().__init__()
+        self._absolute = absolute
+
+    def calculate(self, tune: tu.Tune) -> None:
         """Contains the duration of each note.
 
-        :param midi: the input tune object.
+        :param tune: the input tune object.
         """
-        super().calculate(midi)
+        super().calculate(tune)
 
-        self._contour = midi.float_durations
-        if absolute:
+        self._contour = tune.float_durations
+        if self._absolute:
             self._contour = 8 / self._contour
