@@ -36,8 +36,6 @@ class ModuleConfig(BaseModel):
     tag: str | None = None
     required_tags: list[str] | None = None
 
-    model_config = {"extra": "allow"}
-
 
 @lp.expose("_bypass", "bypass")
 class LOERICModule:

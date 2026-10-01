@@ -19,7 +19,7 @@ import loeric.core.element as le
 import loeric.core.modules.base as lmb
 
 
-class DelayBufferConfig(lmb.ModuleConfig):
+class DelayBufferModuleConfig(lmb.ModuleConfig):
     """Config for :class:`DelayBufferModule`.
 
     :param size: lookahead buffer size in eighths. Must be positive.
@@ -35,7 +35,7 @@ class DelayBufferConfig(lmb.ModuleConfig):
         return v
 
 
-class HistoryBufferConfig(lmb.ModuleConfig):
+class HistoryBufferModuleConfig(lmb.ModuleConfig):
     """Config for :class:`HistoryBufferModule`.
 
     :param size: lookback buffer size in eighths. Must be positive.
@@ -53,7 +53,7 @@ class HistoryBufferConfig(lmb.ModuleConfig):
 
 class HistoryBufferModule(lmb.LOERICModule):
 
-    config_class = HistoryBufferConfig
+    config_class = HistoryBufferModuleConfig
 
     def __init__(self, size: float, **kwargs):
 
@@ -85,7 +85,7 @@ class HistoryBufferModule(lmb.LOERICModule):
 
 class DelayBufferModule(lmb.LOERICModule):
 
-    config_class = DelayBufferConfig
+    config_class = DelayBufferModuleConfig
 
     def __init__(self, size: float, **kwargs):
 

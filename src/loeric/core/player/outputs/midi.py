@@ -388,7 +388,7 @@ class MIDIOutput(lob.OutputInterface):
         with self._out_lock:
             self._out.reset()
             self._out.close()
-        logger.info("Reset and closed midi output.")
+        logger.info("Reset and closed MIDI output.")
 
     def done(self) -> bool:
         """Return whether the output message queue is empty.
@@ -426,7 +426,7 @@ class MIDIOutput(lob.OutputInterface):
         """Convert events to MIDI messages and send any that are due at *tick*.
 
         Note events are assigned a channel via :meth:`_allocate_channel` before
-        conversion. Messages are held in the internal :class:`MIDIQueue` and
+        conversion. Messages are held in the :class:`MIDIQueue` and
         flushed in priority order up to the current tick.
 
         :param events: list of :class:`~loeric.core.element.LOERICElement` to process.

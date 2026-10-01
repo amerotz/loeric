@@ -27,7 +27,7 @@ import loeric.core.modules.base as lmb
 logger = logging.getLogger(__name__)
 
 
-class SingleOrnamentConfig(pdt.BaseModel):
+class OrnamentConfig(pdt.BaseModel):
     """Config for a single ornament entry inside :class:`OrnamentModule`.
 
     :param bind: optional contour name overriding the module-level contour.
@@ -61,10 +61,9 @@ class SingleOrnamentConfig(pdt.BaseModel):
     diatonic: bool = True
     slide: bool = False
 
-    model_config = {"extra": "allow"}
 
     @pdt.model_validator(mode="after")
-    def consistent_lengths(self) -> "SingleOrnamentConfig":
+    def consistent_lengths(self) -> "OrnamentConfig":
         """Ensure pitch, velocity, and duration arrays are the same length."""
         lengths = {
             "pitches_mean": len(self.pitches_mean),
@@ -83,7 +82,7 @@ class SingleOrnamentConfig(pdt.BaseModel):
         return f"(Ornament {self.name} slide={self.slide} thr={self.threshold} p={self.probability})"
 
 
-class OrnamentConfig(lmb.ModuleConfig):
+class OrnamentModuleConfig(lmb.ModuleConfig):
     """Config for :class:`OrnamentModule`.
 
     :param bind: contour name controlling ornament probability.
@@ -98,7 +97,7 @@ class OrnamentConfig(lmb.ModuleConfig):
 
 class OrnamentModule(lmb.LOERICModule):
 
-    config_class = OrnamentConfig
+    config_class = OrnamentModuleConfig
 
     def __init__(self, bind: str, data: dict, whitelist: list[str], **kwargs):
 
@@ -106,7 +105,7 @@ class OrnamentModule(lmb.LOERICModule):
 
         self._name = "ornament"
         self._contour = bind
-        self._ornaments = [SingleOrnamentConfig(name=o, **data[o]) for o in data]
+        self._ornaments = [OrnamentConfig(name=o, **data[o]) for o in data]
         self._window_size = 0
         self._is_online = True
 

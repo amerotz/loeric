@@ -15,20 +15,25 @@
 
 from loeric.core.modules.buffers import (
     DelayBufferModule,
+    DelayBufferModuleConfig,
     HistoryBufferModule,
+    HistoryBufferModuleConfig,
 )
-from loeric.core.modules.drones import DroneModule
-from loeric.core.modules.dynamics import DynamicsModule
-from loeric.core.modules.harmony import HarmonyModule
-from loeric.core.modules.legato import LegatoModule
-from loeric.core.modules.ornament import OrnamentModule
-from loeric.core.modules.swing import SwingModule
-from loeric.core.modules.timing import TimingModule
-from loeric.core.modules.transpose import TransposeModule
+from loeric.core.modules.drones import DroneModule, DroneModuleConfig
+from loeric.core.modules.dynamics import DynamicsModule, DynamicsModuleConfig
+from loeric.core.modules.harmony import HarmonyModule, HarmonyModuleConfig
+from loeric.core.modules.legato import LegatoModule, LegatoModuleConfig
+from loeric.core.modules.ornament import OrnamentModule, OrnamentModuleConfig
+from loeric.core.modules.swing import SwingModule, SwingModuleConfig
+from loeric.core.modules.timing import TimingModule, TimingModuleConfig
+from loeric.core.modules.transpose import TransposeModule, TransposeModuleConfig
 from loeric.core.modules.utils import (
     ConditionalModule,
+    ConditionalModuleConfig,
     LoggerModule,
+    LoggerModuleConfig,
     TaggerModule,
+    TaggerModuleConfig,
 )
 
 

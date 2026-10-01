@@ -20,7 +20,7 @@ import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
 
 
-class TimingConfig(lmb.ModuleConfig):
+class TimingModuleConfig(lmb.ModuleConfig):
     """Config for :class:`TimingModule`.
 
     :param bind: contour name controlling tempo variation.
@@ -41,7 +41,7 @@ class TimingConfig(lmb.ModuleConfig):
 @lp.expose("_only_increase", "only_increase")
 class TimingModule(lmb.LOERICModule):
 
-    config_class = TimingConfig
+    config_class = TimingModuleConfig
 
     def __init__(
         self, bind: str, pattern: str, qpm_amount: float, only_increase: bool, **kwargs

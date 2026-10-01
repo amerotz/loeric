@@ -17,7 +17,7 @@ import loeric.core.element as le
 import loeric.core.modules.base as lmb
 
 
-class LegatoConfig(lmb.ModuleConfig):
+class LegatoModuleConfig(lmb.ModuleConfig):
     """Config for :class:`LegatoModule`.
 
     :param bind: contour name controlling legato amount.
@@ -32,7 +32,7 @@ class LegatoConfig(lmb.ModuleConfig):
 
 class LegatoModule(lmb.LOERICModule):
 
-    config_class = LegatoConfig
+    config_class = LegatoModuleConfig
 
     def __init__(self, min: float, max: float, bind: str, **kwargs):
         super().__init__(**kwargs)

@@ -45,7 +45,7 @@ class ConditionConfig(BaseModel):
         return v
 
 
-class ConditionalConfig(lmb.ModuleConfig):
+class ConditionalModuleConfig(lmb.ModuleConfig):
     """Config for :class:`ConditionalModule`.
 
     :param condition: the condition to evaluate.
@@ -63,13 +63,13 @@ class ConditionalConfig(lmb.ModuleConfig):
         return v
 
 
-class TaggerConfig(lmb.ModuleConfig):
+class TaggerModuleConfig(lmb.ModuleConfig):
     """Config for :class:`TaggerModule`. No additional fields beyond the base."""
 
     pass
 
 
-class LoggerConfig(lmb.ModuleConfig):
+class LoggerModuleConfig(lmb.ModuleConfig):
     """Config for :class:`LoggerModule`.
 
     :param notes: log note events.
@@ -124,7 +124,7 @@ class LOERICCondition:
 
 class ConditionalModule(lmb.LOERICModule):
 
-    config_class = ConditionalConfig
+    config_class = ConditionalModuleConfig
 
     def __init__(self, condition: dict, module: dict, **kwargs):
         super().__init__(**kwargs)
@@ -159,9 +159,10 @@ class ConditionalModule(lmb.LOERICModule):
 
 class TaggerModule(lmb.LOERICModule):
 
-    config_class = TaggerConfig
+    config_class = TaggerModuleConfig
 
     def __init__(self, **kwargs):
+        print(kwargs)
         super().__init__(**kwargs)
 
         self._name = "tagger"
@@ -180,7 +181,7 @@ class TaggerModule(lmb.LOERICModule):
 
 class LoggerModule(lmb.LOERICModule):
 
-    config_class = LoggerConfig
+    config_class = LoggerModuleConfig
 
     def __init__(
         self,

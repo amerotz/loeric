@@ -19,6 +19,7 @@ from loeric.core.player.outputs.base import OutputInterface, OutputInterfaceConf
 """
 from loeric.core.player.outputs.data import DataOutput
 from loeric.core.player.outputs.midi import MIDIOutput
+from loeric.core.player.outputs.osc import OSCOutput
 from loeric.core.player.outputs.soundfont import SoundfontOutput
 
 try:
@@ -63,6 +64,7 @@ def create_output(config: dict | OutputInterfaceConfig) -> OutputInterface:
         "midi": MIDIOutput,
         "soundfont": SoundfontOutput,
         "data": DataOutput,
+        "osc": OSCOutput,
     }
 
     if PYQT_AVAILABLE:

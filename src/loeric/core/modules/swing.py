@@ -17,7 +17,7 @@ import loeric.core.element as le
 import loeric.core.modules.base as lmb
 
 
-class SwingConfig(lmb.ModuleConfig):
+class SwingModuleConfig(lmb.ModuleConfig):
     """Config for :class:`SwingModule`.
 
     :param bind: contour name controlling swing ratio.
@@ -34,7 +34,7 @@ class SwingConfig(lmb.ModuleConfig):
 
 class SwingModule(lmb.LOERICModule):
 
-    config_class = SwingConfig
+    config_class = SwingModuleConfig
 
     def __init__(
         self, min: float, max: float, bind: str, locations: list[int], **kwargs

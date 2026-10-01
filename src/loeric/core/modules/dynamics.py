@@ -18,7 +18,7 @@ import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
 
 
-class DynamicsConfig(lmb.ModuleConfig):
+class DynamicsModuleConfig(lmb.ModuleConfig):
     """Config for :class:`DynamicsModule`.
 
     :param bind: contour name controlling velocity.
@@ -33,7 +33,7 @@ class DynamicsConfig(lmb.ModuleConfig):
 @lp.expose("_pattern", "pattern")
 class DynamicsModule(lmb.LOERICModule):
 
-    config_class = DynamicsConfig
+    config_class = DynamicsModuleConfig
 
     def __init__(self, bind: str, pattern: str, **kwargs):
         super().__init__(**kwargs)

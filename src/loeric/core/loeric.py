@@ -52,10 +52,13 @@ class LOERICCommand:
 
 class LOERICConfig(pdt.BaseModel):
 
-    modules: gr.GrooverConfig
+    groover: gr.GrooverConfig
     contours: dict
     player: pl.PlayerConfig
     mapper: mp.MapperConfig
+
+
+print(LOERICConfig.model_json_schema())
 
 
 class LOERIC:
@@ -75,7 +78,7 @@ class LOERIC:
         self._config = config
         if not isinstance(self._config, LOERICConfig):
             self._config = LOERICConfig(
-                modules=config["groover"],
+                groover=config["groover"],
                 contours=config["contours"],
                 player=config["player"],
                 mapper=config["mapper"],
@@ -253,7 +256,7 @@ class LOERIC:
 
         contour_manager = cnt.ContourManager(config.contours, tune)
         mapper = mp.Mapper(config.mapper)
-        groover = gr.Groover(config.modules)
+        groover = gr.Groover(config.groover)
         player = pl.Player(config.player)
 
         roots = {

@@ -18,7 +18,7 @@ import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
 
 
-class TransposeConfig(lmb.ModuleConfig):
+class TransposeModuleConfig(lmb.ModuleConfig):
     """Config for :class:`TransposeModule`.
 
     :param steps: number of semitones to transpose (may be fractional).
@@ -30,7 +30,7 @@ class TransposeConfig(lmb.ModuleConfig):
 @lp.expose("_steps", "steps")
 class TransposeModule(lmb.LOERICModule):
 
-    config_class = TransposeConfig
+    config_class = TransposeModuleConfig
 
     def __init__(self, steps: float, **kwargs):
         super().__init__(**kwargs)

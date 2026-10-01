@@ -22,7 +22,7 @@ import loeric.core.element as le
 import loeric.core.modules.base as lmb
 
 
-class HarmonyConfig(lmb.ModuleConfig):
+class HarmonyModuleConfig(lmb.ModuleConfig):
     """Config for :class:`HarmonyModule`.
 
     :param chord_score: 12-element list scoring chord roots.
@@ -54,7 +54,7 @@ class HarmonyConfig(lmb.ModuleConfig):
 
 class HarmonyModule(lmb.LOERICModule):
 
-    config_class = HarmonyConfig
+    config_class = HarmonyModuleConfig
 
     def __init__(
         self, chord_score: list[float], chords_per_bar: float, weights: dict, **kwargs
