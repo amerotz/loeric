@@ -4,8 +4,6 @@ import threading
 from collections.abc import Iterable
 from typing import Union
 
-import numpy as np
-import pydantic as pdt
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_message_builder import ArgValue, OscMessageBuilder
 from pythonosc.udp_client import SimpleUDPClient
@@ -67,36 +65,13 @@ class OSCOutputConfig(lob.OutputInterfaceConfig):
     server: str
     port: int
     controls: dict[str, str]
-    velocity_range: list[int]
-    pitchbend_range: int
     send_cc: bool
     send_messages: bool
     control_messages_per_second: float
 
-    @pdt.field_validator("velocity_range")
-    @classmethod
-    def _valid_velocity_range(cls, v: list[int]) -> list[int]:
-        if not (len(v) == 2 and 0 <= v[0] <= 127 and 0 <= v[1] <= 127 and v[0] <= v[1]):
-            raise ValueError(
-                f"Invalid velocity_range {v!r}. "
-                "Expected [min, max] with both values in 0–127 and min <= max."
-            )
-        return v
-
-    @pdt.field_validator("pitchbend_range")
-    @classmethod
-    def _valid_pitchbend_range(cls, v: int) -> int:
-        if not 1 <= v <= 48:
-            raise ValueError(
-                f"Invalid pitchbend_range {v!r}. Expected an integer in 1–48."
-            )
-        return v
-
 
 @lp.readonly("server")
 @lp.readonly("port")
-@lp.expose("_velocity_range", "velocity_range")
-@lp.expose("_pitchbend_range", "pitchbend_range")
 @lp.expose("_send_cc", "send_cc")
 @lp.expose("_send_messages", "send_messages")
 @lp.expose("_control_messages_per_second", "control_messages_per_second")
@@ -110,8 +85,6 @@ class OSCOutput(lob.OutputInterface):
         server: str,
         port: int,
         controls: dict[str, str],
-        velocity_range: list[int],
-        pitchbend_range: int,
         send_cc: bool,
         send_messages: bool,
         control_messages_per_second: float,
@@ -125,8 +98,6 @@ class OSCOutput(lob.OutputInterface):
         self._controls = controls
         self._send_cc = send_cc
         self._send_messages = send_messages
-        self._velocity_range = velocity_range
-        self._pitchbend_range = pitchbend_range
 
         self._control_messages_per_second = control_messages_per_second
         self._message_interval = 1 / self._control_messages_per_second
@@ -199,8 +170,6 @@ class OSCOutput(lob.OutputInterface):
 
         elif isinstance(event, le.Note):
 
-            min_v, max_v = self._velocity_range
-
             if event.duration == 0:
                 return []
 
@@ -210,38 +179,24 @@ class OSCOutput(lob.OutputInterface):
 
             messages = []
 
-            bend_semitones = event.pitch - np.round(event.pitch)
-            bend_percentage = bend_semitones / self._pitchbend_range
-
-            event_velocity = event.velocity * (max_v - min_v) + min_v
-            event_velocity = np.clip(event_velocity, min_v, max_v).astype(int)
-
-            pb = int(min(8191, max(np.round(bend_percentage * 8191), -8192)))
-            event_pitch = int(max(0, min(127, np.round(event.pitch))))
-
             messages.append(
                 (
-                    self._build_osc_message("/loeric/pitchwheel", (event_pitch, pb)),
+                    self._build_osc_message("/loeric/note_on/", float(event.pitch)),
                     overall_time,
                 )
             )
-            messages.append(
-                (self._build_osc_message("/loeric/note_on/", event_pitch), overall_time)
-            )
 
             note_duration = le.TimeDelta(eighth_duration=event.duration)
+
             if event._is_slide:
 
-                previous_bend = bend_percentage
                 resolution = 24
 
+                previous_pitch = event.pitch
                 for note in event._slide_targets:
                     slide_duration = le.TimeDelta(
                         eighth_duration=note.duration / resolution
                     )
-
-                    bend_semitones = note.pitch - event._pitch
-                    bend_percentage = bend_semitones / self._pitchbend_range
 
                     # append messages
                     mult = random.uniform(0.25, 0.5)
@@ -251,33 +206,33 @@ class OSCOutput(lob.OutputInterface):
 
                         perc = j / resolution
                         perc **= mult
-                        pb = (1 - perc) * previous_bend + perc * bend_percentage
-                        pb = min(8191, max(np.round(pb * 8191).astype(int), -8192))
-
+                        new_pitch = (1 - perc) * previous_pitch + perc * note.pitch
                         messages.append(
                             (
                                 self._build_osc_message(
-                                    "/loeric/pitchwheel", (event_pitch, pb)
+                                    "/loeric/note_off", previous_pitch
                                 ),
+                                overall_time,
+                            )
+                        )
+                        messages.append(
+                            (
+                                self._build_osc_message("/loeric/note_on", new_pitch),
                                 overall_time,
                             )
                         )
                         note_duration = note_duration - slide_duration
 
-                    previous_bend = bend_percentage
+                    previous_pitch = float(note.pitch)
+            else:
+                new_pitch = float(event.pitch)
 
             if event._duration == 0:
                 note_duration += 0.001
 
             messages.append(
                 (
-                    self._build_osc_message("/loeric/pitchwheel", (event_pitch, pb)),
-                    overall_time + note_duration,
-                )
-            )
-            messages.append(
-                (
-                    self._build_osc_message("/loeric/note_off/", event_pitch),
+                    self._build_osc_message("/loeric/note_off", new_pitch),
                     overall_time + note_duration,
                 )
             )
