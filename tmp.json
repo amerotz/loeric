@@ -46,7 +46,7 @@
         }
       },
       "dynamics": {
-        "bind": "velocity",
+        "bind": "$velocity",
         "pattern": "velocity_pattern"
       },
       "ornament": {
@@ -639,11 +639,26 @@
         "type": "midi",
         "port": "Midi Through Port-0",
         "analysers": {}
+      },
+      "osc_client": {
+        "active": true,
+        "type": "osc",
+        "server": "127.0.0.1",
+        "port": 1337,
+        "analysers": {
+          "osc_client": {
+            "type": "osc_cc",
+            "active": true,
+            "controls": {
+              "intensity": "/l/i"
+            }
+          }
+        }
       }
     },
     "output": {
       "main": {
-        "active": false,
+        "active": true,
         "type": "midi",
         "port": "Midi Through Port-0",
         "send_cc": true,
@@ -653,7 +668,7 @@
         "controls": {}
       },
       "osc": {
-        "active": true,
+        "active": false,
         "type": "osc",
         "server": "127.0.0.1",
         "port": 1337,
@@ -675,6 +690,6 @@
       "swing"
     ],
     "targets": [],
-    "rules": []
+    "rules": ["intensity ~ velocity", "1 : %velocity"]
   }
 }

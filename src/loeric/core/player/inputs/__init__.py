@@ -19,6 +19,7 @@ from loeric.core.player.inputs.base import InputInterface, InputInterfaceConfig
 """
 from loeric.core.player.inputs.audio import AudioInput
 from loeric.core.player.inputs.midi import MIDIInput
+from loeric.core.player.inputs.osc import OSCInput
 
 __all__ = [InputInterface, InputInterfaceConfig]
 
@@ -35,7 +36,7 @@ def create_input(config: dict | InputInterfaceConfig) -> InputInterface:
     if not isinstance(config, InputInterfaceConfig):
         config = InputInterfaceConfig(config)
 
-    _registry = {"midi": MIDIInput, "audio": AudioInput}
+    _registry = {"midi": MIDIInput, "audio": AudioInput, "osc": OSCInput}
     cls = _registry.get(config.type)
     if cls is None:
         raise ValueError(f"Unknown input interface type {config.type}.")

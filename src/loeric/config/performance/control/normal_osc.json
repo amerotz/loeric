@@ -1,0 +1,54 @@
+{
+  "variables": {
+    "var_drone_bind": "$drone"
+  },
+
+  "groover": {
+    "modules": {
+      "dynamics": {
+        "bind": "$velocity"
+      },
+      "ornament": {
+        "bind": "$ornament"
+      },
+      "timing": {
+        "bind": "$tempo"
+      },
+      "legato": {
+        "bind": "$legato"
+      }
+    }
+  },
+  "player": {
+    "input": {
+      "osc_input": {
+        "active": true,
+        "type": "osc",
+        "server": "127.0.0.1",
+        "port": 1337,
+        "analysers": {
+          "intensity_cc": {
+            "active": true,
+            "type": "osc_cc",
+            "controls": {"intensity": "/loeric/intensity"}
+          }
+        }
+      }
+    }
+  },
+  "mapper": {
+    "sources": [
+      "velocity",
+      "ornament",
+      "drone",
+      "tempo",
+      "legato",
+      "intensity"
+    ],
+    "targets": [],
+    "rules": [
+      "0.5 : %velocity,%ornament,%tempo,%drone,%legato",
+      "intensity ~ velocity,ornament,tempo,drone,legato"
+    ]
+  }
+}
