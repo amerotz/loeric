@@ -267,7 +267,6 @@
   },
   "contours": {
     "ones": {
-      "recipe": {
         "pattern": {
           "mean": [1],
           "period": 1,
@@ -275,10 +274,8 @@
           "std": null,
           "std_scale": 0
         }
-      }
     },
     "drone": {
-      "recipe": {
         "multiply": {
           "contours": {
             "scale": {
@@ -302,10 +299,8 @@
             }
           }
         }
-      }
     },
     "notes_per_bar": {
-      "recipe": {
         "pattern": {
           "mean": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
           "std": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -313,10 +308,8 @@
           "normalize": false,
           "period": 2
         }
-      }
     },
     "velocity": {
-      "recipe": {
         "weighted_sum": {
           "contours": {
             "o_canainn": {
@@ -406,10 +399,8 @@
           },
           "weights": [0.25, 0.25, 0.5]
         }
-      }
     },
     "velocity_pattern": {
-      "recipe": {
         "pattern": {
           "mean": [0.999, 0.999, 1.012, 0.997, 1.003, 0.99],
           "std": [0.14, 0.092, 0.096, 0.097, 0.092, 0.161],
@@ -417,10 +408,8 @@
           "normalize": false,
           "period": 1
         }
-      }
     },
     "tempo": {
-      "recipe": {
         "scale": {
           "contours": {
             "multiply": {
@@ -451,10 +440,8 @@
           "min": 0,
           "max": 0.5
         }
-      }
     },
     "swing": {
-      "recipe": {
         "weighted_sum": {
           "contours": {
             "o_canainn": {
@@ -490,10 +477,8 @@
           },
           "weights": [0.7, 0.3]
         }
-      }
     },
     "tempo_pattern": {
-      "recipe": {
         "pattern": {
           "mean": [1, 0.9, 1],
           "std": [0.01, 0.01, 0.01],
@@ -501,10 +486,8 @@
           "normalize": true,
           "period": 0.5
         }
-      }
     },
     "ornament": {
-      "recipe": {
         "multiply": {
           "contours": {
             "o_canainn": {
@@ -516,10 +499,8 @@
             "pattern": "var_ornament_pattern"
           }
         }
-      }
     },
     "legato": {
-      "recipe": {
         "shift": {
           "contours": {
             "weighted_sum": {
@@ -537,7 +518,6 @@
           },
           "offset": -1
         }
-      }
     }
   },
   "player": {

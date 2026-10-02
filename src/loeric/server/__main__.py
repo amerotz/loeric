@@ -246,8 +246,8 @@ async def start_loeric(
 
         config = lc.join_configs([base, tune_config, instrument_config, config])
         config = lc.process_config(config)
-        if "transpose" in config["modules"]:
-            config["modules"]["transpose"]["steps"] = transpose
+        if "transpose" in config["groover"]["modules"]:
+            config["groover"]["modules"]["transpose"]["steps"] = transpose
 
         # create LOERIC
         if musician:

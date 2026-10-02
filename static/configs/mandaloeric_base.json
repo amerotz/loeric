@@ -88,7 +88,6 @@
   },
   "contours": {
     "ones": {
-      "recipe": {
         "pattern": {
           "mean": [1],
           "period": 1,
@@ -96,30 +95,24 @@
           "std": null,
           "std_scale": 0
         }
-      }
     },
     "drone": {
-      "recipe": {
         "o_canainn": {
           "weights": "var_velocity_weight",
           "savgol": false,
           "scale": true,
           "shift": true
         }
-      }
     },
     "notes_per_bar": {
-      "recipe": {
         "o_canainn": {
           "weights": "var_velocity_weight",
           "savgol": false,
           "scale": true,
           "shift": true
         }
-      }
     },
     "velocity": {
-      "recipe": {
         "weighted_sum": {
           "contours": {
             "o_canainn": {
@@ -209,10 +202,8 @@
           },
           "weights": [0.25, 0.25, 0.5]
         }
-      }
     },
     "velocity_pattern": {
-      "recipe": {
         "pattern": {
           "mean": [1.0],
           "std": [0.0],
@@ -220,10 +211,8 @@
           "normalize": false,
           "period": 1
         }
-      }
     },
     "tempo": {
-      "recipe": {
         "scale": {
           "contours": {
             "multiply": {
@@ -254,10 +243,8 @@
           "min": 0,
           "max": 0.5
         }
-      }
     },
     "swing": {
-      "recipe": {
         "weighted_sum": {
           "contours": {
             "o_canainn": {
@@ -293,10 +280,8 @@
           },
           "weights": [0.7, 0.3]
         }
-      }
     },
     "tempo_pattern": {
-      "recipe": {
         "pattern": {
           "mean": [1.0],
           "std": [0.0],
@@ -304,10 +289,8 @@
           "normalize": true,
           "period": 1
         }
-      }
     },
     "ornament": {
-      "recipe": {
         "multiply": {
           "contours": {
             "o_canainn": {
@@ -319,10 +302,8 @@
             "pattern": "var_ornament_pattern"
           }
         }
-      }
     },
     "legato": {
-      "recipe": {
         "shift": {
           "contours": {
             "weighted_sum": {
@@ -340,7 +321,6 @@
           },
           "offset": -1
         }
-      }
     }
   },
   "player": {

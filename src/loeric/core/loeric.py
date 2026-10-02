@@ -58,9 +58,6 @@ class LOERICConfig(pdt.BaseModel):
     mapper: mp.MapperConfig
 
 
-print(LOERICConfig.model_json_schema())
-
-
 class LOERIC:
 
     config_class = LOERICConfig

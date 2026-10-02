@@ -5,53 +5,47 @@
   },
   "contours": {
     "drone": {
-      "recipe": {
-        "pattern": {
-          "mean": [1, -1, 1],
-          "std": null,
-          "period": 1,
-          "std_scale": 1,
-          "normalize": false
-        }
+      "pattern": {
+        "mean": [1, -1, 1],
+        "std": null,
+        "period": 1,
+        "std_scale": 1,
+        "normalize": false
       }
     },
     "tempo_pattern": {
-      "recipe": {
-        "multiply": {
-          "contours": {
-            "phrasing#1": {
-              "accelerando": 0.5,
-              "ritardando": 0.5,
-              "last": 0.2,
-              "turn": 0.3,
-              "power": 2,
-              "phrase_length": 1,
-              "shift": -4,
-              "mode": "ratio"
-            },
-            "phrasing#2": {
-              "accelerando": 0.5,
-              "ritardando": 0.5,
-              "last": 0.2,
-              "turn": 0.3,
-              "power": 2,
-              "phrase_length": 4,
-              "shift": -2,
-              "mode": "ratio"
-            }
+      "multiply": {
+        "contours": {
+          "phrasing#1": {
+            "accelerando": 0.5,
+            "ritardando": 0.5,
+            "last": 0.2,
+            "turn": 0.3,
+            "power": 2,
+            "phrase_length": 1,
+            "shift": -4,
+            "mode": "ratio"
+          },
+          "phrasing#2": {
+            "accelerando": 0.5,
+            "ritardando": 0.5,
+            "last": 0.2,
+            "turn": 0.3,
+            "power": 2,
+            "phrase_length": 4,
+            "shift": -2,
+            "mode": "ratio"
           }
         }
       }
     },
     "ornament": {
-      "recipe": {
-        "pattern": {
-          "mean": [0],
-          "std": null,
-          "std_scale": 1,
-          "period": 1,
-          "normalize": false
-        }
+      "pattern": {
+        "mean": [0],
+        "std": null,
+        "std_scale": 1,
+        "period": 1,
+        "normalize": false
       }
     }
   },
