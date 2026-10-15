@@ -13,6 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Annotated
+
+import pydantic as pdt
+
 from loeric.core.modules.buffers import (
     DelayBufferModule,
     DelayBufferModuleConfig,
@@ -36,19 +40,35 @@ from loeric.core.modules.utils import (
     TaggerModuleConfig,
 )
 
+ModuleConfig = Annotated[
+    HarmonyModuleConfig
+    | SwingModuleConfig
+    | LegatoModuleConfig
+    | DynamicsModuleConfig
+    | TimingModuleConfig
+    | TransposeModuleConfig
+    | DelayBufferModuleConfig
+    | HistoryBufferModuleConfig
+    | OrnamentModuleConfig
+    | DroneModuleConfig
+    | ConditionalModuleConfig
+    | LoggerModuleConfig
+    | TaggerModuleConfig,
+    pdt.Field(discriminator="type"),
+]
+
+__all__ = [ModuleConfig]
+
 
 def create_module(module_name: str, **kwargs):
     """Instantiate a module by name, validating *kwargs* against its config model.
-
     :param module_name: registered module name (``#`` suffixes are stripped).
     :param kwargs: raw config values; validated and coerced by the module's
-        :class:`ModuleConfig` subclass before the module is constructed.
+        :class:`BaseModuleConfig` subclass before the module is constructed.
     :return: a configured :class:`LOERICModule` instance.
     :raises ValueError: if *module_name* is not registered.
     :raises pydantic.ValidationError: if *kwargs* fail config validation.
     """
-    module_name = module_name.split("#")[0]
-
     _registry = {
         "legato": LegatoModule,
         "swing": SwingModule,
@@ -65,7 +85,7 @@ def create_module(module_name: str, **kwargs):
         "tagger": TaggerModule,
     }
 
-    cls = _registry.get(module_name)
+    cls = _registry.get(kwargs["type"])
     if cls is None:
         raise ValueError(f"Invalid module name '{module_name}'.")
 

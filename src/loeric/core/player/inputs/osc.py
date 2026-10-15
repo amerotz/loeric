@@ -15,6 +15,7 @@
 
 import logging
 import threading
+from typing import Literal
 
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 class OSCInputConfig(lib.InputInterfaceConfig):
 
+    type: Literal["osc"]
     server: str
     port: int
 

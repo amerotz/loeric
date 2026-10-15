@@ -23,21 +23,19 @@
   },
   "player": {
     "input": {
-      "audio_mic_1": {
-        "type": "audio",
+      "audio#mic_input": {
         "active": true,
         "device": "pulse",
         "samplerate": 44100,
         "analysers": {
-          "loudness": {
+          "rms#loudness": {
             "active": true,
-            "type": "rms",
             "responsiveness": 1,
             "controls": ["global_intensity", "velocity_tempo_impact"],
             "windows_per_second": 30,
             "updates_per_second": 30
           },
-          "tempo": {
+          "rms#tempo": {
             "active": true,
             "type": "rms",
             "responsiveness": 0.7,

@@ -13,15 +13,20 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Annotated
+
+import pydantic as pdt
+
+from loeric.core.player.inputs.audio import AudioInput, AudioInputConfig
 from loeric.core.player.inputs.base import InputInterface, InputInterfaceConfig
+from loeric.core.player.inputs.midi import MIDIInput, MIDIInputConfig
+from loeric.core.player.inputs.osc import OSCInput, OSCInputConfig
 
-"""
-"""
-from loeric.core.player.inputs.audio import AudioInput
-from loeric.core.player.inputs.midi import MIDIInput
-from loeric.core.player.inputs.osc import OSCInput
+AllInputInterfacesConfig = Annotated[
+    AudioInputConfig | MIDIInputConfig | OSCInputConfig, pdt.Field(discriminator="type")
+]
 
-__all__ = [InputInterface, InputInterfaceConfig]
+__all__ = [AllInputInterfacesConfig]
 
 
 def create_input(config: dict | InputInterfaceConfig) -> InputInterface:
@@ -33,9 +38,6 @@ def create_input(config: dict | InputInterfaceConfig) -> InputInterface:
         or ``InputInterface`` (uninitialised) if ``active`` is false.
     :raises ValueError: if ``config["type"]`` is not recognised.
     """
-    if not isinstance(config, InputInterfaceConfig):
-        config = InputInterfaceConfig(config)
-
     _registry = {"midi": MIDIInput, "audio": AudioInput, "osc": OSCInput}
     cls = _registry.get(config.type)
     if cls is None:

@@ -246,8 +246,12 @@ async def start_loeric(
 
         config = lc.join_configs([base, tune_config, instrument_config, config])
         config = lc.process_config(config)
-        if "transpose" in config["groover"]["modules"]:
-            config["groover"]["modules"]["transpose"]["steps"] = transpose
+
+        # change transpose
+        try:
+            config["groover"]["modules"]["transpose"]["steps"] += transpose
+        except Exception:
+            pass
 
         # create LOERIC
         if musician:
@@ -256,16 +260,16 @@ async def start_loeric(
 
         musician.set_tune(tune)
         musician.set_tempo(tempo)
-
         musician.start()
 
         # change responsiveness and volume
         musician.set_attribute(
-            "player/input/mic_input/analysers/loudness/responsiveness", responsiveness
+            "player/input/mic_input/analysers/loudness/responsiveness",
+            responsiveness,
+            block=False,
         )
 
         _change_volume(volume)
-
         state.running = True
 
         return True
@@ -399,8 +403,6 @@ async def get_param(path: str):
         raise HTTPException(status_code=400, detail="LOERIC is not running")
 
     value = _get_param(path)
-    if value is None:
-        raise HTTPException(status_code=404, detail=f"Path '{path}' not found")
 
     return value
 
@@ -408,19 +410,19 @@ async def get_param(path: str):
 def _get_param(path: str):
     global musician
 
-    value = musician.get_attribute(path)
-
-    if value is None:
-        return None
+    try:
+        value = musician.get_attribute(path, timeout=1.0)
+    except Exception:
+        raise HTTPException(status_code=404, detail=f"Path '{path}' not found")
 
     if isinstance(value, (int, float, str, bool)):
-        return {"path": path, "value": value}
+        return {"path": path, "value": value, "type": type(value).__name__}
 
     if isinstance(value, dict):
-        return {"path": path, "children": list(value.keys())}
+        return {"path": path, "children": list(value.keys()), "type": "dict"}
 
     if isinstance(value, (list, tuple)):
-        return {"path": path, "children": list(range(len(value)))}
+        return {"path": path, "children": value, "type": "list"}
 
     # object: return exposed properties
     children = [
@@ -428,7 +430,7 @@ def _get_param(path: str):
         for name in dir(type(value))
         if isinstance(getattr(type(value), name, None), property)
     ]
-    return {"path": path, "children": children}
+    return {"path": path, "children": children, "type": "object"}
 
 
 @app.post("/api/change/{path:path}")

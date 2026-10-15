@@ -13,20 +13,24 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Literal
+
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
 
 
-class TransposeModuleConfig(lmb.ModuleConfig):
+class TransposeModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`TransposeModule`.
 
     :param steps: number of semitones to transpose (may be fractional).
     """
 
     steps: float = 0.0
+    type: Literal["transpose"]
 
 
+# TODO create diatonic mode
 @lp.expose("_steps", "steps")
 class TransposeModule(lmb.LOERICModule):
 

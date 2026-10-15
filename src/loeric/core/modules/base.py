@@ -14,9 +14,10 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import copy
+from collections import defaultdict
 from functools import cached_property
+from typing import Optional
 
-#
 import nanoid as nid
 from pydantic import BaseModel
 
@@ -24,7 +25,7 @@ import loeric.core.element as le
 import loeric.core.paths as lp
 
 
-class ModuleConfig(BaseModel):
+class BaseModuleConfig(BaseModel):
     """Base config for all LOERIC modules.
 
     :param bypass: deactivate the module without removing it.
@@ -33,18 +34,25 @@ class ModuleConfig(BaseModel):
     """
 
     bypass: bool = False
-    tag: str | None = None
-    required_tags: list[str] | None = None
+    tag: Optional[str] = None
+    required_tags: Optional[list[str]] = None
+    model_config = {"extra": "forbid"}
 
 
+@lp.expose("_tag", "tag")
 @lp.expose("_bypass", "bypass")
+@lp.expose("_required_tags", "required_tags")
 class LOERICModule:
     """A performance module implementing a series of performance rules."""
 
-    config_class: type[ModuleConfig] = ModuleConfig
+    config_class: BaseModuleConfig
 
     def __init__(
-        self, bypass: bool = False, tag: str = None, required_tags: list[str] = None
+        self,
+        type: str,
+        bypass: bool = False,
+        tag: str = None,
+        required_tags: list[str] = None,
     ):
         """Process LOERICElements.
 
@@ -69,7 +77,8 @@ class LOERICModule:
         self._tempo = None
         self._is_end_of_score = False
 
-        self._contour_values = {}
+        self._contour_values = defaultdict(float)
+        self._required_contours = set()
 
     def reset(self):
         """Reset all module attributes."""
@@ -107,6 +116,7 @@ class LOERICModule:
         elif isinstance(element, le.Tempo):
             self._tempo = copy.copy(element)
         elif isinstance(element, le.ContourValue):
+            # update contour values
             self._contour_values[element.name] = element.value
 
         return self._process(element, window)
@@ -169,6 +179,10 @@ class LOERICModule:
         return all(element.has_tag(t) for t in self._required_tags)
 
     @cached_property
+    def required_contours(self):
+        return self._required_contours
+
+    @cached_property
     def is_online(self):
         return self._is_online
 
@@ -183,3 +197,7 @@ class LOERICModule:
     @property
     def window_size(self):
         return self._window_size
+
+    @property
+    def _has_all_contours(self):
+        return self._required_contours <= set(self._contour_values.keys())

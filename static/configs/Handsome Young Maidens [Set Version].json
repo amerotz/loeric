@@ -38,11 +38,10 @@
   },
   "player": {
     "input": {
-      "main": {
+      "midi#main": {
         "active": true,
         "analysers": {
-          "control_change": {
-            "type": "midi_cc",
+          "midi_cc#control_change": {
             "controls": {
               "ornament_intensity": 77,
               "error": 78,
@@ -54,7 +53,7 @@
         }
       }
     },
-    "output": { "main": { "velocity_range": [1, 127] } }
+    "output": { "midi#main": { "velocity_range": [1, 127] } }
   },
   "groover": {
     "modules": {

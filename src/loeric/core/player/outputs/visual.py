@@ -18,6 +18,7 @@ import multiprocessing as mp
 import random
 import sys
 from multiprocessing import shared_memory
+from typing import Literal
 
 import numpy as np
 
@@ -41,6 +42,7 @@ except Exception:
 
 class VisualOutputConfig(lob.OutputInterfaceConfig):
 
+    type: Literal["visual"]
     width: int
     height: int
     window_size: int

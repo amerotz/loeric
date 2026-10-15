@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, field_validator
 
@@ -45,7 +45,7 @@ class ConditionConfig(BaseModel):
         return v
 
 
-class ConditionalModuleConfig(lmb.ModuleConfig):
+class ConditionalModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`ConditionalModule`.
 
     :param condition: the condition to evaluate.
@@ -54,6 +54,7 @@ class ConditionalModuleConfig(lmb.ModuleConfig):
 
     condition: ConditionConfig
     module: dict[str, Any]
+    type: Literal["conditional"]
 
     @field_validator("module")
     @classmethod
@@ -63,13 +64,13 @@ class ConditionalModuleConfig(lmb.ModuleConfig):
         return v
 
 
-class TaggerModuleConfig(lmb.ModuleConfig):
+class TaggerModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`TaggerModule`. No additional fields beyond the base."""
 
-    pass
+    type: Literal["tagger"]
 
 
-class LoggerModuleConfig(lmb.ModuleConfig):
+class LoggerModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`LoggerModule`.
 
     :param notes: log note events.
@@ -84,6 +85,7 @@ class LoggerModuleConfig(lmb.ModuleConfig):
     time_signatures: bool = False
     key_signatures: bool = False
     tempos: bool = False
+    type: Literal["logger"]
 
 
 class LOERICCondition:
@@ -136,6 +138,7 @@ class ConditionalModule(lmb.LOERICModule):
         self._condition = LOERICCondition(**condition)
 
         self._is_online = self._module.is_online
+        self._required_contours = self._module.required_contours
 
     def _process(
         self,
@@ -162,7 +165,6 @@ class TaggerModule(lmb.LOERICModule):
     config_class = TaggerModuleConfig
 
     def __init__(self, **kwargs):
-        print(kwargs)
         super().__init__(**kwargs)
 
         self._name = "tagger"

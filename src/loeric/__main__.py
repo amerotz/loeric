@@ -94,12 +94,12 @@ def main():
     # load config
     with open(args["config"], "r") as f:
         config_file = json.load(f)
+        if args["transpose"] is not None:
+            if "transpose" in config_file["groover"]["modules"]:
+                config_file["groover"]["modules"]["transpose"]["steps"] += args[
+                    "transpose"
+                ]
         config_file = lc.process_config(config_file)
-        if (
-            args["transpose"] is not None
-            and "transpose" in config_file["groover"]["modules"]
-        ):
-            config_file["groover"]["modules"]["transpose"]["steps"] = args["transpose"]
 
     # create LOERIC
     musician = loeric.LOERIC(config_file)

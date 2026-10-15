@@ -19,41 +19,46 @@ Import order matters: ``base`` first (no internal deps), then submodules,
 then the factory which needs all of them.
 """
 
-from loeric.core.player.analysers.base import Analyser, AnalyserConfig
+from typing import Annotated
 
-"""
-"""
+import pydantic as pdt
+
 from loeric.core.player.analysers.audio import (
     RMS,
     AudioAnalyser,
     BetterRMS,
+    BetterRMSConfig,
+    RMSConfig,
     TempoAnalyser,
+    TempoAnalyserConfig,
 )
+from loeric.core.player.analysers.base import Analyser
 from loeric.core.player.analysers.midi import (
     MIDIAnalyser,
     MIDIContourAnalyser,
+    MIDIContourAnalyserConfig,
     MIDILogger,
+    MIDILoggerConfig,
 )
 from loeric.core.player.analysers.osc import (
-    OSCAnalyser,
     OSCContourAnalyser,
+    OSCContourAnalyserConfig,
     OSCLogger,
+    OSCLoggerConfig,
 )
 
-__all__ = [
-    Analyser,
-    AnalyserConfig,
-    AudioAnalyser,
-    RMS,
-    BetterRMS,
-    TempoAnalyser,
-    MIDIAnalyser,
-    MIDIContourAnalyser,
-    MIDILogger,
-    OSCAnalyser,
-    OSCContourAnalyser,
-    OSCLogger,
+AllAnalysersConfig = Annotated[
+    RMSConfig
+    | BetterRMSConfig
+    | TempoAnalyserConfig
+    | MIDIContourAnalyserConfig
+    | MIDILoggerConfig
+    | OSCContourAnalyserConfig
+    | OSCLoggerConfig,
+    pdt.Field(discriminator="type"),
 ]
+
+__all__ = [AllAnalysersConfig, AudioAnalyser, MIDIAnalyser]
 
 
 def create_analyser(
@@ -93,6 +98,8 @@ def create_analyser(
     raw = dict(config)
     if issubclass(cls, AudioAnalyser):
         raw["samplerate"] = samplerate
+    print(raw)
 
     validated = cls.config_class.model_validate(raw)
+    print(validated.model_dump())
     return cls(**validated.model_dump())

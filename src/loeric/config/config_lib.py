@@ -49,7 +49,53 @@ def process_config(config):
 
         config = json.loads(dict_string)
 
-        return config
+    # convert modules
+    if "groover" in config and "modules" in config["groover"]:
+        config["groover"]["modules"] = change_naming_format(
+            config["groover"]["modules"]
+        )
+
+    if "player" in config and "input" in config["player"]:
+        # convert inputs
+        config["player"]["input"] = change_naming_format(config["player"]["input"])
+        for i in config["player"]["input"]:
+            # convert analysers
+            if "analysers" in config["player"]["input"][i]:
+
+                config["player"]["input"][i]["analysers"] = change_naming_format(
+                    config["player"]["input"][i]["analysers"]
+                )
+
+    if "player" in config and "output" in config["player"]:
+        # convert inputs
+        config["player"]["output"] = change_naming_format(config["player"]["output"])
+
+    return config
+
+
+def change_naming_format(config: dict):
+    """Change naming convection injecting type attributes.
+
+    Change instances of ``"type#name" : {...}`` to
+    ``"name": {"type" : ...}`` in the given dictionary.
+    """
+    keys = list(config)
+    for key in keys:
+        # get name
+        if "#" in key:
+            k_type, k_name = key.split("#")
+            # if format is module#
+            if k_name == "":
+                k_name = f"{key}_noname"
+        else:
+            k_type = key
+            k_name = f"{key}_noname"
+
+        config[key]["type"] = k_type
+        config[k_name] = config[key]
+        del config[key]
+
+    return config
 
 
 def merge_configs(original, new_config):

@@ -16,13 +16,14 @@
 import logging
 import random
 from collections import defaultdict
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pydantic as pdt
 
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
+import loeric.core.paths as lp
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,6 @@ class OrnamentConfig(pdt.BaseModel):
     diatonic: bool = True
     slide: bool = False
 
-
     @pdt.model_validator(mode="after")
     def consistent_lengths(self) -> "OrnamentConfig":
         """Ensure pitch, velocity, and duration arrays are the same length."""
@@ -82,7 +82,7 @@ class OrnamentConfig(pdt.BaseModel):
         return f"(Ornament {self.name} slide={self.slide} thr={self.threshold} p={self.probability})"
 
 
-class OrnamentModuleConfig(lmb.ModuleConfig):
+class OrnamentModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`OrnamentModule`.
 
     :param bind: contour name controlling ornament probability.
@@ -93,8 +93,12 @@ class OrnamentModuleConfig(lmb.ModuleConfig):
     bind: str
     data: dict[str, Any] = {}
     whitelist: list[str] | None = None
+    type: Literal["ornament"]
 
 
+@lp.expose("_contour", "bind")
+@lp.expose("_ornaments", "data")
+@lp.expose("_whitelist", "whitelist")
 class OrnamentModule(lmb.LOERICModule):
 
     config_class = OrnamentModuleConfig
@@ -108,6 +112,7 @@ class OrnamentModule(lmb.LOERICModule):
         self._ornaments = [OrnamentConfig(name=o, **data[o]) for o in data]
         self._window_size = 0
         self._is_online = True
+        self._required_contours = {bind}
 
         if len(self._ornaments) != 0:
             self._window_size = max([o.length for o in self._ornaments])

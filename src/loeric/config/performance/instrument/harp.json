@@ -8,7 +8,7 @@
         "data": {
           "strings": {
             "type": "free",
-            "is_active": true,
+            "active": true,
             "allow_root": false,
             "threshold": "var_drone_threshold",
             "velocity_multiplier": 0.9,

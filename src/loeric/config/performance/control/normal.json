@@ -21,13 +21,12 @@
   },
   "player": {
     "input": {
-      "mic_input": {
+      "audio#mic_input": {
         "active": true,
-        "type": "audio",
         "device": "default",
         "samplerate": 44100,
         "analysers": {
-          "loudness": {
+          "rms#loudness": {
             "active": true,
             "type": "rms",
             "responsiveness": 0.5,

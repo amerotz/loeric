@@ -16,7 +16,6 @@
 
 import json
 import logging
-import re
 import typing
 from dataclasses import dataclass
 
@@ -24,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def readonly(attr: str):
-    """Class decorator that makes a private attribute publicly readable but not writable.
+    """Class decorator that makes a private attribute publicly readonly.
 
     Generates a property named *attr* that reads from ``_{attr}`` and raises
     :exc:`AttributeError` on assignment.
@@ -42,6 +41,12 @@ def readonly(attr: str):
         )
         prop.__doc__ = f"``{attr}`` is readonly and cannot be set at runtime."
         setattr(cls, attr, prop)
+
+        # keep track of flags
+        if not hasattr(cls, "readonly"):
+            cls.readonly = []
+
+        cls.readonly.append(attr)
         return cls
 
     return decorator
@@ -67,16 +72,16 @@ def expose(private: str, public: str, validator=None):
             return getattr(self, private)
 
         def default_setter(self, value):
-            target_type = typing.get_type_hints(cls).get(private)
+            target_type = _container_type(self, private)
 
             if target_type is not None and not isinstance(value, target_type):
                 try:
                     value = coerce(target_type, value)
                 except Exception:
-                    raise ValueError(f"Cannot coerce {value!r} to {target_type}")
+                    raise ValueError(f"Cannot coerce '{value!r}' to '{target_type}'")
 
             if validator is not None and not validator(value):
-                raise ValueError(f"Invalid value {value!r} for '{public}'")
+                raise ValueError(f"Invalid value '{value!r}' for '{public}'")
 
             setattr(self, private, value)
 
@@ -93,10 +98,6 @@ def expose(private: str, public: str, validator=None):
         return cls
 
     return decorator
-
-
-_INT_RE = re.compile(r"-?\d+")
-_FLOAT_RE = re.compile(r"-?\d+(\.\d+)?")
 
 
 def coerce(expected: type | None, value):
@@ -120,63 +121,37 @@ def coerce(expected: type | None, value):
     if isinstance(value, expected):
         return value
 
+    # bool only matches "true" and "false"
+    if expected is bool:
+        if value == "true":
+            return True
+        if value == "false":
+            return False
+        raise TypeError(f"Invalid bool literal {value!r} (expected 'true' or 'false')")
+    # handle lists
+    elif expected is list:
+        return _parse_list(value)
+
+    # handle dicts
+    elif expected is dict:
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                if not isinstance(parsed, dict):
+                    raise TypeError("JSON did not decode to dict")
+                return parsed
+            except json.JSONDecodeError as e:
+                raise TypeError(f"Invalid JSON dict: {value!r}") from e
+    # now convert
     try:
-        if expected is bool:
-            if value == "True":
-                return True
-            if value == "False":
-                return False
-            raise TypeError(
-                f"Invalid bool literal {value!r} (expected 'True' or 'False')"
-            )
-
-        if expected is int:
-            if isinstance(value, str):
-                if not _INT_RE.fullmatch(value):
-                    raise TypeError(f"Invalid int literal {value!r}")
-                return int(value)
-            raise TypeError(f"Cannot coerce {type(value).__name__} to int safely")
-
-        if expected is float:
-            if isinstance(value, str):
-                if not _FLOAT_RE.fullmatch(value):
-                    raise TypeError(f"Invalid float literal {value!r}")
-                return float(value)
-            raise TypeError(f"Cannot coerce {type(value).__name__} to float safely")
-
-        if expected is str:
-            if isinstance(value, str):
-                return value
-            raise TypeError(f"Cannot coerce {type(value).__name__} to str safely")
-
-        if expected is list:
-            return _parse_list(value)
-
-        if expected is dict:
-            if isinstance(value, dict):
-                return value
-            if isinstance(value, str):
-                try:
-                    parsed = json.loads(value)
-                    if not isinstance(parsed, dict):
-                        raise TypeError("JSON did not decode to dict")
-                    return parsed
-                except json.JSONDecodeError as e:
-                    raise TypeError(f"Invalid JSON dict: {value!r}") from e
-
-            raise TypeError(f"Cannot coerce {type(value).__name__} to dict safely")
-
         if callable(expected):
             return expected(value)
-
-        raise TypeError(f"Unsupported coercion target: {expected}")
-
-    except TypeError:
-        raise
     except Exception as e:
         raise TypeError(
-            f"Cannot coerce {value!r} ({type(value).__name__}) to {expected}"
+            f"Cannot coerce {type(value).__name__} to {type(expected).__name__} safely"
         ) from e
+
+    raise TypeError(f"Unsupported coercion target: {expected}")
 
 
 def _parse_list(value):
@@ -203,6 +178,38 @@ def _parse_list(value):
         return parsed
 
     raise TypeError(f"Cannot coerce {type(value).__name__} to list")
+
+
+def _container_type(obj, key: str) -> type | None:
+    """Infer the expected value type for *key* on *obj*.
+
+    For generic containers such as ``dict[str, OutputInterface]``, returns
+    the last type argument (the value type). For plain annotations, returns
+    the annotation directly. Uses the model configuration where available.
+
+    :param obj: the parent object.
+    :param key: the attribute or key name to look up.
+    :return: the expected type, or ``None`` if no hint is present.
+    """
+    # first try the object's own hints (for plain attributes)
+    hints = typing.get_type_hints(type(obj))
+    print(hints)
+    if key in hints:
+        hint = hints[key]
+        args = typing.get_args(hint)
+        return args[-1] if args else hint
+
+    # fall back to the config model if one exists
+    config_cls = getattr(type(obj), "config_class", None)
+    if config_cls is not None:
+        config_hints = typing.get_type_hints(config_cls)
+        if key in config_hints:
+            hint = config_hints[key]
+            args = typing.get_args(hint)
+            print(args)
+            return args[0] if args else hint
+
+    return None
 
 
 @dataclass(frozen=True)
@@ -267,7 +274,8 @@ class LOERICPath:
                 return obj[int(key)]
             except (ValueError, IndexError):
                 pass
-        raise AttributeError(f"Cannot resolve '{key}' on {type(obj).__name__}")
+
+        raise AttributeError(f"Cannot resolve '{key}' on '{type(obj).__name__}'")
 
     @staticmethod
     def _assign(obj, key: str, value) -> bool:
@@ -283,55 +291,37 @@ class LOERICPath:
             the index was out of range, or the value failed the type check.
         """
         # check type consistency based on hints
-        expected = LOERICPath._container_type(obj, key)
+        expected = _container_type(obj, key)
+        # coerce
         if expected and not isinstance(value, expected):
-            logger.warning(
-                f"Cannot set attribute {key} of {obj} (obtained type {type(value)}, expected {expected}"
-            )
-            return False
+            try:
+                value = coerce(expected, value)
+            except TypeError as e:
+                print(e)
+                logger.warning(
+                    f"Cannot set attribute {key} of {obj} (obtained type {type(value)}, expected {expected}"
+                )
+                return False
+
         if isinstance(obj, (list, tuple)):
             try:
                 obj[int(key)] = value
                 return True
             except (ValueError, IndexError):
                 return False
+
         if isinstance(obj, dict):
             if key in obj:
                 obj[key] = value
                 return True
+
         if hasattr(obj, key):
-            setattr(obj, key, value)
+            try:
+                setattr(obj, key, value)
+            except Exception:
+                return False
             return True
         return False
-
-    def _container_type(obj, key: str) -> type | None:
-        """Infer the expected value type for *key* on *obj*.
-
-        For generic containers such as ``dict[str, OutputInterface]``, returns
-        the last type argument (the value type). For plain annotations, returns
-        the annotation directly. Uses the model configuration where available.
-
-        :param obj: the parent object.
-        :param key: the attribute or key name to look up.
-        :return: the expected type, or ``None`` if no hint is present.
-        """
-        # first try the object's own hints (for plain attributes)
-        hints = typing.get_type_hints(type(obj))
-        if key in hints:
-            hint = hints[key]
-            args = typing.get_args(hint)
-            return args[-1] if args else hint
-
-        # fall back to the config model if one exists
-        config_cls = getattr(type(obj), "config_class", None)
-        if config_cls is not None:
-            config_hints = typing.get_type_hints(config_cls)
-            if key in config_hints:
-                hint = config_hints[key]
-                args = typing.get_args(hint)
-                return args[-1] if args else hint
-
-        return None
 
     @staticmethod
     def get(obj, path: "LOERICPath"):
@@ -339,8 +329,9 @@ class LOERICPath:
 
         :param obj: the root object to traverse from.
         :param path: the :class:`LOERICPath` to follow.
-        :return: the value at the end of the path, or ``None`` if any segment
-            could not be resolved.
+        :return: the value at the end of the path
+
+        :raises AttributeError: if the path cannot be resolved
         """
         try:
             for key in path.parts:
@@ -348,7 +339,7 @@ class LOERICPath:
             return obj
         except AttributeError as exc:
             logger.warning(f"get failed at '{path.path}': {exc}")
-            return None
+            raise exc
 
     @staticmethod
     def set(obj, path: "LOERICPath", value) -> bool:
@@ -364,8 +355,25 @@ class LOERICPath:
         """
         parts = path.parts
         try:
+            # traverse object
+            readonly_keys = []
             for key in parts[:-1]:
+
+                # if one is readonly, stop there
+                if key in readonly_keys:
+                    logger.warning(f"'{path.path}' is readonly.")
+                    return False
+
                 obj = LOERICPath._resolve(obj, key)
+
+                # update new keys
+                cls = type(obj)
+                if hasattr(cls, "readonly"):
+                    readonly_keys = cls.readonly
+                # or reset
+                else:
+                    readonly_keys = []
+
         except AttributeError as exc:
             logger.warning(f"set failed traversing '{path.path}': {exc}")
             return False

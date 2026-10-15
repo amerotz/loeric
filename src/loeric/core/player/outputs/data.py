@@ -16,6 +16,7 @@
 import logging
 import threading
 import time
+from typing import Literal
 
 import pandas as pd
 import pydantic as pdt
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 class DataOutputConfig(lob.OutputInterfaceConfig):
 
+    type: Literal["data"]
     path: str
     format: str
     controls: list[str]

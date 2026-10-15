@@ -29,8 +29,8 @@ import loeric.core.player.outputs as lo
 
 class PlayerConfig(pdt.BaseModel):
 
-    input: dict[str, li.InputInterfaceConfig]
-    output: dict[str, lo.OutputInterfaceConfig]
+    input: dict[str, li.AllInputInterfacesConfig]
+    output: dict[str, lo.AllOutputInterfacesConfig]
 
 
 @lp.expose("_input_interfaces", "input")

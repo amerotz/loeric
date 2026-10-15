@@ -30,14 +30,15 @@ class AnalyserConfig(pdt.BaseModel):
 
     type: str
     active: bool
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
 
 
 class Analyser:
     """Base class for all input analysers.
 
     Subclasses implement :meth:`update` to consume incoming data and
-    :meth:`get` to return the resulting :class:`~loeric.core.element.LOERICElement` list.
+    :meth:`get` to return the resulting
+    :class:`~loeric.core.element.LOERICElement` list.
     """
 
     config_class: type[AnalyserConfig] = AnalyserConfig
@@ -60,7 +61,8 @@ class Analyser:
     def get(self) -> list[le.LOERICElement]:
         """Return the result of the last update step.
 
-        :return: list of :class:`~loeric.core.element.LOERICElement` produced since last call.
+        :return: list of :class:`~loeric.core.element.LOERICElement`
+        produced since last call.
         """
         return []
 

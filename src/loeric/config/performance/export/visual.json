@@ -1,9 +1,8 @@
 {
   "player": {
     "output": {
-      "gui": {
+      "visual": {
         "active": true,
-        "type": "visual",
         "window_size": 500,
         "width": 2000,
         "height": 1000,

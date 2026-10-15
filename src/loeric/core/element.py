@@ -65,6 +65,8 @@ class TimeDelta:
 
     @staticmethod
     def quantize(value: float) -> float:
+        if np.isinf(value):
+            return value
         return (
             round(value * MINIMUM_QUARTER_DIVISION) * ONE_OVER_MINIMUM_QUARTER_DIVISION
         )
@@ -763,8 +765,8 @@ class LOERICQueue(Queue):
             KeySignature,
             Accidental,
             TimeSignature,
-            Tempo,
             UserTempo,
+            Tempo,
             Repetition,
             NullEvent,
             Note,

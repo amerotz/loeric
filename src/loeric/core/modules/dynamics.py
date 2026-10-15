@@ -13,12 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Literal
+
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
 
 
-class DynamicsModuleConfig(lmb.ModuleConfig):
+class DynamicsModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`DynamicsModule`.
 
     :param bind: contour name controlling velocity.
@@ -26,7 +28,8 @@ class DynamicsModuleConfig(lmb.ModuleConfig):
     """
 
     bind: str
-    pattern: str | None = None
+    pattern: str = None
+    type: Literal["dynamics"]
 
 
 @lp.expose("_contour", "bind")
@@ -42,6 +45,7 @@ class DynamicsModule(lmb.LOERICModule):
         self._pattern = pattern
         self._name = "dynamics"
         self._is_online = True
+        self._required_contours = {bind, pattern}
 
     def _process(
         self,

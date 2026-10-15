@@ -15,9 +15,10 @@
 
 import copy
 import random
-from typing import Any
+from typing import Annotated, Literal, Optional
 
 import numpy as np
+import pydantic as pdt
 
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
@@ -25,91 +26,121 @@ import loeric.core.paths as lp
 import loeric.core.utils as lu
 
 
-class DroneModuleConfig(lmb.ModuleConfig):
+class BaseDroneConfig(pdt.BaseModel):
+    active: bool
+    bind: str
+    threshold: float
+    probability_scale: bool = True
+    allow_root: bool
+    notes: list[float]
+    transpose: float
+    harmony_weight: float = 0.75
+    reference_weight: float = 0.25
+    polyphony_min: int
+    polyphony_max: int
+    velocity_bind: Optional[str] = None
+    velocity_multiplier: float
+
+    model_config = {"extra": "forbid"}
+
+
+class FreeDroneConfig(BaseDroneConfig):
+
+    type: Literal["free"]
+    sync_with_notes: bool = False
+    notes_per_bar: list[int]
+    notes_per_bar_bind: str
+    ascending: bool
+    delay_bind: Optional[str] = None
+    delay_range: Optional[float] = None
+
+
+class BowedDroneConfig(BaseDroneConfig):
+
+    type: Literal["bowed"]
+    notes_per_bar: list[int]
+    notes_per_bar_bind: str
+    delay_bind: Optional[str] = None
+    delay_range: Optional[float] = None
+
+
+class PedalDroneConfig(BaseDroneConfig):
+    type: Literal["pedal"]
+
+
+DroneConfig = Annotated[
+    BowedDroneConfig | FreeDroneConfig | PedalDroneConfig,
+    pdt.Field(discriminator="type"),
+]
+
+
+class DroneModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`DroneModule`.
 
     :param data: mapping of drone names to their individual configs.
     """
 
-    data: dict[str, Any] = {}
+    type: Literal["drones"]
+    data: dict[
+        str,
+        DroneConfig,
+    ]
 
 
-@lp.expose("_contour", "bind")
-@lp.expose("_whitelist", "whitelis")
-@lp.readonly("data")
+@lp.expose("_drone_sets", "data")
 class DroneModule(lmb.LOERICModule):
 
     config_class = DroneModuleConfig
-
-    class DroneConfig:
-
-        __slots__ = (
-            "probability_scale",
-            "delay_bind",
-            "velocity_bind",
-            "sync_with_notes",
-            "_name",
-            "harmony_weight",
-            "reference_weight",
-            "last_computed_time",
-            "_is_running",
-            "allow_root",
-            "type",
-            "is_active",
-            "notes",
-            "polyphony_min",
-            "polyphony_max",
-            "threshold",
-            "bind",
-            "velocity_multiplier",
-            "notes_per_bar",
-            "notes_per_bar_bind",
-            "transpose",
-            "delay_range",
-            "ascending",
-        )
-
-        def __init__(self, name, config):
-
-            self._name = name
-            self.harmony_weight = 0.75
-            self.reference_weight = 0.25
-
-            for key in config:
-                setattr(self, key, config[key])
-
-            self.probability_scale = config.get("probability_scale")
-            self.delay_bind = config.get("delay_bind")
-            self.velocity_bind = config.get("velocity_bind")
-
-            if "sync_with_notes" not in config:
-                self.sync_with_notes = False
-
-            self.last_computed_time = -np.inf
-            self._is_running = False
-
-        def is_running(self):
-            return self._is_running
-
-        def activate(self):
-            self._is_running = True
-
-        def __repr__(self):
-            return f"(Drone {self.type})"
 
     def __init__(self, data: dict, **kwargs):
         super().__init__(**kwargs)
 
         self._name = "drones"
         self._is_online = True
+        self._required_contours = set(filter(None, self._required_contours))
 
-        self._drone_sets = [self.DroneConfig(d, data[d]) for d in data]
+        self._drone_sets = {d: DroneModule._create_drone(data[d]) for d in data}
+
         self._last_pitch = None
         self._last_velocity = None
+        self._last_computed_time = {d: -np.inf for d in self._drone_sets}
+        self._running = {
+            name: False
+            for name, drone in self._drone_sets.items()
+            if drone.type == "pedal"
+        }
+
         self._current_chord = None
+
         self._all_drones = np.array(
-            [n for d in self._drone_sets for n in d.notes]
+            [n for _, d in self._drone_sets.items() for n in d.notes]
         ).flatten()
+
+        for _, d in self._drone_sets.items():
+            self._required_contours |= {
+                d.bind,
+                d.velocity_bind,
+            }
+            if d.type != "pedal":
+                self._required_contours |= {
+                    d.delay_bind,
+                    d.notes_per_bar_bind,
+                }
+
+    @staticmethod
+    def _create_drone(config):
+        _registry = {
+            "bowed": BowedDroneConfig,
+            "free": FreeDroneConfig,
+            "pedal": PedalDroneConfig,
+        }
+
+        cls = _registry.get(config.get("type"))
+        if cls is None:
+            raise ValueError(f"Invalid drone type '{config.get('type')}'.")
+        config = cls.model_validate(config)
+
+        return config
 
     def _process(
         self,
@@ -134,17 +165,17 @@ class DroneModule(lmb.LOERICModule):
             and (element.is_performable or isinstance(element, le.NullEvent))
         ):
 
-            for drone in self._drone_sets:
-                if not drone.is_active:
+            for drone_name, drone in self._drone_sets.items():
+                if not drone.active:
                     continue
 
                 # pedals can't be triggered twice
-                if drone.type == "pedal" and drone.is_running():
+                if drone.type == "pedal" and self._running[drone_name]:
                     continue
 
                 notes_per_bar = None
                 if drone.type != "pedal":
-                    if drone.sync_with_notes:
+                    if drone.type == "bowed" or drone.sync_with_notes:
                         # if this is not a note
                         # but we want drones only with score notes
                         # skip
@@ -154,19 +185,14 @@ class DroneModule(lmb.LOERICModule):
                             notes_per_bar = (
                                 self._time_signature.eighths_per_bar / element.duration
                             )
-                        drone_interval = (
-                            self._time_signature.eighths_per_bar / notes_per_bar
-                        )
                     else:
                         notes_per_bar = self._current_notes_per_bar(drone)
-                        drone_interval = (
-                            self._time_signature.eighths_per_bar / notes_per_bar
-                        )
-                        if element.time % drone_interval != 0:
-                            continue
 
-                # keep track of notes
-                drone_notes = []
+                    drone_interval = (
+                        self._time_signature.eighths_per_bar / notes_per_bar
+                    )
+                    if element.time % drone_interval != 0:
+                        continue
 
                 prob = self._contour_values[drone.bind]
 
@@ -176,22 +202,26 @@ class DroneModule(lmb.LOERICModule):
                 else:
                     can_drone = prob >= drone.threshold
 
-                can_drone = can_drone and drone.last_computed_time != element.time
+                can_drone = (
+                    can_drone and self._last_computed_time[drone_name] != element.time
+                )
 
+                # keep track of notes
                 if can_drone:
-                    drone.last_computed_time = element.time
+                    self._last_computed_time[drone_name] = element.time
                     # get pitches
                     drone_pitches = self._get_drone(self._last_pitch, drone)
 
-                    # make pedal active if pedal
-                    if drone.type == "pedal" and len(drone_pitches) != 0:
-                        drone.activate()
-
-                    else:
-                        # create the note events
-                        drone_pitches = sorted(
-                            drone_pitches, reverse=not drone.ascending
-                        )
+                    if len(drone_pitches) != 0:
+                        # make pedal active if pedal
+                        if drone.type == "pedal":
+                            self._running[drone_name] = True
+                        elif drone.type == "bowed":
+                            drone_pitches = sorted(drone_pitches)
+                        else:
+                            drone_pitches = sorted(
+                                drone_pitches, reverse=not drone.ascending
+                            )
 
                     d_notes, delay = self._add_drone(
                         element,
@@ -199,13 +229,11 @@ class DroneModule(lmb.LOERICModule):
                         drone,
                         notes_per_bar,
                     )
-                    drone_notes.extend(d_notes)
+                    notes.extend(d_notes)
 
                     removable_delay = min(delay, element.duration)
                     element.time += removable_delay
                     element.duration -= removable_delay
-
-                notes.extend(drone_notes)
 
         return [element, *notes]
 
@@ -217,20 +245,21 @@ class DroneModule(lmb.LOERICModule):
 
         amount = self._contour_values[drone.notes_per_bar_bind]
 
-        if len(options) != 1:
+        index = 0
+        if len(options) > 1:
             index = np.round(
                 (len(options) - 1) * (amount - drone.threshold) / (1 - drone.threshold)
             ).astype(int)
             index = max(0, min(len(options) - 1, index))
-            return options[index]
-        else:
-            return options[0]
+
+        return options[index]
 
     def _get_drone(self, reference, drone) -> np.array:
 
         notes = np.array([-1]).astype(int)
-        drone_perc = self._contour_values[drone.bind]
-        drone_perc = (drone_perc - drone.threshold) / (1 - drone.threshold)
+        drone_perc = (self._contour_values[drone.bind] - drone.threshold) / (
+            1 - drone.threshold
+        )
 
         harmony = int(self._current_chord.root)
         allowed_harmony = self._current_chord.pitches
@@ -266,9 +295,6 @@ class DroneModule(lmb.LOERICModule):
         elif drone.type in ["free", "pedal"]:
             index = np.arange(len(available_notes))
 
-        else:
-            raise Exception(f"Unknown drone type {drone.type}.")
-
         available_notes = available_notes[index]
         available_notes = available_notes[
             np.isin(
@@ -278,13 +304,9 @@ class DroneModule(lmb.LOERICModule):
         ]
 
         possible_bases = np.array([*available_notes, reference])
-        # old harmony sort
-        # index = np.argsort(0.1 * np.arange(len(available_notes))
-        # + (7 * (available_notes - harmony)) % 12)
 
         # sort based on harmony
         # magic function time
-
         if self._current_chord.is_user:
             base = self._current_chord.bass + 12 * np.floor(
                 min(np.min(self._all_drones), reference) / 12
@@ -329,14 +351,6 @@ class DroneModule(lmb.LOERICModule):
             )
             / 10
         )
-        """
-        fb_2 = frequencies - base_frequency / 2
-        score = (
-            -np.nan_to_num(fb_2 / abs(fb_2), nan=1)
-            * (1 / frequencies**0.01)
-            * abs((2 * (2 * frequencies % base_frequency) / base_frequency) - 1)
-        )
-        """
         index = np.argsort(score)
 
         if len(index) != 0:

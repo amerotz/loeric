@@ -14,13 +14,14 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import copy
+from typing import Literal
 
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
 
 
-class TimingModuleConfig(lmb.ModuleConfig):
+class TimingModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`TimingModule`.
 
     :param bind: contour name controlling tempo variation.
@@ -33,6 +34,7 @@ class TimingModuleConfig(lmb.ModuleConfig):
     pattern: str
     qpm_amount: float
     only_increase: bool = False
+    type: Literal["timing"]
 
 
 @lp.expose("_contour", "bind")
@@ -60,6 +62,9 @@ class TimingModule(lmb.LOERICModule):
         self._is_online = True
 
         self._first_tempo = None
+        self._user_tempo = None
+
+        self._required_contours = {bind, pattern}
 
     def _process(
         self,
@@ -119,7 +124,9 @@ class TimingModule(lmb.LOERICModule):
 
     def _process_tempo(self):
 
-        user_tempo_to_original_ratio = self._user_tempo.qpm / self._first_tempo.qpm
+        user_tempo_to_original_ratio = 1
+        if self._user_tempo is not None:
+            user_tempo_to_original_ratio = self._user_tempo.qpm / self._first_tempo.qpm
 
         bpm = self._tempo.qpm * user_tempo_to_original_ratio
         value = 2 * self.qpm_amount * (self._contour_values[self._contour] - 0.5)

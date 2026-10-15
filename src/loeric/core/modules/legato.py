@@ -13,11 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Literal
+
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
 
 
-class LegatoModuleConfig(lmb.ModuleConfig):
+class LegatoModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`LegatoModule`.
 
     :param bind: contour name controlling legato amount.
@@ -28,6 +30,7 @@ class LegatoModuleConfig(lmb.ModuleConfig):
     bind: str
     min: float
     max: float
+    type: Literal["legato"]
 
 
 class LegatoModule(lmb.LOERICModule):
@@ -42,6 +45,7 @@ class LegatoModule(lmb.LOERICModule):
         self._min_legato = min
         self._contour = bind
         self._is_online = True
+        self._required_contours = {bind}
 
     def _process(
         self,

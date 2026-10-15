@@ -72,14 +72,14 @@ class LOERIC:
         assert mode in ["process", "thread"]
         self._mode = mode
 
-        self._config = config
-        if not isinstance(self._config, LOERICConfig):
-            self._config = LOERICConfig(
+        if not isinstance(config, LOERICConfig):
+            config = LOERICConfig(
                 groover=config["groover"],
                 contours=config["contours"],
                 player=config["player"],
                 mapper=config["mapper"],
             )
+        self._config = config
 
         self._tune = None
         self._tune_type = None
@@ -124,18 +124,39 @@ class LOERIC:
             LOERICCommand(command="tempo", payload={"tempo": tempo})
         )
 
-    def set_attribute(self, path: str, value: float):
-        assert (
-            self._running
-        ), "'set_attribute' can only be used on a running LOERIC instance. Make sure to call 'start' first."
+    def set_attribute(
+        self, path: str, value: float, block: bool = True, timeout: float = None
+    ):
+        """Set the value at a config-style path.
+
+        :param path: slash-separated config path,
+            e.g. ``'player/output/headphones/volume'``.
+        :param timeout: seconds to wait for the running instance to respond.
+        :return: ``True`` if the assignment succeded, ``False`` otherwise, ``None`` if an Exception occurred or in non-blocking mode.
+        """
+        response_queue = (
+            multiprocessing.Queue() if self._mode == "process" else queue.Queue()
+        )
         self._command_queue.put(
             LOERICCommand(
                 command="set",
-                payload={"path": lp.LOERICPath(path=path), "value": value},
+                payload={
+                    "path": lp.LOERICPath(path=path),
+                    "value": value,
+                    "response": response_queue,
+                },
             )
         )
+        try:
+            return response_queue.get(block=block, timeout=timeout)
+        except queue.Empty:
+            return None
+        except Exception:
+            logger.warning(f"set_attribute timed out for path '{path}'")
+            traceback.print_exc()
+            return None
 
-    def get_attribute(self, path: str, timeout: float = 1.0):
+    def get_attribute(self, path: str, block: bool = True, timeout: float = 1.0):
         """Retrieve the value at a config-style path from the running instance.
 
         The returned value may be a scalar (int, float, str, bool),
@@ -160,10 +181,14 @@ class LOERIC:
             )
         )
         try:
-            return response_queue.get(timeout=timeout)
-        except Exception:
+            v = response_queue.get(block=block, timeout=timeout)
+            if isinstance(v, Exception):
+                raise v
+
+            return v
+        except Exception as e:
             logger.warning(f"get_attribute timed out for path '{path}'")
-            return None
+            raise e
 
     def start(self, wait_for_prompt=False):
         """Start LOERIC in a new process."""
@@ -251,17 +276,20 @@ class LOERIC:
 
         ########## INIT THINGS ###############
 
+        class Root:
+            def __init__(self, contour_manager, mapper, groover, player):
+
+                self.contour_manager = contour_manager
+                self.mapper = mapper
+                self.groover = groover
+                self.player = player
+
         contour_manager = cnt.ContourManager(config.contours, tune)
         mapper = mp.Mapper(config.mapper)
         groover = gr.Groover(config.groover)
         player = pl.Player(config.player)
 
-        roots = {
-            "player": player,
-            "groover": groover,
-            "mapper": mapper,
-            "contour_manager": contour_manager,
-        }
+        root = Root(contour_manager, mapper, groover, player)
 
         # init tune related things
         groover.init_key_signature(tune.key_signatures[0])
@@ -285,22 +313,27 @@ class LOERIC:
                 le.TempoKeeper.set(cmd.payload["tempo"])
                 groover.set_tempo(cmd.payload["tempo"], tick)
             elif cmd.command == "set":
-                path: lp.LOERICPath = cmd.payload["path"]
-                value = cmd.payload["value"]
-                root_obj = roots.get(path.top)
-                if root_obj is None:
-                    logger.warning(f"Unknown root '{path.top}' in path '{path.path}'")
-                else:
-                    lp.LOERICPath.set(root_obj, path.tail, value)
+                try:
+                    path: lp.LOERICPath = cmd.payload["path"]
+                    value = cmd.payload["value"]
+                    response = cmd.payload["response"]
+                    val = lp.LOERICPath.set(root, path, value)
+                except Exception:
+                    val = False
+                    traceback.print_exc()
+
+                response.put(val)
+
+            # TODO this is not nice
             elif cmd.command == "get":
-                path: lp.LOERICPath = cmd.payload["path"]
-                response = cmd.payload["response"]
-                root_obj = roots.get(path.top)
-                if root_obj is None:
-                    logger.warning(f"Unknown root '{path.top}' in path '{path.path}'")
-                    response.put(None)
-                else:
-                    response.put(lp.LOERICPath.get(root_obj, path.tail))
+                try:
+                    path: lp.LOERICPath = cmd.payload["path"]
+                    response = cmd.payload["response"]
+                    val = lp.LOERICPath.get(root, path)
+                except Exception as e:
+                    val = e
+                    traceback.print_exc()
+                response.put(val)
 
             return False  # keep going
 
@@ -345,7 +378,6 @@ class LOERIC:
 
             # start actual loop
             finish = False
-            warned = False
 
             while not finish:
 
@@ -378,14 +410,9 @@ class LOERIC:
                 # compensate loop duration
                 delay_time = time.perf_counter() - start_time
                 if delay_time > wait_time:
-                    if True:  # not warned:
-                        logger.warning(
-                            f"Computation ({np.round(delay_time,4)}s) is taking more than time interval ({np.round(wait_time,4)}s)!"
-                        )
-
-                        warned = True
-                else:
-                    warned = False
+                    logger.warning(
+                        f"Computation ({np.round(delay_time,4)}s) is taking more than time interval ({np.round(wait_time,4)}s)!"
+                    )
 
                 wait_time -= delay_time
 

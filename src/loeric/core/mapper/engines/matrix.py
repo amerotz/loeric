@@ -131,10 +131,6 @@ class GateLayer(LOERICMatrix):
         self._matrix[:, index] *= float(is_open)
         self._bias[index] *= float(is_open)
 
-    """
-    def __call__(self, x: np.array) -> np.array:
-        return super().__call__(x)
-    """
 
 
 class PreProcessingLayer(LOERICMatrix):

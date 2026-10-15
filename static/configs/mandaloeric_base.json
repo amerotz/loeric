@@ -325,14 +325,12 @@
   },
   "player": {
     "input": {
-      "mic_input": {
+      "audio#mic_input": {
         "active": true,
-        "type": "audio",
         "device": "snd_rpi_hifiberry_dacplusadcpro",
         "samplerate": 48000,
         "analysers": {
-          "loudness": {
-            "type": "rms",
+          "rms#loudness": {
             "responsiveness": 0.5,
             "controls": ["intensity"],
             "windows_per_second": 30,

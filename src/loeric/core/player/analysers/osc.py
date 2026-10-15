@@ -14,6 +14,7 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+from typing import Literal
 
 import loeric.core.element as le
 import loeric.core.paths as lp
@@ -31,7 +32,7 @@ class OSCAnalyserConfig(AnalyserConfig):
 class OSCLoggerConfig(OSCAnalyserConfig):
     """Config for :class:`OSCLogger`. No additional fields."""
 
-    pass
+    type: Literal["osc_logger"]
 
 
 class OSCContourAnalyserConfig(OSCAnalyserConfig):
@@ -40,6 +41,7 @@ class OSCContourAnalyserConfig(OSCAnalyserConfig):
     :param controls: mapping of control names to OSC addresses.
     """
 
+    type: Literal["osc_cc"]
     controls: dict[str, str]
 
 

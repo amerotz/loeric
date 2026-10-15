@@ -14,6 +14,7 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+from typing import Literal
 
 import sounddevice as sd
 
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 class AudioInputConfig(lib.InputInterfaceConfig):
 
+    type: Literal["audio"]
     device: str
     samplerate: int
 

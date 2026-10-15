@@ -14,6 +14,7 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+from typing import Literal
 
 import pydantic as pdt
 
@@ -33,7 +34,7 @@ class MIDIAnalyserConfig(AnalyserConfig):
 class MIDILoggerConfig(MIDIAnalyserConfig):
     """Config for :class:`MIDILogger`. No additional fields."""
 
-    pass
+    type: Literal["midi_logger"]
 
 
 class MIDIContourAnalyserConfig(MIDIAnalyserConfig):
@@ -43,6 +44,7 @@ class MIDIContourAnalyserConfig(MIDIAnalyserConfig):
     """
 
     controls: dict[str, int]
+    type: Literal["midi_cc"]
 
     @pdt.field_validator("controls")
     @classmethod

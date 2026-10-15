@@ -2,9 +2,8 @@
   "player": {
     "input": {},
     "output": {
-      "main": {
+      "midi#main": {
         "active": true,
-        "type": "midi",
         "port": "Midi Through Port-0",
         "send_cc": true,
         "send_messages": true,

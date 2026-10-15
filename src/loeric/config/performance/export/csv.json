@@ -1,8 +1,7 @@
 {
   "player": {
     "output": {
-      "file": {
-        "type": "data",
+      "data#file": {
         "active": true,
         "path": "loeric_export.csv",
         "format": "csv",

@@ -13,19 +13,23 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Literal
+
 from pydantic import field_validator
 
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
+import loeric.core.paths as lp
 
 
-class DelayBufferModuleConfig(lmb.ModuleConfig):
+class DelayBufferModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`DelayBufferModule`.
 
     :param size: lookahead buffer size in eighths. Must be positive.
     """
 
     size: float
+    type: Literal["delay_buffer"]
 
     @field_validator("size")
     @classmethod
@@ -35,13 +39,14 @@ class DelayBufferModuleConfig(lmb.ModuleConfig):
         return v
 
 
-class HistoryBufferModuleConfig(lmb.ModuleConfig):
+class HistoryBufferModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`HistoryBufferModule`.
 
     :param size: lookback buffer size in eighths. Must be positive.
     """
 
     size: float
+    type: Literal["history_buffer"]
 
     @field_validator("size")
     @classmethod
@@ -51,6 +56,7 @@ class HistoryBufferModuleConfig(lmb.ModuleConfig):
         return v
 
 
+@lp.expose("_lookback_size", "size")
 class HistoryBufferModule(lmb.LOERICModule):
 
     config_class = HistoryBufferModuleConfig
@@ -83,6 +89,7 @@ class HistoryBufferModule(lmb.LOERICModule):
         return [element]
 
 
+@lp.expose("_lookahead_size", "size")
 class DelayBufferModule(lmb.LOERICModule):
 
     config_class = DelayBufferModuleConfig

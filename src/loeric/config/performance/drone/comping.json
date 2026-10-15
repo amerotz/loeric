@@ -6,7 +6,7 @@
           "lower": {
             "type": "free",
             "ascending": true,
-            "is_active": true,
+            "active": true,
             "allow_root": false,
             "threshold": 0.5,
             "velocity_multiplier": 0.9,
@@ -22,7 +22,7 @@
           "upper": {
             "type": "free",
             "ascending": true,
-            "is_active": true,
+            "active": true,
             "allow_root": false,
             "threshold": 0.5,
             "velocity_multiplier": 0.9,

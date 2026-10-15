@@ -13,14 +13,15 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
-from loeric.core.player.outputs.base import OutputInterface, OutputInterfaceConfig
+from typing import Annotated
 
-"""
-"""
-from loeric.core.player.outputs.data import DataOutput
-from loeric.core.player.outputs.midi import MIDIOutput
-from loeric.core.player.outputs.osc import OSCOutput
-from loeric.core.player.outputs.soundfont import SoundfontOutput
+import pydantic as pdt
+
+from loeric.core.player.outputs.base import OutputInterface, OutputInterfaceConfig
+from loeric.core.player.outputs.data import DataOutput, DataOutputConfig
+from loeric.core.player.outputs.midi import MIDIOutput, MIDIOutputConfig
+from loeric.core.player.outputs.osc import OSCOutput, OSCOutputConfig
+from loeric.core.player.outputs.soundfont import SoundfontOutput, SoundfontOutputConfig
 
 try:
     import pyqtgraph
@@ -35,10 +36,25 @@ except Exception:
     )
     PYQT_AVAILABLE = False
 
-if PYQT_AVAILABLE:
-    from loeric.core.player.outputs.visual import VisualOutput
+AllOutputInterfacesConfig = Annotated[
+    MIDIOutputConfig | OSCOutputConfig | DataOutputConfig | SoundfontOutputConfig,
+    pdt.Field(discriminator="type"),
+]
 
-__all__ = [OutputInterface, OutputInterfaceConfig]
+if PYQT_AVAILABLE:
+    from loeric.core.player.outputs.visual import VisualOutput, VisualOutputConfig
+
+    AllOutputInterfacesConfig = Annotated[
+        MIDIOutputConfig
+        | OSCOutputConfig
+        | DataOutputConfig
+        | SoundfontOutputConfig
+        | VisualOutputConfig,
+        pdt.Field(discriminator="type"),
+    ]
+
+
+__all__ = [AllOutputInterfacesConfig]
 
 
 def create_output(config: dict | OutputInterfaceConfig) -> OutputInterface:
@@ -51,14 +67,6 @@ def create_output(config: dict | OutputInterfaceConfig) -> OutputInterface:
     """
     if not isinstance(config, OutputInterfaceConfig):
         config = OutputInterfaceConfig(config)
-
-    """
-    if not config.active:
-        interface = OutputInterface()
-        return interface
-    """
-
-    # del config.active
 
     _registry = {
         "midi": MIDIOutput,

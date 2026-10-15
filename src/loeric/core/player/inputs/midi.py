@@ -14,6 +14,7 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+from typing import Literal
 
 import mido
 
@@ -33,6 +34,7 @@ class UnknownMIDIPortException(Exception):
 
 class MIDIInputConfig(lib.InputInterfaceConfig):
 
+    type: Literal["midi"]
     port: str
 
 

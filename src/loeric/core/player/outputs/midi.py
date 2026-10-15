@@ -16,6 +16,7 @@
 import logging
 import random
 import threading
+from typing import Literal
 
 import mido
 import numpy as np
@@ -82,6 +83,8 @@ class MIDIQueue(le.Queue):
 
 
 class MIDIOutputConfig(lob.OutputInterfaceConfig):
+
+    type: Literal["midi"]
     port: str
     send_cc: bool
     send_messages: bool
@@ -171,6 +174,7 @@ class MIDIOutput(lob.OutputInterface):
         self._message_interval = 1 / 10
         self._done = threading.Event()
         self._out_lock = threading.Lock()
+        self._end_of_score = False
 
         if self._send_cc:
             self._cc_thread = threading.Thread(target=self._midi_cc_thread)
@@ -440,6 +444,8 @@ class MIDIOutput(lob.OutputInterface):
             if isinstance(event, le.Note):
                 channel = self._allocate_channel(event)
                 event.channel = channel
+            elif isinstance(event, le.EndOfScore):
+                self._end_of_score = True
             for e in self._event_to_midi(event, absolute_time=True):
                 self._queue.push(e)
 
@@ -448,9 +454,13 @@ class MIDIOutput(lob.OutputInterface):
 
                 m = self._queue.peek()
 
+                if self._end_of_score and np.isinf(m.time):
+                    m.time = 0
+
                 if m.time <= tick:
 
                     m = self._queue.pop()
+                    m.time = 0
 
                     if not m.is_meta:
 

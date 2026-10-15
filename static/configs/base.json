@@ -325,39 +325,34 @@
   },
   "player": {
     "input": {
-      "main": {
+      "midi#main": {
         "active": false,
-        "type": "midi",
         "port": "Midi Through Port-0",
         "analysers": {
-          "control_change": {
+          "midi_cc#control_change": {
             "active": true,
-            "type": "midi_cc",
             "controls": {}
           }
         }
       },
-      "mic_input": {
+      "audio#mic_input": {
         "active": true,
-        "type": "audio",
         "device": "default",
         "samplerate": 44100,
         "analysers": {
-          "loudness": {
+          "rms#loudness": {
             "active": true,
-            "type": "rms",
             "responsiveness": 0.5,
             "controls": ["intensity"],
-            "windows_per_second": 30,
-            "updates_per_second": 30
+            "windows_per_second": 10,
+            "updates_per_second": 10
           }
         }
       }
     },
     "output": {
-      "main": {
+      "midi#main": {
         "active": false,
-        "type": "midi",
         "port": "Midi Through Port-0",
         "send_cc": true,
         "send_messages": true,
@@ -367,7 +362,6 @@
       },
       "soundfont": {
         "active": true,
-        "type": "soundfont",
         "device": "default",
         "channels": 2,
         "volume": 1,

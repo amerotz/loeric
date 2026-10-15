@@ -27,11 +27,10 @@
   },
   "player": {
     "input": {
-      "main": {
+      "midi#main": {
         "active": true,
         "analysers": {
-          "control_change": {
-            "type": "midi_cc",
+          "midi_cc#control_change": {
             "controls": {
               "error": 49
             }

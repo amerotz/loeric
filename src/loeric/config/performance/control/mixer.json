@@ -20,14 +20,12 @@
   },
   "player": {
     "input": {
-      "main": {
+      "midi#main": {
         "active": true,
-        "type": "midi",
         "port": "Launch Control XL Launch Contro",
         "analysers": {
-          "control_changes": {
+          "midi_cc#control_changes": {
             "active": true,
-            "type": "midi_cc",
             "controls": {
               "velocity_i": 77,
               "tempo_i": 78,

@@ -1,12 +1,11 @@
 {
   "player": {
     "output": {
-      "main": {
+      "midi#main": {
         "active": false
       },
       "soundfont": {
         "active": true,
-        "type": "soundfont",
         "device": "default",
         "channels": 2,
         "volume": 1,

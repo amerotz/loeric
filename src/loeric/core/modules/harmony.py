@@ -14,6 +14,7 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import copy
+from typing import Literal
 
 import numpy as np
 from pydantic import field_validator
@@ -22,7 +23,8 @@ import loeric.core.element as le
 import loeric.core.modules.base as lmb
 
 
-class HarmonyModuleConfig(lmb.ModuleConfig):
+# add custom chord shapes
+class HarmonyModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`HarmonyModule`.
 
     :param chord_score: 12-element list scoring chord roots.
@@ -33,6 +35,7 @@ class HarmonyModuleConfig(lmb.ModuleConfig):
     chord_score: list[float]
     chords_per_bar: None | float
     weights: dict[str, list[float]]
+    type: Literal["harmony"]
 
     @field_validator("chord_score")
     @classmethod

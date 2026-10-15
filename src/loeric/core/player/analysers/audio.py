@@ -14,6 +14,7 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+from typing import Literal, Optional
 
 import librosa
 import numpy as np
@@ -38,9 +39,9 @@ class AudioAnalyserConfig(AnalyserConfig):
 
     updates_per_second: float
     windows_per_second: float
-    samplerate: int
+    samplerate: Optional[int] = 44100
 
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
 
     @pdt.model_validator(mode="after")
     def updates_ge_windows(self) -> "AudioAnalyserConfig":
@@ -142,6 +143,7 @@ class RMSConfig(AudioAnalyserConfig):
     :param responsiveness: exponential smoothing factor in [0, 1].
     """
 
+    type: Literal["rms"]
     controls: list[str]
     responsiveness: float
 
@@ -238,6 +240,7 @@ class BetterRMSConfig(AudioAnalyserConfig):
     (fraction of latest delta).
     """
 
+    type: Literal["better_rms"]
     controls: list[str]
     responsiveness: float
     max_recovery: float
@@ -410,6 +413,7 @@ class TempoAnalyserConfig(AudioAnalyserConfig):
     (fraction of latest delta).
     """
 
+    type: Literal["tempo"]
     responsiveness: float
 
 

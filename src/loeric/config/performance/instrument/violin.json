@@ -221,9 +221,8 @@
         "data": {
           "strings": {
             "type": "bowed",
-            "is_active": true,
+            "active": true,
             "allow_root": false,
-            "ascending": true,
             "threshold": "var_drone_threshold",
             "velocity_multiplier": 0.9,
             "bind": "var_drone_bind",

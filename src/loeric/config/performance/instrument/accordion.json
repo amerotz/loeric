@@ -172,7 +172,7 @@
         "data": {
           "bass": {
             "type": "free",
-            "is_active": true,
+            "active": true,
             "allow_root": false,
             "velocity_multiplier": 0.9,
             "polyphony_min": 1,

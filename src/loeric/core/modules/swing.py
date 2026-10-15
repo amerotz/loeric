@@ -13,11 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Literal
+
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
 
 
-class SwingModuleConfig(lmb.ModuleConfig):
+class SwingModuleConfig(lmb.BaseModuleConfig):
     """Config for :class:`SwingModule`.
 
     :param bind: contour name controlling swing ratio.
@@ -30,6 +32,7 @@ class SwingModuleConfig(lmb.ModuleConfig):
     min: float = 1.0
     max: float = 1.0
     locations: list[int] = [0]
+    type: Literal["swing"]
 
 
 class SwingModule(lmb.LOERICModule):
@@ -47,6 +50,7 @@ class SwingModule(lmb.LOERICModule):
         self._contour = bind
         self._locations = set(locations)
         self._is_online = True
+        self._required_contours = {bind}
 
     def _process(
         self,

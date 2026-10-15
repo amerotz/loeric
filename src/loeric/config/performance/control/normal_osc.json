@@ -21,16 +21,14 @@
   },
   "player": {
     "input": {
-      "osc_input": {
+      "osc": {
         "active": true,
-        "type": "osc",
         "server": "127.0.0.1",
         "port": 1337,
         "analysers": {
-          "intensity_cc": {
+          "osc_cc#intensity": {
             "active": true,
-            "type": "osc_cc",
-            "controls": {"intensity": "/loeric/intensity"}
+            "controls": { "intensity": "/loeric/intensity" }
           }
         }
       }

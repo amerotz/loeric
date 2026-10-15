@@ -143,9 +143,8 @@
         "data": {
           "strings_with_melody": {
             "type": "bowed",
-            "ascending": true,
             "allow_root": false,
-            "is_active": true,
+            "active": true,
             "threshold": "var_drone_threshold",
             "velocity_multiplier": 0.9,
             "bind": "var_drone_bind",
@@ -161,7 +160,7 @@
             "type": "free",
             "threshold": "var_drone_threshold",
             "allow_root": false,
-            "is_active": true,
+            "active": true,
             "ascending": true,
             "velocity_multiplier": 0.9,
             "bind": "var_drone_bind",

@@ -6,7 +6,7 @@
           "lower": {
             "allow_root": false,
             "type": "free",
-            "is_active": true,
+            "active": true,
             "probability_scale": true,
             "notes": [54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65],
             "polyphony_min": 2,

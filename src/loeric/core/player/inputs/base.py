@@ -23,9 +23,10 @@ import loeric.core.player.analysers as la
 
 class InputInterfaceConfig(pdt.BaseModel):
 
+    type: str
     active: bool
-    analysers: dict[str, la.AnalyserConfig]
-    model_config = {"extra": "allow"}
+    analysers: dict[str, la.AllAnalysersConfig]
+    model_config = {"extra": "forbid"}
 
 
 @lp.readonly("active")

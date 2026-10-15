@@ -35,25 +35,20 @@
   },
   "player": {
     "input": {
-      "main": {
+      "midi#main": {
         "active": true,
-        "analysers": {
-          "control_change": {
-            "type": "midi_cc",
-            "controls": {
-              "ornament_intensity": 77,
-              "error": 78,
-              "drone_intensity": 79,
-              "legato_intensity": 80,
-              "velocity_intensity": 81,
-              "swing_intensity": 82,
-              "tempo_intensity": 83
-            }
-          }
+        "controls": {
+          "ornament_intensity": 77,
+          "error": 78,
+          "drone_intensity": 79,
+          "legato_intensity": 80,
+          "velocity_intensity": 81,
+          "swing_intensity": 82,
+          "tempo_intensity": 83
         }
       }
     },
-    "output": { "main": { "velocity_range": [1, 127] } }
+    "output": { "midi#main": { "velocity_range": [1, 127] } }
   },
   "groover": {
     "modules": {

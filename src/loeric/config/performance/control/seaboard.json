@@ -9,14 +9,12 @@
   },
   "player": {
     "input": {
-      "main": {
+      "midi#main": {
         "active": true,
-        "type": "midi",
         "port": "Seaboard BLOCK MIDI 1",
         "analysers": {
-          "vertical": {
+          "midi_cc#vertical": {
             "active": true,
-            "type": "midi_cc",
             "controls": {
               "intensity": 74
             }

@@ -1,3 +1,18 @@
+# This file is part of LOERIC.
+#
+# LOERIC is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# LOERIC is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+
 import loeric.core.tune as tu
 from loeric.core.contours.bar import BarLengthContour, BarLengthContourConfig
 from loeric.core.contours.base import (
@@ -33,7 +48,12 @@ from loeric.core.contours.operations import (
     WeightedSumOperationContour,
     WeightedSumOperationContourConfig,
 )
-from loeric.core.contours.phrase import PhraseContour, PhraseContourConfig
+from loeric.core.contours.phrase import (
+    ArchPhraseContour,
+    ArchPhraseContourConfig,
+    GesturePhraseContour,
+    GesturePhraseContourConfig,
+)
 from loeric.core.contours.sampled import (
     PatternContour,
     PatternContourConfig,
@@ -58,8 +78,8 @@ __all__ = [
     SmoothOperationContour,
     ToMeanOperationContour,
     WeightedSumOperationContour,
-    PhraseContour,
-    PhraseContour,
+    ArchPhraseContour,
+    GesturePhraseContour,
     RandomContour,
     IntensityContour,
 ]
@@ -72,7 +92,8 @@ def validate_config(config: dict):
         "pitch": PitchContour,
         "duration": DurationContour,
         "pattern": PatternContour,
-        "phrasing": PhraseContour,
+        "phrase_arch": ArchPhraseContour,
+        "phrase_gesture": GesturePhraseContour,
         "bar_length": BarLengthContour,
         "random": RandomContour,
         "weighted_sum": WeightedSumOperationContour,
@@ -129,7 +150,8 @@ def create_contour(tune: tu.Tune, contour_program: dict) -> LOERICContour:
         PitchContourConfig: PitchContour,
         DurationContourConfig: DurationContour,
         PatternContourConfig: PatternContour,
-        PhraseContourConfig: PhraseContour,
+        ArchPhraseContourConfig: ArchPhraseContour,
+        GesturePhraseContourConfig: GesturePhraseContour,
         BarLengthContourConfig: BarLengthContour,
         RandomContourConfig: RandomContour,
         WeightedSumOperationContourConfig: WeightedSumOperationContour,

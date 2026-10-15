@@ -16,6 +16,7 @@
 import logging
 import os
 import threading
+from typing import Literal
 
 import mido
 import numpy as np
@@ -131,6 +132,8 @@ class SynthOutput(mido.ports.BaseOutput):
 
 
 class SoundfontOutputConfig(lom.MIDIOutputConfig):
+
+    type: Literal["soundfont"]
     path: str
     program: int
     gain: float
