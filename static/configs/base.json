@@ -173,7 +173,7 @@
             "contours": {
               "multiply": {
                 "contours": {
-                  "phrasing#2": {
+                  "phrase_arch#2": {
                     "accelerando": 0.5,
                     "ritardando": 1,
                     "last": 0.2,
@@ -183,7 +183,7 @@
                     "shift": null,
                     "mode": "contour"
                   },
-                  "phrasing#1": {
+                  "phrase_arch#1": {
                     "accelerando": 1,
                     "ritardando": 1,
                     "last": 0.2,
@@ -217,7 +217,7 @@
         "contours": {
           "multiply": {
             "contours": {
-              "phrasing#2": {
+              "phrase_arch#2": {
                 "accelerando": 0.5,
                 "ritardando": 1,
                 "last": 0.2,
@@ -227,7 +227,7 @@
                 "shift": null,
                 "mode": "contour"
               },
-              "phrasing#1": {
+              "phrase_arch#1": {
                 "accelerando": 1,
                 "ritardando": 1,
                 "last": 0.2,
@@ -255,7 +255,7 @@
           },
           "multiply": {
             "contours": {
-              "phrasing#2": {
+              "phrase_arch#2": {
                 "accelerando": 0.5,
                 "ritardando": 1,
                 "last": 0.2,
@@ -265,7 +265,7 @@
                 "shift": null,
                 "mode": "contour"
               },
-              "phrasing#1": {
+              "phrase_arch#1": {
                 "accelerando": 1,
                 "ritardando": 1,
                 "last": 0.2,

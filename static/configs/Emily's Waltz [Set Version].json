@@ -16,7 +16,7 @@
     "tempo_pattern": {
       "multiply": {
         "contours": {
-          "phrasing#1": {
+          "phrase_arch#1": {
             "accelerando": 0.5,
             "ritardando": 0.5,
             "last": 0.2,
@@ -26,7 +26,7 @@
             "shift": -4,
             "mode": "ratio"
           },
-          "phrasing#2": {
+          "phrase_arch#2": {
             "accelerando": 0.5,
             "ritardando": 0.5,
             "last": 0.2,
