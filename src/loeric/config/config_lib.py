@@ -88,14 +88,17 @@ def _change_naming_format(config: dict):
             k_type, k_name = key.split("#")
             # if format is module#
             if k_name == "":
-                k_name = f"{key}_noname"
+                # k_name = f"{key}_noname"
+                k_name = key
         else:
             k_type = key
-            k_name = f"{key}_noname"
+            # k_name = f"{key}_noname"
+            k_name = key
 
         config[key]["type"] = k_type
         config[k_name] = config[key]
-        del config[key]
+        if k_name != key:
+            del config[key]
 
     return config
 
