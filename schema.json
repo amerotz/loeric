@@ -1,0 +1,1239 @@
+{
+  "$defs": {
+    "AudioInputConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "audio", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "analysers": {
+          "additionalProperties": {
+            "discriminator": {
+              "mapping": {
+                "better_rms": "#/$defs/BetterRMSConfig",
+                "midi_cc": "#/$defs/MIDIContourAnalyserConfig",
+                "midi_logger": "#/$defs/MIDILoggerConfig",
+                "osc_cc": "#/$defs/OSCContourAnalyserConfig",
+                "osc_logger": "#/$defs/OSCLoggerConfig",
+                "rms": "#/$defs/RMSConfig",
+                "tempo": "#/$defs/TempoAnalyserConfig"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              { "$ref": "#/$defs/RMSConfig" },
+              { "$ref": "#/$defs/BetterRMSConfig" },
+              { "$ref": "#/$defs/TempoAnalyserConfig" },
+              { "$ref": "#/$defs/MIDIContourAnalyserConfig" },
+              { "$ref": "#/$defs/MIDILoggerConfig" },
+              { "$ref": "#/$defs/OSCContourAnalyserConfig" },
+              { "$ref": "#/$defs/OSCLoggerConfig" }
+            ]
+          },
+          "title": "Analysers",
+          "type": "object"
+        },
+        "device": { "title": "Device", "type": "string" },
+        "samplerate": { "title": "Samplerate", "type": "integer" }
+      },
+      "required": ["type", "active", "analysers", "device", "samplerate"],
+      "title": "AudioInputConfig",
+      "type": "object"
+    },
+    "BetterRMSConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`BetterRMS`.\n\n:param controls: list of control names this analyser publishes values to.\n:param responsiveness: exponential smoothing factor in [0, 1].\n:param max_recovery: recovery rate of max value towards the current signal.\n:param min_recovery: recovery rate of min value towards the current signal.\n:param max_slack_factor: slack added to new maximum values\n(fraction of latest delta).\n:param min_slack_factor: slack added to new minimum values\n(fraction of latest delta).",
+      "properties": {
+        "type": { "const": "better_rms", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "updates_per_second": {
+          "title": "Updates Per Second",
+          "type": "number"
+        },
+        "windows_per_second": {
+          "title": "Windows Per Second",
+          "type": "number"
+        },
+        "samplerate": {
+          "anyOf": [{ "type": "integer" }, { "type": "null" }],
+          "default": 44100,
+          "title": "Samplerate"
+        },
+        "controls": {
+          "items": { "type": "string" },
+          "title": "Controls",
+          "type": "array"
+        },
+        "responsiveness": { "title": "Responsiveness", "type": "number" },
+        "max_recovery": { "title": "Max Recovery", "type": "number" },
+        "min_recovery": { "title": "Min Recovery", "type": "number" },
+        "max_slack_factor": { "title": "Max Slack Factor", "type": "number" },
+        "min_slack_factor": { "title": "Min Slack Factor", "type": "number" }
+      },
+      "required": [
+        "type",
+        "active",
+        "updates_per_second",
+        "windows_per_second",
+        "controls",
+        "responsiveness",
+        "max_recovery",
+        "min_recovery",
+        "max_slack_factor",
+        "min_slack_factor"
+      ],
+      "title": "BetterRMSConfig",
+      "type": "object"
+    },
+    "BowedDroneConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "active": { "title": "Active", "type": "boolean" },
+        "bind": { "title": "Bind", "type": "string" },
+        "threshold": { "title": "Threshold", "type": "number" },
+        "probability_scale": {
+          "default": true,
+          "title": "Probability Scale",
+          "type": "boolean"
+        },
+        "allow_root": { "title": "Allow Root", "type": "boolean" },
+        "notes": {
+          "items": { "type": "number" },
+          "title": "Notes",
+          "type": "array"
+        },
+        "transpose": { "title": "Transpose", "type": "number" },
+        "harmony_weight": {
+          "default": 0.75,
+          "title": "Harmony Weight",
+          "type": "number"
+        },
+        "reference_weight": {
+          "default": 0.25,
+          "title": "Reference Weight",
+          "type": "number"
+        },
+        "polyphony_min": { "title": "Polyphony Min", "type": "integer" },
+        "polyphony_max": { "title": "Polyphony Max", "type": "integer" },
+        "velocity_bind": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Velocity Bind"
+        },
+        "velocity_multiplier": {
+          "title": "Velocity Multiplier",
+          "type": "number"
+        },
+        "type": { "const": "bowed", "title": "Type", "type": "string" },
+        "notes_per_bar": {
+          "items": { "type": "integer" },
+          "title": "Notes Per Bar",
+          "type": "array"
+        },
+        "notes_per_bar_bind": {
+          "title": "Notes Per Bar Bind",
+          "type": "string"
+        },
+        "delay_bind": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Delay Bind"
+        },
+        "delay_range": {
+          "anyOf": [{ "type": "number" }, { "type": "null" }],
+          "default": null,
+          "title": "Delay Range"
+        }
+      },
+      "required": [
+        "active",
+        "bind",
+        "threshold",
+        "allow_root",
+        "notes",
+        "transpose",
+        "polyphony_min",
+        "polyphony_max",
+        "velocity_multiplier",
+        "type",
+        "notes_per_bar",
+        "notes_per_bar_bind"
+      ],
+      "title": "BowedDroneConfig",
+      "type": "object"
+    },
+    "ChainModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`ChainModule`.\n\n:param modules: a chain of module configurations.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "modules": {
+          "additionalProperties": true,
+          "title": "Modules",
+          "type": "object"
+        },
+        "type": { "const": "chain", "title": "Type", "type": "string" }
+      },
+      "required": ["modules", "type"],
+      "title": "ChainModuleConfig",
+      "type": "object"
+    },
+    "ConditionConfig": {
+      "description": "Config for a :class:`LOERICCondition`.\n\n:param attribute: element attribute to test.\n:param operation: comparison operator string.\n:param value: value to compare against.",
+      "properties": {
+        "attribute": { "title": "Attribute", "type": "string" },
+        "operation": { "title": "Operation", "type": "string" },
+        "value": { "title": "Value" }
+      },
+      "required": ["attribute", "operation", "value"],
+      "title": "ConditionConfig",
+      "type": "object"
+    },
+    "ConditionalModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`ConditionalModule`.\n\n:param condition: the condition to evaluate.\n:param module: a single-key dict mapping a module name to its config.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "condition": { "$ref": "#/$defs/ConditionConfig" },
+        "module": {
+          "additionalProperties": true,
+          "title": "Module",
+          "type": "object"
+        },
+        "type": { "const": "conditional", "title": "Type", "type": "string" }
+      },
+      "required": ["condition", "module", "type"],
+      "title": "ConditionalModuleConfig",
+      "type": "object"
+    },
+    "DataOutputConfig": {
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "data", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "path": { "title": "Path", "type": "string" },
+        "format": { "title": "Format", "type": "string" },
+        "controls": {
+          "items": { "type": "string" },
+          "title": "Controls",
+          "type": "array"
+        }
+      },
+      "required": ["type", "active", "path", "format", "controls"],
+      "title": "DataOutputConfig",
+      "type": "object"
+    },
+    "DelayBufferModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`DelayBufferModule`.\n\n:param size: lookahead buffer size in eighths. Must be positive.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "size": { "title": "Size", "type": "number" },
+        "type": { "const": "delay_buffer", "title": "Type", "type": "string" }
+      },
+      "required": ["size", "type"],
+      "title": "DelayBufferModuleConfig",
+      "type": "object"
+    },
+    "DroneModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`DroneModule`.\n\n:param data: mapping of drone names to their individual configs.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "type": { "const": "drones", "title": "Type", "type": "string" },
+        "data": {
+          "additionalProperties": {
+            "discriminator": {
+              "mapping": {
+                "bowed": "#/$defs/BowedDroneConfig",
+                "free": "#/$defs/FreeDroneConfig",
+                "pedal": "#/$defs/PedalDroneConfig"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              { "$ref": "#/$defs/BowedDroneConfig" },
+              { "$ref": "#/$defs/FreeDroneConfig" },
+              { "$ref": "#/$defs/PedalDroneConfig" }
+            ]
+          },
+          "title": "Data",
+          "type": "object"
+        }
+      },
+      "required": ["type", "data"],
+      "title": "DroneModuleConfig",
+      "type": "object"
+    },
+    "DynamicsModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`DynamicsModule`.\n\n:param bind: contour name controlling velocity.\n:param pattern: contour name for the velocity pattern multiplier.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "bind": { "title": "Bind", "type": "string" },
+        "pattern": { "default": null, "title": "Pattern", "type": "string" },
+        "type": { "const": "dynamics", "title": "Type", "type": "string" }
+      },
+      "required": ["bind", "type"],
+      "title": "DynamicsModuleConfig",
+      "type": "object"
+    },
+    "FreeDroneConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "active": { "title": "Active", "type": "boolean" },
+        "bind": { "title": "Bind", "type": "string" },
+        "threshold": { "title": "Threshold", "type": "number" },
+        "probability_scale": {
+          "default": true,
+          "title": "Probability Scale",
+          "type": "boolean"
+        },
+        "allow_root": { "title": "Allow Root", "type": "boolean" },
+        "notes": {
+          "items": { "type": "number" },
+          "title": "Notes",
+          "type": "array"
+        },
+        "transpose": { "title": "Transpose", "type": "number" },
+        "harmony_weight": {
+          "default": 0.75,
+          "title": "Harmony Weight",
+          "type": "number"
+        },
+        "reference_weight": {
+          "default": 0.25,
+          "title": "Reference Weight",
+          "type": "number"
+        },
+        "polyphony_min": { "title": "Polyphony Min", "type": "integer" },
+        "polyphony_max": { "title": "Polyphony Max", "type": "integer" },
+        "velocity_bind": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Velocity Bind"
+        },
+        "velocity_multiplier": {
+          "title": "Velocity Multiplier",
+          "type": "number"
+        },
+        "type": { "const": "free", "title": "Type", "type": "string" },
+        "sync_with_notes": {
+          "default": false,
+          "title": "Sync With Notes",
+          "type": "boolean"
+        },
+        "notes_per_bar": {
+          "items": { "type": "integer" },
+          "title": "Notes Per Bar",
+          "type": "array"
+        },
+        "notes_per_bar_bind": {
+          "title": "Notes Per Bar Bind",
+          "type": "string"
+        },
+        "ascending": { "title": "Ascending", "type": "boolean" },
+        "delay_bind": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Delay Bind"
+        },
+        "delay_range": {
+          "anyOf": [{ "type": "number" }, { "type": "null" }],
+          "default": null,
+          "title": "Delay Range"
+        }
+      },
+      "required": [
+        "active",
+        "bind",
+        "threshold",
+        "allow_root",
+        "notes",
+        "transpose",
+        "polyphony_min",
+        "polyphony_max",
+        "velocity_multiplier",
+        "type",
+        "notes_per_bar",
+        "notes_per_bar_bind",
+        "ascending"
+      ],
+      "title": "FreeDroneConfig",
+      "type": "object"
+    },
+    "GrooverConfig": {
+      "description": "Configuration that maps pipeline stage names to config model instances.",
+      "properties": {
+        "modules": {
+          "additionalProperties": {
+            "discriminator": {
+              "mapping": {
+                "chain": "#/$defs/ChainModuleConfig",
+                "conditional": "#/$defs/ConditionalModuleConfig",
+                "delay_buffer": "#/$defs/DelayBufferModuleConfig",
+                "drones": "#/$defs/DroneModuleConfig",
+                "dynamics": "#/$defs/DynamicsModuleConfig",
+                "harmony": "#/$defs/HarmonyModuleConfig",
+                "history_buffer": "#/$defs/HistoryBufferModuleConfig",
+                "legato": "#/$defs/LegatoModuleConfig",
+                "logger": "#/$defs/LoggerModuleConfig",
+                "ornament": "#/$defs/OrnamentModuleConfig",
+                "swing": "#/$defs/SwingModuleConfig",
+                "tagger": "#/$defs/TaggerModuleConfig",
+                "timing": "#/$defs/TimingModuleConfig",
+                "transpose": "#/$defs/TransposeModuleConfig"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              { "$ref": "#/$defs/HarmonyModuleConfig" },
+              { "$ref": "#/$defs/SwingModuleConfig" },
+              { "$ref": "#/$defs/LegatoModuleConfig" },
+              { "$ref": "#/$defs/DynamicsModuleConfig" },
+              { "$ref": "#/$defs/TimingModuleConfig" },
+              { "$ref": "#/$defs/TransposeModuleConfig" },
+              { "$ref": "#/$defs/DelayBufferModuleConfig" },
+              { "$ref": "#/$defs/HistoryBufferModuleConfig" },
+              { "$ref": "#/$defs/OrnamentModuleConfig" },
+              { "$ref": "#/$defs/DroneModuleConfig" },
+              { "$ref": "#/$defs/ConditionalModuleConfig" },
+              { "$ref": "#/$defs/LoggerModuleConfig" },
+              { "$ref": "#/$defs/ChainModuleConfig" },
+              { "$ref": "#/$defs/TaggerModuleConfig" }
+            ]
+          },
+          "title": "Modules",
+          "type": "object"
+        }
+      },
+      "required": ["modules"],
+      "title": "GrooverConfig",
+      "type": "object"
+    },
+    "HarmonyModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`HarmonyModule`.\n\n:param chord_score: 12-element list scoring chord roots.\n:param chords_per_bar: how many chords to generate per bar.\n:param weights: mapping of mode names to 12-element weight arrays.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "chord_score": {
+          "items": { "type": "number" },
+          "title": "Chord Score",
+          "type": "array"
+        },
+        "chords_per_bar": {
+          "anyOf": [{ "type": "number" }, { "type": "null" }],
+          "title": "Chords Per Bar"
+        },
+        "weights": {
+          "additionalProperties": {
+            "items": { "type": "number" },
+            "type": "array"
+          },
+          "title": "Weights",
+          "type": "object"
+        },
+        "type": { "const": "harmony", "title": "Type", "type": "string" }
+      },
+      "required": ["chord_score", "chords_per_bar", "weights", "type"],
+      "title": "HarmonyModuleConfig",
+      "type": "object"
+    },
+    "HistoryBufferModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`HistoryBufferModule`.\n\n:param size: lookback buffer size in eighths. Must be positive.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "size": { "title": "Size", "type": "number" },
+        "type": { "const": "history_buffer", "title": "Type", "type": "string" }
+      },
+      "required": ["size", "type"],
+      "title": "HistoryBufferModuleConfig",
+      "type": "object"
+    },
+    "LegatoModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`LegatoModule`.\n\n:param bind: contour name controlling legato amount.\n:param min: minimum legato multiplier.\n:param max: maximum legato multiplier.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "bind": { "title": "Bind", "type": "string" },
+        "min": { "title": "Min", "type": "number" },
+        "max": { "title": "Max", "type": "number" },
+        "type": { "const": "legato", "title": "Type", "type": "string" }
+      },
+      "required": ["bind", "min", "max", "type"],
+      "title": "LegatoModuleConfig",
+      "type": "object"
+    },
+    "LoggerModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`LoggerModule`.\n\n:param notes: log note events.\n:param chords: log chord events.\n:param time_signatures: log time signature events.\n:param key_signatures: log key signature events.\n:param tempos: log tempo events.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "notes": { "default": false, "title": "Notes", "type": "boolean" },
+        "chords": { "default": false, "title": "Chords", "type": "boolean" },
+        "time_signatures": {
+          "default": false,
+          "title": "Time Signatures",
+          "type": "boolean"
+        },
+        "key_signatures": {
+          "default": false,
+          "title": "Key Signatures",
+          "type": "boolean"
+        },
+        "tempos": { "default": false, "title": "Tempos", "type": "boolean" },
+        "type": { "const": "logger", "title": "Type", "type": "string" }
+      },
+      "required": ["type"],
+      "title": "LoggerModuleConfig",
+      "type": "object"
+    },
+    "MIDIContourAnalyserConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`MIDIContourAnalyser`.\n\n:param controls: mapping of control names to MIDI CC numbers (0\u2013127).",
+      "properties": {
+        "type": { "const": "midi_cc", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "controls": {
+          "additionalProperties": { "type": "integer" },
+          "title": "Controls",
+          "type": "object"
+        }
+      },
+      "required": ["type", "active", "controls"],
+      "title": "MIDIContourAnalyserConfig",
+      "type": "object"
+    },
+    "MIDIInputConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "midi", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "analysers": {
+          "additionalProperties": {
+            "discriminator": {
+              "mapping": {
+                "better_rms": "#/$defs/BetterRMSConfig",
+                "midi_cc": "#/$defs/MIDIContourAnalyserConfig",
+                "midi_logger": "#/$defs/MIDILoggerConfig",
+                "osc_cc": "#/$defs/OSCContourAnalyserConfig",
+                "osc_logger": "#/$defs/OSCLoggerConfig",
+                "rms": "#/$defs/RMSConfig",
+                "tempo": "#/$defs/TempoAnalyserConfig"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              { "$ref": "#/$defs/RMSConfig" },
+              { "$ref": "#/$defs/BetterRMSConfig" },
+              { "$ref": "#/$defs/TempoAnalyserConfig" },
+              { "$ref": "#/$defs/MIDIContourAnalyserConfig" },
+              { "$ref": "#/$defs/MIDILoggerConfig" },
+              { "$ref": "#/$defs/OSCContourAnalyserConfig" },
+              { "$ref": "#/$defs/OSCLoggerConfig" }
+            ]
+          },
+          "title": "Analysers",
+          "type": "object"
+        },
+        "port": { "title": "Port", "type": "string" }
+      },
+      "required": ["type", "active", "analysers", "port"],
+      "title": "MIDIInputConfig",
+      "type": "object"
+    },
+    "MIDILoggerConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`MIDILogger`. No additional fields.",
+      "properties": {
+        "type": { "const": "midi_logger", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" }
+      },
+      "required": ["type", "active"],
+      "title": "MIDILoggerConfig",
+      "type": "object"
+    },
+    "MIDIOutputConfig": {
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "midi", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "port": { "title": "Port", "type": "string" },
+        "send_cc": { "title": "Send Cc", "type": "boolean" },
+        "send_messages": { "title": "Send Messages", "type": "boolean" },
+        "velocity_range": {
+          "items": { "type": "integer" },
+          "title": "Velocity Range",
+          "type": "array"
+        },
+        "pitchbend_range": { "title": "Pitchbend Range", "type": "integer" },
+        "controls": {
+          "additionalProperties": { "type": "integer" },
+          "title": "Controls",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "active",
+        "port",
+        "send_cc",
+        "send_messages",
+        "velocity_range",
+        "pitchbend_range",
+        "controls"
+      ],
+      "title": "MIDIOutputConfig",
+      "type": "object"
+    },
+    "MapperConfig": {
+      "properties": {
+        "sources": {
+          "items": { "type": "string" },
+          "title": "Sources",
+          "type": "array"
+        },
+        "targets": {
+          "items": { "type": "string" },
+          "title": "Targets",
+          "type": "array"
+        },
+        "rules": {
+          "items": { "type": "string" },
+          "title": "Rules",
+          "type": "array"
+        }
+      },
+      "required": ["sources", "targets", "rules"],
+      "title": "MapperConfig",
+      "type": "object"
+    },
+    "OSCContourAnalyserConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`OSCContourAnalyser`.\n\n:param controls: mapping of control names to OSC addresses.",
+      "properties": {
+        "type": { "const": "osc_cc", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "controls": {
+          "additionalProperties": { "type": "string" },
+          "title": "Controls",
+          "type": "object"
+        }
+      },
+      "required": ["type", "active", "controls"],
+      "title": "OSCContourAnalyserConfig",
+      "type": "object"
+    },
+    "OSCInputConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "osc", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "analysers": {
+          "additionalProperties": {
+            "discriminator": {
+              "mapping": {
+                "better_rms": "#/$defs/BetterRMSConfig",
+                "midi_cc": "#/$defs/MIDIContourAnalyserConfig",
+                "midi_logger": "#/$defs/MIDILoggerConfig",
+                "osc_cc": "#/$defs/OSCContourAnalyserConfig",
+                "osc_logger": "#/$defs/OSCLoggerConfig",
+                "rms": "#/$defs/RMSConfig",
+                "tempo": "#/$defs/TempoAnalyserConfig"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              { "$ref": "#/$defs/RMSConfig" },
+              { "$ref": "#/$defs/BetterRMSConfig" },
+              { "$ref": "#/$defs/TempoAnalyserConfig" },
+              { "$ref": "#/$defs/MIDIContourAnalyserConfig" },
+              { "$ref": "#/$defs/MIDILoggerConfig" },
+              { "$ref": "#/$defs/OSCContourAnalyserConfig" },
+              { "$ref": "#/$defs/OSCLoggerConfig" }
+            ]
+          },
+          "title": "Analysers",
+          "type": "object"
+        },
+        "server": { "title": "Server", "type": "string" },
+        "port": { "title": "Port", "type": "integer" }
+      },
+      "required": ["type", "active", "analysers", "server", "port"],
+      "title": "OSCInputConfig",
+      "type": "object"
+    },
+    "OSCLoggerConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`OSCLogger`. No additional fields.",
+      "properties": {
+        "type": { "const": "osc_logger", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" }
+      },
+      "required": ["type", "active"],
+      "title": "OSCLoggerConfig",
+      "type": "object"
+    },
+    "OSCOutputConfig": {
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "osc", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "server": { "title": "Server", "type": "string" },
+        "port": { "title": "Port", "type": "integer" },
+        "controls": {
+          "additionalProperties": { "type": "string" },
+          "title": "Controls",
+          "type": "object"
+        },
+        "send_cc": { "title": "Send Cc", "type": "boolean" },
+        "send_messages": { "title": "Send Messages", "type": "boolean" },
+        "control_messages_per_second": {
+          "title": "Control Messages Per Second",
+          "type": "number"
+        }
+      },
+      "required": [
+        "type",
+        "active",
+        "server",
+        "port",
+        "controls",
+        "send_cc",
+        "send_messages",
+        "control_messages_per_second"
+      ],
+      "title": "OSCOutputConfig",
+      "type": "object"
+    },
+    "OrnamentModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`OrnamentModule`.\n\n:param bind: contour name controlling ornament probability.\n:param data: mapping of ornament names to their configs.\n:param whitelist: if set, only listed ornaments are active.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "bind": { "title": "Bind", "type": "string" },
+        "data": {
+          "additionalProperties": true,
+          "default": {},
+          "title": "Data",
+          "type": "object"
+        },
+        "whitelist": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Whitelist"
+        },
+        "type": { "const": "ornament", "title": "Type", "type": "string" }
+      },
+      "required": ["bind", "type"],
+      "title": "OrnamentModuleConfig",
+      "type": "object"
+    },
+    "PedalDroneConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "active": { "title": "Active", "type": "boolean" },
+        "bind": { "title": "Bind", "type": "string" },
+        "threshold": { "title": "Threshold", "type": "number" },
+        "probability_scale": {
+          "default": true,
+          "title": "Probability Scale",
+          "type": "boolean"
+        },
+        "allow_root": { "title": "Allow Root", "type": "boolean" },
+        "notes": {
+          "items": { "type": "number" },
+          "title": "Notes",
+          "type": "array"
+        },
+        "transpose": { "title": "Transpose", "type": "number" },
+        "harmony_weight": {
+          "default": 0.75,
+          "title": "Harmony Weight",
+          "type": "number"
+        },
+        "reference_weight": {
+          "default": 0.25,
+          "title": "Reference Weight",
+          "type": "number"
+        },
+        "polyphony_min": { "title": "Polyphony Min", "type": "integer" },
+        "polyphony_max": { "title": "Polyphony Max", "type": "integer" },
+        "velocity_bind": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Velocity Bind"
+        },
+        "velocity_multiplier": {
+          "title": "Velocity Multiplier",
+          "type": "number"
+        },
+        "type": { "const": "pedal", "title": "Type", "type": "string" }
+      },
+      "required": [
+        "active",
+        "bind",
+        "threshold",
+        "allow_root",
+        "notes",
+        "transpose",
+        "polyphony_min",
+        "polyphony_max",
+        "velocity_multiplier",
+        "type"
+      ],
+      "title": "PedalDroneConfig",
+      "type": "object"
+    },
+    "PlayerConfig": {
+      "properties": {
+        "input": {
+          "additionalProperties": {
+            "discriminator": {
+              "mapping": {
+                "audio": "#/$defs/AudioInputConfig",
+                "midi": "#/$defs/MIDIInputConfig",
+                "osc": "#/$defs/OSCInputConfig"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              { "$ref": "#/$defs/AudioInputConfig" },
+              { "$ref": "#/$defs/MIDIInputConfig" },
+              { "$ref": "#/$defs/OSCInputConfig" }
+            ]
+          },
+          "title": "Input",
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": {
+            "discriminator": {
+              "mapping": {
+                "data": "#/$defs/DataOutputConfig",
+                "midi": "#/$defs/MIDIOutputConfig",
+                "osc": "#/$defs/OSCOutputConfig",
+                "soundfont": "#/$defs/SoundfontOutputConfig",
+                "visual": "#/$defs/VisualOutputConfig"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              { "$ref": "#/$defs/MIDIOutputConfig" },
+              { "$ref": "#/$defs/OSCOutputConfig" },
+              { "$ref": "#/$defs/DataOutputConfig" },
+              { "$ref": "#/$defs/SoundfontOutputConfig" },
+              { "$ref": "#/$defs/VisualOutputConfig" }
+            ]
+          },
+          "title": "Output",
+          "type": "object"
+        }
+      },
+      "required": ["input", "output"],
+      "title": "PlayerConfig",
+      "type": "object"
+    },
+    "RMSConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`RMS`.\n\n:param controls: list of control names this analyser publishes values to.\n:param responsiveness: exponential smoothing factor in [0, 1].",
+      "properties": {
+        "type": { "const": "rms", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "updates_per_second": {
+          "title": "Updates Per Second",
+          "type": "number"
+        },
+        "windows_per_second": {
+          "title": "Windows Per Second",
+          "type": "number"
+        },
+        "samplerate": {
+          "anyOf": [{ "type": "integer" }, { "type": "null" }],
+          "default": 44100,
+          "title": "Samplerate"
+        },
+        "controls": {
+          "items": { "type": "string" },
+          "title": "Controls",
+          "type": "array"
+        },
+        "responsiveness": { "title": "Responsiveness", "type": "number" }
+      },
+      "required": [
+        "type",
+        "active",
+        "updates_per_second",
+        "windows_per_second",
+        "controls",
+        "responsiveness"
+      ],
+      "title": "RMSConfig",
+      "type": "object"
+    },
+    "SoundfontOutputConfig": {
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "soundfont", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "port": { "default": null, "title": "Port", "type": "null" },
+        "send_cc": { "title": "Send Cc", "type": "boolean" },
+        "send_messages": { "title": "Send Messages", "type": "boolean" },
+        "velocity_range": {
+          "items": { "type": "integer" },
+          "title": "Velocity Range",
+          "type": "array"
+        },
+        "pitchbend_range": { "title": "Pitchbend Range", "type": "integer" },
+        "controls": {
+          "additionalProperties": { "type": "integer" },
+          "title": "Controls",
+          "type": "object"
+        },
+        "path": { "title": "Path", "type": "string" },
+        "program": { "title": "Program", "type": "integer" },
+        "gain": { "title": "Gain", "type": "number" },
+        "device": { "title": "Device", "type": "string" },
+        "volume": { "title": "Volume", "type": "number" },
+        "samplerate": { "title": "Samplerate", "type": "integer" },
+        "channels": { "title": "Channels", "type": "integer" }
+      },
+      "required": [
+        "type",
+        "active",
+        "send_cc",
+        "send_messages",
+        "velocity_range",
+        "pitchbend_range",
+        "controls",
+        "path",
+        "program",
+        "gain",
+        "device",
+        "volume",
+        "samplerate",
+        "channels"
+      ],
+      "title": "SoundfontOutputConfig",
+      "type": "object"
+    },
+    "SwingModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`SwingModule`.\n\n:param bind: contour name controlling swing ratio.\n:param min: minimum swing ratio.\n:param max: maximum swing ratio.\n:param locations: beat positions (in eighths) where swing is applied.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "bind": { "title": "Bind", "type": "string" },
+        "min": { "default": 1.0, "title": "Min", "type": "number" },
+        "max": { "default": 1.0, "title": "Max", "type": "number" },
+        "locations": {
+          "default": [0],
+          "items": { "type": "integer" },
+          "title": "Locations",
+          "type": "array"
+        },
+        "type": { "const": "swing", "title": "Type", "type": "string" }
+      },
+      "required": ["bind", "type"],
+      "title": "SwingModuleConfig",
+      "type": "object"
+    },
+    "TaggerModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`TaggerModule`. No additional fields beyond the base.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "type": { "const": "tagger", "title": "Type", "type": "string" }
+      },
+      "required": ["type"],
+      "title": "TaggerModuleConfig",
+      "type": "object"
+    },
+    "TempoAnalyserConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`BetterRMS`.\n\n:param responsiveness: exponential smoothing factor in [0, 1].\n(fraction of latest delta).",
+      "properties": {
+        "type": { "const": "tempo", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "updates_per_second": {
+          "title": "Updates Per Second",
+          "type": "number"
+        },
+        "windows_per_second": {
+          "title": "Windows Per Second",
+          "type": "number"
+        },
+        "samplerate": {
+          "anyOf": [{ "type": "integer" }, { "type": "null" }],
+          "default": 44100,
+          "title": "Samplerate"
+        },
+        "responsiveness": { "title": "Responsiveness", "type": "number" }
+      },
+      "required": [
+        "type",
+        "active",
+        "updates_per_second",
+        "windows_per_second",
+        "responsiveness"
+      ],
+      "title": "TempoAnalyserConfig",
+      "type": "object"
+    },
+    "TimingModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`TimingModule`.\n\n:param bind: contour name controlling tempo variation.\n:param pattern: contour name for the timing pattern multiplier.\n:param qpm_amount: maximum QPM deviation.\n:param only_increase: if ``True``, tempo can only be increased.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "bind": { "title": "Bind", "type": "string" },
+        "pattern": { "title": "Pattern", "type": "string" },
+        "qpm_amount": { "title": "Qpm Amount", "type": "number" },
+        "only_increase": {
+          "default": false,
+          "title": "Only Increase",
+          "type": "boolean"
+        },
+        "type": { "const": "timing", "title": "Type", "type": "string" }
+      },
+      "required": ["bind", "pattern", "qpm_amount", "type"],
+      "title": "TimingModuleConfig",
+      "type": "object"
+    },
+    "TransposeModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`TransposeModule`.\n\n:param steps: number of semitones to transpose (may be fractional).",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "steps": { "default": 0.0, "title": "Steps", "type": "number" },
+        "type": { "const": "transpose", "title": "Type", "type": "string" }
+      },
+      "required": ["type"],
+      "title": "TransposeModuleConfig",
+      "type": "object"
+    },
+    "VisualOutputConfig": {
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "visual", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "width": { "title": "Width", "type": "integer" },
+        "height": { "title": "Height", "type": "integer" },
+        "window_size": { "title": "Window Size", "type": "integer" },
+        "fps": { "title": "Fps", "type": "integer" },
+        "controls": {
+          "items": { "type": "string" },
+          "title": "Controls",
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "active",
+        "width",
+        "height",
+        "window_size",
+        "fps",
+        "controls"
+      ],
+      "title": "VisualOutputConfig",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "groover": { "$ref": "#/$defs/GrooverConfig" },
+    "contours": {
+      "additionalProperties": true,
+      "title": "Contours",
+      "type": "object"
+    },
+    "player": { "$ref": "#/$defs/PlayerConfig" },
+    "mapper": { "$ref": "#/$defs/MapperConfig" }
+  },
+  "required": ["groover", "contours", "player", "mapper"],
+  "title": "LOERICConfig",
+  "type": "object"
+}

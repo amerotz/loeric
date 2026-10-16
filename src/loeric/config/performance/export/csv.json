@@ -1,0 +1,20 @@
+{
+  "player": {
+    "output": {
+      "data#file": {
+        "active": true,
+        "path": "loeric_export.csv",
+        "format": "csv",
+        "controls": [
+          "velocity",
+          "drone",
+          "notes_per_bar",
+          "tempo",
+          "legato",
+          "ornament",
+          "swing"
+        ]
+      }
+    }
+  }
+}

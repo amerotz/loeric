@@ -1,0 +1,6 @@
+{
+  "typeCheckingMode": "basic",
+  "reportUnusedFunction": true,
+  "reportUnusedVariable": true,
+  "reportUnusedImport": true
+}

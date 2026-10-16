@@ -1,0 +1,13 @@
+{
+  "contours": {
+    "tempo_pattern": {
+      "pattern": {
+        "mean": [1.14, 0.85, 1.14],
+        "std": [0.05, 0.05, 0.05],
+        "std_scale": 1,
+        "normalize": true,
+        "period": 0.5
+      }
+    }
+  }
+}

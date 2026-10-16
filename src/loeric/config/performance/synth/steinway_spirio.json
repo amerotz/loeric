@@ -1,0 +1,9 @@
+{
+  "player": {
+    "output": {
+      "midi#main": {
+        "velocity_range": [0, 100]
+      }
+    }
+  }
+}

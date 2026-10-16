@@ -1,0 +1,26 @@
+{
+  "variables": {
+    "var_drone_bind": "drone"
+  },
+  "groover": {
+    "modules": {
+      "dynamics": {
+        "bind": "velocity",
+        "pattern": "velocity_pattern"
+      },
+      "ornament": {
+        "bind": "ornament"
+      },
+      "swing": {
+        "bind": "swing"
+      },
+      "timing": {
+        "bind": "tempo",
+        "pattern": "tempo_pattern"
+      },
+      "legato": {
+        "bind": "legato"
+      }
+    }
+  }
+}

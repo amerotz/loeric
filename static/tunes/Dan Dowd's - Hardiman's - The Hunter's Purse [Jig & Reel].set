@@ -1,0 +1,50 @@
+[
+	{
+		"file": "Dan Dowd's.abc",
+		"repetitions": 3,
+		"config": null,
+		"trim_end_eighths": 0,
+		"qpm": 174
+
+	},
+	{
+		"file": ".dowds_to_hard.abc",
+		"repetitions": 1,
+		"config": null,
+		"trim_end_eighths": 0,
+		"qpm": 174
+
+	},
+	{
+		"file": "Hardiman's Jig [Set Version].abc",
+		"repetitions": 3,
+		"config": null,
+		"trim_end_eighths": 0,
+		"qpm": 174
+
+	},
+	{
+		"file": "The Hunter's Purse [Jig - Set Version].abc",
+		"repetitions": 1,
+		"config": null,
+		"trim_end_eighths": 0,
+		"qpm": 174
+
+	},
+	{
+		"file": ".hunters_purse_jig_to_reel.abc",
+		"repetitions": 1,
+		"config": null,
+		"trim_end_eighths": 0,
+		"qpm": 232
+
+	},
+	{
+		"file": "The Hunter's Purse [Reel].abc",
+		"repetitions": 1,
+		"config": null,
+		"trim_end_eighths": 0,
+		"qpm": 232
+
+	}
+]

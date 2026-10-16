@@ -1,0 +1,77 @@
+{
+  "variables": {
+    "var_drone_threshold": 0.4,
+    "var_notes_per_bar": [3]
+  },
+  "contours": {
+    "drone": {
+      "pattern": {
+        "mean": [1, -1, 1],
+        "std": null,
+        "period": 1,
+        "std_scale": 1,
+        "normalize": false
+      }
+    },
+    "tempo_pattern": {
+      "multiply": {
+        "contours": {
+          "phrase_arch#1": {
+            "accelerando": 0.5,
+            "ritardando": 0.5,
+            "last": 0.2,
+            "turn": 0.3,
+            "power": 2,
+            "phrase_length": 1,
+            "shift": -4,
+            "mode": "ratio"
+          },
+          "phrase_arch#2": {
+            "accelerando": 0.5,
+            "ritardando": 0.5,
+            "last": 0.2,
+            "turn": 0.3,
+            "power": 2,
+            "phrase_length": 4,
+            "shift": -2,
+            "mode": "ratio"
+          }
+        }
+      }
+    },
+    "ornament": {
+      "pattern": {
+        "mean": [0],
+        "std": null,
+        "std_scale": 1,
+        "period": 1,
+        "normalize": false
+      }
+    }
+  },
+  "groover": {
+    "modules": {
+      "dynamics": {
+        "bind": "velocity"
+      },
+      "ornament": {
+        "bind": "ornament"
+      },
+      "swing": {
+        "min": 1,
+        "max": 1,
+        "bind": "swing",
+        "locations": [1, 3, 5]
+      },
+      "timing": {
+        "bind": "tempo"
+      },
+      "legato": {
+        "bind": "legato"
+      }
+    }
+  },
+  "mapper": {
+    "rules": ["1 : %drone", "intensity ~ drone"]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "groover": {
+    "modules": {
+      "timing": {
+        "bind": "$tempo",
+        "qpm_amount": 50
+      }
+    }
+  },
+  "player": {
+    "input": {
+      "midi#main": {
+        "active": true,
+        "port": "Seaboard BLOCK MIDI 1",
+        "analysers": {
+          "midi_cc#vertical": {
+            "active": true,
+            "controls": {
+              "intensity": 74
+            }
+          }
+        }
+      }
+    }
+  },
+  "mapper": {
+    "sources": ["tempo", "intensity"],
+    "targets": [],
+    "rules": ["intensity ~ tempo", "1 : %tempo"]
+  }
+}

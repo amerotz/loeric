@@ -1,0 +1,27 @@
+{
+  "variables": {
+    "var_notes_per_bar": [2],
+    "var_drone_bind": "$drone"
+  },
+  "groover": {
+    "modules": {
+      "drones": {
+        "bypass": false
+      }
+    },
+    "timing": {
+      "only_increase": false,
+      "qpm_amount": 1
+    }
+  },
+  "mapper": {
+    "sources": ["drone", "intensity"],
+    "rules": ["1 : %drone", "intensity ~ drone"]
+  },
+  "tempo_control": {
+    "slow_start_percentage": 0.2,
+    "slow_end_percentage": 0.8,
+    "slow_start_bars": 1,
+    "slow_start": true
+  }
+}

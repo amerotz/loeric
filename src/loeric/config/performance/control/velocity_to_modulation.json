@@ -1,0 +1,22 @@
+{
+  "player": {
+    "input": {},
+    "output": {
+      "midi#main": {
+        "active": true,
+        "port": "Midi Through Port-0",
+        "send_cc": true,
+        "send_messages": true,
+        "pitchbend_range": 2,
+        "controls": {
+          "modulation": 1
+        }
+      }
+    }
+  },
+  "mapper": {
+    "sources": ["velocity"],
+    "targets": ["modulation"],
+    "rules": ["$velocity : modulation"]
+  }
+}

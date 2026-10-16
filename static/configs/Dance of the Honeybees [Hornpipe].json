@@ -1,0 +1,26 @@
+{
+  "variables": {
+    "var_notes_per_bar": [4, 4, 2]
+  },
+  "mapper": {
+    "rules": [
+      "0 : %drone,%swing,%ornament,%legato",
+      "1 : %velocity,%tempo",
+      "intensity ~ tempo,velocity"
+    ]
+  },
+  "player": {
+    "output": {
+      "midi#main": {
+        "velocity_range": [1, 127]
+      }
+    }
+  },
+  "groover": {
+    "modules": {
+      "timing": {
+        "qpm_amount": 20
+      }
+    }
+  }
+}

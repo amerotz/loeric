@@ -1,0 +1,62 @@
+{
+  "Dan Dowd's": {
+    "configs": ["dan_dowds_no_errors.json"],
+    "default": "Dan Dowd's.json"
+  },
+  "Dance of the Honeybees [Hornpipe]": {
+    "configs": ["Dance of the Honeybees [Hornpipe].json"],
+    "default": ""
+  },
+  "Dance of the Honeybees [Waltz]": {
+    "configs": ["Dance of the Honeybees [Waltz].json"],
+    "default": ""
+  },
+  "Emily's Waltz [Set Version]": {
+    "configs": ["Emily's Waltz [Set Version].json"],
+    "default": ""
+  },
+  "Handsome Young Maidens [Set Version]": {
+    "configs": ["Handsome Young Maidens [Set Version].json"],
+    "default": ""
+  },
+  "Hardiman's Jig": {
+    "configs": ["Hardiman's Jig [Old Version].json"],
+    "default": ""
+  },
+  "Hardiman's Jig [Set Version]": {
+    "configs": ["Hardiman's Jig [Set Version].json"],
+    "default": ""
+  },
+  "Sound Man, Éamonn": {
+    "configs": ["Sound Man, Éamonn [TJ].json"],
+    "default": ""
+  },
+  "Swedish Scottische": {
+    "configs": ["Swedish Scottische [TJ].json"],
+    "default": ""
+  },
+  "The Home Ruler [Set Version]": {
+    "configs": ["The Home Ruler [Set Version].json"],
+    "default": ""
+  },
+  "The Hunter's Purse [Jig - Set Version]": {
+    "configs": ["The Hunter's Purse [Jig - Set Version].json"],
+    "default": ""
+  },
+  "The Hunter's Purse [Jig]": {
+    "configs": ["The Hunter's Purse [Jig].json"],
+    "default": ""
+  },
+  "The Hunter's Purse [Reel]": {
+    "configs": ["The Hunter's Purse [Reel].json"],
+    "default": ""
+  },
+  "The Sailor's Cravat": {
+    "configs": ["The Sailor's Cravat [TJ].json"],
+    "default": ""
+  },
+  "Waltz Clog": {
+    "configs": ["Waltz Clog [TJ].json"],
+    "default": ""
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "groover": {
+    "modules": {
+      "drones": {
+        "bypass": true
+      }
+    }
+  }
+}

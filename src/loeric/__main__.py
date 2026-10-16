@@ -1,218 +1,57 @@
+# This file is part of LOERIC.
+#
+# LOERIC is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# LOERIC is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
+
 import argparse
-import mido
-import threading
-import time
-import os
-import faulthandler
+import importlib.resources as ir
+import json
+import logging
+
+import loeric
+import loeric.config as lc
+import loeric.core.contour_manager as cnt
+import loeric.core.tune as tu
+import loeric.core.utils as lu
+
+logging.basicConfig(
+    level=logging.INFO,
+    datefmt="%H:%M:%S",
+    format=("[%(levelname)s] " "\033[96m%(name)s\033[0m " "%(message)s"),
+)
+
+logging.addLevelName(logging.DEBUG, "\033[90mDEBG\033[0m")
+logging.addLevelName(logging.INFO, "\033[94mINFO\033[0m")
+logging.addLevelName(logging.WARNING, "\033[93mWARN\033[0m")
+logging.addLevelName(logging.ERROR, "\033[91mERRO\033[0m")
 
 
-from . import tune as tu
-from . import groover as gr
-from . import player as pl
-from . import loeric_utils as lu
-
-
-faulthandler.enable()
-# bad code goes here
-
-received_start = threading.Semaphore(value=0)
-done_playing = threading.Event()
-
-
-# play midi file
-def play(
-    groover: gr.Groover,
-    tune: tu.Tune,
-    out: mido.ports.BaseOutput,
-    sync_port_out: mido.ports.BaseOutput,
-    **kwargs,
-) -> None:
-    global received_start
-    try:
-        """
-        Play the given tune with the given groover.
-
-        :param groover: the groover object
-        :param tune: the tune object
-        :param sync_port_out: the MIDI port for synchronization
-        :param kwargs: the performance arguments
-        """
-        # create player
-        player = pl.Player(
-            tempo=groover.tempo,
-            key_signature=tune.key_signature,
-            time_signature=tune.time_signature,
-            save=kwargs["save"],
-            verbose=kwargs["verbose"],
-            midi_out=out,
-        )
-
-        # wait for start
-        if kwargs["sync"]:
-            received_start.acquire()
-
-        player.init_playback()
-
-        # repeat as specified
-        # iterate over messages
-        while True:
-            if groover.stopped.is_set():
-                player.reset()
-                with groover.playback_resumed:
-                    groover.playback_resumed.wait()
-                player.init_playback()
-            message = groover.next_event()
-            if message is None:
-                break
-
-            if message.type == "sysex":
-                if kwargs["verbose"] > 0:
-                    print(f"[INFO]\tRepetition {message.data[0]+1}/{kwargs['repeat']}")
-                groover._offset = 0
-                groover._swing_offset = 0
-                continue
-            # perform notes
-            elif lu.is_note(message):
-                # make the groover play the messages
-                new_messages = groover.perform(message)
-            # keep meta messages intact
-            else:
-                if message.type == "songpos":
-                    if sync_port_out is not None:
-                        sync_port_out.send(message)
-                        if kwargs["verbose"] > 0:
-                            print(
-                                f"[INFO]\t{groover.loeric_id} SENT {message.pos} ({time.time()})"
-                            )
-                elif message.type == "key_signature" and kwargs["force_key"] is None:
-                    if kwargs["verbose"] > 0:
-                        print(f"[INFO]\tChanging key. {message}")
-                    groover._tune.set_key_signature(message)
-                new_messages = groover.perform(message)
-            # play
-            player.play(new_messages)
-
-        # play an end note
-        if groover.do_end_note:
-            groover.reset_contours()
-            groover.advance_contours()
-            player.play(groover.get_end_notes())
-
-        if kwargs["save"]:
-            name = os.path.splitext(os.path.basename(kwargs["source"]))[0]
-            if kwargs["output_dir"] is None:
-                dirname = os.path.dirname(kwargs["source"])
-            else:
-                if not os.path.isdir(kwargs["output_dir"]):
-                    os.makedirs(kwargs["output_dir"])
-                dirname = kwargs["output_dir"]
-
-            filename = kwargs["filename"]
-            if filename is None:
-                filename = f"generated_{name}_{kwargs['seed']}_{groover.loeric_id}.mid"
-            if kwargs["verbose"] > 0:
-                print(f"[INFO]\tSaving to {dirname}/{filename}.")
-            player.save(f"{dirname}/{filename}")
-
-    except Exception as e:
-        raise e
-    finally:
-        # stop sync thread
-        done_playing.set()
-        if kwargs["verbose"] > 0:
-            print("[INFO]\tPlayer thread terminated.")
-
-
-def sync_thread(
-    groover: gr.Groover, sync_port_in: mido.ports.BaseInput, out: mido.ports.BaseOutput
-) -> None:
-    """
-    Handle MIDI start, stop, songpos and tempo messages.
-    """
-    while not done_playing.is_set():
-        msg = sync_port_in.receive(block=True)
-        if msg.type == "sysex" and msg.data[0] == 69:
-            tempo = sum(msg.data[1:])
-            groover.set_tempo(tempo)
-            print(f"Received SET TEMPO {tempo}.")
-        elif msg.type == "reset":
-            groover.reset_clock()
-            print(f"Received RESET.")
-        elif msg.type == "clock":
-            groover.set_clock()
-            print(f"Received CLOCK.")
-        elif msg.type == "songpos":
-            print(f"Received JUMP {msg.pos}.")
-            if groover.stopped.is_set():
-                groover.jump_to_pos(msg.pos)
-            else:
-                print(f"Ignoring JUMP because playback is active.")
-        elif msg.type == "start":
-            received_start.release(n=2)
-            print("Received START.")
-        elif msg.type == "stop":
-            groover.stopped.set()
-            print("Received STOP.")
-        elif msg.type == "continue":
-            groover.stopped.clear()
-            with groover.playback_resumed:
-                groover.playback_resumed.notify_all()
-            print("Received CONTINUE.")
-
-    print("Sync thread terminated.")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def main():
-    global received_start, done_playing
-    # args
+
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--list-ports",
-        help="list available input and output MIDI ports and exit.",
-        action="store_true",
-    )
     parser.add_argument("source", help="the midi file to play.", nargs="?", default="")
     parser.add_argument(
-        "-n",
-        "--name",
-        help="the name of this LOERIC instance.",
-        type=str,
-        default=None,
-    )
-    parser.add_argument(
-        "-ic",
-        "--intensity-control",
-        help="the MIDI control signal number to use as intensity control.",
-        type=int,
-        default=10,
-    )
-    parser.add_argument(
-        "-hic",
-        "--human-impact-control",
-        help="the MIDI control signal number to use as human impact control.",
-        type=int,
-        default=11,
-    )
-    parser.add_argument(
-        "-hi",
-        "--human-impact",
-        help="the initial percentage of human impact over the performance (0: only generated, 1: only human).",
+        "-qpm",
+        help="the QPM for the tune",
         type=float,
-        default=0,
+        default=120.0,
     )
     parser.add_argument(
-        "-mc",
-        "--midi-channel",
-        help="the output MIDI channel for the performance.",
-        type=int,
-        default=1,
-    )
-    parser.add_argument(
-        "-t",
-        "--transpose",
-        help="the number of semitones to transpose the tune of",
-        type=int,
-        default=0,
+        "-j", "--cores", help="the number of cores to dedicate", type=int, default=None
     )
     parser.add_argument(
         "-r",
@@ -222,325 +61,76 @@ def main():
         default=1,
     )
     parser.add_argument(
-        "-bpm",
-        help="the tempo of the performance. If None, defaults to the original file's tempo.",
-        type=int,
-        default=None,
-    )
-    parser.add_argument(
-        "--seed",
-        help="Random seed for the performance.",
-        type=int,
-        default=None,
-    )
-    parser.add_argument(
-        "--save",
-        help="whether or not to export the performance. Playback will be disabled.",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--no-prompt",
-        help="whether or not to wait for user input before starting.",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--sync",
-        help="whether or not to wait for a MIDI start message.",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--output-dir",
-        help="the output directory for generated performances. Defaults to the tune's directory.",
-        type=str,
-        default=None,
-    )
-    parser.add_argument(
-        "--filename",
-        help="the output filename for the generated performance.",
-        type=str,
-        default=None,
-    )
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    parser.add_argument(
         "--config",
-        help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
+        help="the path to a configuration file.",
         type=str,
-        default=f"{dir_path}/loeric_config/performance/config.json",
+        default=ir.files("loeric.config").joinpath("config.json"),
     )
     parser.add_argument(
-        "-v",
-        "--verbose",
-        help="whether to write generated messages to terminal or not.\n 0: no output. 1: configuration and repetition. 2: configuration, repetition, ornaments. 3: configuration, repetition, contours. 4: configuration, repetition, intonation. 5: all output messages.",
-        action="count",
-        default=0,
-    )
-    parser.add_argument(
-        "--do-end-note",
-        help="plays a final note at the end of all repetitions",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--slow-start",
-        help="starts the performance at a slower tempo and gradually increases it.",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--slow-end",
-        help="ends the performance at a slower tempo.",
-        action="store_true",
-    )
-
-    parser.add_argument(
-        "--force-key",
-        help="overrides any key information in the tune.",
-        type=str,
-        default=None,
-    )
-    parser.add_argument(
-        "--force-meter",
-        help="overrides any time signature information in the tune.",
-        type=str,
+        "-t",
+        "--transpose",
+        help="the number of semitones to transpose the tune of",
+        type=int,
         default=None,
     )
     parser.add_argument(
         "--plot",
         help="plots the specified contour before playback.",
+        nargs="+",
         type=str,
         default=None,
     )
 
-    input_args = parser.add_mutually_exclusive_group()
-    input_args.add_argument(
-        "--create-in",
-        help="whether to create a new MIDI input port or not",
-        action="store_true",
-    )
-    input_args.add_argument(
-        "-i",
-        "--input",
-        help="the input MIDI port for the performance.",
-        type=int,
-        default=None,
-    )
-
-    output_args = parser.add_mutually_exclusive_group()
-    output_args.add_argument(
-        "--create-out",
-        help="whether to create a new MIDI output port or not",
-        action="store_true",
-    )
-    output_args.add_argument(
-        "-o",
-        "--output",
-        help="the output MIDI port for the performance.",
-        type=int,
-        default=None,
-    )
-
-    sync_args = parser.add_mutually_exclusive_group()
-    sync_args.add_argument(
-        "--create-sync",
-        help="whether to create a new MIDI sync port or not",
-        action="store_true",
-    )
-    sync_ports = sync_args.add_argument_group("sync ports")
-    sync_ports.add_argument(
-        "-si",
-        "--sync-in",
-        help="the sync input MIDI port for the performance.",
-        type=int,
-        default=None,
-    )
-    sync_ports.add_argument(
-        "-so",
-        "--sync-out",
-        help="the sync output MIDI port for the performance.",
-        type=int,
-        default=None,
-    )
     args = parser.parse_args()
     args = vars(args)
 
-    # loeric instance id
-    if args["name"] is None:
-        loeric_id = int(time.time())
-    else:
-        loeric_id = args["name"]
+    # performance improvements
+    # dedicate cores
+    if args["cores"] is not None:
+        lu.pin_to_cores(range(args["cores"]))
+    # realtime priority
+    lu.set_realtime_priority()
 
-    if args["create_in"]:
-        port = mido.open_input(f"LOERIC in #{loeric_id}#", virtual=True)
+    # load config
+    with open(args["config"], "r") as f:
+        config_file = json.load(f)
+        if args["transpose"] is not None:
+            if "transpose" in config_file["groover"]["modules"]:
+                config_file["groover"]["modules"]["transpose"]["steps"] += args[
+                    "transpose"
+                ]
+        config_file = lc.process_config(config_file)
 
-    if args["create_out"]:
-        out = mido.open_output(f"LOERIC out #{loeric_id}#", virtual=True)
+    # create LOERIC
+    musician = loeric.LOERIC(config_file)
 
-    # sync port
-    if args["sync"]:
-        if args["create_sync"]:
-            sync_port_in = mido.open_input(f"LOERIC SYNC #{loeric_id}#", virtual=True)
-            sync_port_out = mido.open_output(f"LOERIC SYNC #{loeric_id}#", virtual=True)
+    # create tune
+    tune = tu.Tune(args["source"], args["repeat"])
 
-    input_defined = args["input"] is not None or args["create_in"]
-    output_defined = args["output"] is not None or args["create_out"]
+    # set params
+    musician.set_tune(tune)
+    musician.set_tempo(args["qpm"])
 
-    saving_defined = args["save"]
+    if args["plot"] is not None:
 
-    inport, outport = lu.get_ports(
-        input_number=args["input"],
-        output_number=args["output"],
-        list_ports=args["list_ports"],
-        create_in=args["create_in"],
-        create_out=args["create_out"],
-        prompt_in=(not input_defined) and (not output_defined) and (not saving_defined),
-        prompt_out=(not output_defined) and (input_defined or not saving_defined),
-    )
+        _config = musician.config.model_dump()["contours"]
+        config = {}
+        for key in _config:
+            if key in args["plot"]:
+                config[key] = _config[key]
+        contour_manager = cnt.ContourManager(config, tune)
+        lu.plot_contours(contour_manager, tune, args["plot"])
 
-    sync_inport, sync_outport = None, None
-    if args["sync"] and output_defined:
-        sync_input_defined = (args["sync_in"] is not None) or args["create_sync"]
-        sync_output_defined = (args["sync_out"] is not None) or args["create_sync"]
-        sync_inport, sync_outport = lu.get_ports(
-            input_number=args["sync_in"],
-            output_number=args["sync_out"],
-            list_ports=False,
-            create_in=args["create_sync"],
-            create_out=args["create_sync"],
-            prompt_in=not sync_input_defined,
-            prompt_out=not sync_output_defined,
-        )
-
-    if args["list_ports"]:
-        return
-
-    # open in
-    if args["create_in"]:
-        pass
-    elif inport is not None:
-        port = mido.open_input(inport)
-    else:
-        port = None
-
-    # open out
-    if args["create_out"]:
-        pass
-    elif outport is None:
-        out = None
-    else:
-        out = mido.open_output(outport)
-
-    # open sync
-    if args["create_sync"]:
-        pass
-    elif sync_inport is None or sync_outport is None:
-        sync_port_in = None
-        sync_port_out = None
-    else:
-        sync_port_in = mido.open_input(sync_inport)
-        sync_port_out = mido.open_output(sync_outport)
-
-    # consistency with MIDI spec and mido
-    args["midi_channel"] -= 1
-
-    if not args["sync"] and not args["no_prompt"]:
-        input("Press any key to start playback:")
-        print()
-
-    # start the player thread
     try:
-        print(args["verbose"])
-        # load a tune
-        tune = tu.Tune(
-            args["source"],
-            args["repeat"],
-            key=args["force_key"],
-            meter=args["force_meter"],
-            verbose=args["verbose"],
-        )
-
-        # check seed
-        if args["seed"] is None:
-            args["seed"] = int(time.time())
-
-        # create groover
-        groover = gr.Groover(
-            tune,
-            bpm=args["bpm"],
-            midi_channel=args["midi_channel"],
-            transpose=args["transpose"],
-            human_impact=args["human_impact"],
-            seed=args["seed"],
-            config_file=args["config"],
-            intensity_control=args["intensity_control"],
-            human_impact_control=args["human_impact_control"],
-            syncing=args["sync"],
-            plot=args["plot"],
-            slow_start=args["slow_start"],
-            slow_end=args["slow_end"],
-            do_end_note=args["do_end_note"],
-            verbose=args["verbose"],
-            loeric_id=loeric_id,
-        )
-
-        # set input callback
-        if port is not None:
-            port.callback = groover.check_midi_control()
-
-        if args["sync"] and args["verbose"] > 0:
-            print("[INFO]\tWaiting for START message...")
-
-        player_t = threading.Thread(
-            target=play,
-            args=(groover, tune, out, sync_port_out),
-            kwargs=args,
-        )
-        player_t.start()
-
-        if args["sync"]:
-
-            sync_t = threading.Thread(
-                target=sync_thread, args=(groover, sync_port_in, out)
-            )
-            sync_t.start()
-
-        while player_t.is_alive():
-            player_t.join(1)
-
-        if args["sync"]:
-            while sync_t.is_alive():
-                sync_t.join(1)
+        musician.start(wait_for_prompt=True)
+        musician.join()
 
     except KeyboardInterrupt:
-        if args["verbose"] > 0:
-            print("[INFO]\tPlayback stopped by user.")
+        logger.info("Playback terminated.")
+    finally:
+        musician.stop()
 
-    # close midi input
-    if port is not None:
-        port.close()
-        if args["verbose"] > 0:
-            print("[INFO]\tClosing midi ports...")
-        if port.closed:
-            if args["verbose"] > 0:
-                print("[INFO]\tClosed MIDI input.")
 
-    # make sure to turn off all notes
-    if out is not None:
-        for i in range(127):
-            out.send(mido.Message("note_off", velocity=0, note=i, time=0))
-        out.reset()
-        out.close()
-        if out.closed:
-            if args["verbose"] > 0:
-                print("[INFO]\tClosed MIDI output.")
+if __name__ == "__main__":
 
-    # close sync ports
-    if args["sync"]:
-        if args["verbose"] > 0:
-            print("[INFO]\tClosing sync ports...")
-        sync_port_in.close()
-        if sync_port_in.closed:
-            if args["verbose"] > 0:
-                print("[INFO]\tClosed SYNC input.")
-        sync_port_out.reset()
-        sync_port_out.close()
-        if sync_port_out.closed:
-            if args["verbose"] > 0:
-                print("[INFO]\tClosed SYNC output.")
+    main()

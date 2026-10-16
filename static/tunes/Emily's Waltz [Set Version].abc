@@ -1,0 +1,89 @@
+X: 1
+T: Emily's Waltz
+M: 3/4
+L: 1/8
+K:G % 1 sharps
+D GA|: \
+"G"B2 BA BG| \
+"Bm"dB g2 fg| \
+"C"e2 ed  eg|
+"Bm"d4  Bd| \
+"C"e2 "Bm"d3B| \
+"Am"cd2<"G"B2G| \
+"C"E2 ED BD|
+"D7"A3D dc| \
+"G"B2 BA BG| \
+"Bm"dB g2 fg| \
+"C"e2 ed  eg|
+"Bm"d3G  Bd| \
+"C"e2 "Bm"d3B| \
+"Am"cd2<"G"B2G| \
+"C"E3D BA|1
+"D7"G3D GA:|2 \
+"D7"G3d ef| \
+|:"G" g3d ba| \
+"G"ga fg fd| \
+"C"e3d  eg|
+"Bm"d3G  Bd| \
+"C"e2 "Bm"d3B| \
+"Am"cd2<"G"B2G| \
+"C"E3D Bd|
+"D"A3d ef| \
+"Em"g3d "D/F#"ba| \
+"G"ga fg fd| \
+"C"e3d  eg|
+"Bm"d3G  Bd| \
+"C"e2 "Bm"d3B| \
+"Am"cd2<"G"B2G| \
+"C"E3D BA|1
+"D"G3d ef:|2 \
+"G"G3 D GA|: \
+"G"B2 BA BG| \
+"Bm"dB g2 fg| \
+"C"e2 ed  eg|
+"Bm"d4  Bd| \
+"C"e2 "Bm"d3B| \
+"Am"cd2<"G"B2G| \
+"C"E2 ED BD|
+"D7"A3D dc| \
+"G"B2 BA BG| \
+"Bm"dB g2 fg| \
+"C"e2 ed  eg|
+"Bm"d3G  Bd| \
+"C"e2 "Bm"d3B| \
+"Am"cd2<"G"B2G| \
+"C"E3D BA|1
+"D7"G3D GA:|2 \
+"D7"G3d ef| \
+|"G" g3d ba| \
+"G"ga fg fd| \
+"C"e3d  eg|
+"Bm"d3G  Bd| \
+"C"e2 "Bm"d3B| \
+"Am"cd2<"G"B2G| \
+"C"E3D Bd|
+"D"A3d ef| \
+"Em"g3d "D/F#"ba| \
+"G"ga fg fd| \
+"C"e3d  eg|
+"Bm"d3G  Bd| \
+"C"e2 "Bm"d3B| \
+"Am"cd2<"G"B2G| \
+"C"E3D BA
+"D"G3d ef
+|"G" g3d ba| \
+"G"ga fg fd| \
+"C"e3d  eg|
+"Bm"d3G  Bd| \
+"C"e2 "Bm"d3B| \
+"Am"cd2<"G"B2G| \
+"C"E3D Bd|
+"D"A3d ef| \
+"Em"g3d "D/F#"ba| \
+"G"ga fg fd| \
+"C"e3d  eg|
+"Bm"d3G  Bd| \
+"C"ez "Bm"dz3| \
+"Am"cd2<"G"Bz2| \
+"C"E3D BA
+"G"G3|

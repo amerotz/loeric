@@ -1,0 +1,70 @@
+{
+  "contours": {},
+  "mapper": {
+    "rules": [
+      "0.0 : %drone",
+      "0.0 : %velocity",
+      "0.0 : %velocity_pattern",
+      "0 : %tempo",
+      "0 : %swing",
+      "0.0 : %tempo_pattern",
+      "0.0 : %ornament",
+      "0.0 : %legato"
+    ],
+    "sources": []
+  },
+  "player": {
+    "input": {
+      "midi#main": {
+        "active": true,
+        "analysers": {
+          "midi_cc#control_change": {
+            "controls": {
+              "error": 49
+            }
+          }
+        }
+      }
+    }
+  },
+  "groover": {
+    "modules": {
+      "ornament": {
+        "data": {
+          "error_chromatic": {
+            "cases": ["not beat"],
+            "pitches_mean": [0],
+            "pitches_std": [4],
+            "velocities_mean": [1],
+            "velocities_std": [0.25],
+            "durations_mean": [1],
+            "durations_std": [0.5],
+            "probability": 0.01,
+            "length": 1,
+            "diatonic": false,
+            "threshold": 0,
+            "slide": false,
+            "probability_contour": "error",
+            "bind": "error"
+          },
+          "error_diatonic": {
+            "cases": ["not beat"],
+            "pitches_mean": [0],
+            "pitches_std": [4],
+            "velocities_mean": [1],
+            "velocities_std": [0.25],
+            "durations_mean": [1],
+            "durations_std": [0.5],
+            "probability": 0.01,
+            "length": 1,
+            "diatonic": true,
+            "threshold": 0,
+            "slide": false,
+            "probability_contour": "error",
+            "bind": "error"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "groover": {
+  "modules": {
+    "ornament": {
+      "data": {
+        "slide": {
+          "probability": 0
+        },
+        "error_slide": {
+          "probability": 0
+        },
+        "vibrato": {
+          "probability": 0
+        }
+      }
+    }
+  }
+  }
+}

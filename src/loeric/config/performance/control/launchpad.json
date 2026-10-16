@@ -1,0 +1,73 @@
+{
+  "variables": {
+    "var_drone_bind": "drone_i"
+  },
+  "groover": {
+    "modules": {
+      "dynamics": {
+        "bind": "velocity_i"
+      },
+      "ornament": {
+        "bind": "ornament_i",
+        "data": {
+          "error_chromatic": {
+            "bind": "error_i"
+          },
+          "error_diatonic": {
+            "bind": "error_i"
+          },
+          "error_slide": {
+            "bind": "error_i"
+          }
+        }
+      },
+      "swing": {
+        "bind": "swing_i"
+      },
+      "timing": {
+        "bind": "tempo_i",
+        "qpm_amount": 50
+      },
+      "legato": {
+        "bind": "legato_i",
+        "min": 0.1,
+        "max": 1
+      }
+    }
+  },
+  "player": {
+    "input": {
+      "midi#main": {
+        "active": true,
+        "port": "Launch Control XL Launch Contro",
+        "analysers": {
+          "midi_cc#control_changes": {
+            "active": true,
+            "controls": {
+              "ornament_i": 21,
+              "drone_i": 22,
+              "legato_i": 23,
+              "error_i": 24,
+              "swing_i": 25,
+              "velocity_i": 26,
+              "tempo_i": 27
+            }
+          }
+        }
+      }
+    }
+  },
+  "mapper": {
+    "sources": [
+      "ornament_i",
+      "drone_i",
+      "legato_i",
+      "error_i",
+      "swing_i",
+      "velocity_i",
+      "tempo_i"
+    ],
+    "targets": [],
+    "rules": []
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "player": {
+    "output": {
+      "osc": {
+        "active": true,
+        "server": "127.0.0.1",
+        "port": 1337,
+        "send_cc": true,
+        "send_messages": true,
+        "control_messages_per_second": 10,
+        "controls": {}
+      }
+    }
+  }
+}
