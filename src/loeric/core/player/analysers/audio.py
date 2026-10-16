@@ -481,7 +481,7 @@ class TempoAnalyser(AudioAnalyser):
     def _compute(self, buffer):
 
         buffer = self._k_weighting(buffer)
-        pitches, magnitudes = librosa.piptrack(y=buffer, sr=self._samplerate)
+        """pitches, magnitudes = librosa.piptrack(y=buffer, sr=self._samplerate)
 
         # get indexes of the maximum value in each time slice
         max_indexes = np.argmax(magnitudes, axis=0)
@@ -491,28 +491,23 @@ class TempoAnalyser(AudioAnalyser):
         print(pitches)
         """
         hop_length = 512
-        oenv = librosa.onset.onset_strength(
-            y=buffer, sr=self._samplerate, hop_length=hop_length
-        )
-        tempogram = librosa.feature.tempogram(
-            onset_envelope=oenv, sr=self._samplerate, hop_length=hop_length
-        )
-        # Compute global onset autocorrelation
-        ac_global = librosa.autocorrelate(oenv, max_size=tempogram.shape[0])
-        ac_global = librosa.util.normalize(ac_global)
+
         # Estimate the global tempo for display purposes
         chosen = librosa.feature.tempo(
-            onset_envelope=oenv, sr=self._samplerate, hop_length=hop_length
+            y=buffer, sr=self._samplerate, hop_length=hop_length
         )[0][0]
 
         current = le.TempoKeeper.tempo().qpm
+
+        candidates = np.array(
+            [chosen, chosen * 2, chosen / 2, 2 * chosen / 3, 3 * chosen / 2]
+        )
+        chosen = candidates[np.argmin(candidates - current)]
 
         tempo = current * (1 - self._responsiveness) + chosen * self._responsiveness
 
         logger.info(tempo)
         return tempo
-        """
-        return None
 
     def get(self) -> list[le.ContourValue]:
         """Return the current RMS value mapped to all declared controls.

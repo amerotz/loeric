@@ -8,6 +8,7 @@
     "var_phrase_length_1": 4,
     "var_velocity_weight": [0, -1, 1, 1, 1],
     "var_drone_bind": "$drone",
+    "var_notes_per_bar": [8, 4],
     "var_notes_per_bar_bind": "notes_per_bar",
     "var_legato_pattern": {
       "mean": [1, 1, 1, 0.9, 1, 1, 1, 0.8, 1, 1, 1, 0.9, 1, 1, 1, 0.5],
@@ -23,7 +24,6 @@
       "std_scale": 1,
       "normalize": false
     },
-    "var_notes_per_bar": [8, 4],
     "var_comping_notes_per_bar": [4],
     "var_upper_comping_pattern": [0, 1, 0, 1, 0, 1, 0, 1],
     "var_lower_comping_pattern": [1, 0, 1, 0, 1, 0, 1, 0]
@@ -195,9 +195,8 @@
         "data": {
           "strings_with_melody": {
             "type": "bowed",
-            "ascending": true,
             "allow_root": false,
-            "is_active": true,
+            "active": true,
             "threshold": "var_drone_threshold",
             "velocity_multiplier": 0.9,
             "bind": "var_drone_bind",
@@ -213,7 +212,7 @@
             "type": "free",
             "threshold": "var_drone_threshold",
             "allow_root": false,
-            "is_active": true,
+            "active": true,
             "ascending": true,
             "velocity_multiplier": 0.9,
             "bind": "var_drone_bind",
@@ -256,292 +255,258 @@
   },
   "contours": {
     "ones": {
-      "recipe": {
-        "pattern": {
-          "mean": [1],
-          "period": 1,
-          "normalize": false,
-          "std": null,
-          "std_scale": 0
-        }
+      "pattern": {
+        "mean": [1],
+        "period": 1,
+        "normalize": false,
+        "std": null,
+        "std_scale": 0
       }
     },
     "drone": {
-      "recipe": {
-        "multiply": {
-          "contours": {
-            "scale": {
-              "contours": {
-                "o_canainn": {
-                  "weights": [1, 2, 1, 1, 2],
-                  "savgol": true,
-                  "scale": true,
-                  "shift": true
-                }
-              },
-              "min": 0.5,
-              "max": 1
+      "multiply": {
+        "contours": {
+          "scale": {
+            "contours": {
+              "o_canainn": {
+                "weights": [1, 2, 1, 1, 2],
+                "savgol": true,
+                "scale": true,
+                "shift": true
+              }
             },
-            "pattern": {
-              "mean": [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-              "std": null,
-              "std_scale": 1,
-              "normalize": false,
-              "period": 2
-            }
+            "min": 0.5,
+            "max": 1
+          },
+          "pattern": {
+            "mean": [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+            "std": null,
+            "std_scale": 1,
+            "normalize": false,
+            "period": 2
           }
         }
       }
     },
     "notes_per_bar": {
-      "recipe": {
-        "pattern": {
-          "mean": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-          "std": null,
-          "std_scale": 1,
-          "normalize": false,
-          "period": 2
-        }
+      "pattern": {
+        "mean": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "std": null,
+        "std_scale": 1,
+        "normalize": false,
+        "period": 2
       }
     },
     "velocity": {
-      "recipe": {
-        "weighted_sum": {
-          "contours": {
-            "o_canainn": {
-              "weights": "var_velocity_weight",
-              "savgol": false,
-              "scale": true,
-              "shift": false
-            },
-            "weighted_sum": {
-              "contours": {
-                "scale#low_pitch": {
-                  "contours": {
-                    "clamp": {
-                      "contours": {
-                        "linear": {
-                          "contours": {
-                            "pitch": {
-                              "scale": true,
-                              "shift": true
-                            }
-                          },
-                          "a": -1,
-                          "b": 0.5
-                        }
-                      },
-                      "low": 0
-                    }
-                  },
-                  "min": 0,
-                  "max": 1
-                },
-                "scale#high_pitch": {
-                  "contours": {
-                    "clamp": {
-                      "contours": {
-                        "linear": {
-                          "contours": {
-                            "pitch": {
-                              "scale": true,
-                              "shift": true
-                            }
-                          },
-                          "a": 1,
-                          "b": -0.5
-                        }
-                      },
-                      "low": 0
-                    }
-                  },
-                  "min": 0,
-                  "max": 1
-                }
-              },
-              "weights": [1, 1],
-              "normalize": false
-            },
-            "scale#3": {
-              "contours": {
-                "multiply": {
-                  "contours": {
-                    "phrasing#2": {
-                      "accelerando": 0.5,
-                      "ritardando": 1,
-                      "last": 0.2,
-                      "turn": 0.4,
-                      "power": 2,
-                      "phrase_length": "var_phrase_length_2",
-                      "shift": null,
-                      "mode": "contour"
+      "weighted_sum": {
+        "contours": {
+          "o_canainn": {
+            "weights": "var_velocity_weight",
+            "savgol": false,
+            "scale": true,
+            "shift": false
+          },
+          "weighted_sum": {
+            "contours": {
+              "scale#low_pitch": {
+                "contours": {
+                  "clamp": {
+                    "contours": {
+                      "linear": {
+                        "contours": {
+                          "pitch": {
+                            "scale": true,
+                            "shift": true
+                          }
+                        },
+                        "a": -1,
+                        "b": 0.5
+                      }
                     },
-                    "phrasing#1": {
-                      "accelerando": 1,
-                      "ritardando": 1,
-                      "last": 0.2,
-                      "turn": 0.4,
-                      "power": 2,
-                      "phrase_length": "var_phrase_length_1",
-                      "shift": null,
-                      "mode": "contour"
-                    }
+                    "low": 0
+                  }
+                },
+                "min": 0,
+                "max": 1
+              },
+              "scale#high_pitch": {
+                "contours": {
+                  "clamp": {
+                    "contours": {
+                      "linear": {
+                        "contours": {
+                          "pitch": {
+                            "scale": true,
+                            "shift": true
+                          }
+                        },
+                        "a": 1,
+                        "b": -0.5
+                      }
+                    },
+                    "low": 0
+                  }
+                },
+                "min": 0,
+                "max": 1
+              }
+            },
+            "weights": [1, 1],
+            "normalize": false
+          },
+          "scale#3": {
+            "contours": {
+              "multiply": {
+                "contours": {
+                  "phrase_arch#2": {
+                    "accelerando": 0.5,
+                    "ritardando": 1,
+                    "last": 0.2,
+                    "turn": 0.4,
+                    "power": 2,
+                    "phrase_length": "var_phrase_length_2",
+                    "shift": null,
+                    "mode": "contour"
+                  },
+                  "phrase_arch#1": {
+                    "accelerando": 1,
+                    "ritardando": 1,
+                    "last": 0.2,
+                    "turn": 0.4,
+                    "power": 2,
+                    "phrase_length": "var_phrase_length_1",
+                    "shift": null,
+                    "mode": "contour"
                   }
                 }
-              },
-              "min": 0.5,
-              "max": 1
-            }
-          },
-          "weights": [0.25, 0.25, 0.5]
-        }
+              }
+            },
+            "min": 0.5,
+            "max": 1
+          }
+        },
+        "weights": [0.25, 0.25, 0.5]
       }
     },
     "velocity_pattern": {
-      "recipe": {
-        "pattern": {
-          "mean": [0.998, 0.994, 1.212, 1.0, 0.999, 0.999, 1.205, 0.983],
-          "std": [0.14, 0.09, 0.09, 0.087, 0.094, 0.089, 0.085, 0.185],
-          "std_scale": 1,
-          "normalize": false,
-          "period": 1
-        }
+      "pattern": {
+        "mean": [0.998, 0.994, 1.212, 1.0, 0.999, 0.999, 1.205, 0.983],
+        "std": [0.14, 0.09, 0.09, 0.087, 0.094, 0.089, 0.085, 0.185],
+        "std_scale": 1,
+        "normalize": false,
+        "period": 1
       }
     },
     "tempo": {
-      "recipe": {
-        "scale": {
-          "contours": {
-            "multiply": {
-              "contours": {
-                "phrasing#2": {
-                  "accelerando": 0.5,
-                  "ritardando": 1,
-                  "last": 0.2,
-                  "turn": 0.4,
-                  "power": 2,
-                  "phrase_length": "var_phrase_length_2",
-                  "shift": null,
-                  "mode": "contour"
-                },
-                "phrasing#1": {
-                  "accelerando": 1,
-                  "ritardando": 1,
-                  "last": 0.2,
-                  "turn": 0.4,
-                  "power": 2,
-                  "phrase_length": "var_phrase_length_1",
-                  "shift": null,
-                  "mode": "contour"
-                }
+      "scale": {
+        "contours": {
+          "multiply": {
+            "contours": {
+              "phrase_arch#2": {
+                "accelerando": 0.5,
+                "ritardando": 1,
+                "last": 0.2,
+                "turn": 0.4,
+                "power": 2,
+                "phrase_length": "var_phrase_length_2",
+                "shift": null,
+                "mode": "contour"
+              },
+              "phrase_arch#1": {
+                "accelerando": 1,
+                "ritardando": 1,
+                "last": 0.2,
+                "turn": 0.4,
+                "power": 2,
+                "phrase_length": "var_phrase_length_1",
+                "shift": null,
+                "mode": "contour"
               }
             }
-          },
-          "min": 0,
-          "max": 0.5
-        }
+          }
+        },
+        "min": 0,
+        "max": 0.5
       }
     },
     "swing": {
-      "recipe": {
-        "weighted_sum": {
-          "contours": {
-            "o_canainn": {
-              "weights": [0, 1, 0, 0, 0],
-              "savgol": true,
-              "scale": true,
-              "shift": true
-            },
-            "random": {
-              "min": 0.0,
-              "max": 1.0
-            }
+      "weighted_sum": {
+        "contours": {
+          "o_canainn": {
+            "weights": [0, 1, 0, 0, 0],
+            "savgol": true,
+            "scale": true,
+            "shift": true
           },
-          "weights": [0.95, 0.05]
-        }
+          "random": {
+            "min": 0.0,
+            "max": 1.0
+          }
+        },
+        "weights": [0.95, 0.05]
       }
     },
     "tempo_pattern": {
-      "recipe": {
-        "pattern": {
-          "mean": [1],
-          "std": null,
-          "std_scale": 0.0,
-          "normalize": true,
-          "period": 1
-        }
+      "pattern": {
+        "mean": [1],
+        "std": null,
+        "std_scale": 0.0,
+        "normalize": true,
+        "period": 1
       }
     },
     "ornament": {
-      "recipe": {
-        "multiply": {
-          "contours": {
-            "o_canainn": {
-              "weights": [1, 1, 1, 1, 1],
-              "savgol": false,
-              "scale": true,
-              "shift": false
-            },
-            "pattern": "var_ornament_pattern"
-          }
+      "multiply": {
+        "contours": {
+          "o_canainn": {
+            "weights": [1, 1, 1, 1, 1],
+            "savgol": false,
+            "scale": true,
+            "shift": false
+          },
+          "pattern": "var_ornament_pattern"
         }
       }
     },
     "legato": {
-      "recipe": {
-        "shift": {
-          "contours": {
-            "weighted_sum": {
-              "contours": {
-                "o_canainn": {
-                  "weights": [1, 1, 0, -1, -0.25],
-                  "savgol": false,
-                  "scale": true,
-                  "shift": false
-                },
-                "pattern": "var_legato_pattern"
+      "shift": {
+        "contours": {
+          "weighted_sum": {
+            "contours": {
+              "o_canainn": {
+                "weights": [1, 1, 0, -1, -0.25],
+                "savgol": false,
+                "scale": true,
+                "shift": false
               },
-              "weights": [0.5, 0.5]
-            }
-          },
-          "offset": -1
-        }
+              "pattern": "var_legato_pattern"
+            },
+            "weights": [0.5, 0.5]
+          }
+        },
+        "offset": -1
       }
     }
   },
   "player": {
     "input": {
-      "main": {
-        "active": false,
-        "type": "midi",
-        "port": "Midi Through Port-0",
-        "analysers": {}
-      },
-      "mic_input": {
+      "audio#mic_input": {
         "active": true,
-        "type": "audio",
         "device": "default",
         "samplerate": 44100,
         "analysers": {
-          "loudness": {
+          "tempo": {
             "active": true,
-            "type": "better_rms",
             "responsiveness": 0.5,
-            "controls": ["intensity"],
-            "windows_per_second": 2.5,
-            "updates_per_second": 10,
-            "max_recovery": 0.01,
-            "min_recovery": 0.01,
-            "max_slack_factor": 2,
-            "min_slack_factor": 1
+            "windows_per_second": 1,
+            "updates_per_second": 2
           }
         }
       }
     },
     "output": {
-      "main": {
+      "midi#main": {
         "active": true,
-        "type": "midi",
         "port": "Midi Through Port-0",
         "send_cc": true,
         "send_messages": true,

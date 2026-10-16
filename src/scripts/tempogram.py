@@ -13,37 +13,48 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
-import librosa
+import numpy as np
 import sounddevice as sd
 
 sr = 44100
 
+prev_mag = None
+max_mag = 0
+data = None
+last_values = []
+
 
 def callback(indata, frames, time, status):
-    print(frames)
 
-    try:
-        print(frames)
-        hop_length = 256
+    global prev_mag, max_mag, data, last_values
 
-        oenv = librosa.onset.onset_strength(y=indata, sr=sr, hop_length=hop_length)
+    if data is None:
+        data = indata
+    else:
+        data = np.concatenate((data, indata))
 
+    if len(data) < sr:
         return
-        tempogram = librosa.feature.tempogram(
-            onset_envelope=oenv, sr=sr, hop_length=hop_length, n_ft=frames / 2
-        )
 
-        # Compute global onset autocorrelation
-        ac_global = librosa.autocorrelate(oenv, max_size=tempogram.shape[0])
-        ac_global = librosa.util.normalize(ac_global)
+    data = data[-sr:, :]
 
-        # Estimate the global tempo for display purposes
-        tempo = librosa.feature.tempo(
-            onset_envelope=oenv, sr=sr, hop_length=hop_length
-        )[0]
-        print(tempo)
-    except Exception as e:
-        print(e)
+    mag = np.abs(np.fft.rfft(data))
+
+    if prev_mag is None:
+        prev_mag = mag
+        return
+
+    diff = (mag - prev_mag).sum().clip(min=0)
+    prev_mag = mag
+
+    last_values.append(diff)
+    last_values = last_values[-100:]
+    max_v = max(last_values)
+
+    diff /= max_v
+
+    if diff > 0.25:
+        print("ONSET!", diff)
 
 
 stream = sd.InputStream(

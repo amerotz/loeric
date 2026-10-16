@@ -34,6 +34,7 @@ def process_config(config):
     The ``variables'' object of a configuration allows one to define variables
     once and use them throughout the config. This utility performs a simple
     text-based substitution of the variable name with its value.
+
     """
     # compile variables by copying them explicitly
     if "variables" in config:
@@ -50,30 +51,31 @@ def process_config(config):
         config = json.loads(dict_string)
 
     # convert modules
-    if "groover" in config and "modules" in config["groover"]:
-        config["groover"]["modules"] = change_naming_format(
-            config["groover"]["modules"]
-        )
-
-    if "player" in config and "input" in config["player"]:
-        # convert inputs
-        config["player"]["input"] = change_naming_format(config["player"]["input"])
-        for i in config["player"]["input"]:
-            # convert analysers
-            if "analysers" in config["player"]["input"][i]:
-
-                config["player"]["input"][i]["analysers"] = change_naming_format(
-                    config["player"]["input"][i]["analysers"]
-                )
-
-    if "player" in config and "output" in config["player"]:
-        # convert inputs
-        config["player"]["output"] = change_naming_format(config["player"]["output"])
+    config = _process_recursive(config)
 
     return config
 
 
-def change_naming_format(config: dict):
+def _process_recursive(config):
+    if not isinstance(config, dict):
+        return config
+
+    for special in [
+        "modules",
+        "module",
+        "input",
+        "output",
+        "analysers",
+    ]:
+        if special in config:
+            config[special] = _change_naming_format(config[special])
+    for k in config:
+        config[k] = _process_recursive(config[k])
+
+    return config
+
+
+def _change_naming_format(config: dict):
     """Change naming convection injecting type attributes.
 
     Change instances of ``"type#name" : {...}`` to

@@ -132,7 +132,6 @@ class GateLayer(LOERICMatrix):
         self._bias[index] *= float(is_open)
 
 
-
 class PreProcessingLayer(LOERICMatrix):
 
     def __init__(self):
@@ -308,6 +307,10 @@ class MatrixEngine(lme.LOERICMapperEngine):
         """
 
         x = np.array([self._parameters[n].get() for n in self._pre_layer.inputs])
+
+        # if empty mapper
+        if len(x) == 0:
+            return
 
         # close and open gates
         self._gate_layer.reset()

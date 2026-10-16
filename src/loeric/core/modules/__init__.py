@@ -32,12 +32,18 @@ from loeric.core.modules.swing import SwingModule, SwingModuleConfig
 from loeric.core.modules.timing import TimingModule, TimingModuleConfig
 from loeric.core.modules.transpose import TransposeModule, TransposeModuleConfig
 from loeric.core.modules.utils import (
-    ConditionalModule,
-    ConditionalModuleConfig,
     LoggerModule,
     LoggerModuleConfig,
     TaggerModule,
     TaggerModuleConfig,
+)
+from loeric.core.modules.condition import (
+    ConditionalModule,
+    ConditionalModuleConfig,
+)
+from loeric.core.modules.chain import (
+    ChainModule,
+    ChainModuleConfig,
 )
 
 ModuleConfig = Annotated[
@@ -53,6 +59,7 @@ ModuleConfig = Annotated[
     | DroneModuleConfig
     | ConditionalModuleConfig
     | LoggerModuleConfig
+    | ChainModuleConfig
     | TaggerModuleConfig,
     pdt.Field(discriminator="type"),
 ]
@@ -83,6 +90,7 @@ def create_module(module_name: str, **kwargs):
         "logger": LoggerModule,
         "conditional": ConditionalModule,
         "tagger": TaggerModule,
+        "chain": ChainModule,
     }
 
     cls = _registry.get(kwargs["type"])
