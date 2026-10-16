@@ -70,19 +70,18 @@
             "threshold": 0.7,
             "slide": false
         },
-        "short_roll": {
+        "roll_3": {
             "cases": [
-                [ [0,2] ],
-                [ [0,1], [0,1] ]
+                [[0,3]]
             ],
             "pitches_mean": [ 1, 0, -1, 0 ],
             "pitches_std": [ 0, 0, 0, 0 ],
-            "velocities_mean": [ 0.8, 1, 0.8, 1 ],
-            "velocities_std": [ 0, 0, 0, 0 ],
-            "durations_mean": [ 0.3, 0.7, 0.3, 0.7 ],
-            "durations_std": [ 0.01, 0, 0.01, 0 ],
+            "velocities_mean": [ 1, 0.8, 0.8, 1 ],
+            "velocities_std": [ 0, 0, 0, 0],
+            "durations_mean": [ 0.25, 0.25, 0.25, 1.75],
+            "durations_std": [ 0.1, 0.1, 0.1, 0 ],
             "probability": 1,
-            "length": 2,
+            "length": 3,
             "diatonic": true,
             "threshold": 0.7,
             "slide": false

@@ -1,20 +1,12 @@
-"""
-This file is part of LOERIC.
-
-LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
-"""
-import argparse
-import threading
-import time
-
-import mido
 import pandas as pd
-
-from . import groover as gr, loeric_utils as lu, player as pl, tune as tu
+import mido
+import argparse
+import time
+import threading
+from . import tune as tu
+from . import groover as gr
+from . import player as pl
+from . import loeric_utils as lu
 
 
 def main():
@@ -162,18 +154,21 @@ def main():
         tunes.append(tune)
         groovers.append(groover)
 
+    print("Awaiting message...")
+    with received_start:
+        received_start.wait()
+
     # create player
     player = pl.Player(tempo=groovers[0].current_tempo, midi_out=out)
+    player.init_playback()
 
-    player_t = threading.Thread(target=player_loop, args=[player])
-
-    print("Awaiting message...")
-    player_t.start()
-
-    play_tunes(player, tunes, groovers, port)
+    player_t = threading.Thread(
+        target=play_tunes,
+        args=(player, tunes, groovers, port),
+    )
 
     try:
-
+        player_t.start()
         while player_t.is_alive():
             player_t.join(1)
 
@@ -197,13 +192,14 @@ def main():
             print("Closed MIDI output.")
 
 
-received_start = threading.Event()
-current_groover = None
+received_start = threading.Condition()
+skip_to_next = False
 
 
 def get_callback(control):
 
     def check_skips(msg):
+        global skip_to_next, received_start
 
         if msg.type == "control_change" and msg.control != control:
             return
@@ -211,11 +207,12 @@ def get_callback(control):
             return
 
         if check_skips.counter == 0:
-            received_start.set()
+            with received_start:
+                received_start.notify()
             print("received start")
             check_skips.counter += 1
         else:
-            current_groover.skip_repetition = True
+            skip_to_next = True
             print("Skipping at end of repetition.")
 
     check_skips.counter = 0
@@ -223,34 +220,49 @@ def get_callback(control):
     return check_skips
 
 
-def player_loop(player):
-
-    received_start.wait()
-    print("Player started")
-    while True:
-
-        player.play_next()
-
-
 def play_tunes(player, tunes, groovers, port):
-    global current_groover
-
-    received_start.wait()
-    print("Groovers started")
+    global skip_to_next, received_start
 
     for tune, groover in zip(tunes, groovers):
 
-        current_groover = groover
         # set input callback
         if port is not None:
             port.callback = groover.check_midi_control()
-        print("Playing next tune.")
 
-        lu.play(
-            groover,
-            player,
-            songpos_callback=None,
-            repetition_callback=lambda x: print(x),
-        )
+        # iterate over messages
+        while True:
 
-        print("Player thread terminated.")
+            message = groover.next_event()
+            if message is None:
+                break
+
+            if message.type == "sysex":
+                print(f"Repetition {message.data[0]+1}")
+                groover._offset = 0
+                groover._swing_offset = 0
+
+                if skip_to_next:
+                    skip_to_next = False
+                    break
+
+                continue
+
+            # perform notes
+            elif lu.is_note(message):
+                # make the groover play the messages
+                new_messages = groover.perform(message)
+            # keep meta messages intact
+            else:
+                if message.type == "songpos":
+                    pass
+                new_messages = groover.perform(message)
+            # play
+            player.play(new_messages)
+
+        # play an end note
+        if groover.do_end_note:
+            groover.reset_contours()
+            groover.advance_contours()
+            player.play(groover.get_end_notes())
+
+    print("Player thread terminated.")

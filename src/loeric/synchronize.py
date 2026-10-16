@@ -1,25 +1,16 @@
-"""
-This file is part of LOERIC.
-
-LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
-"""
-import argparse
-import importlib.resources as ir
-import json
-import random
+import mido
+import os
+import pandas as pd
+import numpy as np
 import re
+import math
 import threading
+import random
 import time
 import traceback
+import json
+import argparse
 from collections import defaultdict
-
-import mido
-import numpy as np
-import pandas as pd
 
 
 songpos_wait = 0
@@ -45,7 +36,7 @@ def send_tempo(tempo, port):
 
 
 def update_tempo(tempo):
-    global songpos_wait, last_tempo, switch_timer, fix_sync_duration, stop_sync_duration
+    global songpos_wait, last_tempo, switch_timer, fix_sync_duration, stop_sync_duration, config
     last_tempo = tempo
     fix_sync_duration = config["tempo_policy"]["fix_sync_multiplier"] * 60 / last_tempo
     stop_sync_duration = (
@@ -56,6 +47,7 @@ def update_tempo(tempo):
 
 
 def sync_intensity(inports, outports):
+    global songpos_wait, last_tempo, switch_timer, fix_sync_duration, stop_sync_duration, exiting, all_dead, config
     all_dead.acquire()
     shell_print("Intensity Sync ON.")
     int_dict = defaultdict(int)
@@ -252,6 +244,7 @@ def sync_intensity(inports, outports):
 
 
 def sync_loeric(inports, outports):
+    global songpos_wait, last_tempo, switch_timer, fix_sync_duration, stop_sync_duration, exiting, all_dead, config
     all_dead.acquire()
     shell_print("Sync ON.")
     pos_dict = {}
@@ -295,13 +288,13 @@ def sync_loeric(inports, outports):
 
             # who sent this?
             loeric_id = re.search("#.*#", port.name)[0]
-            shell_print(f"{loeric_id}: SENT {msg.pos} ({now})")
+            # shell_print(f"{loeric_id}: SENT {msg.pos} ({now})")
 
             # don't sync the human
             if "HUMAN" in port.name:
                 if (
                     # if first time
-                    loeric_id not in pos_dict
+                    not loeric_id in pos_dict
                     # or skipped a beat
                     or now - pos_dict[loeric_id][0] > 2 * songpos_wait
                 ):
@@ -414,6 +407,7 @@ def shell_print(s):
 
 
 def close_shell():
+    global songpos_wait, last_tempo, switch_timer, fix_sync_duration, stop_sync_duration, exiting, all_dead
     exiting.set()
     all_dead.acquire()
     all_dead.acquire()
@@ -429,34 +423,27 @@ def check_args(command, num_args=0, values=[], optional=True):
 
     if len(values) != 0:
         for a in args[1:]:
-            if a not in values:
+            if not a in values:
                 return False
     return True
 
 
-def load_sync_config(path: str):
-    global config
-    with open(path, "r") as f:
-        config = json.load(f)
-
-
 def main():
 
-    # dir_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.dirname(os.path.realpath(__file__))
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--config",
-        default=ir.files("loeric.loeric_config.shell").joinpath("config.json"),
-        type=str,
+        "--config", default=f"{dir_path}/loeric_config/shell/config.json", type=str
     )
     args = parser.parse_args()
     args = vars(args)
 
-    global sync_thread, intensity_thread
+    global config, sync_thread, intensity_thread
 
     # load base config
-    load_sync_config(args["config"])
+    with open(args["config"], "r") as f:
+        config = json.load(f)
 
     update_tempo(120)
     sync_thread = threading.Thread()
@@ -612,10 +599,13 @@ def main():
                 else:
                     if multi_out is not None:
                         cmd = "songpos"
-                        val = int(command.split(" ")[-1])
-                        msg = mido.Message(cmd, pos=val)
-                        multi_out.send(msg)
-                        shell_print(msg)
+                        try:
+                            val = int(command.split(" ")[-1])
+                            msg = mido.Message(cmd, pos=val)
+                            multi_out.send(msg)
+                            shell_print(msg)
+                        except:
+                            shell_print("Invalid argument.")
                     else:
                         shell_print("Please connect to LOERIC first.")
             # close shell

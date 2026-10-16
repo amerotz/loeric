@@ -1,49 +1,34 @@
-"""
-This file is part of LOERIC.
-
-LOERIC is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-LOERIC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
-"""
 import argparse
-import importlib.resources as ir
-import json
-import os
 import random
+import os
 import threading
 import time
-import traceback
-from collections import defaultdict
-
 import mido
+import json
 import numpy as np
 
-import loeric.groover as gr
-import loeric.loeric_utils as lu
-import loeric.player as pl
-import loeric.tune as tu
+from collections import defaultdict
 
-
+"""
+from . import tune as tu
+from . import groover as gr
+from . import player as pl
+from . import loeric_utils as lu
 """
 from loeric import tune as tu
 from loeric import groover as gr
 from loeric import player as pl
 from loeric import loeric_utils as lu
-"""
 
 # parallel stuff
 received_start = threading.Condition()
-# must_die = threading.Event()
-# all_dead = threading.Semaphore()
-stop_event = threading.Event()
+must_die = threading.Event()
 program_start = 0
 
 
 class Session:
 
-    def __init__(self, config):
+    def __init__(self, config, out):
 
         with open(config, "r") as f:
             self._config = json.load(f)
@@ -55,7 +40,7 @@ class Session:
         self._sleepers = []
         self._sleepers_lock = threading.Lock()
         self._position_lock = threading.Lock()
-        # self._out = out
+        self._out = out
 
         self._intensity_dict = defaultdict(int)
         self._human_impact_dict = defaultdict(int)
@@ -63,29 +48,16 @@ class Session:
 
     @property
     def sync_interval(self):
-        return 2 * self._config["tempo_policy"]["sync_interval_quarters"]
+        return self._config["tempo_policy"]["sync_interval_quarters"]
 
     def set_tempo(self, tempo):
         self._last_tempo = tempo
-
-        if self._config["tempo_policy"]["absolute_time"]:
-            self._fix_sync_duration = (
-                self._config["tempo_policy"]["fix_sync_millis"] / 1000
-            )
-            self._stop_sync_duration = (
-                self._config["tempo_policy"]["stop_sync_millis"] / 1000
-            )
-        else:
-            self._fix_sync_duration = (
-                self._config["tempo_policy"]["fix_sync_quarters"]
-                * 60
-                / self._last_tempo
-            )
-            self._stop_sync_duration = (
-                self._config["tempo_policy"]["stop_sync_quarters"]
-                * 60
-                / self._last_tempo
-            )
+        self._fix_sync_duration = (
+            self._config["tempo_policy"]["fix_sync_quarters"] * 60 / self._last_tempo
+        )
+        self._stop_sync_duration = (
+            self._config["tempo_policy"]["stop_sync_quarters"] * 60 / self._last_tempo
+        )
 
         self._songpos_wait = (
             self._config["tempo_policy"]["sync_interval_quarters"]
@@ -101,11 +73,13 @@ class Session:
 
     def session_loop(self):
 
-        # all_dead.acquire()
-        print("[LOOP] Session loop thread started.")
-        while not stop_event.is_set():
+        global all_dead, program_start
 
-            # now = time.time()
+        all_dead.acquire()
+        print("[LOOP] Session loop thread started.")
+        while not must_die.is_set():
+
+            now = time.time()
             # handle sleep/awakening
             with self._sleepers_lock:
 
@@ -132,11 +106,12 @@ class Session:
                             )
 
                         # awake thread
-                        groover.playback_resumed.set()
+                        with groover.playback_resumed:
+                            groover.playback_resumed.notify_all()
 
-                        print(
-                            f"[LOOP] {groover.loeric_id} AWKN at {sleeper_position} ({current_time - program_start})"
-                        )
+                            print(
+                                f"[LOOP] {groover.loeric_id} AWKN at {sleeper_position} ({current_time - program_start})"
+                            )
                     else:
                         # nevermind, keep sleeping
                         new_sleepers.append(s)
@@ -146,15 +121,16 @@ class Session:
             # no need to run all the time
             time.sleep(1 / 50)
 
-        # all_dead.release()
+        all_dead.release()
 
     def handle_human_pos(self, human_id, position):
+        global program_start
         # don't sync the human
         # but record positions
         now = time.time()
         if (
             # if first time
-            human_id not in self._loeric_positions
+            not human_id in self._loeric_positions
             # or human skipped a beat
             or now - self._loeric_positions[human_id][0] > 2 * self._songpos_wait
         ):
@@ -178,11 +154,9 @@ class Session:
                     self._loeric_positions[human_id][1] + 1,
                 )
 
-        """
         print(
-            f"[SYNC] {human_id} SENT {self._loeric_positions[human_id][1]} {(self._loeric_positions[human_id][0] - program_start)}"
+            f"[SYNC] {human_id} SENT {self._loeric_positions[human_id][1] (self._loeric_positions[human_id][0] - program_start)}"
         )
-        """
 
     def _calculate_position(self, loeric_id):
 
@@ -191,7 +165,6 @@ class Session:
                 [
                     self._loeric_positions[t][1]
                     for t in self._loeric_positions
-                    if t not in self._sleepers
                     # if t != loeric_id
                 ]
             )
@@ -199,7 +172,6 @@ class Session:
                 [
                     self._loeric_positions[t][0]
                     for t in self._loeric_positions
-                    if t not in self._sleepers
                     # if t != loeric_id
                 ]
             )
@@ -238,7 +210,6 @@ class Session:
             # tell groover to wait
             groover.stopped.set()
 
-            """
             for i in range(127):
                 self._out.send(
                     mido.Message(
@@ -250,16 +221,14 @@ class Session:
                         "note_off", time=0, channel=groover._drone_midi_channel, note=i
                     )
                 )
-            """
 
             # tell groover to start at next songpos
-            groover.jump_to_pos(int(position))
+            groover.jump_to_pos(position)
 
     def _calculate_new_tempo(self, now, expected_timestamp):
-        """
-        Q = self._songpos_wait
-        v0 = self._last_tempo
+        Q = self._config["tempo_policy"]["sync_interval_quarters"]
         v1 = self._last_tempo
+        v0 = self._last_tempo
         t0 = now
         t1 = expected_timestamp
         f1t1 = v1 * t1
@@ -267,22 +236,16 @@ class Session:
         f1q1 = v1 * q1
         f0t0 = v0 * t0
         w = (f1q1 - f0t0) / (q1 - t0)
-        """
-        multiplier = self._songpos_wait / (
-            expected_timestamp + self._songpos_wait - now
-        )
-        w = self._last_tempo * multiplier
 
         return w
 
-    def handle_loeric_pos(self, groover: gr.Groover, player: pl.Player, position: int):
+    def handle_loeric_pos(self, groover: gr.Groover, position: int):
+        global program_start
         # obtain timestamp
         now = time.time()
 
         # who sent this?
         loeric_id = groover.loeric_id
-
-        # print(loeric_id, "SENT", position)
 
         with self._position_lock:
             # store a tuple (time, position) for each
@@ -291,7 +254,7 @@ class Session:
         # obtain sync position
         timestamp, calculated_position = self._calculate_position(loeric_id)
 
-        # print(f"[SYNC]\t{loeric_id} SENT {position} ({now-program_start})")
+        print(f"[SYNC] {loeric_id} SENT {position} ({now-program_start})")
 
         # expected timestamp
         expected_songpos_timestamp = (
@@ -302,14 +265,12 @@ class Session:
         diff = abs(now - expected_songpos_timestamp)
         fix_thr = self._fix_sync_duration
         stop_thr = self._stop_sync_duration
-        # print(diff, fix_thr, stop_thr, self._songpos_wait)
 
         # if tempo was updated before
         # we need to reset it to the original
         if self._was_updated[loeric_id]:
             with groover.lock:
                 groover.set_tempo(self._last_tempo)
-                player.set_tempo_scale(groover.tempo_scale)
             self._was_updated[loeric_id] = False
 
         # hard fix
@@ -333,7 +294,7 @@ class Session:
             )
 
             print(
-                f"[SYNC]\t{loeric_id} SLEP at {calculated_position}",
+                f"[SYNC] {loeric_id} SLEP at {calculated_position}",
                 self._songpos_wait + timestamp - program_start,
             )
 
@@ -355,13 +316,7 @@ class Session:
 
             with groover.lock:
                 groover.set_tempo(new_tempo)
-                player.set_tempo_scale(groover.tempo_scale)
             self._was_updated[loeric_id] = True
-
-            print(
-                f"[SYNC]\t{loeric_id} BUMP at {calculated_position}",
-                np.round(new_tempo, 2),
-            )
 
             with self._position_lock:
                 self._loeric_positions[loeric_id] = (
@@ -369,17 +324,16 @@ class Session:
                     position,
                 )
 
-    def handle_human_intensity(self, human_id, control, value):
+    def handle_human_intensity(self, human_id, intensity, human_impact):
+
+        # who sent this?
+        loeric_id = re.search("#.*#", port.name)[0]
 
         # keep track of intensity
-        if control == self._config["intensity_control_out"]:
-            self._intensity_dict[human_id] = value
-            print("[INSY]:\t", np.round(value, 2))
+        self._intensity_dict[human_id] = intensity
 
         # keep track of human_impact
-        if control == self._config["human_impact_control_out"]:
-            self._human_impact_dict[human_id] = value
-            print("[HUIP]:\t", np.round(value, 2))
+        self._human_impact_dict[human_id] = human_impact
 
     def handle_loeric_intensity(self, groover: gr.Groover):
 
@@ -389,16 +343,15 @@ class Session:
         loeric_id = groover.loeric_id
 
         # keep track of intensity
-        self._intensity_dict[loeric_id] = np.mean(
-            groover.get_control_value(self._config["intensity_control_out"])
+        self._intensity_dict[loeric_id] = groover.get_control_value(
+            self._config["intensity_control_in"]
         )
 
         # keep track of human_impact
-        self._human_impact_dict[loeric_id] = np.mean(
-            groover.get_control_value(self._config["human_impact_control_out"])
+        self._human_impact_dict[loeric_id] = groover.get_control_value(
+            self._config["human_impact_control_in"]
         )
 
-        """
         if loeric_id not in self._action_dict:
             self._action_dict[loeric_id] = (
                 now - random.random() * self._switch_timer,
@@ -407,13 +360,10 @@ class Session:
                 ),
                 loeric_id,
             )
-        """
 
+        diff = now - self._action_dict[loeric_id][0]
         # choose new action
-        if (
-            loeric_id not in self._action_dict
-            or now - self._action_dict[loeric_id][0] >= self._switch_timer
-        ):
+        if diff >= self._switch_timer:
 
             players = [p for p in self._intensity_dict.keys() if str(p) != loeric_id]
             # backoff or
@@ -437,17 +387,10 @@ class Session:
                         len(players),
                     ),
                 )
-
-            if self._config["attention_policy"]["human_only"]:
-                candidates = [p for p in players if "HUMAN" in p]
-                if len(candidates) < 1:
-                    return
-                group = random.sample(candidates, min(n, len(candidates)))
-            else:
-                group = random.sample(players, n)
+            group = random.sample(players, n)
 
             self._action_dict[loeric_id] = (now, action, group)
-            print(f"[SESS]\t{loeric_id:10}\t{action}\t{group}")
+            print(loeric_id, action, group)
 
         _, action, group = self._action_dict[loeric_id]
         if type(group) is not list:
@@ -494,20 +437,189 @@ class Session:
             "human_impact_constant"
         ]
 
-        int_value = min(int_value, 1)
+        int_value *= 127
+        int_value = int(int_value)
+        int_value = min(int_value, 127)
         int_value = max(int_value, 0)
 
-        hi_value = min(hi_value, 1)
+        hi_value *= 127
+        hi_value = int(hi_value)
+        hi_value = min(hi_value, 127)
         hi_value = max(hi_value, 0)
 
-        groover.set_control_value(self._config["intensity_control_in"], int_value)
+        groover.set_control_value(self._config["intensity_control_out"], int_value)
+        groover.set_control_value(self._config["human_impact_control_out"], hi_value)
 
-        groover.set_control_value(self._config["human_impact_control_in"], hi_value)
+    def sync_intensity(self, inports, outports):
+        global must_die, all_dead
+        all_dead.acquire()
+
+        self._intensity_dict = defaultdict(int)
+        self._human_impact_dict = defaultdict(int)
+        self._action_dict = {}
+
+        while not must_die.is_set():
+            # receive message and port
+            bundle = list(
+                mido.ports.multi_receive(inports, yield_ports=True, block=False)
+            )
+            now = time.time()
+            if len(bundle) == 0:
+                continue
+            port, msg = bundle[0]
+            if msg.type != "control_change" or (
+                msg.control != self._config["human_impact_control_in"]
+                and msg.control != self._config["intensity_control_in"]
+            ):
+                continue
+
+            # who sent this?
+            loeric_id = re.search("#.*#", port.name)[0]
+
+            now = time.time()
+            # keep track of intensity
+            if msg.control == self._config["intensity_control_in"]:
+                self._intensity_dict[loeric_id] = msg.value / 127
+
+            # keep track of human_impact
+            elif msg.control == self._config["human_impact_control_in"]:
+                self._human_impact_dict[loeric_id] = msg.value / 127
+
+            # don't consider human for actions
+            if "HUMAN" in port.name:
+                continue
+
+            if loeric_id not in self._action_dict:
+                self._action_dict[loeric_id] = (
+                    now - random.random() * self._switch_timer,
+                    random.choice(
+                        list(self._config["attention_policy"]["behaviors"].keys())
+                    ),
+                    loeric_id,
+                )
+                print("added")
+
+            diff = now - self._action_dict[loeric_id][0]
+            # choose new action
+            if diff >= self._switch_timer:
+
+                players = [
+                    p for p in self._intensity_dict.keys() if str(p) != loeric_id
+                ]
+                # backoff or
+                # match
+                # any group of players
+                # action = random.choice(["backoff", "match", "lead"])
+                action = random.choice(
+                    list(self._config["attention_policy"]["behaviors"].keys())
+                )
+                n = 1
+                if len(players) < 1:
+                    continue
+                elif len(players) > 1:
+                    n = random.randint(
+                        min(
+                            self._config["attention_policy"][
+                                "attention_group_min_size"
+                            ],
+                            len(players),
+                        ),
+                        min(
+                            self._config["attention_policy"][
+                                "attention_group_max_size"
+                            ],
+                            len(players),
+                        ),
+                    )
+                group = random.sample(players, n)
+
+                self._action_dict[loeric_id] = (now, action, group)
+                print(loeric_id, action, group)
+
+            # output port
+            out_port = None
+            for p in outports:
+                if loeric_id == re.search("#.*#", p.name)[0]:
+                    out_port = p
+                    break
+
+            _, action, group = self._action_dict[loeric_id]
+            if type(group) is not list:
+                group = [group]
+
+            # intensity
+            int_value = 0
+            algorithm = self._config["attention_policy"]["behaviors"][action][
+                "intensity_aggregator"
+            ]
+            if algorithm == "mean":
+                int_value = np.mean([self._intensity_dict[p] for p in group])
+            elif algorithm == "min":
+                int_value = np.min([self._intensity_dict[p] for p in group])
+            elif algorithm == "max":
+                int_value = np.max([self._intensity_dict[p] for p in group])
+            elif algorithm == "constant":
+                pass
+
+            int_value *= self._config["attention_policy"]["behaviors"][action][
+                "intensity_multiplier"
+            ]
+            int_value += self._config["attention_policy"]["behaviors"][action][
+                "intensity_constant"
+            ]
+
+            hi_value = 0
+            algorithm = self._config["attention_policy"]["behaviors"][action][
+                "human_impact_aggregator"
+            ]
+            if algorithm == "mean":
+                hi_value = np.mean([self._human_impact_dict[p] for p in group])
+            elif algorithm == "min":
+                hi_value = np.min([self._human_impact_dict[p] for p in group])
+            elif algorithm == "max":
+                hi_value = np.max([self._human_impact_dict[p] for p in group])
+            elif algorithm == "constant":
+                pass
+
+            hi_value *= self._config["attention_policy"]["behaviors"][action][
+                "human_impact_multiplier"
+            ]
+            hi_value += self._config["attention_policy"]["behaviors"][action][
+                "human_impact_constant"
+            ]
+
+            int_value *= 127
+            int_value = int(int_value)
+            int_value = min(int_value, 127)
+            int_value = max(int_value, 0)
+
+            hi_value *= 127
+            hi_value = int(hi_value)
+            hi_value = min(hi_value, 127)
+            hi_value = max(hi_value, 0)
+
+            # prepare message
+            if out_port is not None:
+                msg = mido.Message(
+                    "control_change",
+                    value=int_value,
+                    control=self._config["intensity_control_out"],
+                )
+                out_port.send(msg)
+                msg = mido.Message(
+                    "control_change",
+                    value=hi_value,
+                    control=self._config["human_impact_control_out"],
+                )
+                out_port.send(msg)
+
+        all_dead.release()
 
 
 def get_callback(control):
 
     def check_skips(msg):
+        global received_start
 
         if msg.type == "control_change" and msg.control != control:
             return
@@ -526,44 +638,22 @@ def get_callback(control):
 
 
 def main():
-    global program_start
+    global all_dead, program_start
     parser = argparse.ArgumentParser()
+    parser.add_argument("source", help="the midi file to play.", nargs="?", default="")
     parser.add_argument(
-        "source",
-        help="the files to play. If more than one, they will be assigned to each player in order.",
-        nargs="+",
-        default="",
-    )
-    player_args = parser.add_mutually_exclusive_group()
-    player_args.add_argument(
-        "--player_configs",
-        help="the configuration files for each player.",
-        nargs="+",
-        type=str,
-        default=None,
-    )
-    player_args.add_argument(
         "--players",
-        help="the instruments for each player.",
+        help="the self._configuration files for each player.",
         nargs="+",
         type=str,
         default=None,
     )
-    parser.add_argument(
-        "--ireland",
-        action="store_true",
-        help="load a configuration snippet compatible with NI Kontakt Ireland.",
-    )
-    parser.add_argument(
-        "--name",
-        type=str,
-    )
-
+    dir_path = os.path.dirname(os.path.realpath(__file__))
     parser.add_argument(
         "--config",
         help="the path to a configuration file. Every option included in the configuration file will override command line arguments.",
         type=str,
-        default=ir.files("loeric.loeric_config.session").joinpath("session.json"),
+        default=f"{dir_path}/loeric_config/session/session.json",
     )
     input_args = parser.add_mutually_exclusive_group()
     input_args.add_argument(
@@ -591,11 +681,6 @@ def main():
         help="the output MIDI port for the performance.",
         type=int,
         default=None,
-    )
-    parser.add_argument(
-        "--separate",
-        help="create different outputs for each instrument. Requires '--create-out'",
-        action="store_true",
     )
 
     sync_args = parser.add_mutually_exclusive_group()
@@ -662,34 +747,14 @@ def main():
     args = parser.parse_args()
     args = vars(args)
 
-    if args["separate"]:
-        assert args["create_out"]
-
-    if len(args["source"]) != 1:
-
-        if args["players"] is not None:
-            assert len(args["source"]) == len(args["players"])
-        else:
-            assert len(args["source"]) == len(args["player_configs"])
-
     loeric_id = int(time.time())
-    if args.get("name") is not None:
-        loeric_id = args.get("name")
     scheduler_port = None
 
     if args["create_in"]:
         port = mido.open_input(f"LOERIC SESSION in #{loeric_id}#", virtual=True)
 
-    # create lock for accessing the output
-    output_lock = threading.Lock()
-
     if args["create_out"]:
-        if args["separate"]:
-            # if ports are all different, no need
-            output_lock = None
-            outputs = []
-        else:
-            out = mido.open_output(f"LOERIC SESSION out #{loeric_id}#", virtual=True)
+        out = mido.open_output(f"LOERIC SESSION out", virtual=True)
 
     if args["create_sync"]:
         scheduler_port = mido.open_input(
@@ -734,73 +799,24 @@ def main():
         scheduler_port = mido.open_input(mido.get_input_names()[args["sync"]])
 
     # create Session object
-    session = Session(args["config"])
+    session = Session(args["config"], out)
 
     # set session tempo
     session.set_tempo(args["bpm"])
 
-    single_tune = len(args["source"]) == 1
-    if single_tune:
-        tune = tu.Tune(
-            args["source"][0],
-            args["repeat"],
-            key=args["force_key"],
-            meter=args["force_meter"],
-            verbose=1,
-            sync_interval=session.sync_interval,
-        )
+    tune = tu.Tune(
+        args["source"],
+        args["repeat"],
+        key=args["force_key"],
+        meter=args["force_meter"],
+        verbose=1,
+        sync_interval=session.sync_interval,
+    )
 
     groovers = []
-    players = []
-    musicians = args["players"]
-    using_configs = False
+    for i, config in enumerate(args["players"]):
 
-    if musicians is None:
-        musicians = args["player_configs"]
-        using_configs = True
-
-    for i, setup in enumerate(musicians):
-
-        # create the part for this musician
-        if not single_tune:
-            tune = tu.Tune(
-                args["source"][i],
-                args["repeat"],
-                key=args["force_key"],
-                meter=args["force_meter"],
-                verbose=1,
-                sync_interval=session.sync_interval,
-            )
-        print(f"[SESS] Creating {setup}")
-
-        # players are defined by configuration files
-        if using_configs:
-            config = setup
-            additional_configs = []
-        # players are generated using snippets
-        else:
-            config = None
-            additional_configs = [
-                lu.general_configs_path / "instrument" / f"{setup}.json",
-                lu.general_configs_path / "tune_type" / f"{tune.tune_type}.json",
-                lu.general_configs_path / "drone" / "on.json",
-                lu.general_configs_path / "control" / "session.json",
-                lu.general_configs_path / "ornament" / "variations.json",
-            ]
-            if args.get("ireland"):
-                additional_configs.append(
-                    lu.general_configs_path / "synth" / "kontakt_ireland.json"
-                )
-                additional_configs.append(
-                    lu.general_configs_path / "control" / "velocity_to_modulation.json"
-                )
-
-        # create ports
-        if args["separate"]:
-            outputs.append(
-                mido.open_output(f"LOERIC SESSION out #{setup}#", virtual=True)
-            )
-
+        print(f"[SESSION] Creating {config}")
         groover = gr.Groover(
             tune,
             bpm=args["bpm"],
@@ -810,264 +826,138 @@ def main():
             human_impact=1,
             do_end_note=args["do_end_note"],
             verbose=0,
+            # to account for drones
             midi_channel=2 * i,
-            loeric_id=f"{i}_" + os.path.basename(setup)[:7],
+            loeric_id=config.split(".json")[0],
             syncing=True,
-            seed=int(time.time()),
-            additional_configs=additional_configs,
         )
 
         groovers.append(groover)
 
-    groover_threads = []
-    player_threads = []
+    threads = []
     # create session loop
     session_t = threading.Thread(target=session.session_loop, args=())
 
     # create players
-    for i, g in enumerate(groovers):
+    for g in groovers:
+        player = pl.Player(tempo=g.current_tempo, midi_out=out)
+        player.init_playback()
 
-        if args["separate"]:
-            out = outputs[i]
-
-        # create a player per groover
-        p = pl.Player(tempo=g.current_tempo, midi_out=out, midi_out_lock=output_lock)
-        players.append(p)
-
-        p.init_playback()
-
-        groover_t = threading.Thread(
+        player_t = threading.Thread(
             target=play_tune,
-            args=(p, g, port, session),
+            args=(player, tune, g, port, session),
         )
-        player_t = threading.Thread(target=player_loop, args=(p, g))
-        groover_threads.append(groover_t)
-        player_threads.append(player_t)
+        threads.append(player_t)
 
     # all threads + session loop
-    # all_dead = threading.Semaphore(value=total_threads)
+    all_dead = threading.Semaphore(value=len(threads) + 1)
 
+    print("[SESSION] Awaiting message...")
     try:
         # set up port and wait
         if scheduler_port is not None:
-            print("[SESS] Awaiting message...")
 
             scheduler_port.callback = get_callback(args["control"])
 
             with received_start:
                 received_start.wait()
-        else:
-            input("Press any key to start playback:")
-            print()
 
         program_start = time.time()
         # start session
         session_t.start()
 
         # start all threads
-        for thread in groover_threads:
-            thread.start()
+        for player_t in threads:
+            player_t.start()
 
-        for thread in player_threads:
-            thread.start()
+        # join all threads
+        for player_t in threads:
+            while player_t.is_alive():
+                player_t.join(1)
 
-        ##################################################
-
-        """
-        import matplotlib.pyplot as plt
-        from matplotlib.animation import FuncAnimation
-        from collections import deque
-
-        WINDOW = 20  # sliding window size
-
-        # Create a deque for each key
-        buffers = {g.loeric_id: deque(maxlen=WINDOW) for g in groovers}
-
-        # Colors for each line (optional)
-        colors = ["r", "g", "b", "m", "c", "y", "k"]
-
-        # --- Plot setup ---
-        fig, ax = plt.subplots()
-
-        lines = {}
-        for i, k in enumerate(session._intensity_dict.keys()):
-            (line,) = ax.plot([], [], label=k, color=colors[i % len(colors)])
-            lines[k] = line
-
-        ax.legend(loc="upper left")
-        ax.set_title("Live Multi-Line Sliding Window")
-        ax.set_xlim(0, WINDOW - 1)
-
-        def animate(frame):
-
-            # Append new value to each buffer
-            for k in session._intensity_dict.keys():
-                buffers[k].append(session._intensity_dict[k])
-                x = range(len(buffers[k]))
-                y = list(buffers[k])
-                lines[k].set_data(x, y)
-
-            # Adjust y-limits based on current values
-            all_vals = [v for buf in buffers.values() for v in buf]
-            if all_vals:
-                ax.set_ylim(min(all_vals) - 0.1, max(all_vals) + 0.1)
-
-            return lines.values()
-
-        anim = FuncAnimation(fig, animate, interval=200, blit=False)  # update rate (ms)
-        plt.show()
-        anim.copy()
-
-        ##################################################
-        """
-        # join all groover threads
-        for thread in groover_threads:
-            while thread.is_alive():
-                thread.join(1)
-
-        # now kill the others
-        # must_die.set()
-        stop_event.set()
-
-        # join player threads to kill them
-        for thread in player_threads:
-            while thread.is_alive():
-                thread.join(1)
-
+        must_die.set()
         # join session thread to kill it
         while session_t.is_alive():
             session_t.join(1)
 
     except KeyboardInterrupt:
-        print("[SESS] Playback stopped by user.")
+        print("[SESSION] Playback stopped by user.")
         # tell threads to stop
-        stop_event.set()
+        must_die.set()
 
     # wait for every thread to die
-    for groover in groovers:
-        groover.stopped.clear()
-        groover.playback_resumed.set()
-
-    for player in players:
-        player.has_reached_wake_time.set()
-
-    for i, thread in enumerate(groover_threads):
-        while thread.is_alive():
-            thread.join(1)
-        print(f"[SESS] {i+1}/{len(groover_threads)} groover threads dead.")
-
-    for i, thread in enumerate(player_threads):
-        while thread.is_alive():
-            thread.join(1)
-        print(f"[SESS] {i+1}/{len(player_threads)} player threads dead.")
+    for i, t in enumerate(threads):
+        all_dead.acquire()
+        print(f"[SESSION] {i+1}/{len(threads)} threads dead.")
 
     # close midi input
     if port is not None:
         port.close()
-        print("[SESS] Closing midi ports...")
+        print("[SESSION] Closing midi ports...")
         if port.closed:
-            print("[SESS] Closed MIDI input.")
+            print("[SESSION] Closed MIDI input.")
 
     # make sure to turn off all notes
-    if args["separate"]:
-        ports = outputs
-    else:
-        ports = [out]
-
-    for out in ports:
-        if out is not None:
-            for i in range(127):
-                out.send(mido.Message("note_off", velocity=0, note=i, time=0))
-            out.reset()
-            out.close()
-            if out.closed:
-                print("[SESS] Closed MIDI output.")
+    if out is not None:
+        for i in range(127):
+            out.send(mido.Message("note_off", velocity=0, note=i, time=0))
+        out.reset()
+        out.close()
+        if out.closed:
+            print("[SESSION] Closed MIDI output.")
 
 
-"""
-def player_loop_old(player, groover):
-    for i, thread in enumerate(player_threads):
-        while thread.is_alive():
-            thread.join(1)
-        print(f"[SESS] {i+1}/{len(player_threads)} player threads dead.")
+def play_tune(player, tunes, groover, port, session):
+    global must_die, all_dead
 
-    # all_dead.acquire()
-    print(f"[PLYR] Started {groover.loeric_id}")
-    while not must_die.is_set():
-
-        while groover.stopped.is_set():
-            player.reset()
-            print("player waiting play")
-            groover.playback_resumed.wait()
-            print("player awake")
-            player.init_playback()
-
-        player.play_next()
-
-    print(f"[PLYR] Terminated {groover.loeric_id}")
-    # all_dead.release()
-"""
-
-
-def player_loop(player, groover):
-    try:
-        print(f"[PLYR] Started {groover.loeric_id}")
-        while not stop_event.is_set():
-
-            # If paused then block indefinitely
-            while groover.stopped.is_set() and not stop_event.is_set():
-                player.reset()
-                groover.playback_resumed.wait()
-
-                # If stop happened while paused then exit
-                if stop_event.is_set():
-                    break
-
-                player.init_playback()
-
-            # Normal playback
-            player.play_next()
-
-    except Exception as e:
-        traceback.print_exception(e)
-    finally:
-        print(f"[PLYR] Terminated {groover.loeric_id}")
-
-
-def play_tune(player, groover, port, session):
+    all_dead.acquire()
+    print(f"[GRVR] Started {groover.loeric_id}")
 
     # set input callback
     if port is not None:
+        port.callback = groover.check_midi_control()
 
-        def callback(message):
+    # iterate over messages
+    while not must_die.is_set():
 
+        if groover.stopped.is_set():
+            player.reset()
+            with groover.playback_resumed:
+                groover.playback_resumed.wait()
+            player.init_playback()
+
+        message = groover.next_event()
+        if message is None:
+            break
+
+        if message.type == "sysex":
+            # print(f"Repetition {message.data[0]+1}")
+            groover._offset = 0
+            groover._swing_offset = 0
+
+            continue
+
+        # perform notes
+        elif lu.is_note(message):
+            # make the groover play the messages
+            new_messages = groover.perform(message)
+            session.handle_loeric_intensity(groover)
+        # keep meta messages intact
+        else:
             if message.type == "songpos":
-                session.handle_human_pos("HUMAN", message.position)
-            elif message.is_cc:
-                session.handle_human_intensity(
-                    "HUMAN", message.control, message.value / 127
-                )
+                session.handle_loeric_pos(groover, message.pos)
+            new_messages = groover.perform(message)
+        # play
+        player.play(new_messages)
 
-        port.callback = callback
-
-    def note_callback(message):
-        session.handle_loeric_intensity(groover)
-
-    def songpos_callback(message):
-        session.handle_loeric_pos(groover, player, message.position)
-
-    # all_dead.acquire()
-    print(f"[GRVR] Started {groover.loeric_id}")
-    args = {"verbose": 0}
-    lu.play(
-        loop_condition=lambda: not stop_event.is_set(),
-        groover=groover,
-        player=player,
-        note_callback=note_callback,
-        songpos_callback=songpos_callback,
-        repetition_callback=None,
-        **args,
-    )
+    # play an end note
+    if groover.do_end_note:
+        groover.reset_contours()
+        groover.advance_contours()
+        player.play(groover.get_end_notes())
 
     print(f"[GRVR] Terminated {groover.loeric_id}")
-    # all_dead.release()
+    all_dead.release()
+
+
+main()
