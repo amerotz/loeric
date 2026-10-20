@@ -17,6 +17,7 @@
 import faulthandler
 import logging
 import multiprocessing
+import multiprocessing.queues
 import queue
 import threading
 import time
@@ -262,7 +263,7 @@ class LOERIC:
         config: dict,
         tune: tu.Tune,
         wait_for_prompt: bool,
-        command_queue: queue.Queue | multiprocessing.Queue,
+        command_queue: queue.Queue | multiprocessing.queues.Queue,
         ready_event: threading.Event | multiprocessing.Event,
         mode: str,
     ):
