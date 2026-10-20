@@ -159,7 +159,7 @@ class PerformanceClock:
         PerformanceClock._tick = tick
 
     @staticmethod
-    def now() -> le.TimeDelta:
+    def now() -> TimeDelta:
         return PerformanceClock._tick
 
 
