@@ -264,7 +264,7 @@ class LOERIC:
         tune: tu.Tune,
         wait_for_prompt: bool,
         command_queue: queue.Queue | multiprocessing.queues.Queue,
-        ready_event: threading.Event | multiprocessing.Event,
+        ready_event: threading.Event | multiprocessing.synchronize.Event,
         mode: str,
     ):
         """Create all LOERIC objects and start playback."""
