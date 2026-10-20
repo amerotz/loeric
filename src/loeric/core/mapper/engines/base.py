@@ -105,9 +105,6 @@ class LOERICMapperEngine:
     def _process_contour_source(self, obj: lmpm.ContourSource):
         pass
 
-    def _process_constant_source(self, obj: lmpm.ConstantSource):
-        pass
-
     def _process_human_impact_target(self, obj: lmpm.HumanImpactTarget):
         pass
 
