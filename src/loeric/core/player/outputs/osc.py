@@ -42,7 +42,7 @@ class OSCQueue(le.Queue):
         super().__init__()
         self._seq = 0
 
-    def push(self, item: tuple(OscMessage, le.TimeDelta)):
+    def push(self, item: tuple[OscMessage, le.TimeDelta]):
         """Insert an OSC message into the priority queue.
 
         :param item: a :class:`mido.Message` or :class:`mido.MetaMessage` to enqueue.

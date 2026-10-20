@@ -27,6 +27,8 @@ joblib==1.5.3
 jsonmerge==1.9.2
 jsonpickle==4.1.1
 jsonschema==4.26.0
+librosa
+python-osc
 jsonschema-specifications==2025.9.1
 kiwisolver==1.4.9
 matplotlib==3.10.8
