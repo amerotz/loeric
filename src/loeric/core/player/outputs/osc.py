@@ -160,7 +160,7 @@ class OSCOutput(lob.OutputInterface):
 
     def _event_to_osc(
         self, event, absolute_time: bool = False
-    ) -> list[tuple(OscMessage, le.TimeDelta)]:
+    ) -> list[tuple[OscMessage, le.TimeDelta]]:
 
         time = event.duration
         if absolute_time:
