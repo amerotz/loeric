@@ -39,6 +39,8 @@ from loeric.core.player.analysers.midi import (
     MIDIContourAnalyserConfig,
     MIDILogger,
     MIDILoggerConfig,
+    MIDINoteAnalyser,
+    MIDINoteAnalyserConfig,
 )
 from loeric.core.player.analysers.osc import (
     OSCContourAnalyser,
@@ -53,6 +55,7 @@ AllAnalysersConfig = Annotated[
     | TempoAnalyserConfig
     | MIDIContourAnalyserConfig
     | MIDILoggerConfig
+    | MIDINoteAnalyserConfig
     | OSCContourAnalyserConfig
     | OSCLoggerConfig,
     pdt.Field(discriminator="type"),
@@ -82,6 +85,7 @@ def create_analyser(
         "tempo": TempoAnalyser,
         "midi_cc": MIDIContourAnalyser,
         "midi_logger": MIDILogger,
+        "midi_notes": MIDINoteAnalyser,
         "osc_cc": OSCContourAnalyser,
         "osc_logger": OSCLogger,
     }
@@ -98,8 +102,6 @@ def create_analyser(
     raw = dict(config)
     if issubclass(cls, AudioAnalyser):
         raw["samplerate"] = samplerate
-    print(raw)
 
     validated = cls.config_class.model_validate(raw)
-    print(validated.model_dump())
     return cls(**validated.model_dump())

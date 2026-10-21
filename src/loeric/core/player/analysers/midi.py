@@ -59,6 +59,13 @@ class MIDIContourAnalyserConfig(MIDIAnalyserConfig):
         return v
 
 
+class MIDINoteAnalyserConfig(MIDIAnalyserConfig):
+    """Config for :class:`MIDINoteAnalyser`."""
+
+    type: Literal["midi_notes"]
+    controls: dict[str, Literal["note"] | Literal["velocity"]]
+
+
 class MIDIAnalyser(Analyser):
     """Base class for MIDI analysis functions.
 
@@ -143,6 +150,50 @@ class MIDIContourAnalyser(MIDIAnalyser):
                 event = le.ContourValue(
                     name=name,
                     value=message.value / 127.0,
+                    time=le.PerformanceClock.now(),
+                )
+                events.append(event)
+                logger.info(f"{event.name}: {event.value:.2f}")
+
+        if events:
+            self._control_events = events
+
+
+class MIDINoteAnalyser(MIDIAnalyser):
+    """MIDI analyser that maps note attributes to named contour values.
+
+    Filters non-note on messages.
+
+    and emits :class:`~loeric.core.element.ContourValue` events.
+    """
+
+    config_class = MIDINoteAnalyserConfig
+
+    def __init__(self, controls: dict[str, int], **kwargs):
+        """Initialise the MIDI contour analyser.
+
+        :param controls: mapping of control names to MIDI note attributes.
+        :param kwargs: forwarded to :class:`MIDIAnalyser`.
+        """
+        super().__init__(**kwargs)
+        self._controls = controls
+
+    def update(self, message):
+        """Map incoming note on messages to contour events.
+
+        :param message: the MIDI message to process.
+        """
+        if not self._active:
+            return
+        if message.type not in ["note_on"]:
+            return
+
+        events = []
+        for name, note_attribute in self._controls.items():
+            if note_attribute in ["note", "velocity"]:
+                event = le.ContourValue(
+                    name=name,
+                    value=getattr(message, note_attribute) / 127,
                     time=le.PerformanceClock.now(),
                 )
                 events.append(event)
