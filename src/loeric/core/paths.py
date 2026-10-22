@@ -193,7 +193,6 @@ def _container_type(obj, key: str) -> type | None:
     """
     # first try the object's own hints (for plain attributes)
     hints = typing.get_type_hints(type(obj))
-    print(hints)
     if key in hints:
         hint = hints[key]
         args = typing.get_args(hint)
@@ -206,7 +205,6 @@ def _container_type(obj, key: str) -> type | None:
         if key in config_hints:
             hint = config_hints[key]
             args = typing.get_args(hint)
-            print(args)
             return args[0] if args else hint
 
     return None
@@ -297,7 +295,6 @@ class LOERICPath:
             try:
                 value = coerce(expected, value)
             except TypeError as e:
-                print(e)
                 logger.warning(
                     f"Cannot set attribute {key} of {obj} (obtained type {type(value)}, expected {expected}"
                 )

@@ -51,32 +51,80 @@ class SynthOutput(mido.ports.BaseOutput):
         self._volume = volume
         self._lock = threading.RLock()
         self._samplerate = samplerate
-        self._channels = channels
+        self._channels = min(channels, sd.query_devices(device)["max_output_channels"])
 
         self._synth = tinysoundfont.Synth(gain=self._gain, samplerate=self._samplerate)
         self._soundfont_id = self._synth.sfload(self._path)
         self._stream = None
         self._synth_is_running = False
 
+        self._compressor_envelope = 0.0
+
         for channel in range(16):
             self._synth.program_select(channel, self._soundfont_id, 0, self._program)
 
-        CALLBACK_CHANNELS = min(self._channels, 2)
-
         def callback(outdata, frames, time, status):
+
             if status:
                 logger.warning("Audio callback status: %s", status)
+
             buf = self._synth.generate(samples=frames)
             buf = np.frombuffer(buf, dtype=np.float32).reshape(-1, 2)
 
-            # mono
-            if CALLBACK_CHANNELS == 1:
-                buf = buf.mean(axis=1).reshape(-1, 1)
+            # Convert to mono if needed
+            if self._channels == 1:
+                buf = buf.mean(axis=1, keepdims=True)
 
-            # change volume by scaling signal
+            # Fixed compressor settings
+            threshold_db = -18.0  # Compress signals above -18 dBFS
+            ratio = 4.0  # 4:1 compression ratio
+            makeup_gain_db = 6.0  # Compensate for reduced loudness
+            attack_ms = 5.0
+            release_ms = 100.0
+
+            # Convert dBFS threshold to linear amplitude
+            threshold = 10.0 ** (threshold_db / 20.0)
+            makeup_gain = 10.0 ** (makeup_gain_db / 20.0)
+
+            # Envelope follower coefficients
+            sr = self._samplerate
+
+            attack_coeff = np.exp(-1.0 / (sr * attack_ms / 1000.0))
+            release_coeff = np.exp(-1.0 / (sr * release_ms / 1000.0))
+
+            # Compress both channels together to preserve stereo balance
+            peak = np.max(np.abs(buf), axis=1)
+
+            envelope = self._compressor_envelope
+            gain = np.empty_like(peak)
+
+            for i, sample_peak in enumerate(peak):
+                coeff = attack_coeff if sample_peak > envelope else release_coeff
+                envelope = coeff * envelope + (1.0 - coeff) * sample_peak
+
+                if envelope > threshold:
+                    # Above threshold, reduce dynamic range
+                    compressed_level = threshold * (envelope / threshold) ** (
+                        1.0 / ratio
+                    )
+
+                    gain[i] = compressed_level / max(envelope, 1e-12)
+                else:
+                    gain[i] = 1.0
+
+            self._compressor_envelope = envelope
+
+            # Apply compression and makeup gain
+            buf *= gain[:, None]
+            buf *= makeup_gain
+
+            # Apply user volume last
             buf *= self._volume
 
-            outdata[:, :CALLBACK_CHANNELS] = buf
+            # Prevent clipping
+            np.clip(buf, -1.0, 1.0, out=buf)
+
+            outdata[:, : self._channels] = buf
 
         self._stream = sd.OutputStream(
             samplerate=self._synth.samplerate,
