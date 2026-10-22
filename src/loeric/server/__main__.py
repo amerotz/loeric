@@ -269,7 +269,7 @@ async def start_loeric(
             block=False,
         )
 
-        _change_volume(volume)
+        #_change_volume(volume)
         state.running = True
 
         return True
