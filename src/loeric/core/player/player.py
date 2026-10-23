@@ -19,12 +19,16 @@
 # pop(): obtain next event
 # push: add an element to the working queue
 # update: process the queue
+import logging
+
 import pydantic as pdt
 
 import loeric.core.element as le
 import loeric.core.paths as lp
 import loeric.core.player.inputs as li
 import loeric.core.player.outputs as lo
+
+logger = logging.getLogger(__name__)
 
 
 class PlayerConfig(pdt.BaseModel):
@@ -45,13 +49,17 @@ class Player:
             config = PlayerConfig(config)
 
         self._input_interfaces = {}
+        logger.info("Creating following inputs:")
         for i in config.input:
+            logger.info(i)
             interface = li.create_input(config.input[i])
             if interface is not None:
                 self._input_interfaces[i] = interface
 
         self._output_interfaces = {}
+        logger.info("Creating following outputs:")
         for o in config.output:
+            logger.info(o)
             interface = lo.create_output(config.output[o])
             if interface is not None:
                 self._output_interfaces[o] = interface

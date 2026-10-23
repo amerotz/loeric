@@ -156,7 +156,6 @@ class PreProcessingLayer(LOERICMatrix):
 
     def route(self, input_key: str, output_key: str):
         """Route a source to a target."""
-
         if input_key not in self._inputs:
             raise ValueError(f"Unknown input {input_key}.")
 
@@ -305,8 +304,11 @@ class MatrixEngine(lme.LOERICMapperEngine):
 
         Called by ``meth:Mapper.update()``.
         """
-
         x = np.array([self._parameters[n].get() for n in self._pre_layer.inputs])
+        # keep track of what was nan
+        nans = [
+            n for n in self._pre_layer.inputs if np.isnan(self._parameters[n].get())
+        ]
 
         # if empty mapper
         if len(x) == 0:
@@ -325,7 +327,7 @@ class MatrixEngine(lme.LOERICMapperEngine):
 
         # set the parameters
         for name, val in zip(self._gate_layer.outputs, x):
-            self._parameters[name].set(val)
+            self._parameters[name].set(val, bypass_range=True)
 
         # calculate human impact
         x_h = np.array([self._parameters[n].get() for n in self._impact_layer.inputs])
@@ -333,12 +335,16 @@ class MatrixEngine(lme.LOERICMapperEngine):
         if len(x_h) != 0:
             y_h = self._impact_layer(x_h)
             for name, val in zip(self._impact_layer.outputs, y_h):
-                self._parameters[name].set(val)
+                self._parameters[name].set(val, bypass_range=True)
 
         # calculate rules
         y = self._rule_layer(x)
         for name, val in zip(self._rule_layer.outputs, y):
-            self._parameters[name].set(val)
+            self._parameters[name].set(val, bypass_range=True)
+
+        # bring back to nans those that were nans
+        for n in nans:
+            self._parameters[n].set(np.nan, bypass_range=True)
 
     def _add_input(self, name):
         """Add an input to the underlying matrices."""
@@ -352,10 +358,11 @@ class MatrixEngine(lme.LOERICMapperEngine):
         self._pre_layer.add_output(name)
         self._rule_layer.add_output(name)
 
-    def _add_parameter(self, name: str, a: float = 0, b: float = 1):
+    def _add_parameter(self, name: str, a: float = 0, b: float = 1, mode="select"):
+
         if name not in self._parameters:
             # add parameter
-            self._parameters[name] = lmp.Parameter(name, a, b)
+            self._parameters[name] = lmp.Parameter(name, a, b, mode=mode)
 
     def _process_mapper_range(self, obj: lmPm.MapperRange):
         pass
@@ -405,6 +412,18 @@ class MatrixEngine(lme.LOERICMapperEngine):
         self._add_input(ranged_name)
         # overwrite param
         self._add_parameter(ranged_name, obj.range.a, obj.range.b)
+
+        return ranged_name
+
+    def _process_mapper_clipper(self, obj: lmPm.MapperClipper):
+        name = self.process(obj.source)
+
+        ranged_name = f"{name}|[{obj.range.a},{obj.range.b}]"
+        self._ranged_input_pairs.append((ranged_name, name))
+
+        self._add_input(ranged_name)
+        # overwrite param
+        self._add_parameter(ranged_name, obj.range.a, obj.range.b, mode="clip")
 
         return ranged_name
 

@@ -297,6 +297,7 @@ class MIDIOutput(lob.OutputInterface):
 
             event_velocity = event.velocity * (max_v - min_v) + min_v
             event_velocity = np.clip(event_velocity, min_v, max_v).astype(int)
+            event_velocity = min(max(event_velocity, 0), 127)
 
             pb = min(8191, max(np.round(bend_percentage * 8191).astype(int), -8192))
             event_pitch = max(0, min(127, np.round(event.pitch).astype(int)))

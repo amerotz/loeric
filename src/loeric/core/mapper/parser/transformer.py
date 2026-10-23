@@ -82,6 +82,10 @@ class _LOERICMapperTransformer(lark.Transformer):
         self._context.last_recorded_range = items[1]
         return lmm.MapperSelector(source=items[0], range=items[1])
 
+    def clip(self, items):
+        self._context.last_recorded_range = items[1]
+        return lmm.MapperClipper(source=items[0], range=items[1])
+
     def map(self, items):
 
         if self._context.last_recorded_range is None:

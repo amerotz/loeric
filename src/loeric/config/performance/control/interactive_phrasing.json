@@ -70,7 +70,9 @@
 
       "0.5 : %drone",
       "1 : %legato",
-      "velocity_tempo_impact : %velocity,%tempo",
+      "velocity_tempo_impact @ [0,0.35] : %velocity,%tempo",
+      "velocity_tempo_impact @ [0.35,0.8] : %velocity,%tempo",
+      "velocity_tempo_impact @ [0.8,1.0] : %velocity,%tempo",
 
       "global_intensity @ [0,0.35] ~ velocity,legato,drone",
       "global_intensity @ [0.35,0.8] ~ velocity,legato,drone",

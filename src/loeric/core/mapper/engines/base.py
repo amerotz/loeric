@@ -46,6 +46,7 @@ class LOERICMapperEngine:
             lmpm.HumanImpactTarget: self._process_human_impact_target,
             lmpm.ProcessedSource: self._process_processed_source,
             lmpm.MapperSelector: self._process_mapper_selector,
+            lmpm.MapperClipper: self._process_mapper_clipper,
             lmpm.MapperRemapper: self._process_mapper_remapper,
             lmpm.MapperModulator: self._process_mapper_modulator,
             lmpm.MapperRouter: self._process_mapper_router,
@@ -112,6 +113,9 @@ class LOERICMapperEngine:
         pass
 
     def _process_mapper_selector(self, obj: lmpm.MapperSelector):
+        pass
+
+    def _process_mapper_clipper(self, obj: lmpm.MapperClipper):
         pass
 
     def _process_mapper_remapper(self, obj: lmpm.MapperRemapper):

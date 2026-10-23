@@ -106,6 +106,14 @@ class MapperSelector(LOERICPreProcessRule):
 
 
 @dataclass(frozen=True)
+class MapperClipper(LOERICPreProcessRule):
+    """A range selection rule that clips to the extremes."""
+
+    source: ContourSource
+    range: MapperRange
+
+
+@dataclass(frozen=True)
 class MapperRemapper(LOERICPreProcessRule):
     """A range remapping rule."""
 

@@ -495,8 +495,8 @@
         "port": "KOMPLETE KONTROL S61 MK2 MIDI 1",
         "analysers": {
           "midi_notes": {
-            "controls": { "intensity": "note" },
-            "responsiveness": 0.5,
+            "controls": { "intensity": "velocity", "range": "note" },
+            "responsiveness": 1,
             "active": true
           }
         }
@@ -511,6 +511,14 @@
         "velocity_range": [32, 110],
         "pitchbend_range": 2,
         "controls": {}
+      },
+      "visual": {
+        "active": true,
+        "window_size": 500,
+        "width": 2000,
+        "height": 1000,
+        "fps": 60,
+        "controls": ["range|[0.18,0.67]", "intensity", "signal"]
       }
     }
   },
@@ -521,13 +529,17 @@
       "drone",
       "tempo",
       "legato",
-      "intensity"
+      "intensity",
+      "signal"
     ],
-    "targets": [],
+    "targets": ["signal"],
     "rules": [
-      "intensity @ [0.18,0.67] > [0, 1] !",
+      "range | [0.18,0.67] > [0, 1] !",
+      "0.5 : %intensity",
+      "range | [0.18,0.67] ~ intensity",
+      "$intensity : signal",
       "1 : %velocity,%ornament,%tempo,%drone,%legato",
-      "intensity@[0.18,0.67] ~ velocity,ornament,tempo,drone,legato"
+      "signal ~ velocity,ornament,tempo,drone,legato"
     ]
   }
 }

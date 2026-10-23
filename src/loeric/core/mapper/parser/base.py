@@ -39,9 +39,11 @@ class LOERICMapperParser:
             | routing_rule
 
         select : source "@" range
+        clip : source "|" range
 
         ?modulation_source : source
             | select
+            | clip
         modulation_targets : [source ("," source)*]
         modulation_rule : modulation_source "~" modulation_targets
 
@@ -49,11 +51,14 @@ class LOERICMapperParser:
         ?pre_processing_rule :
             | source
             | select
+            | clip
             | pre_processing_rule ">" range -> map
             | pre_processing_rule "!" -> invert
 
         ?routing_source : number -> constant
             | source
+            | select
+            | clip
             | "$" source -> processed_source
         ?routing_target : "%" source -> impact_target
             | target
