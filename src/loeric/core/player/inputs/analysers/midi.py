@@ -14,6 +14,7 @@
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+from collections import defaultdict
 from typing import Literal
 
 import pydantic as pdt
@@ -64,6 +65,7 @@ class MIDINoteAnalyserConfig(MIDIAnalyserConfig):
 
     type: Literal["midi_notes"]
     controls: dict[str, Literal["note"] | Literal["velocity"]]
+    responsiveness: float
 
 
 class MIDIAnalyser(Analyser):
@@ -169,7 +171,7 @@ class MIDINoteAnalyser(MIDIAnalyser):
 
     config_class = MIDINoteAnalyserConfig
 
-    def __init__(self, controls: dict[str, int], **kwargs):
+    def __init__(self, controls: dict[str, int], responsiveness: float, **kwargs):
         """Initialise the MIDI contour analyser.
 
         :param controls: mapping of control names to MIDI note attributes.
@@ -177,6 +179,9 @@ class MIDINoteAnalyser(MIDIAnalyser):
         """
         super().__init__(**kwargs)
         self._controls = controls
+        self._responsiveness = responsiveness
+
+        self._values = defaultdict(float)
 
     def update(self, message):
         """Map incoming note on messages to contour events.
@@ -188,16 +193,23 @@ class MIDINoteAnalyser(MIDIAnalyser):
         if message.type not in ["note_on"]:
             return
 
+        for attr in ["note", "velocity"]:
+            value = getattr(message, attr)
+            if self._values.get(attr) is None:
+                self._values[attr] = value
+            else:
+                self._values[attr] *= 1 - self._responsiveness
+                self._values[attr] += self._responsiveness * value
+
         events = []
-        for name, note_attribute in self._controls.items():
-            if note_attribute in ["note", "velocity"]:
-                event = le.ContourValue(
-                    name=name,
-                    value=getattr(message, note_attribute) / 127,
-                    time=le.PerformanceClock.now(),
-                )
-                events.append(event)
-                logger.info(f"{event.name}: {event.value:.2f}")
+        for name, attr in self._controls.items():
+            event = le.ContourValue(
+                name=name,
+                value=self._values[attr] / 127,
+                time=le.PerformanceClock.now(),
+            )
+            events.append(event)
+            logger.info(f"{event.name}: {event.value:.2f}")
 
         if events:
             self._control_events = events
