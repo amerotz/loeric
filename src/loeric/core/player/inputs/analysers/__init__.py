@@ -23,7 +23,7 @@ from typing import Annotated
 
 import pydantic as pdt
 
-from loeric.core.player.analysers.audio import (
+from loeric.core.player.inputs.analysers.audio import (
     RMS,
     AudioAnalyser,
     BetterRMS,
@@ -32,8 +32,8 @@ from loeric.core.player.analysers.audio import (
     TempoAnalyser,
     TempoAnalyserConfig,
 )
-from loeric.core.player.analysers.base import Analyser
-from loeric.core.player.analysers.midi import (
+from loeric.core.player.inputs.analysers.base import Analyser
+from loeric.core.player.inputs.analysers.midi import (
     MIDIAnalyser,
     MIDIContourAnalyser,
     MIDIContourAnalyserConfig,
@@ -42,7 +42,7 @@ from loeric.core.player.analysers.midi import (
     MIDINoteAnalyser,
     MIDINoteAnalyserConfig,
 )
-from loeric.core.player.analysers.osc import (
+from loeric.core.player.inputs.analysers.osc import (
     OSCContourAnalyser,
     OSCContourAnalyserConfig,
     OSCLogger,

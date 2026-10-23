@@ -21,7 +21,7 @@ from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
 
 import loeric.core.paths as lp
-import loeric.core.player.analysers as la
+import loeric.core.player.inputs.analysers as la
 import loeric.core.player.inputs.base as lib
 
 logger = logging.getLogger(__name__)

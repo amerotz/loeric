@@ -18,7 +18,7 @@ from typing import Literal
 
 import loeric.core.element as le
 import loeric.core.paths as lp
-from loeric.core.player.analysers.base import Analyser, AnalyserConfig
+from loeric.core.player.inputs.analysers.base import Analyser, AnalyserConfig
 
 logger = logging.getLogger(__name__)
 

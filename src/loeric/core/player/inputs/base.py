@@ -18,7 +18,7 @@ import pydantic as pdt
 
 import loeric.core.element as le
 import loeric.core.paths as lp
-import loeric.core.player.analysers as la
+import loeric.core.player.inputs.analysers as la
 
 
 class InputInterfaceConfig(pdt.BaseModel):
