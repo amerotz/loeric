@@ -4,9 +4,8 @@ build:
   os: ubuntu-26.04
   tools:
     python: "3.14"
-  jobs:
-    pre_system_dependencies:
-      - apt install portaudio19-dev
+  apt_pacakges:
+    - portaudio19-dev
 
 sphinx:
   configuration: docs/source/conf.py
