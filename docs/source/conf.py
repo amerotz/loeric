@@ -22,11 +22,11 @@ sys.path.insert(0, os.path.abspath("../../loeric/"))
 # -- Project information
 
 project = "loeric"
-copyright = "2023, Marco Amerotti"
+copyright = "2026, Marco Amerotti"
 author = "Marco Amerotti"
 
-release = "0.1"
-version = "0.1.0"
+release = "3.0"
+version = "3.0.0"
 
 # -- General configuration
 
