@@ -6,7 +6,7 @@ build:
     python: "3.14"
   jobs:
     pre_system_dependencies:
-      - sudo apt install portaudio19-dev
+      - apt install portaudio19-dev
 
 sphinx:
   configuration: docs/source/conf.py
