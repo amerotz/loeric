@@ -14,7 +14,6 @@ pandas==3.1.0
 pydantic==2.14.1
 pyinstaller==6.22.3
 python-osc==1.10.2
-python-rtmidi==1.5.8
 pyqt5==5.15.11
 pyqtgraph==0.14.0
 scipy==1.18.1
