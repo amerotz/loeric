@@ -69,9 +69,9 @@ __all__ = [ModuleConfig]
 
 def create_module(module_name: str, **kwargs):
     """Instantiate a module by name, validating *kwargs* against its config model.
+
     :param module_name: registered module name (``#`` suffixes are stripped).
-    :param kwargs: raw config values; validated and coerced by the module's
-        :class:`BaseModuleConfig` subclass before the module is constructed.
+    :param kwargs: raw config values; validated and coerced by the module's :class:`BaseModuleConfig` subclass before the module is constructed.
     :return: a configured :class:`LOERICModule` instance.
     :raises ValueError: if *module_name* is not registered.
     :raises pydantic.ValidationError: if *kwargs* fail config validation.
