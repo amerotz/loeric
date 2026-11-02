@@ -10,7 +10,7 @@ API
    :private-members:
    :special-members:
 
-.. automodule:: loeric.core.contour
+.. automodule:: loeric.core.contours
    :members:
    :private-members:
    :special-members:
