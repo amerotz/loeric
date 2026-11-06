@@ -1,0 +1,90 @@
+{
+  "variables": {
+    "var_notes_per_bar": [6, 3],
+    "var_velocity_weight": [0, -1, 0, 0, 0],
+    "var_legato_pattern": {
+      "mean": [1, 1, 1, 0.5, 1, 0.3],
+      "std": null,
+      "std_scale": 1,
+      "period": 1,
+      "normalize": false
+    },
+    "var_ornament_pattern": {
+      "mean": [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+      "std": null,
+      "period": 4,
+      "std_scale": 1,
+      "normalize": false
+    },
+    "var_comping_notes_per_bar": [6],
+    "var_upper_comping_pattern": [0, 1, 0, 1, 0, 1],
+    "var_lower_comping_pattern": [1, 0, 1, 0, 1, 0]
+  },
+  "groover": {
+    "modules": {
+      "harmony": {
+        "chords_per_bar": 3
+      },
+      "ornament": {
+        "whitelist": ["vibrato", "cut_1", "cut_2", "divide"]
+      },
+      "swing": {
+        "min": 1.1,
+        "max": 1,
+        "bind": "swing",
+        "locations": [0, 2, 4]
+      }
+    }
+  },
+  "contours": {
+    "drone": {
+      "multiply": {
+        "contours": {
+          "scale#1": {
+            "contours": {
+              "o_canainn": {
+                "weights": "var_velocity_weight",
+                "savgol": true,
+                "scale": true,
+                "shift": true
+              }
+            },
+            "min": "var_drone_threshold",
+            "max": 1
+          },
+          "scale#2": {
+            "contours": {
+              "pattern": {
+                "mean": [1, 1, 0, 1, 0, 1],
+                "std": null,
+                "std_scale": 1,
+                "normalize": false,
+                "period": 1
+              }
+            },
+            "min": 0.9,
+            "max": 1
+          }
+        }
+      }
+    },
+    "velocity_pattern": {
+      "pattern": {
+        "mean": [1.0, 1.5, 0.6, 1.5, 1.0, 1.5],
+        "std": null,
+        "std_scale": 1,
+        "normalize": false,
+        "period": 1
+      }
+    },
+    "tempo_pattern": {
+      "pattern": {
+        "mean": [1.0, 1.0, 1.0],
+        "std": null,
+        "std_scale": 1,
+        "normalize": true,
+        "period": 1
+      }
+    }
+  }
+}

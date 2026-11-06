@@ -17,6 +17,7 @@ import time
 
 import numpy as np
 
+import loeric.core.context as lctx
 import loeric.core.element as le
 import loeric.core.mapper.parameter as lmp
 import loeric.core.mapper.parser.models as lmpm
@@ -84,7 +85,7 @@ class LOERICMapperEngine:
         else:
             values = [
                 le.ContourValue(
-                    name=p, value=params[p].get(), time=le.PerformanceClock.now()
+                    name=p, value=params[p].get(), time=lctx.PerformanceClock.now()
                 )
                 for p in params
                 if params[p].has_changed_since(self._last_read_timestamp)

@@ -63,11 +63,8 @@ class Score:
     def tempos(self):
         return self._tempos
 
+    """
     def _at(self, time: float | le.TimeDelta) -> list[le.LOERICElement]:
-        """Return all events occurring at the specified time.
-
-        Past the end of the score only EndOfScore will be returned.
-        """
         if time > self.end_time:
             return [self._annotated_score[-1]]
         elif time < self.start_time:
@@ -81,7 +78,6 @@ class Score:
     def _window(
         self, time: float | le.TimeDelta, size: float | le.TimeDelta
     ) -> list[le.LOERICElement]:
-        """Return a window of tune elements from `time` to `time + size` (in eighth notes)."""
         if time >= self.end_time:
             return [self._annotated_score[-1]]
         elif size == 0:
@@ -95,6 +91,7 @@ class Score:
             for i in range(index_1, index_2 + 1, 1):
                 window.append(self._annotated_score[i])
             return window
+    """
 
     def at(self, time: float | le.TimeDelta) -> list[le.LOERICElement]:
         """Return all events occurring at the specified time.
@@ -116,7 +113,10 @@ class Score:
     def window(
         self, time: float | le.TimeDelta, size: float | le.TimeDelta
     ) -> list[le.LOERICElement]:
-        """Return a window of tune elements from `time` to `time + size` (in eighth notes)."""
+        """Return a window of tune elements.
+
+        Elements span from `time` to `time + size` (in eighth notes).
+        """
         if time >= self.end_time:
             return [self._annotated_score[-1]]
         elif size == 0:
@@ -148,6 +148,10 @@ class Score:
                 )
             ]
         )
+
+    @cached_property
+    def note_count(self):
+        return len(self.pitches)
 
     @cached_property
     def durations(self):

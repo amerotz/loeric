@@ -42,6 +42,10 @@ from loeric.core.player.inputs.analysers.midi import (
     MIDINoteAnalyser,
     MIDINoteAnalyserConfig,
 )
+from loeric.core.player.inputs.analysers.midi_tracker import (
+    MIDIScoreTrackerAnalyser,
+    MIDIScoreTrackerAnalyserConfig,
+)
 from loeric.core.player.inputs.analysers.osc import (
     OSCContourAnalyser,
     OSCContourAnalyserConfig,
@@ -56,6 +60,7 @@ AllAnalysersConfig = Annotated[
     | MIDIContourAnalyserConfig
     | MIDILoggerConfig
     | MIDINoteAnalyserConfig
+    | MIDIScoreTrackerAnalyserConfig
     | OSCContourAnalyserConfig
     | OSCLoggerConfig,
     pdt.Field(discriminator="type"),
@@ -86,6 +91,7 @@ def create_analyser(
         "midi_cc": MIDIContourAnalyser,
         "midi_logger": MIDILogger,
         "midi_notes": MIDINoteAnalyser,
+        "midi_tracker": MIDIScoreTrackerAnalyser,
         "osc_cc": OSCContourAnalyser,
         "osc_logger": OSCLogger,
     }

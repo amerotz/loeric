@@ -150,32 +150,6 @@ class TimeDelta:
         return float(self.eighth_duration)
 
 
-class PerformanceClock:
-
-    _tick = TimeDelta(eighth_duration=0)
-
-    @staticmethod
-    def set(tick):
-        PerformanceClock._tick = tick
-
-    @staticmethod
-    def now() -> TimeDelta:
-        return PerformanceClock._tick
-
-
-class TempoKeeper:
-
-    _tempo = None
-
-    @staticmethod
-    def set(tempo):
-        TempoKeeper._tempo = tempo
-
-    @staticmethod
-    def tempo() -> float:
-        return Tempo(qpm=TempoKeeper._tempo, time=PerformanceClock.now())
-
-
 class LOERICElement:
 
     __slots__ = (
@@ -407,6 +381,45 @@ class SongPosition(LOERICElement):
 
     def __repr__(self):
         return f"(Position p={self._position} t={self._time})"
+
+
+class UserPosition(LOERICElement):
+    def __init__(self, position: float = 0, time: float = 0):
+        super().__init__(time)
+
+        self._position = TimeDelta(eighth_duration=position)
+
+    @property
+    def position(self):
+        return self._position
+
+    def __repr__(self):
+        return f"(UserPosition t={self._position} t={self._time})"
+
+
+class UserPlayback(LOERICElement):
+    """Where the performer currently is in the score.
+
+    :param position: score time of the last played event, in eighth notes.
+    :param delay: seconds elapsed since that event was played.
+    """
+
+    def __init__(self, position: float = 0, delay: float = 0, time: float = 0):
+        super().__init__(time)
+
+        self._position = TimeDelta(eighth_duration=position)
+        self._delay = delay
+
+    @property
+    def position(self):
+        return self._position
+
+    @property
+    def delay(self):
+        return self._delay
+
+    def __repr__(self):
+        return f"(UserPlayback p={self._position} d={self._delay})"
 
 
 class Tempo(LOERICElement):
@@ -761,6 +774,8 @@ class LOERICQueue(Queue):
             ContourValue,
             Chord,
             SongPosition,
+            UserPosition,
+            UserPlayback,
             Barline,
             KeySignature,
             Accidental,

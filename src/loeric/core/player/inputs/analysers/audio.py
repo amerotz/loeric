@@ -21,6 +21,7 @@ import numpy as np
 import pydantic as pdt
 from scipy.signal import butter, sosfilt
 
+import loeric.core.context as lctx
 import loeric.core.element as le
 import loeric.core.paths as lp
 from loeric.core.player.inputs.analysers.base import Analyser, AnalyserConfig
@@ -222,7 +223,7 @@ class RMS(AudioAnalyser):
         :return: list of :class:`~loeric.core.element.ContourValue` events.
         """
         return [
-            le.ContourValue(name=c, value=self._value, time=le.PerformanceClock.now())
+            le.ContourValue(name=c, value=self._value, time=lctx.PerformanceClock.now())
             for c in self._controls
         ]
 
@@ -401,7 +402,7 @@ class BetterRMS(AudioAnalyser):
         :return: list of :class:`~loeric.core.element.ContourValue` events.
         """
         return [
-            le.ContourValue(name=c, value=self._value, time=le.PerformanceClock.now())
+            le.ContourValue(name=c, value=self._value, time=lctx.PerformanceClock.now())
             for c in self._controls
         ]
 
@@ -497,7 +498,7 @@ class TempoAnalyser(AudioAnalyser):
             y=buffer, sr=self._samplerate, hop_length=hop_length
         )[0][0]
 
-        current = le.TempoKeeper.tempo().qpm
+        current = lctx.TempoKeeper.tempo().qpm
 
         candidates = np.array(
             [chosen, chosen * 2, chosen / 2, 2 * chosen / 3, 3 * chosen / 2]
@@ -517,4 +518,4 @@ class TempoAnalyser(AudioAnalyser):
         if self._value is None:
             return []
 
-        return [le.UserTempo(qpm=self._value, time=le.PerformanceClock.now())]
+        return [le.UserTempo(qpm=self._value, time=lctx.PerformanceClock.now())]

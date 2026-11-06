@@ -27,6 +27,7 @@ from dataclasses import dataclass
 import numpy as np
 import pydantic as pdt
 
+import loeric.core.context as lctx
 import loeric.core.contour_manager as cnt
 import loeric.core.element as le
 import loeric.core.groover as gr
@@ -82,7 +83,6 @@ class LOERIC:
             )
         self._config = config
 
-        self._tune = None
         self._tune_type = None
 
         self._instance = None
@@ -93,6 +93,8 @@ class LOERIC:
         else:
             self._command_queue = queue.Queue()
 
+        self._context = lctx.LOERICContext()
+
     @property
     def config(self):
         """Return LOERIC's current config."""
@@ -100,7 +102,8 @@ class LOERIC:
 
     def set_tune(self, tune: tu.Tune):
         """Assign a tune to LOERIC."""
-        self._tune = tune
+        with lctx.activate_context(self._context):
+            lctx.CurrentTune.set(tune)
 
     @staticmethod
     def infer_tune_type(tune: tu.Tune):
@@ -117,10 +120,7 @@ class LOERIC:
         return tunes[tune.time_signatures[0].meter_string]
 
     def set_tempo(self, tempo: float):
-        """Set tempo for LOERIC's performance in quarters per minute (QPM).
-
-        Defaults to 120 QPM.
-        """
+        """Set tempo for LOERIC's performance in quarters per minute (QPM)."""
         self._command_queue.put(
             LOERICCommand(command="tempo", payload={"tempo": tempo})
         )
@@ -203,11 +203,11 @@ class LOERIC:
                 target=LOERIC._run,
                 args=(
                     self._config,
-                    self._tune,
                     wait_for_prompt,
                     self._command_queue,
                     ready_event,
                     self._mode,
+                    self._context,
                 ),
             )
         else:
@@ -216,11 +216,11 @@ class LOERIC:
                 target=LOERIC._run,
                 args=(
                     self._config,
-                    self._tune,
                     wait_for_prompt,
                     self._command_queue,
                     ready_event,
                     self._mode,
+                    self._context,
                 ),
             )
 
@@ -259,9 +259,20 @@ class LOERIC:
             self._instance.join(timeout)
 
     @staticmethod
-    def _run(
+    def _run(config, wait_for_prompt, command_queue, ready_event, mode, context):
+        """Helper function to handle context managment."""
+        with lctx.activate_context(context):
+            LOERIC._run_active(
+                config,
+                wait_for_prompt,
+                command_queue,
+                ready_event,
+                mode,
+            )
+
+    @staticmethod
+    def _run_active(
         config: dict,
-        tune: tu.Tune,
         wait_for_prompt: bool,
         command_queue: queue.Queue | multiprocessing.queues.Queue,
         ready_event: threading.Event | multiprocessing.synchronize.Event,
@@ -272,6 +283,8 @@ class LOERIC:
             import signal
 
             signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+        tune = lctx.CurrentTune.get()
 
         assert tune is not None, "No tune to play. First call 'loeric.set_tune(tune)'"
 
@@ -311,7 +324,7 @@ class LOERIC:
             if cmd.command == "stop":
                 return True  # signal caller to break
             if cmd.command == "tempo":
-                le.TempoKeeper.set(cmd.payload["tempo"])
+                lctx.TempoKeeper.set(cmd.payload["tempo"])
                 groover.set_tempo(cmd.payload["tempo"], tick)
             elif cmd.command == "set":
                 try:
@@ -358,7 +371,7 @@ class LOERIC:
                     if handle_command(cmd):
                         break
 
-                finish = LOERIC._step(
+                finish, _ = LOERIC._step(
                     mapper,
                     contour_manager,
                     groover,
@@ -393,7 +406,7 @@ class LOERIC:
                 start_time = time.perf_counter()
 
                 # step
-                finish = LOERIC._step(
+                finish, new_tick = LOERIC._step(
                     mapper,
                     contour_manager,
                     groover,
@@ -403,7 +416,10 @@ class LOERIC:
                     null_events=True,
                 )
 
-                tick += time_division
+                if new_tick is not None:
+                    tick = new_tick
+                else:
+                    tick += time_division
 
                 # fraction of eight note converted to seconds
                 wait_time = time_division_f * player.eighth_duration_seconds
@@ -441,7 +457,7 @@ class LOERIC:
 
         # update performance time
         performance_tick = tick + groover.lookahead_size
-        le.PerformanceClock.set(performance_tick)
+        lctx.PerformanceClock.set(performance_tick)
 
         # obtain user inputs and update the mapper
         user_inputs = player.get()
@@ -494,4 +510,4 @@ class LOERIC:
         # check if player is done playing
         finished = finished and player.done()
 
-        return finished
+        return finished, player.requested_tick
