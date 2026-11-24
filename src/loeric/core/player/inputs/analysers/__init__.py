@@ -13,11 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
-"""Analyser subpackage.
-
-Import order matters: ``base`` first (no internal deps), then submodules,
-then the factory which needs all of them.
-"""
+"""Analyser subpackage."""
 
 from typing import Annotated
 
@@ -29,8 +25,6 @@ from loeric.core.player.inputs.analysers.audio import (
     BetterRMS,
     BetterRMSConfig,
     RMSConfig,
-    TempoAnalyser,
-    TempoAnalyserConfig,
 )
 from loeric.core.player.inputs.analysers.base import Analyser
 from loeric.core.player.inputs.analysers.midi import (
@@ -54,21 +48,15 @@ from loeric.core.player.inputs.analysers.osc import (
     OSCLoggerConfig,
 )
 
-"""
-from loeric.core.player.inputs.analysers.midi_tracker import (
-    MIDIScoreTrackerAnalyser,
-    MIDIScoreTrackerAnalyserConfig,
-)
-"""
 AllAnalysersConfig = Annotated[
     RMSConfig
     | BetterRMSConfig
-    | TempoAnalyserConfig
     | MIDIContourAnalyserConfig
     | MIDILoggerConfig
     | MIDINoteAnalyserConfig
-    # | MIDIScoreTrackerAnalyserConfig
-    | MIDINoteForwarderConfig | OSCContourAnalyserConfig | OSCLoggerConfig,
+    | MIDINoteForwarderConfig
+    | OSCContourAnalyserConfig
+    | OSCLoggerConfig,
     pdt.Field(discriminator="type"),
 ]
 
@@ -93,11 +81,9 @@ def create_analyser(
     _registry: dict[str, type[Analyser]] = {
         "rms": RMS,
         "better_rms": BetterRMS,
-        "tempo": TempoAnalyser,
         "midi_cc": MIDIContourAnalyser,
         "midi_logger": MIDILogger,
         "midi_notes": MIDINoteAnalyser,
-        # "midi_tracker": MIDIScoreTrackerAnalyser,
         "midi_forward": MIDINoteForwarder,
         "osc_cc": OSCContourAnalyser,
         "osc_logger": OSCLogger,

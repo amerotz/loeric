@@ -1,0 +1,52 @@
+{
+  "variables": {
+    "var_drone_bind": "$drone"
+  },
+
+  "groover": {
+    "modules": {
+      "dynamics": {
+        "bind": "$velocity"
+      },
+      "ornament": {
+        "bind": "$ornament"
+      },
+      "timing": {
+        "bind": "$tempo"
+      },
+      "legato": {
+        "bind": "$legato"
+      }
+    }
+  },
+  "player": {
+    "input": {
+      "midi#midi_input": {
+        "port": "Midi Through:Midi Through Port-0 14:0",
+        "active": true,
+        "analysers": {
+          "midi_notes": {
+            "active": true,
+            "responsiveness": 0.5,
+            "controls": { "intensity": "velocity" }
+          }
+        }
+      }
+    }
+  },
+  "mapper": {
+    "sources": [
+      "velocity",
+      "ornament",
+      "drone",
+      "tempo",
+      "legato",
+      "intensity"
+    ],
+    "targets": [],
+    "rules": [
+      "0.5 : %velocity,%ornament,%tempo,%drone,%legato",
+      "intensity ~ velocity,ornament,tempo,drone,legato"
+    ]
+  }
+}

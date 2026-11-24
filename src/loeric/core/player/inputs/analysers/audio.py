@@ -16,12 +16,10 @@
 import logging
 from typing import Literal, Optional
 
-import librosa
 import numpy as np
 import pydantic as pdt
 from scipy.signal import butter, sosfilt
 
-import loeric.core.context as lctx
 import loeric.core.element as le
 import loeric.core.paths as lp
 from loeric.core.player.inputs.analysers.base import Analyser, AnalyserConfig
@@ -222,10 +220,7 @@ class RMS(AudioAnalyser):
 
         :return: list of :class:`~loeric.core.element.ContourValue` events.
         """
-        return [
-            le.ContourValue(name=c, value=self._value)
-            for c in self._controls
-        ]
+        return [le.ContourValue(name=c, value=self._value) for c in self._controls]
 
 
 class BetterRMSConfig(AudioAnalyserConfig):
@@ -403,117 +398,3 @@ class BetterRMS(AudioAnalyser):
         """
         return [le.ContourValue(name=c, value=self._value) for c in self._controls]
 
-
-class TempoAnalyserConfig(AudioAnalyserConfig):
-    """Config for :class:`BetterRMS`.
-
-    :param responsiveness: exponential smoothing factor in [0, 1].
-    (fraction of latest delta).
-    """
-
-    type: Literal["tempo"]
-    responsiveness: float
-
-
-# TODO make free of lctx
-@lp.expose("_controls", "controls")
-@lp.expose("_responsiveness", "responsiveness")
-class TempoAnalyser(AudioAnalyser):
-
-    config_class = TempoAnalyserConfig
-
-    def __init__(
-        self,
-        responsiveness: float,
-        **kwargs,
-    ):
-        """Initialise the RMS analyser.
-
-        :param responsiveness: exponential smoothing factor in [0, 1].
-            Higher values track changes faster.
-        :param controls: list of control names this analyser publishes values to.
-        :param kwargs: forwarded to :class:`AudioAnalyser`.
-        """
-        super().__init__(**kwargs)
-
-        self._responsiveness = responsiveness
-        self._value = None
-
-    def _k_weighting(self, audio):
-        """BS.1770-style K-weighting approximation.
-
-        Stage 1:
-            RLB high-pass (~38 Hz)
-
-        Stage 2:
-            high frequency emphasis
-
-        This removes inaudible low-frequency energy and
-        better approximates perceived loudness than raw energy.
-        """
-        hp = butter(
-            2,
-            38 / (self._samplerate / 2),
-            btype="highpass",
-            output="sos",
-        )
-
-        audio = sosfilt(
-            hp,
-            audio,
-        )
-
-        shelf = butter(
-            2,
-            1500 / (self._samplerate / 2),
-            btype="highpass",
-            output="sos",
-        )
-
-        audio = audio + 0.25 * sosfilt(
-            shelf,
-            audio,
-        )
-
-        return audio
-
-    def _compute(self, buffer):
-
-        buffer = self._k_weighting(buffer)
-        """pitches, magnitudes = librosa.piptrack(y=buffer, sr=self._samplerate)
-
-        # get indexes of the maximum value in each time slice
-        max_indexes = np.argmax(magnitudes, axis=0)
-        # get the pitches of the max indexes per time slice
-        pitches = pitches[max_indexes, :]
-
-        print(pitches)
-        """
-        hop_length = 512
-
-        # Estimate the global tempo for display purposes
-        chosen = librosa.feature.tempo(
-            y=buffer, sr=self._samplerate, hop_length=hop_length
-        )[0][0]
-
-        current = lctx.TempoKeeper.tempo().qpm
-
-        candidates = np.array(
-            [chosen, chosen * 2, chosen / 2, 2 * chosen / 3, 3 * chosen / 2]
-        )
-        chosen = candidates[np.argmin(candidates - current)]
-
-        tempo = current * (1 - self._responsiveness) + chosen * self._responsiveness
-
-        logger.info(tempo)
-        return tempo
-
-    def get(self) -> list[le.ContourValue]:
-        """Return the current RMS value mapped to all declared controls.
-
-        :return: list of :class:`~loeric.core.element.ContourValue` events.
-        """
-        if self._value is None:
-            return []
-
-        return [le.UserTempo(qpm=self._value)]

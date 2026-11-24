@@ -322,7 +322,6 @@ class LOERIC:
             if cmd.command == "stop":
                 return True  # signal caller to break
             if cmd.command == "tempo":
-                lctx.TempoKeeper.set(cmd.payload["tempo"])
                 groover.set_tempo(cmd.payload["tempo"], tick)
             elif cmd.command == "set":
                 try:

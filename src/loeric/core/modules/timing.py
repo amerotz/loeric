@@ -91,7 +91,8 @@ class TimingModule(lmb.LOERICModule):
             qpm = self._process_tempo()
             if qpm != self._last_qpm:
                 self._last_qpm = qpm
-                ret_val.insert(0, le.Tempo(qpm=qpm, time=element.time))
+                ret_val.append(le.Tempo(qpm=qpm, time=element.time))
+
         return ret_val
 
     def _process_element(

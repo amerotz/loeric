@@ -83,7 +83,8 @@
         "chords": true,
         "time_signatures": true,
         "key_signatures": true,
-        "tempos": false
+        "tempos": false,
+        "positions": false
       }
     }
   },
@@ -335,7 +336,7 @@
     "output": {
       "midi#main": {
         "active": true,
-        "port": "Midi Through Port-0",
+        "port": "Midi Through:Midi Through Port-0 14:0",
         "send_cc": true,
         "send_messages": true,
         "velocity_range": [32, 110],

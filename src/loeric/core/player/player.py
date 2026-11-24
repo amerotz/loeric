@@ -23,7 +23,6 @@ import logging
 
 import pydantic as pdt
 
-import loeric.core.context as lctx
 import loeric.core.element as le
 import loeric.core.paths as lp
 import loeric.core.player.inputs as li
@@ -66,6 +65,7 @@ class Player:
             if interface is not None:
                 self._output_interfaces[o] = interface
 
+        self._qpm = 120
         self._message_queue = le.LOERICQueue()
         self._requested_tick = None
         self._requested_state = None
@@ -88,7 +88,7 @@ class Player:
             else:
                 e = self._message_queue.pop()
                 if isinstance(e, le.Tempo):
-                    lctx.TempoKeeper.set(e.qpm)
+                    self._qpm = e.qpm
                 # start playback
                 elif isinstance(e, le.StartPlayback):
                     self._requested_state = ls.LOERICState.PROCESSING
@@ -138,4 +138,4 @@ class Player:
 
     @property
     def eighth_duration_seconds(self) -> float:
-        return 30 / lctx.TempoKeeper.get().qpm
+        return 30 / self._qpm

@@ -9,7 +9,6 @@ class LOERICContext:
     def __init__(self):
         self.tick = le.TimeDelta(0)
         self.tune = None
-        self.tempo = None
 
 
 _CURRENT_CONTEXT = ContextVar("loeric_context", default=None)
@@ -58,13 +57,3 @@ class CurrentTune:
         return get_context().tune
 
 
-class TempoKeeper:
-
-    @staticmethod
-    def set(tempo):
-        get_context().tempo = tempo
-
-    @staticmethod
-    def get() -> le.Tempo:
-        context = get_context()
-        return le.Tempo(qpm=context.tempo, time=context.tick)
