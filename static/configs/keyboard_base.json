@@ -1,6 +1,6 @@
 {
   "variables": {
-    "site_responsiveness_path": "player/input/midi/analysers/midi_notes/responsiveness"
+    "site_responsiveness_path": "player/input/main/analysers/midi_notes/responsiveness"
   },
   "player": {
     "input": {
