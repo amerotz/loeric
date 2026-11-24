@@ -380,10 +380,10 @@ class SongPosition(LOERICElement):
         return self._position
 
     def __repr__(self):
-        return f"(Position p={self._position} t={self._time})"
+        return f"(SongPosition p={self._position} t={self._time})"
 
 
-class UserPosition(LOERICElement):
+class SeekPosition(LOERICElement):
     def __init__(self, position: float = 0, time: float = 0):
         super().__init__(time)
 
@@ -394,32 +394,98 @@ class UserPosition(LOERICElement):
         return self._position
 
     def __repr__(self):
-        return f"(UserPosition t={self._position} t={self._time})"
+        return f"(SeekPosition p={self._position} t={self._time})"
+
+
+class StartPlayback(LOERICElement):
+    def __init__(self, time: float = 0):
+        super().__init__(time)
+
+    def __repr__(self):
+        return f"(StartPlayback t={self._time})"
+
+
+class StopPlayback(LOERICElement):
+    def __init__(self, time: float = 0):
+        super().__init__(time)
+
+    def __repr__(self):
+        return f"(StopPlayback t={self._time})"
+
+
+class UnknownUserPosition(LOERICElement):
+    def __init__(self, time: float = 0):
+        super().__init__(time)
+
+    def __repr__(self):
+        return f"(UnknownUserPosition t={self._time})"
+
+
+class UserNote(LOERICElement):
+    """A note played by the performer.
+
+    :param pitch: MIDI pitch of the note.
+    :param wall_time: ``time.perf_counter()`` at which it was played.
+    """
+
+    def __init__(self, pitch: int = 0, wall_time: float = 0, time: float = 0):
+        super().__init__(time)
+
+        self._pitch = pitch
+        self._wall_time = wall_time
+
+    @property
+    def pitch(self):
+        return self._pitch
+
+    @property
+    def wall_time(self):
+        return self._wall_time
+
+    def __repr__(self):
+        return f"(UserNote p={self._pitch} t={self._time})"
 
 
 class UserPlayback(LOERICElement):
     """Where the performer currently is in the score.
 
-    :param position: score time of the last played event, in eighth notes.
-    :param delay: seconds elapsed since that event was played.
+    :param score_time: score time of the last played event, in eighth notes.
+    :param timestamp: timestamp of when the event was plyed
     """
 
-    def __init__(self, position: float = 0, delay: float = 0, time: float = 0):
+    def __init__(
+        self,
+        score_time: float = 0,
+        timestamp: int = 0,
+        time: float = 0,
+        jump: bool = False,
+        confidence: float = 0,
+    ):
         super().__init__(time)
 
-        self._position = TimeDelta(eighth_duration=position)
-        self._delay = delay
+        self._score_time = score_time
+        self._timestamp = timestamp
+        self._confidence = confidence
+        self._jump = jump
 
     @property
-    def position(self):
-        return self._position
+    def score_time(self):
+        return self._score_time
 
     @property
-    def delay(self):
-        return self._delay
+    def is_jump(self):
+        return self._jump
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @property
+    def confidence(self):
+        return self._confidence
 
     def __repr__(self):
-        return f"(UserPlayback p={self._position} d={self._delay})"
+        return f"(UserPlayback s={self._score_time} t={self._timestamp} c={self._confidence})"
 
 
 class Tempo(LOERICElement):
@@ -741,6 +807,10 @@ class Note(LOERICElement):
     def id(self):
         return self._id
 
+    @id.setter
+    def id(self, id):
+        self._id = id
+
 
 class Queue:
     def __init__(self):
@@ -754,6 +824,9 @@ class Queue:
 
     def peek(self):
         return self._q[0]
+
+    def clear(self):
+        self._q = []
 
     def is_empty(self):
         return len(self._q) == 0
@@ -771,17 +844,21 @@ class LOERICQueue(Queue):
     def __init__(self):
         super().__init__()
         order = [
+            StopPlayback,
+            SeekPosition,
+            StartPlayback,
             ContourValue,
             Chord,
-            SongPosition,
-            UserPosition,
+            UnknownUserPosition,
             UserPlayback,
+            UserNote,
             Barline,
             KeySignature,
             Accidental,
             TimeSignature,
             UserTempo,
             Tempo,
+            SongPosition,
             Repetition,
             NullEvent,
             Note,

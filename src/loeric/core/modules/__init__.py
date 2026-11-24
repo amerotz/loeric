@@ -23,12 +23,28 @@ from loeric.core.modules.buffers import (
     HistoryBufferModule,
     HistoryBufferModuleConfig,
 )
+from loeric.core.modules.chain import (
+    ChainModule,
+    ChainModuleConfig,
+)
+from loeric.core.modules.condition import (
+    ConditionalModule,
+    ConditionalModuleConfig,
+)
 from loeric.core.modules.drones import DroneModule, DroneModuleConfig
 from loeric.core.modules.dynamics import DynamicsModule, DynamicsModuleConfig
 from loeric.core.modules.harmony import HarmonyModule, HarmonyModuleConfig
 from loeric.core.modules.legato import LegatoModule, LegatoModuleConfig
 from loeric.core.modules.ornament import OrnamentModule, OrnamentModuleConfig
+from loeric.core.modules.score_tracker import (
+    ScoreTrackerModule,
+    ScoreTrackerModuleConfig,
+)
 from loeric.core.modules.swing import SwingModule, SwingModuleConfig
+from loeric.core.modules.synchroniser import (
+    SynchroniserModule,
+    SynchroniserModuleConfig,
+)
 from loeric.core.modules.timing import TimingModule, TimingModuleConfig
 from loeric.core.modules.transpose import TransposeModule, TransposeModuleConfig
 from loeric.core.modules.utils import (
@@ -36,14 +52,6 @@ from loeric.core.modules.utils import (
     LoggerModuleConfig,
     TaggerModule,
     TaggerModuleConfig,
-)
-from loeric.core.modules.condition import (
-    ConditionalModule,
-    ConditionalModuleConfig,
-)
-from loeric.core.modules.chain import (
-    ChainModule,
-    ChainModuleConfig,
 )
 
 ModuleConfig = Annotated[
@@ -60,7 +68,9 @@ ModuleConfig = Annotated[
     | ConditionalModuleConfig
     | LoggerModuleConfig
     | ChainModuleConfig
-    | TaggerModuleConfig,
+    | ScoreTrackerModuleConfig
+    | TaggerModuleConfig
+    | SynchroniserModuleConfig,
     pdt.Field(discriminator="type"),
 ]
 
@@ -91,6 +101,8 @@ def create_module(module_name: str, **kwargs):
         "conditional": ConditionalModule,
         "tagger": TaggerModule,
         "chain": ChainModule,
+        "score_tracker": ScoreTrackerModule,
+        "synchroniser": SynchroniserModule,
     }
 
     cls = _registry.get(kwargs["type"])

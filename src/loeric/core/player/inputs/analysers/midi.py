@@ -19,7 +19,6 @@ from typing import Literal
 
 import pydantic as pdt
 
-import loeric.core.context as lctx
 import loeric.core.element as le
 import loeric.core.paths as lp
 from loeric.core.player.inputs.analysers.base import Analyser, AnalyserConfig
@@ -153,7 +152,6 @@ class MIDIContourAnalyser(MIDIAnalyser):
                 event = le.ContourValue(
                     name=name,
                     value=message.value / 127.0,
-                    time=lctx.PerformanceClock.now(),
                 )
                 events.append(event)
                 logger.info(f"{event.name}: {event.value:.2f}")
@@ -162,6 +160,8 @@ class MIDIContourAnalyser(MIDIAnalyser):
             self._control_events = events
 
 
+@lp.expose("_controls", "controls")
+@lp.expose("_responsiveness", "responsiveness")
 class MIDINoteAnalyser(MIDIAnalyser):
     """MIDI analyser that maps note attributes to named contour values.
 
@@ -207,7 +207,6 @@ class MIDINoteAnalyser(MIDIAnalyser):
             event = le.ContourValue(
                 name=name,
                 value=self._values[attr] / 127,
-                time=lctx.PerformanceClock.now(),
             )
             events.append(event)
             logger.info(f"{event.name}: {event.value:.2f}")

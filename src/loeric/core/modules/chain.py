@@ -13,10 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 
-import logging
 from typing import Any, Literal
-
-from pydantic import BaseModel, field_validator
 
 import loeric.core.element as le
 import loeric.core.modules as lm
@@ -56,11 +53,10 @@ class ChainModule(lmb.LOERICModule):
         element: le.LOERICElement,
         window: list[le.LOERICElement] = None,
     ):
-        """Execute the module if the condition is met.
+        """Execute all modules one after the other.
 
         :param element: the element to process.
         """
-
         # run it through the modules
         to_be_processed_by_module = [element]
 

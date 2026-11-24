@@ -63,6 +63,7 @@ class TimingModule(lmb.LOERICModule):
 
         self._first_tempo = None
         self._user_tempo = None
+        self._last_qpm = 0
 
         self._required_contours = {bind, pattern}
 
@@ -88,7 +89,9 @@ class TimingModule(lmb.LOERICModule):
         # always update tempo
         if self._tempo is not None:
             qpm = self._process_tempo()
-            ret_val.insert(0, le.Tempo(qpm=qpm, time=element.time))
+            if qpm != self._last_qpm:
+                self._last_qpm = qpm
+                ret_val.insert(0, le.Tempo(qpm=qpm, time=element.time))
         return ret_val
 
     def _process_element(

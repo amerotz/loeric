@@ -65,7 +65,7 @@ class HistoryBufferModule(lmb.LOERICModule):
 
         super().__init__(**kwargs)
 
-        self._name = "buffer"
+        self._name = "history_buffer"
         assert size > 0, "Buffer size cannot be 0 or negative"
         self._lookahead_size = 0
         self._lookback_size = size
@@ -98,7 +98,7 @@ class DelayBufferModule(lmb.LOERICModule):
 
         super().__init__(**kwargs)
 
-        self._name = "buffer"
+        self._name = "delay_buffer"
         assert size > 0, "Buffer size cannot be 0 or negative"
         self._lookahead_size = size
         self._lookback_size = 0

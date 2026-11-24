@@ -179,7 +179,7 @@ class DroneModule(lmb.LOERICModule):
                         # if this is not a note
                         # but we want drones only with score notes
                         # skip
-                        if not isinstance(element, le.Note):
+                        if not isinstance(element, le.Note) or element.duration == 0:
                             continue
                         else:
                             notes_per_bar = (
@@ -390,6 +390,7 @@ class DroneModule(lmb.LOERICModule):
 
             notes.append(
                 le.Note(
+                    id=element.id,
                     pitch=p,
                     eighth_duration=(note_duration - delay),
                     velocity=velocity,

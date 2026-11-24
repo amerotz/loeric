@@ -13,12 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with LOERIC. If not, see <https://www.gnu.org/licenses/>.
 import logging
-from typing import Any, Literal
-
-from pydantic import BaseModel, field_validator
+from typing import Literal
 
 import loeric.core.element as le
-import loeric.core.modules as lm
 import loeric.core.modules.base as lmb
 
 logger = logging.getLogger(__name__)
@@ -38,6 +35,7 @@ class LoggerModuleConfig(lmb.BaseModuleConfig):
     :param time_signatures: log time signature events.
     :param key_signatures: log key signature events.
     :param tempos: log tempo events.
+    :param positions: log position events.
     """
 
     notes: bool = False
@@ -45,6 +43,7 @@ class LoggerModuleConfig(lmb.BaseModuleConfig):
     time_signatures: bool = False
     key_signatures: bool = False
     tempos: bool = False
+    positions: bool = False
     type: Literal["logger"]
 
 
@@ -80,6 +79,7 @@ class LoggerModule(lmb.LOERICModule):
         time_signatures: bool,
         key_signatures: bool,
         tempos: bool,
+        positions: bool,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -89,6 +89,7 @@ class LoggerModule(lmb.LOERICModule):
         self._do_time_s = time_signatures
         self._do_key_s = key_signatures
         self._do_tempo = tempos
+        self._do_positions = positions
 
         self._name = "logger"
 
@@ -111,6 +112,18 @@ class LoggerModule(lmb.LOERICModule):
         elif self._do_key_s and isinstance(element, le.KeySignature):
             logger.info(element)
         elif self._do_tempo and isinstance(element, le.Tempo):
+            logger.info(element)
+        elif self._do_positions and isinstance(
+            element,
+            (
+                le.SongPosition,
+                le.SeekPosition,
+                le.StartPlayback,
+                le.StopPlayback,
+                le.UnknownUserPosition,
+                le.UserPlayback,
+            ),
+        ):
             logger.info(element)
 
         return [element]

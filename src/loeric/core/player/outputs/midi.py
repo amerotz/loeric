@@ -182,9 +182,15 @@ class MIDIOutput(lob.OutputInterface):
                 self._cc_thread.start()
 
         self._queue = MIDIQueue()
+        self._active_notes = set()
 
     def _create_output(self):
-        return mido.open_output(self._port)
+        virtual = self._port not in mido.get_output_names()
+        if virtual:
+            logger.warning(
+                f"No MIDI port '{self._port}' available. Creating a virtual one."
+            )
+        return mido.open_output(self._port, virtual=virtual)
 
     def _midi_cc_thread(self):
         """Background thread that sends CC messages at a fixed rate.
@@ -265,7 +271,14 @@ class MIDIOutput(lob.OutputInterface):
         if absolute_time:
             time += event.time
 
-        if isinstance(event, le.SongPosition):
+        if isinstance(event, le.StopPlayback):
+            return [
+                mido.Message(
+                    "note_off", velocity=0, channel=c, time=time.eighth_duration, note=n
+                )
+                for n, c in self._active_notes
+            ]
+        elif isinstance(event, le.SongPosition):
             return [
                 mido.Message("songpos", pos=event.position, time=time.eighth_duration)
             ]
@@ -447,6 +460,10 @@ class MIDIOutput(lob.OutputInterface):
                 event.channel = channel
             elif isinstance(event, le.EndOfScore):
                 self._end_of_score = True
+            elif isinstance(event, le.StopPlayback):
+                # flush the queue
+                self._queue.clear()
+
             for e in self._event_to_midi(event, absolute_time=True):
                 self._queue.push(e)
 
@@ -466,8 +483,12 @@ class MIDIOutput(lob.OutputInterface):
                     if not m.is_meta:
 
                         if m.type in ["note_on", "note_off", "pitchwheel"]:
-
                             if self._send_messages:
                                 self._out.send(m)
+
+                            if m.type == "note_on":
+                                self._active_notes.add((m.note, m.channel))
+                            elif m.type == "note_off":
+                                self._active_notes.discard((m.note, m.channel))
                 else:
                     break

@@ -80,6 +80,8 @@ class LOERICModule:
         self._contour_values = defaultdict(float)
         self._required_contours = set()
 
+        self._global_lookahead = 0
+
     def reset(self):
         """Reset all module attributes."""
         self._key_signature = None
@@ -95,6 +97,9 @@ class LOERICModule:
 
     def set_tempo(self, tempo: le.Tempo):
         self._tempo = tempo
+
+    def set_global_lookahead(self, lookahead: float):
+        self._global_lookahead = lookahead
 
     def process(
         self,

@@ -110,7 +110,8 @@ class IntensityContour(NotewiseContour):
         # this is a mandatory scaling step, since the contour needs
         # to have range 0 to 1
         array -= min(array)
-        array /= max(array)
+        if max(array) != 0:
+            array /= max(array)
 
         if savgol:
             window = 15
@@ -120,7 +121,8 @@ class IntensityContour(NotewiseContour):
 
         if scale:
             array -= min(array)
-            array /= max(array)
+            if max(array) != 0:
+                array /= max(array)
 
         if shift:
             array /= 2 * array.mean()

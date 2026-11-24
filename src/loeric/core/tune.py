@@ -22,6 +22,7 @@ import muspy as mp
 import numpy as np
 
 import loeric.core.element as le
+import loeric.core.utils as lu
 
 logger = logging.getLogger(__name__)
 
@@ -62,36 +63,6 @@ class Score:
     @property
     def tempos(self):
         return self._tempos
-
-    """
-    def _at(self, time: float | le.TimeDelta) -> list[le.LOERICElement]:
-        if time > self.end_time:
-            return [self._annotated_score[-1]]
-        elif time < self.start_time:
-            return []
-        else:
-            indexes = np.argwhere(
-                self.all_float_times == time.eighth_duration
-            ).flatten()
-            return [self._annotated_score[i] for i in indexes]
-
-    def _window(
-        self, time: float | le.TimeDelta, size: float | le.TimeDelta
-    ) -> list[le.LOERICElement]:
-        if time >= self.end_time:
-            return [self._annotated_score[-1]]
-        elif size == 0:
-            return []
-        else:
-            index_1 = np.argwhere(self.all_float_times >= float(time)).flatten()[0]
-            index_2 = np.argwhere(self.all_float_times < float(time + size)).flatten()[
-                -1
-            ]
-            window = []
-            for i in range(index_1, index_2 + 1, 1):
-                window.append(self._annotated_score[i])
-            return window
-    """
 
     def at(self, time: float | le.TimeDelta) -> list[le.LOERICElement]:
         """Return all events occurring at the specified time.
@@ -203,7 +174,7 @@ class Score:
 
 
 class NullTune(Score):
-    """A tune containing only  null events."""
+    """A tune containing only null events."""
 
     def __init__(self):
         super().__init__()
@@ -219,7 +190,6 @@ class Tune(Score):
         self,
         filename: str,
         repeats: int,
-        sync_interval: float = None,
     ):
         """Initialize the class.
 
@@ -227,16 +197,12 @@ class Tune(Score):
         :param repeats: how many times the tune should be repeated.
         :param key: the key of the tune.
         :param meter: the meter of the tune.
-        :param sync_interval: the synchronization interval for the virtual session.
 
         """
         super().__init__()
 
-        self._sync_interval = None
-        if sync_interval is not None:
-            self._sync_interval = le.TimeDelta(eighth_duration=sync_interval)
-
         self._first_bar_length = 0
+        self._tune_type = None
 
         if filename.endswith(".mid") or filename.endswith(".midi"):
             midi_source = mp.read_midi(filename)
@@ -248,13 +214,15 @@ class Tune(Score):
 
         elif filename.endswith(".abc"):
             midi_source = mp.read_abc(filename)
+            self._tune_type = lu.get_abc_tune_type(filename)
+
             self._first_bar_length = (
                 midi_source.barlines[1].time - midi_source.barlines[0].time
             ) / 12
 
         else:
             raise Exception(
-                f"Cannot read {filename}. Make sure it is a MIDI or ABC file."
+                f"Cannot read {filename}. Make sure it is a MIDI, ABC or MusicXML file."
             )
 
         ############################# tempo #############################
@@ -299,15 +267,8 @@ class Tune(Score):
             )
 
         time_signature = self._time_signatures[0]
-        if self._sync_interval is None:
-            self._sync_interval = (
-                time_signature.eighths_per_bar / time_signature.beat_count
-            )
 
         self._first_bar_length %= time_signature.eighths_per_bar.eighth_duration
-        logger.info(
-            f"Synchronizing every:\t{self._sync_interval / 2} quarters.",
-        )
 
         ######################### barlines ######################
         midi_source_barlines = []
@@ -389,12 +350,14 @@ class Tune(Score):
         time_signatures = []
         tempos = []
         barlines = []
+        max_id = max(note_ids)
 
         # add notes and repetitions
         for r in range(repeats):
             new_score = copy.deepcopy(_score)
             for n in new_score:
                 n.time += score_duration * r - self._first_bar_length
+                n.id += max_id * r
             repetitions.append(le.Repetition(number=r + 1, time=new_score[0].time))
             for k in self._key_signatures:
                 key_signatures.append(
@@ -452,7 +415,7 @@ class Tune(Score):
         """
         _score_end_time = _score[-1].time + _score[-1].duration
 
-        ############# score with repetition signs, songpos etc ###########
+        ############# score with repetition signs, etc ###########
 
         self._annotated_score = []
 
@@ -474,23 +437,6 @@ class Tune(Score):
         # add Chords
         self._annotated_score.extend(self._original_chords)
 
-        # arange songpos messages independently
-        self._position_times = np.arange(
-            start=-self._first_bar_length,
-            stop=_score_end_time.eighth_duration,
-            step=self._sync_interval.eighth_duration,
-        )
-        song_positions = np.array(
-            [
-                le.SongPosition(position=p, time=t)
-                for p, t in enumerate(self._position_times)
-            ]
-        )
-
-        # divide add songpos in messages that contain a sync interval
-        should_add_position = np.ones_like(song_positions).astype(bool)
-
-        self._annotated_score.extend(song_positions[should_add_position])
         self._annotated_score.extend(_score)
         self._annotated_score.append(le.EndOfScore(time=_score_end_time))
 
@@ -503,3 +449,29 @@ class Tune(Score):
         logger.info(
             f"Key:\t\t{self._key_signatures[0].root} {self._key_signatures[0].mode}"
         )
+
+    def synchronise_every(self, interval):
+
+        # remove any existing songpos
+        self._annotated_score = [
+            el for el in self._annotated_score if not isinstance(el, le.SongPosition)
+        ]
+
+        # arange songpos messages
+        position_times = np.arange(
+            start=-self._first_bar_length,
+            stop=self.end_time.eighth_duration,
+            step=interval,
+        )
+        song_positions = np.array(
+            [le.SongPosition(position=p, time=t) for p, t in enumerate(position_times)]
+        )
+
+        # add to score
+        self._annotated_score.extend(song_positions)
+        # sort score
+        self._annotated_score.sort(key=lambda x: x.time)
+
+    @property
+    def tune_type(self):
+        return self._tune_type

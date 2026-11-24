@@ -15,6 +15,7 @@
 
 import logging
 import os
+import unicodedata
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,6 +24,16 @@ logger = logging.getLogger(__name__)
 
 
 _MIDI_TO_FREQ_FACTOR = 440.0 * (2.0 ** (-69.0 / 12.0))
+
+time_signature_to_irish_tune_type = {
+    "2/2": "reel",
+    "2/4": "polka",
+    "3/4": "waltz",
+    "4/4": "hornpipe",
+    "6/8": "jig",
+    "9/8": "slipjig",
+    "12/8": "slide",
+}
 
 
 def plot_contours(manager, tune, plot_keys):
@@ -95,3 +106,25 @@ def set_realtime_priority():
 def midi_to_freq(midi):
     """Convert a MIDI not number to its frequency."""
     return _MIDI_TO_FREQ_FACTOR * np.exp2(midi / 12.0)
+
+
+def get_abc_tune_type(filename: str) -> str | None:
+    with open(filename, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+
+            if line.startswith("R:"):
+                tune_type = line[2:]
+                return (
+                    unicodedata.normalize("NFKD", tune_type)
+                    .encode("ascii", "ignore")
+                    .decode("ascii")
+                    .lower()
+                    .strip()
+                )
+
+            # Stop searching when the tune body starts
+            if line.startswith("K:"):
+                break
+
+    return None

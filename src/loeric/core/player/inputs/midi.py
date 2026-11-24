@@ -25,13 +25,6 @@ import loeric.core.player.inputs.base as lib
 logger = logging.getLogger(__name__)
 
 
-class UnknownMIDIPortException(Exception):
-    """Raised if the corresponding MIDI port cannot be found."""
-
-    def __init__(self, port: str):
-        super().__init__(f"Could not find MIDI port '{port}'.")
-
-
 class MIDIInputConfig(lib.InputInterfaceConfig):
 
     type: Literal["midi"]
@@ -57,10 +50,13 @@ class MIDIInput(lib.InputInterface):
         self._port = port
 
         if kwargs["active"]:
-            try:
-                self._midi_in = mido.open_input(port)
-            except Exception:
-                raise UnknownMIDIPortException(port)
+
+            virtual = self._port not in mido.get_input_names()
+            if virtual:
+                logger.warning(
+                    f"No MIDI port '{self._port}' available. Creating a virtual one."
+                )
+            self._midi_in = mido.open_input(self._port, virtual=virtual)
             self._midi_in.callback = self._callback
 
         super().__init__(**kwargs)

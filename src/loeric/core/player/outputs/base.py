@@ -31,7 +31,6 @@ class OutputInterfaceConfig(pdt.BaseModel):
 
     type: str
     active: bool
-    model_config = {"extra": "allow"}
 
 
 @lp.readonly("active")

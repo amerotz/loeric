@@ -82,6 +82,8 @@ TUNES_PATH = STATIC_ROOT / "tunes"
 FRONTEND_ROOT = STATIC_ROOT / "site"
 GUI_FILE = FRONTEND_ROOT / "index.html"
 
+RESPONSIVENESS_PATH = None
+
 logger.info(f"STATIC_ROOT: {STATIC_ROOT}")
 logger.info(f"TUNES_PATH: {TUNES_PATH}")
 logger.info(f"CONFIG_PATH: {CONFIG_PATH}")
@@ -91,7 +93,7 @@ logger.info(f"GUI_FILE: {GUI_FILE}")
 app = FastAPI(title="LOERIC")
 
 # Global state
-state = lsm.LOERICState()
+state = lsm.ServerState()
 
 # Load config index
 config_index = {}
@@ -206,7 +208,7 @@ async def start_loeric(
 
     Once LOERIC is created, a new thread is spawn and the system starts.
     """
-    global musician
+    global musician, RESPONSIVENESS_PATH
     try:
 
         # Update state
@@ -227,11 +229,17 @@ async def start_loeric(
 
         # create tune
         tune = tu.Tune(tune_list[tune].path, repetitions)
+
         # tune type
-        with open(
-            TUNE_CONFIG_PATH / f"{loeric.LOERIC.infer_tune_type(tune)}.json"
-        ) as f:
-            tune_config = json.load(f)
+        tune_config = {}
+        tune_type = loeric.LOERIC.infer_tune_type(tune)
+        tune_type_config_path = TUNE_CONFIG_PATH / f"{tune_type}.json"
+
+        if tune_type is not None and os.path.exists(tune_type_config_path):
+            with open(tune_type_config_path) as f:
+                tune_config = json.load(f)
+        else:
+            logger.info(f"No available config for tune type '{tune_type}'.")
 
         # open instrument config
         with open(INSTRUMENT_CONFIG_PATH / f"{instrument_model}.json", "r") as f:
@@ -245,6 +253,9 @@ async def start_loeric(
             config = {}
 
         config = lc.join_configs([base, tune_config, instrument_config, config])
+
+        RESPONSIVENESS_PATH = config.get("variables").get("site_responsiveness_path")
+
         config = lc.process_config(config)
 
         # change transpose
@@ -264,12 +275,12 @@ async def start_loeric(
 
         # change responsiveness and volume
         musician.set_attribute(
-            "player/input/mic_input/analysers/loudness/responsiveness",
+            RESPONSIVENESS_PATH,
             responsiveness,
             block=False,
         )
 
-        #_change_volume(volume)
+        _change_volume(volume)
         state.running = True
 
         return True
@@ -344,11 +355,9 @@ async def tempo_change(qpm: float):
 @app.post("/api/responsiveness/{value}", response_model=lsm.StatusResponse)
 async def responsiveness_change(value: float):
     """POST /api/responsiveness/{value} - Change LOERIC's responsiveness."""
-    global musician
+    global musician, RESPONSIVENESS_PATH
     if musician:
-        musician.set_attribute(
-            "player/input/mic_input/analysers/loudness/responsiveness", value
-        )
+        musician.set_attribute(RESPONSIVENESS_PATH, value, block=False)
 
     state.parameters["responsiveness"] = value
     return await get_status()

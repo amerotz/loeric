@@ -75,8 +75,12 @@ class Groover:
     @property
     def lookahead_size(self):
         size = 1
+        # check the max requested lookahead
         for m in self._modules:
             size = max(self._modules[m].lookahead_size, size)
+        # tell the modules what lookahead we are using
+        for m in self._modules:
+            self._modules[m].set_global_lookahead(size)
         return size
 
     @property

@@ -388,6 +388,7 @@ class OrnamentModule(lmb.LOERICModule):
                 vel = 0
 
             orn_note = le.Note(
+                id=element.id,
                 pitch=new_note,
                 eighth_duration=d,
                 velocity=vel,

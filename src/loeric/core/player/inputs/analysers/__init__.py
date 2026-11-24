@@ -42,17 +42,24 @@ from loeric.core.player.inputs.analysers.midi import (
     MIDINoteAnalyser,
     MIDINoteAnalyserConfig,
 )
-from loeric.core.player.inputs.analysers.midi_tracker import (
-    MIDIScoreTrackerAnalyser,
-    MIDIScoreTrackerAnalyserConfig,
+from loeric.core.player.inputs.analysers.midi_forward import (
+    MIDINoteForwarder,
+    MIDINoteForwarderConfig,
 )
 from loeric.core.player.inputs.analysers.osc import (
+    OSCAnalyser,
     OSCContourAnalyser,
     OSCContourAnalyserConfig,
     OSCLogger,
     OSCLoggerConfig,
 )
 
+"""
+from loeric.core.player.inputs.analysers.midi_tracker import (
+    MIDIScoreTrackerAnalyser,
+    MIDIScoreTrackerAnalyserConfig,
+)
+"""
 AllAnalysersConfig = Annotated[
     RMSConfig
     | BetterRMSConfig
@@ -60,13 +67,12 @@ AllAnalysersConfig = Annotated[
     | MIDIContourAnalyserConfig
     | MIDILoggerConfig
     | MIDINoteAnalyserConfig
-    | MIDIScoreTrackerAnalyserConfig
-    | OSCContourAnalyserConfig
-    | OSCLoggerConfig,
+    # | MIDIScoreTrackerAnalyserConfig
+    | MIDINoteForwarderConfig | OSCContourAnalyserConfig | OSCLoggerConfig,
     pdt.Field(discriminator="type"),
 ]
 
-__all__ = [AllAnalysersConfig, AudioAnalyser, MIDIAnalyser]
+__all__ = [AllAnalysersConfig, AudioAnalyser, MIDIAnalyser, OSCAnalyser]
 
 
 def create_analyser(
@@ -91,7 +97,8 @@ def create_analyser(
         "midi_cc": MIDIContourAnalyser,
         "midi_logger": MIDILogger,
         "midi_notes": MIDINoteAnalyser,
-        "midi_tracker": MIDIScoreTrackerAnalyser,
+        # "midi_tracker": MIDIScoreTrackerAnalyser,
+        "midi_forward": MIDINoteForwarder,
         "osc_cc": OSCContourAnalyser,
         "osc_logger": OSCLogger,
     }

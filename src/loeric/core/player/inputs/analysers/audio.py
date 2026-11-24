@@ -223,7 +223,7 @@ class RMS(AudioAnalyser):
         :return: list of :class:`~loeric.core.element.ContourValue` events.
         """
         return [
-            le.ContourValue(name=c, value=self._value, time=lctx.PerformanceClock.now())
+            le.ContourValue(name=c, value=self._value)
             for c in self._controls
         ]
 
@@ -401,10 +401,7 @@ class BetterRMS(AudioAnalyser):
 
         :return: list of :class:`~loeric.core.element.ContourValue` events.
         """
-        return [
-            le.ContourValue(name=c, value=self._value, time=lctx.PerformanceClock.now())
-            for c in self._controls
-        ]
+        return [le.ContourValue(name=c, value=self._value) for c in self._controls]
 
 
 class TempoAnalyserConfig(AudioAnalyserConfig):
@@ -418,6 +415,7 @@ class TempoAnalyserConfig(AudioAnalyserConfig):
     responsiveness: float
 
 
+# TODO make free of lctx
 @lp.expose("_controls", "controls")
 @lp.expose("_responsiveness", "responsiveness")
 class TempoAnalyser(AudioAnalyser):
@@ -518,4 +516,4 @@ class TempoAnalyser(AudioAnalyser):
         if self._value is None:
             return []
 
-        return [le.UserTempo(qpm=self._value, time=lctx.PerformanceClock.now())]
+        return [le.UserTempo(qpm=self._value)]

@@ -171,7 +171,10 @@ class PatternContour(NotewiseContour):
             value, index = super()._at(time)
         else:
             position = time.eighth_duration / self._time_period
-            index = int((len(self._mean) * position) % len(self._mean))
+            index = min(
+                int((len(self._mean) * position) % len(self._mean)),
+                len(self._contour_times) - 1,
+            )
             value = np.random.normal(
                 loc=self._mean[index],
                 scale=self._std_scale * self._std[index],

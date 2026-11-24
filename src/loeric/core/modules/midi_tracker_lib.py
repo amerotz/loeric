@@ -28,11 +28,14 @@ The pipeline is:
    position is acquired and when it has jumped.
 """
 
+import logging
 import math
 from collections import deque
 from dataclasses import dataclass
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # DATA
@@ -59,16 +62,14 @@ class MatchResult:
 
     :param position: index of the score event matching the last played event.
     :param score_time: score time of that event, in eighth notes.
-    :param song_position: id of the closest song position marker.
-    :param song_offset: distance from that marker, in eighth notes.
     :param confidence: alignment confidence in [0, 1].
     :param timestamp: wall-clock time of the last matched played event.
+    :param speed: how fast the performer plays compared to the performed
+        score (1 = same tempo), if the rhythm could be estimated.
     """
 
     position: int
     score_time: float
-    song_position: int
-    song_offset: float
     confidence: float
     timestamp: float
 
@@ -110,17 +111,34 @@ class EventTable:
     """Score representation used by the tracker.
 
     Score times are shifted so that the first event happens at time zero.
+
+    Besides the written score, the table keeps what the performance adds
+    while playing: the chord sounding at each event and the time at which
+    each event was performed. They are fed by the module version of the
+    tracker through :meth:`set_current_chord` and :meth:`observe`.
     """
 
-    def __init__(self, times, pitches, song_positions, chords=None):
+    # a performed note belongs to an event if this close to it, in eighths
+    _OBSERVE_TOLERANCE = 4.0
+
+    def __init__(
+        self,
+        times,
+        pitches,
+        chords=None,
+        ids=None,
+        loop_length=None,
+    ):
         """Initialise the table.
 
         :param times: score time of each event, in eighth notes.
         :param pitches: for each event, the MIDI pitches sounding at it.
-        :param song_positions: list of ``(id, time)`` song position markers.
         :param chords: optional user-defined chords, as a list of
             ``(time, pitch classes)``. A chord lasts until the next one; an
             empty pitch class list is the null chord (no harmony).
+        :param ids: optional, for each event, the ids of its notes. They are
+            used to recognise the notes once performed.
+        :param loop_length: optional duration of the score, in eighth notes.
         :raises ValueError: if the table is empty or an event has no pitch.
         """
         self.times = np.asarray(times, dtype=np.float64)
@@ -131,9 +149,16 @@ class EventTable:
         # shift the score so that it starts at zero
         start = float(self.times[0])
         self.times = self.times - start
+        self._start = start
 
         self.pitches = [frozenset(int(p) for p in ps) for ps in pitches]
         self.n = len(self.pitches)
+
+        # duration of the score, used when a match wraps around its end
+        self.loop_length = max(
+            0.0 if loop_length is None else float(loop_length),
+            float(self.times[-1]) + 1e-3,
+        )
 
         # the chord sounding at each event (empty if there is none): the
         # last one that started at or before it
@@ -151,15 +176,27 @@ class EventTable:
                 for i in idx
             ]
 
-        self._song_position_ids = np.asarray(
-            [p for p, _ in song_positions], dtype=np.int32
-        )
-        self._song_position_times = (
-            np.asarray([t for _, t in song_positions], dtype=np.float64) - start
-        )
+        # user-defined chords can not be replaced by calculated ones
+        self._static_chords = list(self.chords)
+        self._fixed = [len(c) > 0 for c in self.chords]
 
         if any(len(ps) == 0 for ps in self.pitches):
             raise ValueError("Score events must contain at least one pitch.")
+
+        # events of each note id (a repeated tune reuses the ids)
+        self._id_events = {}
+
+        for i, event_ids in enumerate(ids if ids is not None else []):
+            for note_id in event_ids:
+                self._id_events.setdefault(int(note_id), []).append(i)
+
+        self._id_events = {k: np.asarray(v) for k, v in self._id_events.items()}
+
+        # what the performance adds: see reset_performance
+        self._performed = np.full(self.n, np.nan)
+        self._offset = 0.0
+        self._current_chord = frozenset()
+        self._chord_updates = []
 
     def event_delta(self, a: int, b: int) -> int:
         """Return the number of events from event ``a`` to event ``b``.
@@ -179,29 +216,94 @@ class EventTable:
         """
         return float(self.times[b] - self.times[a])
 
-    def locate_song_position(self, score_time: float) -> tuple[int, float]:
-        """Find the song position marker closest to a score time.
+    # --------------------------------------------------------
+    # PERFORMANCE
+    # --------------------------------------------------------
 
-        :param score_time: score time, in eighth notes.
-        :return: the marker id and the signed offset from it, in eighth notes.
-        :raises ValueError: if the table has no (finite) markers or the time
-            is not finite.
+    def set_current_chord(self, pitch_classes):
+        """Set the chord sounding in the performance from now on.
+
+        :param pitch_classes: pitch classes of the chord (empty for none).
         """
-        if len(self._song_position_times) == 0:
-            raise ValueError("No song positions available.")
+        self._current_chord = frozenset(int(p) % 12 for p in pitch_classes)
 
-        if not np.isfinite(score_time):
-            raise ValueError("score_time must be finite.")
+    def observe(self, note_id: int, time: float):
+        """Register a performed note.
 
-        if not np.all(np.isfinite(self._song_position_times)):
-            raise ValueError("Song position times must be finite.")
+        The event it belongs to learns when it was performed and which chord
+        was sounding.
 
-        idx = int(np.argmin(np.abs(self._song_position_times - score_time)))
+        :param note_id: id of the note.
+        :param time: performed time of the note, in eighth notes.
+        """
+        events = self._id_events.get(note_id)
 
-        return (
-            int(self._song_position_ids[idx]),
-            float(score_time - self._song_position_times[idx]),
+        if events is None:
+            return
+
+        # the performed time is the score time minus the current offset
+        t = time - self._start
+        expected = self.times[events] - self._offset
+        j = int(np.argmin(np.abs(expected - t)))
+
+        if abs(expected[j] - t) > self._OBSERVE_TOLERANCE:
+            return
+
+        k = int(events[j])
+
+        self._performed[k] = t
+        self._offset = float(self.times[k] - t)
+
+        # calculated chords can not replace user-defined ones
+        if not self._fixed[k] and self.chords[k] != self._current_chord:
+            self.chords[k] = self._current_chord
+            self._chord_updates.append((k, self._current_chord))
+
+    def take_chord_updates(self) -> list:
+        """Return the chords changed since the last call, and forget them.
+
+        :return: list of ``(event index, pitch classes)``.
+        """
+        updates, self._chord_updates = self._chord_updates, []
+
+        return updates
+
+    def performed_times(self, indices) -> np.ndarray:
+        """Return the performed time of events.
+
+        Events not performed yet are assumed to be late by as much as the
+        last performed one. Indices past the end of the score wrap around.
+
+        :param indices: event indices.
+        :return: performed times, in eighth notes.
+        """
+        indices = np.asarray(indices, dtype=np.int64)
+
+        base = indices % self.n
+        wraps = indices // self.n
+
+        times = np.where(
+            np.isnan(self._performed[base]),
+            self.times[base] - self._offset,
+            self._performed[base],
         )
+
+        return times + wraps * self.loop_length
+
+    def reset_performance(self):
+        """Forget what the performance added, and go back to the written score."""
+        self._performed[:] = np.nan
+        self._offset = 0.0
+        self._current_chord = frozenset()
+
+        # the chords that changed are brought back to the written ones
+        self._chord_updates = [
+            (i, self._static_chords[i])
+            for i in range(self.n)
+            if self.chords[i] != self._static_chords[i]
+        ]
+
+        self.chords = list(self._static_chords)
 
 
 # ============================================================
@@ -303,7 +405,7 @@ class Follower:
     _TAIL_INSERTION_EXTRA = (0.30, 0.10)
 
     # score events closer than this to the best match are not rivals
-    _SECOND_BEST_GUARD = 4
+    _SECOND_BEST_GUARD = 1
     # confidence multiplier for a perfectly ambiguous match
     _MARGIN_FLOOR = 0.60
     # cost gap over which ambiguity fades out
@@ -314,28 +416,45 @@ class Follower:
     _MAX_ALIGNMENT_EXTRA = 4
 
     # pitch-class similarity: kernel width and term weights
-    _PITCH_DISTANCE_SIGMA = 0.5
-    _PRECISION_SHARE = 0.30
+    _PITCH_DISTANCE_SIGMA = 1
+    _PRECISION_SHARE = 0.70
+
+    # rhythm: timing residual (seconds) that costs ~63% of the rhythm score,
+    # shortest span (seconds) to estimate a tempo and plausible speed range
+    _RHYTHM_SIGMA = 0.35
+    _MIN_SLOPE_SPAN = 0.30
+    _MIN_PLAYBACK_SPEED = 0.5
+    _MAX_PLAYBACK_SPEED = 2.5
 
     # soft preference for matches close to the expected position
     _PRIOR_WEIGHT = 0.02
     _PRIOR_SCALE_EVENTS = 64
 
-    def __init__(self, table: EventTable, eighth_seconds: float, melody_weight: float):
+    def __init__(
+        self,
+        table: EventTable,
+        eighth_seconds: float,
+        melody_weight: float,
+        harmony_weight: float,
+        rhythm_weight: float = 0.0,
+    ):
         """Precompute the score similarity tables.
 
         :param table: the score to follow.
         :param eighth_seconds: duration of an eighth note at the base tempo.
         :param melody_weight: weight (0–1) of the melody (top voice) in the
             similarity; the rest goes to the harmony (all other pitches).
+        :param rhythm_weight: weight of the timing consistency of the match
+            in the confidence. 0 ignores the rhythm, as needed when the
+            table does not know how the score is performed.
         """
         self._table = table
+        self._rhythm_weight = rhythm_weight
+        self._eighth_seconds = float(eighth_seconds)
         self._n = table.n
 
-        # BUGFIX: the melody weight was hard-coded to 0.75, ignoring the
-        # argument (and so the configuration)
         self._melody_weight = melody_weight
-        self._harmony_weight = 1.0 - melody_weight
+        self._harmony_weight = harmony_weight
 
         n = self._n
 
@@ -372,36 +491,37 @@ class Follower:
         for a in range(12):
             B[a] = (S * K[a][None, :]).max(axis=1)
 
-        # User-defined chords: the played pitches can also be explained by the
-        # chord sounding at the event, and the chord can be recalled instead
-        # of the notes, since a performer may play the melody, the chords or
-        # both. Without chords the tables below are not needed.
+        # Chords (user-defined or calculated): the played pitches can also be
+        # explained by the chord sounding at the event, and the chord can be
+        # recalled instead of the notes, since a performer may play the
+        # melody, the chords or both. They are kept in tables of their own,
+        # updated as the performance brings new chords (_set_chord_row).
         self._has_chords = any(table.chords)
+        self._B_notes = B
 
-        if self._has_chords:
-            Sc = np.zeros((n, 12), dtype=np.float32)
+        Sc = np.zeros((n, 12), dtype=np.float32)
 
-            for i, chord in enumerate(table.chords):
-                for p in chord:
-                    Sc[i, p] = 1.0
+        for i, chord in enumerate(table.chords):
+            for p in chord:
+                Sc[i, p] = 1.0
 
-            chord_counts = Sc.sum(axis=1)
-            inv_chord = np.divide(
-                1.0,
-                chord_counts,
-                out=np.zeros(n, dtype=np.float32),
-                where=chord_counts > 0,
-            )
+        chord_counts = Sc.sum(axis=1)
+        inv_chord = np.divide(
+            1.0,
+            chord_counts,
+            out=np.zeros(n, dtype=np.float32),
+            where=chord_counts > 0,
+        )
 
-            Bc = np.empty((12, n), dtype=np.float32)
+        Bc = np.empty((12, n), dtype=np.float32)
 
-            for a in range(12):
-                Bc[a] = (Sc * K[a][None, :]).max(axis=1)
+        for a in range(12):
+            Bc[a] = (Sc * K[a][None, :]).max(axis=1)
 
-            STc = np.ascontiguousarray(Sc.T)
+        STc = np.ascontiguousarray(Sc.T)
 
-            # precision is measured against the notes and the chord together
-            B = np.maximum(B, Bc)
+        # precision is measured against the notes and the chord together
+        B = np.maximum(B, Bc)
 
         TK = np.ascontiguousarray(K[:, top])
         ST = np.ascontiguousarray(S.T)
@@ -420,9 +540,8 @@ class Follower:
         self._ST_x = np.ascontiguousarray(ST[:, cols])
         self._inv_x = np.ascontiguousarray(inv_c[cols])
 
-        if self._has_chords:
-            self._STc_x = np.ascontiguousarray(STc[:, cols])
-            self._invc_x = np.ascontiguousarray(inv_chord[cols])
+        self._STc_x = np.ascontiguousarray(STc[:, cols])
+        self._invc_x = np.ascontiguousarray(inv_chord[cols])
 
         # preallocated dynamic programming buffers
         max_c = n + self._ext + 1
@@ -439,6 +558,40 @@ class Follower:
     def reset(self):
         """Forget all played events."""
         self._history.clear()
+
+    def set_eighth_seconds(self, eighth_seconds: float):
+        """Set the duration of an eighth note in the performance.
+
+        :param eighth_seconds: duration of an eighth note, in seconds.
+        """
+        self._eighth_seconds = float(eighth_seconds)
+        self._base_window = max(1.0, self._HISTORY_EIGHTHS * float(eighth_seconds))
+
+    def _set_chord_row(self, i: int, chord):
+        """Change the chord of an event in the similarity tables.
+
+        :param i: event index.
+        :param chord: pitch classes of the chord (empty for none).
+        """
+        row = np.zeros(12, dtype=np.float32)
+
+        for p in chord:
+            row[p] = 1.0
+
+        count = float(row.sum())
+        inv = 1.0 / count if count > 0 else 0.0
+
+        union = np.maximum(self._B_notes[:, i], (row[None, :] * self._K).max(axis=1))
+
+        # the event appears once in the circular extension, or twice
+        for c in (i, i + self._n):
+            if c < self._n + self._ext:
+                self._B_x[:, c] = union
+                self._STc_x[:, c] = row
+                self._invc_x[c] = inv
+
+        if count > 0:
+            self._has_chords = True
 
     def ready(self) -> bool:
         """Tell whether enough events were played to attempt an alignment."""
@@ -537,6 +690,46 @@ class Follower:
 
         return D, trace
 
+    def _rhythm(self, t_in, t_sc):
+        """Estimate the speed and the timing consistency of a match.
+
+        :param t_in: wall-clock times of the matched played events, seconds.
+        :param t_sc: performed times of the matched score events, seconds.
+        :return: the speed of the performer (score seconds per wall second,
+            or ``None`` if unknown) and a rhythm score in [0, 1].
+        """
+        k = len(t_in)
+
+        if k < 4:
+            return None, 0.5
+
+        # slope between every pair of matches that are far enough apart
+        iu = np.triu_indices(k, 1)
+        dt = (t_in[None, :] - t_in[:, None])[iu]
+        ds = (t_sc[None, :] - t_sc[:, None])[iu]
+
+        ok = (dt >= self._MIN_SLOPE_SPAN) & (ds > 0)
+
+        if ok.sum() < 2:
+            return None, 0.5
+
+        slopes = ds[ok] / dt[ok]
+        slopes = slopes[
+            (slopes >= self._MIN_PLAYBACK_SPEED) & (slopes <= self._MAX_PLAYBACK_SPEED)
+        ]
+
+        if len(slopes) < 2:
+            return None, 0.3
+
+        # the speed is the median slope; how much the matches scatter
+        # around that line gives the rhythm score
+        speed = float(np.median(slopes))
+
+        resid = t_sc - speed * t_in
+        resid = np.abs(resid - np.median(resid))
+
+        return speed, float(math.exp(-float(np.median(resid)) / self._RHYTHM_SIGMA))
+
     def align(self, expected: int | None = None) -> MatchResult | None:
         """Align the played history to the score.
 
@@ -545,10 +738,14 @@ class Follower:
         :return: the best alignment, or ``None`` if it cannot be computed.
         """
         h = list(self._history)
-        m = len(h)
+        history_length = len(h)
 
-        if m < self._MIN_HISTORY:
+        if history_length < self._MIN_HISTORY:
             return None
+
+        # bring in the chords the performance has produced since last time
+        for i, chord in self._table.take_chord_updates():
+            self._set_chord_row(i, chord)
 
         n = self._n
 
@@ -561,14 +758,14 @@ class Follower:
         inv = self._inv_x
 
         # played pitch classes (O) and top pitch classes
-        O = np.stack([e.pc for e in h])
-        top = np.fromiter((e.top_pc for e in h), dtype=np.intp, count=m)
+        Obs = np.stack([e.pc for e in h])
+        top = np.fromiter((e.top_pc for e in h), dtype=np.intp, count=history_length)
 
-        co = O.sum(axis=1)
-        Bo = (O[:, :, None] * self._K[None, :, :]).max(axis=1)
+        co = Obs.sum(axis=1)
+        Bo = (Obs[:, :, None] * self._K[None, :, :]).max(axis=1)
 
         # precision: how well played pitches are explained by the score event
-        P = (O @ B) / co[:, None]
+        P = (Obs @ B) / co[:, None]
 
         # recall: how well the score event's pitches are found in the played one
         R = (Bo @ ST) * inv[None, :]
@@ -591,7 +788,7 @@ class Follower:
         D, tr = self._dp(cost)
 
         # average alignment cost for every possible end column
-        raw = D[m, 1 : C + 1] / m
+        raw = D[history_length, 1 : C + 1] / history_length
 
         s_idx = np.arange(C)
 
@@ -615,7 +812,7 @@ class Follower:
         played_idx = []
         score_idx = []
 
-        i = m
+        i = history_length
         j = c_best + 1
 
         while i > 0:
@@ -652,15 +849,31 @@ class Follower:
 
         score_time = float(self._table.times[position])
 
-        song_position, song_offset = self._table.locate_song_position(score_time)
-
         matched = len(played_idx)
 
         # ----------------------------------------------------
         # CONFIDENCE
         # ----------------------------------------------------
 
-        confidence = math.exp(-2.0 * best_cost) * (matched / m)
+        # a match must also be consistent in time (see _rhythm)
+        speed = None
+        combined_cost = best_cost
+
+        if self._rhythm_weight > 0.0:
+            t_in = np.fromiter(
+                (h[k].timestamp for k in played_idx),
+                dtype=np.float64,
+                count=matched,
+            )
+            t_sc = (
+                self._table.performed_times(np.asarray(score_idx))
+                * self._eighth_seconds
+            )
+
+            speed, rhythm = self._rhythm(t_in, t_sc)
+            combined_cost += self._rhythm_weight * (1.0 - rhythm)
+
+        confidence = math.exp(-2.0 * combined_cost) * (matched / history_length)
 
         # ----------------------------------------------------
         # AMBIGUITY
@@ -672,7 +885,7 @@ class Follower:
         if rival.any():
             second = float(raw[rival].min())
 
-            gap = max(second - best_cost, 0.0) * m
+            gap = max(second - best_cost, 0.0) * history_length
 
             margin_factor = self._MARGIN_FLOOR + (1.0 - self._MARGIN_FLOOR) * (
                 1.0 - math.exp(-gap / self._MARGIN_SCALE)
@@ -683,8 +896,6 @@ class Follower:
         return MatchResult(
             position=position,
             score_time=score_time,
-            song_position=song_position,
-            song_offset=song_offset,
             confidence=confidence,
             timestamp=float(h[played_idx[-1]].timestamp),
         )
@@ -702,11 +913,11 @@ class Tracker:
     _CONSIST_BACK = 4
     # ...and this many events forward per new played event, plus a slack
     _CONSIST_FWD_PER_EVENT = 4
-    _CONSIST_SLACK = 4
+    _CONSIST_SLACK = 3
 
     # evidence older than this (in eighths of score time or seconds) is dropped
-    _EVIDENCE_WINDOW = 4.0
-    _EVIDENCE_MAX_AGE = 3.0
+    _EVIDENCE_WINDOW = 2.0
+    _EVIDENCE_MAX_AGE = 16.0
 
     # minimum evidence to consider the trajectory reliable
     _MIN_EVIDENCE_MATCHES = 3
@@ -831,12 +1042,17 @@ class TrackerEngine:
         table: EventTable,
         eighth_seconds: float,
         threshold: float,
+        loss_threshold: float,
         confirmations: int,
+        loss_confirmations: int,
         collection_seconds: float,
-        melody_vs_harmony_weight: float,
+        melody_weight: float,
+        harmony_weight: float,
+        rhythm_weight: float,
         on_acquire=None,
         on_jump=None,
         on_match=None,
+        on_loss=None,
         log=print,
     ):
         """Initialise the engine.
@@ -850,6 +1066,8 @@ class TrackerEngine:
         :param melody_vs_harmony_weight: weight (0–1) of the melody (top voice)
             against the harmony (all other pitches and the chords of the
             tune) when comparing played and written notes.
+        :param rhythm_weight: weight of the timing consistency of a match in
+            its confidence; 0 ignores the rhythm.
         :param on_acquire: called with the :class:`MatchResult` on acquisition.
         :param on_jump: called with the :class:`MatchResult` on a position jump.
         :param on_match: called with the :class:`MatchResult` every time the
@@ -859,17 +1077,22 @@ class TrackerEngine:
         """
         self._table = table
 
-        self._follower = Follower(table, eighth_seconds, melody_vs_harmony_weight)
+        self._follower = Follower(
+            table, eighth_seconds, melody_weight, harmony_weight, rhythm_weight
+        )
         self._tracker = Tracker(table)
         self._grouper = NoteGrouper()
 
         self._threshold = threshold
+        self._loss_threshold = loss_threshold
         self._confirmations = max(1, confirmations)
+        self._loss_confirmations = max(1, loss_confirmations)
         self._collection_seconds = collection_seconds
 
         self._on_acquire = on_acquire
         self._on_jump = on_jump
         self._on_match = on_match
+        self._on_loss = on_loss
         self._log = log
 
         self._state = TrackerState("SEARCHING")
@@ -880,6 +1103,8 @@ class TrackerEngine:
         self._events_since_update = 0
         # candidate jump target as [position, confirmations]
         self._alt = None
+        # count of low confidence matches
+        self._low_confidence_count = 0
 
     @property
     def state(self) -> TrackerState:
@@ -894,6 +1119,7 @@ class TrackerEngine:
         """Forget everything and go back to searching."""
         self._follower.reset()
         self._tracker.reset()
+        self._table.reset_performance()
 
         self._grouper = NoteGrouper()
 
@@ -901,6 +1127,7 @@ class TrackerEngine:
 
         self._first_timestamp = None
         self._events_since_update = 0
+        self._low_confidence_count = 0
 
         self._alt = None
 
@@ -937,6 +1164,32 @@ class TrackerEngine:
         return self._grouper.deadline()
 
     # --------------------------------------------------------
+    # PERFORMANCE SIDE
+    # --------------------------------------------------------
+
+    def set_tempo(self, qpm: float):
+        """Tell the tempo at which the score is being performed.
+
+        :param qpm: quarter notes per minute.
+        """
+        self._follower.set_eighth_seconds(30.0 / qpm)
+
+    def set_chord(self, pitch_classes):
+        """Tell the chord the performance is playing from now on.
+
+        :param pitch_classes: pitch classes of the chord (empty for none).
+        """
+        self._table.set_current_chord(pitch_classes)
+
+    def observe_note(self, note_id: int, time: float):
+        """Tell that the performance played a note of the score.
+
+        :param note_id: id of the note.
+        :param time: performed time of the note, in eighth notes.
+        """
+        self._table.observe(note_id, time)
+
+    # --------------------------------------------------------
     # STATE ACCEPTANCE
     # --------------------------------------------------------
 
@@ -962,10 +1215,28 @@ class TrackerEngine:
 
         Results that continue the trajectory are accepted; results that jump
         elsewhere must be confirmed by several consistent results first.
+        If confidence drops below the loss threshold, the trajectory is
+        interrupted and we start searching again.
 
         :param result: the new alignment result.
         :param new_events: played events that led to this result.
         """
+        if result.confidence < self._loss_threshold:
+            self._low_confidence_count += 1
+
+            if self._low_confidence_count >= self._loss_confirmations:
+                self._log(
+                    f"POSITION LOST: "
+                    f"score_time={result.score_time:.2f}), "
+                    f"event={result.position}, "
+                    f"confidence={result.confidence:.3f}, "
+                )
+                self._lose()
+
+            return
+
+        self._low_confidence_count = 0
+
         self._events_since_update = min(
             self._events_since_update + new_events,
             Follower.MAX_HISTORY_EVENTS,
@@ -999,9 +1270,7 @@ class TrackerEngine:
         if alt[1] >= self._confirmations:
             self._log(
                 f"POSITION JUMP: "
-                f"song_position={self._state.result.song_position} -> "
-                f"{result.song_position} "
-                f"(offset={result.song_offset:+.2f} eighths, "
+                f"score_time={result.score_time:.2f}), "
                 f"confidence={result.confidence:.3f})"
             )
 
@@ -1009,6 +1278,24 @@ class TrackerEngine:
 
             if self._on_jump is not None:
                 self._on_jump(result)
+
+    def _lose(self):
+        """Return to searching after losing the tracked position."""
+        if self._state.mode != "ACQUIRED":
+            return
+
+        self._state = TrackerState("SEARCHING")
+
+        self._tracker.reset()
+        self._follower.reset()
+
+        self._first_timestamp = None
+        self._events_since_update = 0
+        self._alt = None
+        self._low_confidence_count = 0
+
+        if self._on_loss is not None:
+            self._on_loss()
 
     # --------------------------------------------------------
     # MAIN PROCESSING
@@ -1026,6 +1313,7 @@ class TrackerEngine:
         for ev in events:
             if self._first_timestamp is None:
                 self._first_timestamp = ev.timestamp
+                logger.info("Collecting data...")
 
             self._follower.add(ev)
 
@@ -1036,6 +1324,7 @@ class TrackerEngine:
 
         expected = self._state.result.position if acquired else None
         result = self._follower.align(expected)
+        # logger.info(f"match result: {result}")
 
         if result is None:
             return None
@@ -1062,8 +1351,6 @@ class TrackerEngine:
 
         self._log(
             f"ACQUISITION: "
-            f"song_position={result.song_position} "
-            f"(offset={result.song_offset:+.2f} eighths, "
             f"score_time={result.score_time:.2f}), "
             f"event={result.position}, "
             f"confidence={conf:.3f}, "

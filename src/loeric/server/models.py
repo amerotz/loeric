@@ -18,7 +18,7 @@ from typing import Optional
 import pydantic as pdt
 
 
-class LOERICState(pdt.BaseModel):
+class ServerState(pdt.BaseModel):
     running: bool = False
     current_tune: Optional[str] = None
     current_config: Optional[str] = None

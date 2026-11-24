@@ -16,7 +16,6 @@
 import logging
 from typing import Literal
 
-import loeric.core.context as lctx
 import loeric.core.element as le
 import loeric.core.paths as lp
 from loeric.core.player.inputs.analysers.base import Analyser, AnalyserConfig
@@ -132,7 +131,6 @@ class OSCContourAnalyser(OSCAnalyser):
                 event = le.ContourValue(
                     name=name,
                     value=message_value,
-                    time=lctx.PerformanceClock.now(),
                 )
                 events.append(event)
                 logger.info(f"{event.name}: {event.value:.2f}")

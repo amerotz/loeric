@@ -28,6 +28,7 @@ import loeric.core.element as le
 import loeric.core.paths as lp
 import loeric.core.player.inputs as li
 import loeric.core.player.outputs as lo
+import loeric.core.state as ls
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +68,12 @@ class Player:
 
         self._message_queue = le.LOERICQueue()
         self._requested_tick = None
+        self._requested_state = None
 
     def update(self, events: list[le.LOERICElement], tick: le.TimeDelta):
 
         self._requested_tick = None
+        self._requested_state = None
 
         # update own tempo
         for e in events:
@@ -86,7 +89,14 @@ class Player:
                 e = self._message_queue.pop()
                 if isinstance(e, le.Tempo):
                     lctx.TempoKeeper.set(e.qpm)
-                elif isinstance(e, le.UserPosition):
+                # start playback
+                elif isinstance(e, le.StartPlayback):
+                    self._requested_state = ls.LOERICState.PROCESSING
+                # stop playback
+                elif isinstance(e, le.StopPlayback):
+                    self._requested_state = ls.LOERICState.IDLE
+                # seek position
+                elif isinstance(e, le.SeekPosition):
                     self._requested_tick = e.position
 
     def play_events(self, events: list[le.LOERICElement], tick: le.TimeDelta):
@@ -121,6 +131,10 @@ class Player:
     @property
     def requested_tick(self) -> float:
         return self._requested_tick
+
+    @property
+    def requested_state(self) -> ls.LOERICState:
+        return self._requested_state
 
     @property
     def eighth_duration_seconds(self) -> float:

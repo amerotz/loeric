@@ -34,7 +34,9 @@ import loeric.core.groover as gr
 import loeric.core.mapper as mp
 import loeric.core.paths as lp
 import loeric.core.player as pl
+import loeric.core.state as ls
 import loeric.core.tune as tu
+import loeric.core.utils as lu
 
 faulthandler.enable()
 # bad code goes here
@@ -108,16 +110,12 @@ class LOERIC:
     @staticmethod
     def infer_tune_type(tune: tu.Tune):
         """Infer tune type from the tune's time signature."""
-        tunes = {
-            "2/2": "reel",
-            "2/4": "polka",
-            "3/4": "waltz",
-            "4/4": "hornpipe",
-            "6/8": "jig",
-            "9/8": "slipjig",
-            "12/8": "slide",
-        }
-        return tunes[tune.time_signatures[0].meter_string]
+        t = tune.tune_type
+        if t is None:
+            t = lu.time_signature_to_irish_tune_type[
+                tune.time_signatures[0].meter_string
+            ]
+        return t
 
     def set_tempo(self, tempo: float):
         """Set tempo for LOERIC's performance in quarters per minute (QPM)."""
@@ -371,7 +369,7 @@ class LOERIC:
                     if handle_command(cmd):
                         break
 
-                finish, _ = LOERIC._step(
+                finish, _, _ = LOERIC._step(
                     mapper,
                     contour_manager,
                     groover,
@@ -393,6 +391,7 @@ class LOERIC:
             # start actual loop
             finish = False
 
+            state = ls.LOERICState.PROCESSING
             while not finish:
 
                 # commands
@@ -406,19 +405,35 @@ class LOERIC:
                 start_time = time.perf_counter()
 
                 # step
-                finish, new_tick = LOERIC._step(
-                    mapper,
-                    contour_manager,
-                    groover,
-                    player,
-                    tune,
-                    tick,
-                    null_events=True,
-                )
+                if state == ls.LOERICState.PROCESSING:
+                    finish, new_state, new_tick = LOERIC._step(
+                        mapper,
+                        contour_manager,
+                        groover,
+                        player,
+                        tune,
+                        tick,
+                        null_events=True,
+                    )
+                elif state == ls.LOERICState.IDLE:
+                    finish, new_state, new_tick = LOERIC._step_idle(
+                        mapper,
+                        contour_manager,
+                        groover,
+                        player,
+                        tune,
+                        tick,
+                        null_events=False,
+                    )
+                else:
+                    raise Exception
+
+                if new_state is not None:
+                    state = new_state
 
                 if new_tick is not None:
                     tick = new_tick
-                else:
+                elif state == ls.LOERICState.PROCESSING:
                     tick += time_division
 
                 # fraction of eight note converted to seconds
@@ -496,6 +511,9 @@ class LOERIC:
         # get performed things
         groover_out = groover.pop(tick)
 
+        # set groover-generated contours
+        mapper.set(groover_out)
+
         # update player
         player.update(groover_out, tick)
 
@@ -510,4 +528,65 @@ class LOERIC:
         # check if player is done playing
         finished = finished and player.done()
 
-        return finished, player.requested_tick
+        return finished, player.requested_state, player.requested_tick
+
+    @staticmethod
+    def _step_idle(
+        mapper: mp.Mapper,
+        contour_manager: cnt.ContourManager,
+        groover: gr.Groover,
+        player: pl.Player,
+        tune: tu.Tune,
+        tick: le.TimeDelta,
+        null_events: bool = False,
+    ):
+
+        # update performance time
+        performance_tick = tick + groover.lookahead_size
+        lctx.PerformanceClock.set(performance_tick)
+
+        # obtain user inputs and update the mapper
+        user_inputs = player.get()
+        mapper.set(user_inputs)
+
+        mapper.update()
+
+        # obtain processed control values
+        contour_values = mapper.get()
+
+        # obtain elements to process
+
+        # feed everything in the groover
+        for c in contour_values:
+            groover.push(c)
+
+        for u in user_inputs:
+            groover.push(u)
+
+        # make the groover compute
+        groover.update(performance_tick, window=None, null_events=null_events)
+
+        # set control outputs for the player
+        player.set(contour_values)
+
+        # get performed things
+        groover_out = groover.pop(tick)
+
+        # set groover-generated contours
+        mapper.set(groover_out)
+
+        # update player
+        player.update(groover_out, tick)
+
+        # play them
+        player.play_events(groover_out, tick)
+
+        # check if groover output end of score
+        finished = False
+        for s in groover_out:
+            finished = finished or isinstance(s, le.EndOfScore)
+
+        # check if player is done playing
+        finished = finished and player.done()
+
+        return finished, player.requested_state, player.requested_tick

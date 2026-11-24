@@ -166,10 +166,26 @@ class OSCOutput(lob.OutputInterface):
         if absolute_time:
             time += event.time
 
-        if isinstance(event, le.SongPosition):
+        if isinstance(event, le.StopPlayback):
             return [
                 (
-                    self._build_osc_message(f"/{self._prefix}/songpos", event.position),
+                    self._build_osc_message(f"/{self._prefix}/stop"),
+                    event.time,
+                )
+            ]
+        elif isinstance(event, le.StartPlayback):
+            return [
+                (
+                    self._build_osc_message(f"/{self._prefix}/start"),
+                    event.time,
+                )
+            ]
+        elif isinstance(event, le.SongPosition):
+            return [
+                (
+                    self._build_osc_message(
+                        f"/{self._prefix}/songpos", [event.position]
+                    ),
                     event.time,
                 )
             ]
@@ -178,7 +194,7 @@ class OSCOutput(lob.OutputInterface):
             return [
                 (
                     self._build_osc_message(
-                        f"/{self._prefix}/key", le.NOTE_NAMES[event.major_root]
+                        f"/{self._prefix}/key", [le.NOTE_NAMES[event.major_root]]
                     ),
                     event.time,
                 )
@@ -197,7 +213,7 @@ class OSCOutput(lob.OutputInterface):
 
             messages.append(
                 (
-                    self._build_osc_message("/loeric/note_on/", float(event.pitch)),
+                    self._build_osc_message("/loeric/note_on/", [float(event.pitch)]),
                     overall_time,
                 )
             )
@@ -226,14 +242,14 @@ class OSCOutput(lob.OutputInterface):
                         messages.append(
                             (
                                 self._build_osc_message(
-                                    "/loeric/note_off", previous_pitch
+                                    "/loeric/note_off", [previous_pitch]
                                 ),
                                 overall_time,
                             )
                         )
                         messages.append(
                             (
-                                self._build_osc_message("/loeric/note_on", new_pitch),
+                                self._build_osc_message("/loeric/note_on", [new_pitch]),
                                 overall_time,
                             )
                         )
@@ -248,7 +264,7 @@ class OSCOutput(lob.OutputInterface):
 
             messages.append(
                 (
-                    self._build_osc_message("/loeric/note_off", new_pitch),
+                    self._build_osc_message("/loeric/note_off", [new_pitch]),
                     overall_time + note_duration,
                 )
             )
@@ -276,7 +292,7 @@ class OSCOutput(lob.OutputInterface):
                 val = self._contour_values[c]
 
                 # logger.info(f"{c}: cc {self._controls[c]} {val}")
-                message = self._build_osc_message(self._controls[c], val)
+                message = self._build_osc_message(self._controls[c], [val])
                 messages.append(message)
             with self._out_lock:
                 for m in messages:

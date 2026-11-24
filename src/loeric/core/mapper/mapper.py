@@ -19,6 +19,7 @@ import logging
 
 import pydantic as pdt
 
+import loeric.core.context as lctx
 import loeric.core.element as le
 import loeric.core.mapper.engines.matrix as lme
 import loeric.core.mapper.parser as lmp
@@ -84,4 +85,6 @@ class Mapper:
     def get(self, as_array=False):
         """Get output values."""
         values = self._engine.get(as_array=as_array)
+        for v in values:
+            v.time = lctx.PerformanceClock.now()
         return values
