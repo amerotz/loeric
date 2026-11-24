@@ -265,6 +265,8 @@ async def start_loeric(
 
         config = lc.process_config(config)
 
+        print(json.dumps(config, indent=2))
+
         # change transpose
         try:
             config["groover"]["modules"]["transpose"]["steps"] += transpose
