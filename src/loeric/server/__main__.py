@@ -389,7 +389,7 @@ async def volume_change(value: float):
 def _change_volume(value: float):
     global musician
 
-    outputs = _get_param("player/output")
+    outputs = _get_param("player/output", timeout=None)
 
     if outputs is None:
         return -1
@@ -423,11 +423,11 @@ async def get_param(path: str):
     return value
 
 
-def _get_param(path: str):
+def _get_param(path: str, timeout=1.0):
     global musician
 
     try:
-        value = musician.get_attribute(path, timeout=1.0)
+        value = musician.get_attribute(path, timeout=timeout)
     except Exception:
         raise HTTPException(status_code=404, detail=f"Path '{path}' not found")
 
@@ -558,7 +558,7 @@ def main():
     if args.device is not None:
         DEVICE_BASE_CONFIG = Path(CONFIG_PATH / f"{args.device}_base.json")
 
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="debug", access_log=True)
 
 
 if __name__ == "__main__":
