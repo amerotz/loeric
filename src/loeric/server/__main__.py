@@ -259,7 +259,7 @@ async def start_loeric(
         else:
             config = {}
 
-        config = lc.join_configs([base, tune_config, instrument_config, config])
+        config = lc.join_configs([base, device_base, tune_config, instrument_config, config])
 
         RESPONSIVENESS_PATH = config.get("variables").get("site_responsiveness_path")
 
