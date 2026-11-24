@@ -27,19 +27,27 @@
         "device": "snd_rpi_hifiberry_dacplusadcpro",
         "samplerate": 44100,
         "analysers": {
-          "rms#intensity_velocity_tempo": {
+          "better_rms#intensity_velocity_tempo": {
             "active": true,
             "responsiveness": 1,
             "controls": ["velocity_tempo_impact"],
             "windows_per_second": 30,
-            "updates_per_second": 30
+            "updates_per_second": 30,
+	    "min_recovery": 0.05,
+	    "max_recovery": 0.05,
+	    "min_slack_factor": 0.05,
+	    "max_slack_factor": 0.05
           },
-	"rms#tempo": {
+	"better_rms#tempo": {
             "active": true,
             "responsiveness": 0.7,
             "controls": ["tempo_intensity"],
             "windows_per_second": 30,
-            "updates_per_second": 30
+            "updates_per_second": 30,
+	    "min_recovery": 0.05,
+	    "max_recovery": 0.05,
+	    "min_slack_factor": 0.05,
+	    "max_slack_factor": 0.05
           }
         }
       },

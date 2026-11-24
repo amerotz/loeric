@@ -6,7 +6,7 @@
     "input": {
       "midi#main": {
         "active": true,
-        "port": "Midi Through:Midi Through Port-0 14:0",
+        "port": "SL:SL LINK 24:2",
         "analysers": {
           "midi_notes": {
             "active": true,

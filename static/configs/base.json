@@ -8,7 +8,7 @@
     "var_phrase_length_2": 2,
     "var_phrase_length_1": 4,
     "var_velocity_weight": [1, 1, 1, 1, 1],
-    "var_drone_bind": "drone",
+    "var_drone_bind": "$drone",
     "var_notes_per_bar": [8],
     "var_notes_per_bar_bind": "notes_per_bar",
     "var_legato_pattern": {
@@ -347,12 +347,16 @@
         "device": "default",
         "samplerate": 44100,
         "analysers": {
-          "rms#loudness": {
+          "better_rms#loudness": {
             "active": true,
             "responsiveness": 0.5,
             "controls": ["intensity"],
             "windows_per_second": 10,
-            "updates_per_second": 10
+            "updates_per_second": 10,
+	    "min_recovery": 0.05,
+	    "max_recovery": 0.05,
+	    "min_slack_factor": 0.05,
+	    "max_slack_factor": 0.05
           }
         }
       }
