@@ -46,7 +46,7 @@
         }
       },
       "dynamics": {
-        "bind": "velocity",
+        "bind": "$velocity",
         "pattern": "velocity_pattern"
       },
       "ornament": {
@@ -307,12 +307,34 @@
         "max": 1,
         "bind": "legato"
       },
+      "score_tracker": {
+        "bypass": false,
+        "threshold": 0.6,
+        "loss_threshold": 0.5,
+        "confirmations": 3,
+        "loss_confirmations": 3,
+        "collection_seconds": 2,
+        "melody_weight": 0.33,
+        "harmony_weight": 0.33,
+        "rhythm_weight": 0.33,
+        "confidence_contour": "confidence"
+      },
       "logger": {
         "notes": false,
         "chords": true,
         "time_signatures": true,
         "key_signatures": true,
-        "tempos": false
+        "tempos": false,
+        "positions": true
+      },
+      "synchroniser": {
+        "bypass": false,
+        "stop_if_unknown": false,
+        "wait_for_start": true,
+        "fix_threshold": 0.025,
+        "stop_threshold": 0.5,
+        "sync_interval": 6,
+        "use_ms": true
       }
     }
   },
@@ -580,14 +602,10 @@
     "input": {
       "midi#main": {
         "active": true,
-        "port": "VI61 In",
+        "port": "KOMPLETE KONTROL S61 MK2:KOMPLETE KONTROL S61 MK2 MIDI 1 24:0",
         "analysers": {
-          "midi_tracker": {
-            "active": true,
-            "threshold": 0.5,
-            "confirmations": 3,
-            "collection_seconds": 2,
-            "melody_vs_harmony_weight": 0
+          "midi_forward": {
+            "active": true
           }
         }
       }
@@ -595,7 +613,7 @@
     "output": {
       "midi#main": {
         "active": true,
-        "port": "Midi Through Port-0",
+        "port": "Midi Through:Midi Through Port-0 14:0",
         "send_cc": true,
         "send_messages": true,
         "velocity_range": [32, 110],
@@ -606,7 +624,7 @@
   },
   "mapper": {
     "sources": [
-      "intensity",
+      "confidence",
       "velocity",
       "drone",
       "tempo",
@@ -615,6 +633,9 @@
       "swing"
     ],
     "targets": [],
-    "rules": []
+    "rules": [
+      "0.5 : %velocity, %ornament, %drone",
+      "confidence ~ velocity, ornament, drone"
+    ]
   }
 }

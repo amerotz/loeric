@@ -11,7 +11,9 @@
               "mapping": {
                 "better_rms": "#/$defs/BetterRMSConfig",
                 "midi_cc": "#/$defs/MIDIContourAnalyserConfig",
+                "midi_forward": "#/$defs/MIDINoteForwarderConfig",
                 "midi_logger": "#/$defs/MIDILoggerConfig",
+                "midi_notes": "#/$defs/MIDINoteAnalyserConfig",
                 "osc_cc": "#/$defs/OSCContourAnalyserConfig",
                 "osc_logger": "#/$defs/OSCLoggerConfig",
                 "rms": "#/$defs/RMSConfig",
@@ -25,6 +27,8 @@
               { "$ref": "#/$defs/TempoAnalyserConfig" },
               { "$ref": "#/$defs/MIDIContourAnalyserConfig" },
               { "$ref": "#/$defs/MIDILoggerConfig" },
+              { "$ref": "#/$defs/MIDINoteAnalyserConfig" },
+              { "$ref": "#/$defs/MIDINoteForwarderConfig" },
               { "$ref": "#/$defs/OSCContourAnalyserConfig" },
               { "$ref": "#/$defs/OSCLoggerConfig" }
             ]
@@ -232,7 +236,6 @@
       "type": "object"
     },
     "DataOutputConfig": {
-      "additionalProperties": true,
       "properties": {
         "type": { "const": "data", "title": "Type", "type": "string" },
         "active": { "title": "Active", "type": "boolean" },
@@ -443,7 +446,9 @@
                 "legato": "#/$defs/LegatoModuleConfig",
                 "logger": "#/$defs/LoggerModuleConfig",
                 "ornament": "#/$defs/OrnamentModuleConfig",
+                "score_tracker": "#/$defs/ScoreTrackerModuleConfig",
                 "swing": "#/$defs/SwingModuleConfig",
+                "synchroniser": "#/$defs/SynchroniserModuleConfig",
                 "tagger": "#/$defs/TaggerModuleConfig",
                 "timing": "#/$defs/TimingModuleConfig",
                 "transpose": "#/$defs/TransposeModuleConfig"
@@ -464,7 +469,9 @@
               { "$ref": "#/$defs/ConditionalModuleConfig" },
               { "$ref": "#/$defs/LoggerModuleConfig" },
               { "$ref": "#/$defs/ChainModuleConfig" },
-              { "$ref": "#/$defs/TaggerModuleConfig" }
+              { "$ref": "#/$defs/ScoreTrackerModuleConfig" },
+              { "$ref": "#/$defs/TaggerModuleConfig" },
+              { "$ref": "#/$defs/SynchroniserModuleConfig" }
             ]
           },
           "title": "Modules",
@@ -570,7 +577,7 @@
     },
     "LoggerModuleConfig": {
       "additionalProperties": false,
-      "description": "Config for :class:`LoggerModule`.\n\n:param notes: log note events.\n:param chords: log chord events.\n:param time_signatures: log time signature events.\n:param key_signatures: log key signature events.\n:param tempos: log tempo events.",
+      "description": "Config for :class:`LoggerModule`.\n\n:param notes: log note events.\n:param chords: log chord events.\n:param time_signatures: log time signature events.\n:param key_signatures: log key signature events.\n:param tempos: log tempo events.\n:param positions: log position events.",
       "properties": {
         "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
         "tag": {
@@ -599,6 +606,11 @@
           "type": "boolean"
         },
         "tempos": { "default": false, "title": "Tempos", "type": "boolean" },
+        "positions": {
+          "default": false,
+          "title": "Positions",
+          "type": "boolean"
+        },
         "type": { "const": "logger", "title": "Type", "type": "string" }
       },
       "required": ["type"],
@@ -632,7 +644,9 @@
               "mapping": {
                 "better_rms": "#/$defs/BetterRMSConfig",
                 "midi_cc": "#/$defs/MIDIContourAnalyserConfig",
+                "midi_forward": "#/$defs/MIDINoteForwarderConfig",
                 "midi_logger": "#/$defs/MIDILoggerConfig",
+                "midi_notes": "#/$defs/MIDINoteAnalyserConfig",
                 "osc_cc": "#/$defs/OSCContourAnalyserConfig",
                 "osc_logger": "#/$defs/OSCLoggerConfig",
                 "rms": "#/$defs/RMSConfig",
@@ -646,6 +660,8 @@
               { "$ref": "#/$defs/TempoAnalyserConfig" },
               { "$ref": "#/$defs/MIDIContourAnalyserConfig" },
               { "$ref": "#/$defs/MIDILoggerConfig" },
+              { "$ref": "#/$defs/MIDINoteAnalyserConfig" },
+              { "$ref": "#/$defs/MIDINoteForwarderConfig" },
               { "$ref": "#/$defs/OSCContourAnalyserConfig" },
               { "$ref": "#/$defs/OSCLoggerConfig" }
             ]
@@ -670,8 +686,40 @@
       "title": "MIDILoggerConfig",
       "type": "object"
     },
+    "MIDINoteAnalyserConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`MIDINoteAnalyser`.",
+      "properties": {
+        "type": { "const": "midi_notes", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" },
+        "controls": {
+          "additionalProperties": {
+            "anyOf": [
+              { "const": "note", "type": "string" },
+              { "const": "velocity", "type": "string" }
+            ]
+          },
+          "title": "Controls",
+          "type": "object"
+        },
+        "responsiveness": { "title": "Responsiveness", "type": "number" }
+      },
+      "required": ["type", "active", "controls", "responsiveness"],
+      "title": "MIDINoteAnalyserConfig",
+      "type": "object"
+    },
+    "MIDINoteForwarderConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`MIDINoteForwarder`. No additional fields.",
+      "properties": {
+        "type": { "const": "midi_forward", "title": "Type", "type": "string" },
+        "active": { "title": "Active", "type": "boolean" }
+      },
+      "required": ["type", "active"],
+      "title": "MIDINoteForwarderConfig",
+      "type": "object"
+    },
     "MIDIOutputConfig": {
-      "additionalProperties": true,
       "properties": {
         "type": { "const": "midi", "title": "Type", "type": "string" },
         "active": { "title": "Active", "type": "boolean" },
@@ -752,7 +800,9 @@
               "mapping": {
                 "better_rms": "#/$defs/BetterRMSConfig",
                 "midi_cc": "#/$defs/MIDIContourAnalyserConfig",
+                "midi_forward": "#/$defs/MIDINoteForwarderConfig",
                 "midi_logger": "#/$defs/MIDILoggerConfig",
+                "midi_notes": "#/$defs/MIDINoteAnalyserConfig",
                 "osc_cc": "#/$defs/OSCContourAnalyserConfig",
                 "osc_logger": "#/$defs/OSCLoggerConfig",
                 "rms": "#/$defs/RMSConfig",
@@ -766,6 +816,8 @@
               { "$ref": "#/$defs/TempoAnalyserConfig" },
               { "$ref": "#/$defs/MIDIContourAnalyserConfig" },
               { "$ref": "#/$defs/MIDILoggerConfig" },
+              { "$ref": "#/$defs/MIDINoteAnalyserConfig" },
+              { "$ref": "#/$defs/MIDINoteForwarderConfig" },
               { "$ref": "#/$defs/OSCContourAnalyserConfig" },
               { "$ref": "#/$defs/OSCLoggerConfig" }
             ]
@@ -792,7 +844,6 @@
       "type": "object"
     },
     "OSCOutputConfig": {
-      "additionalProperties": true,
       "properties": {
         "type": { "const": "osc", "title": "Type", "type": "string" },
         "active": { "title": "Active", "type": "boolean" },
@@ -1004,8 +1055,88 @@
       "title": "RMSConfig",
       "type": "object"
     },
+    "ScoreTrackerModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`ScoreTrackerModule`.\n\n:param threshold: minimum confidence (0\u20131) for a match to be trusted.\n    Lower acquires faster but may lock onto the wrong phrase.\n:param collection_seconds: minimum seconds of playing before the position\n    can be acquired.\n:param confirmations: consistent matches needed to acquire the position or\n    to follow a jump to another part of the tune.\n:param melody_weight: weightof the melody (top voice)\n:param harmony_weight: weightof the harmony\n:param rhythm_weight: weight of the timing consistency of a match in its\n    confidence. 0 ignores the rhythm.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "type": { "const": "score_tracker", "title": "Type", "type": "string" },
+        "threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Threshold",
+          "type": "number"
+        },
+        "loss_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Loss Threshold",
+          "type": "number"
+        },
+        "collection_seconds": {
+          "minimum": 0.0,
+          "title": "Collection Seconds",
+          "type": "number"
+        },
+        "confirmations": {
+          "minimum": 1,
+          "title": "Confirmations",
+          "type": "integer"
+        },
+        "loss_confirmations": {
+          "minimum": 1,
+          "title": "Loss Confirmations",
+          "type": "integer"
+        },
+        "melody_weight": {
+          "minimum": 0.0,
+          "title": "Melody Weight",
+          "type": "number"
+        },
+        "harmony_weight": {
+          "minimum": 0.0,
+          "title": "Harmony Weight",
+          "type": "number"
+        },
+        "rhythm_weight": {
+          "minimum": 0.0,
+          "title": "Rhythm Weight",
+          "type": "number"
+        },
+        "confidence_contour": {
+          "title": "Confidence Contour",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "threshold",
+        "loss_threshold",
+        "collection_seconds",
+        "confirmations",
+        "loss_confirmations",
+        "melody_weight",
+        "harmony_weight",
+        "rhythm_weight",
+        "confidence_contour"
+      ],
+      "title": "ScoreTrackerModuleConfig",
+      "type": "object"
+    },
     "SoundfontOutputConfig": {
-      "additionalProperties": true,
       "properties": {
         "type": { "const": "soundfont", "title": "Type", "type": "string" },
         "active": { "title": "Active", "type": "boolean" },
@@ -1081,6 +1212,44 @@
       },
       "required": ["bind", "type"],
       "title": "SwingModuleConfig",
+      "type": "object"
+    },
+    "SynchroniserModuleConfig": {
+      "additionalProperties": false,
+      "description": "Config for :class:`SynchroniserModule`.\n\n:param stop_if_unknown: stop playing when the performer is lost.\n:param wait_for_start: do not play until the performer is found.\n:param fix_threshold: sync errors below this (eighth notes) are ignored;\n    above it the tempo is bent to catch up.\n:param stop_threshold: sync errors above this (eighth notes) stop the\n    system, which restarts at the next song position of the performer.\n:param sync_interval: the interval over which to synchronise, i eighth notes.",
+      "properties": {
+        "bypass": { "default": false, "title": "Bypass", "type": "boolean" },
+        "tag": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Tag"
+        },
+        "required_tags": {
+          "anyOf": [
+            { "items": { "type": "string" }, "type": "array" },
+            { "type": "null" }
+          ],
+          "default": null,
+          "title": "Required Tags"
+        },
+        "type": { "const": "synchroniser", "title": "Type", "type": "string" },
+        "stop_if_unknown": { "title": "Stop If Unknown", "type": "boolean" },
+        "wait_for_start": { "title": "Wait For Start", "type": "boolean" },
+        "fix_threshold": { "title": "Fix Threshold", "type": "number" },
+        "stop_threshold": { "title": "Stop Threshold", "type": "number" },
+        "sync_interval": { "title": "Sync Interval", "type": "number" },
+        "use_ms": { "title": "Use Ms", "type": "boolean" }
+      },
+      "required": [
+        "type",
+        "stop_if_unknown",
+        "wait_for_start",
+        "fix_threshold",
+        "stop_threshold",
+        "sync_interval",
+        "use_ms"
+      ],
+      "title": "SynchroniserModuleConfig",
       "type": "object"
     },
     "TaggerModuleConfig": {
@@ -1196,7 +1365,6 @@
       "type": "object"
     },
     "VisualOutputConfig": {
-      "additionalProperties": true,
       "properties": {
         "type": { "const": "visual", "title": "Type", "type": "string" },
         "active": { "title": "Active", "type": "boolean" },

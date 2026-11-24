@@ -1,6 +1,7 @@
 {
-  "variables": {
-    "site_responsiveness_path": "player/input/main/analysers/midi_notes/responsiveness"
+  "site_controls": {
+    "Volume": "player/output/soundfont/volume",
+    "Responsiveness": "player/input/main/analysers/midi_notes/responsiveness"
   },
   "player": {
     "input": {

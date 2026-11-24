@@ -1,0 +1,26 @@
+{
+  "site_controls": {
+    "Volume": "player/output/soundfont/volume",
+    "Responsiveness": "player/input/mic_input/analysers/loudness/responsiveness"
+  },
+  "player": {
+    "input": {
+      "audio#mic_input": {
+        "active": true,
+        "device": "default"
+      }
+    },
+    "output": {
+      "midi": {
+        "active": true,
+        "port": "Midi Through:Midi Through Port-0 14:0"
+      },
+      "soundfont": {
+        "active": true,
+        "path": "/usr/share/sounds/sf2/FluidR3_GM.sf2",
+        "device": "default",
+        "channels": 1
+      }
+    }
+  }
+}

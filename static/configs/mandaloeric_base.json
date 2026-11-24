@@ -1,8 +1,11 @@
 {
+  "site_controls": {
+    "Volume": "player/output/soundfont/volume",
+    "Responsiveness": "player/input/mic_input/analysers/loudness/responsiveness"
+  },
   "variables": {
-    "site_responsiveness_path": "player/input/mic_input/analysers/loudness/responsiveness",
-     "var_speaker_device": "snd_rpi_hifiberry_dacplusadcpro: HiFiBerry DAC+ADC Pro HiFi multicodec-0 (hw:3,0)",
-     "var_headphones_device": "bcm2835 Headphones"
+    "var_speaker_device": "snd_rpi_hifiberry_dacplusadcpro: HiFiBerry DAC+ADC Pro HiFi multicodec-0 (hw:3,0)",
+    "var_headphones_device": "bcm2835 Headphones"
   },
   "player": {
     "input": {
@@ -19,7 +22,7 @@
       "soundfont": {
         "active": true,
         "path": "/usr/share/sounds/sf2/FluidR3_GM.sf2",
-	"device": "var_headphones_device",
+        "device": "var_headphones_device",
         "channels": 1
       }
     }

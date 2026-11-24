@@ -83,7 +83,6 @@ TUNES_PATH = STATIC_ROOT / "tunes"
 FRONTEND_ROOT = STATIC_ROOT / "site"
 GUI_FILE = FRONTEND_ROOT / "index.html"
 
-RESPONSIVENESS_PATH = None
 
 logger.info(f"STATIC_ROOT: {STATIC_ROOT}")
 logger.info(f"TUNES_PATH: {TUNES_PATH}")
@@ -112,10 +111,14 @@ def load_tunes() -> dict[str, lsm.TuneInfo]:
     if TUNES_PATH.exists():
         for tune_file in TUNES_PATH.glob("*.abc"):
             tune_id = tune_file.stem
+            if tune_id.startswith("."):
+                continue
             tunes[tune_id] = lsm.TuneInfo(id=tune_id, name=tune_id, path=str(tune_file))
 
         for tune_file in TUNES_PATH.glob("*.mid"):
             tune_id = tune_file.stem
+            if tune_id.startswith("."):
+                continue
             tunes[tune_id] = lsm.TuneInfo(id=tune_id, name=tune_id, path=str(tune_file))
 
         logger.info(f"Found {len(tunes)} tunes")
@@ -189,6 +192,109 @@ def get_available_instruments() -> list[lsm.InstrumentModel]:
     return instruments
 
 
+def load_merged_config(
+    tune_id: Optional[str] = None,
+    instrument_model: Optional[str] = None,
+    config_id: Optional[str] = None,
+) -> dict:
+    """Load and merge configuration without starting LOERIC."""
+    configs = []
+
+    # Base configuration (always loaded)
+    with open(BASE_CONFIG) as f:
+        configs.append(json.load(f))
+
+    # Device configuration
+    if DEVICE_BASE_CONFIG is not None and DEVICE_BASE_CONFIG.is_file():
+        with open(DEVICE_BASE_CONFIG) as f:
+            configs.append(json.load(f))
+
+    # Tune-type configuration
+    if tune_id:
+        if tune_id not in tune_list:
+            raise HTTPException(status_code=404, detail="Tune not found")
+
+        tune = tu.Tune(tune_list[tune_id].path, 1)
+        tune_type = loeric.LOERIC.infer_tune_type(tune)
+
+        tune_type_path = TUNE_CONFIG_PATH / f"{tune_type}.json"
+
+        if tune_type and tune_type_path.is_file():
+            with open(tune_type_path) as f:
+                configs.append(json.load(f))
+
+    # Instrument configuration
+    if instrument_model:
+        instrument_path = INSTRUMENT_CONFIG_PATH / f"{instrument_model}.json"
+
+        if not instrument_path.is_file():
+            raise HTTPException(status_code=404, detail="Instrument not found")
+
+        with open(instrument_path) as f:
+            configs.append(json.load(f))
+
+    # Additional configuration
+    if config_id and config_id != "default":
+        config_path = CONFIG_PATH / config_id
+
+        if not config_path.is_file():
+            raise HTTPException(status_code=404, detail="Configuration not found")
+
+        with open(config_path) as f:
+            configs.append(json.load(f))
+
+    config = lc.join_configs(configs)
+    config = lc.process_config(config)
+    return config
+
+
+@app.get("/api/ui/controls")
+async def get_ui_controls(
+    tune_id: Optional[str] = None,
+    instrument_model: Optional[str] = None,
+    config: Optional[str] = None,
+):
+    """Return available GUI controls and their configured values."""
+    merged_config = load_merged_config(
+        tune_id=tune_id,
+        instrument_model=instrument_model,
+        config_id=config,
+    )
+
+    controls = merged_config.get("site_controls", {})
+
+    result = []
+
+    for label, path in controls.items():
+        # Retrieve the initial value from the merged configuration.
+        value = merged_config
+
+        try:
+            for key in path.split("/"):
+                value = value[key]
+                print(key)
+
+            value = float(value)
+
+        except (KeyError, TypeError, ValueError) as e:
+            print(e)
+            value = 0.5
+
+        result.append(
+            {
+                "id": label.lower().replace(" ", "_"),
+                "label": label,
+                "path": path,
+                "min": 0,
+                "max": 1,
+                "step": 0.01,
+                "value": value,
+            }
+        )
+
+    return {"controls": result}
+
+
 async def start_loeric(
     tune: str,
     repetitions: int,
@@ -196,8 +302,6 @@ async def start_loeric(
     config: str,
     instrument_model: str,
     tempo: float,
-    volume: float,
-    responsiveness: float,
 ) -> bool:
     """Start loeric with the specified tune and parameters.
 
@@ -209,7 +313,7 @@ async def start_loeric(
 
     Once LOERIC is created, a new thread is spawn and the system starts.
     """
-    global musician, RESPONSIVENESS_PATH
+    global musician
     try:
 
         # Update state
@@ -217,11 +321,9 @@ async def start_loeric(
         state.current_config = config
         state.parameters = {
             "tempo": tempo,
-            "volume": volume,
             "instrument": instrument_model,
             "repetitions": repetitions,
             "transpose": transpose,
-            "responsiveness": responsiveness,
         }
 
         # open base config
@@ -259,13 +361,11 @@ async def start_loeric(
         else:
             config = {}
 
-        config = lc.join_configs([base, device_base, tune_config, instrument_config, config])
-
-        RESPONSIVENESS_PATH = config.get("variables").get("site_responsiveness_path")
+        config = lc.join_configs(
+            [base, device_base, tune_config, instrument_config, config]
+        )
 
         config = lc.process_config(config)
-
-        print(json.dumps(config, indent=2))
 
         # change transpose
         try:
@@ -282,14 +382,6 @@ async def start_loeric(
         musician.set_tempo(tempo)
         musician.start()
 
-        # change responsiveness and volume
-        musician.set_attribute(
-            RESPONSIVENESS_PATH,
-            responsiveness,
-            block=False,
-        )
-
-        _change_volume(volume)
         state.running = True
 
         return True
@@ -359,51 +451,6 @@ async def tempo_change(qpm: float):
 
     state.parameters["tempo"] = qpm
     return await get_status()
-
-
-@app.post("/api/responsiveness/{value}", response_model=lsm.StatusResponse)
-async def responsiveness_change(value: float):
-    """POST /api/responsiveness/{value} - Change LOERIC's responsiveness."""
-    global musician, RESPONSIVENESS_PATH
-    if musician:
-        musician.set_attribute(RESPONSIVENESS_PATH, value, block=False)
-
-    state.parameters["responsiveness"] = value
-    return await get_status()
-
-
-@app.post("/api/volume/{value}", response_model=lsm.StatusResponse)
-async def volume_change(value: float):
-    """POST /api/volume/{value} - Change LOERIC's volume."""
-    global musician
-
-    if not musician:
-        raise HTTPException(status_code=400, detail="LOERIC is not running")
-
-    status = _change_volume(value)
-    if status == -1:
-        raise HTTPException(status_code=404, detail="Path not found")
-
-    state.parameters["volume"] = value
-    return await get_status()
-
-
-def _change_volume(value: float):
-    global musician
-
-    outputs = _get_param("player/output", timeout=None)
-
-    if outputs is None:
-        return -1
-
-    for o in outputs["children"]:
-        p = f"player/output/{o}"
-        attrs = _get_param(p)
-        if attrs is not None and "children" in attrs and "volume" in attrs["children"]:
-            p += "/volume"
-            musician.set_attribute(p, value)
-
-    return 0
 
 
 @app.get("/api/get/{path:path}")
@@ -478,8 +525,6 @@ async def start(request: lsm.StartRequest):
             config=request.config,
             instrument_model=request.instrument_model,
             tempo=request.tempo,
-            responsiveness=request.responsiveness,
-            volume=request.volume,
         )
         return {
             "status": "started",
@@ -489,8 +534,6 @@ async def start(request: lsm.StartRequest):
             "config": request.config,
             "instrument": request.instrument_model,
             "tempo": request.tempo,
-            "responsiveness": request.responsiveness,
-            "volume": request.volume,
         }
     except Exception as e:
         logger.error(f"Start failed: {e}")
