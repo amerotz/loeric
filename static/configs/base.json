@@ -1,5 +1,6 @@
 {
   "variables": {
+    "site_responsiveness_path": "player/input/mic_input/analysers/loudness/responsiveness",
     "var_instrument_program": 1,
     "var_comping_pattern_period": 2,
     "var_drone_threshold": 0.5,
@@ -7,7 +8,8 @@
     "var_phrase_length_2": 2,
     "var_phrase_length_1": 4,
     "var_velocity_weight": [1, 1, 1, 1, 1],
-    "var_drone_bind": "$drone",
+    "var_drone_bind": "drone",
+    "var_notes_per_bar": [8],
     "var_notes_per_bar_bind": "notes_per_bar",
     "var_legato_pattern": {
       "mean": [1],
@@ -17,7 +19,7 @@
       "normalize": false
     },
     "var_ornament_pattern": {
-      "mean": [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      "mean": [0, 1, 1, 1, 1, 1, 1, 0],
       "std": null,
       "period": 8,
       "std_scale": 1,
@@ -325,18 +327,23 @@
   },
   "player": {
     "input": {
-      "midi": {
+      "midi#main": {
         "active": false,
         "port": "Midi Through:Midi Through Port-0 14:0",
         "analysers": {
           "midi_cc#control_change": {
-            "active": true,
+            "active": false,
             "controls": {}
-          }
+          },
+	  "midi_notes": {
+		  "active": false,
+		  "controls": {},
+		  "responsiveness": 0.5
+	  }
         }
       },
       "audio#mic_input": {
-        "active": true,
+        "active": false,
         "device": "default",
         "samplerate": 44100,
         "analysers": {
@@ -361,11 +368,11 @@
         "controls": {}
       },
       "soundfont": {
-        "active": true,
+        "active": false,
         "device": "default",
         "channels": 2,
         "volume": 1,
-        "samplerate": 41000,
+        "samplerate": 44100,
         "path": "/usr/share/sounds/sf2/FluidR3_GM.sf2",
         "gain": 0,
         "program": "var_instrument_program",
@@ -374,7 +381,6 @@
         "velocity_range": [32, 110],
         "pitchbend_range": 2,
         "controls": {
-          "velocity": 1
         }
       }
     }

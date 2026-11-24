@@ -78,6 +78,7 @@ TUNE_CONFIG_PATH = ir.files(loeric.config).joinpath("performance/tune_type")
 CONFIG_PATH = STATIC_ROOT / "configs"
 CONFIG_INDEX_FILE = STATIC_ROOT / "index.json"
 BASE_CONFIG = STATIC_ROOT / "configs" / "base.json"
+DEVICE_BASE_CONFIG = None
 TUNES_PATH = STATIC_ROOT / "tunes"
 FRONTEND_ROOT = STATIC_ROOT / "site"
 GUI_FILE = FRONTEND_ROOT / "index.html"
@@ -226,6 +227,12 @@ async def start_loeric(
         # open base config
         with open(BASE_CONFIG, "r") as f:
             base = json.load(f)
+
+        # open device config
+        device_base = {}
+        if DEVICE_BASE_CONFIG is not None:
+            with open(DEVICE_BASE_CONFIG, "r") as f:
+                device_base = json.load(f)
 
         # create tune
         tune = tu.Tune(tune_list[tune].path, repetitions)
@@ -532,7 +539,7 @@ async def index():
 
 def main():
     """Start the server."""
-    global BASE_CONFIG
+    global DEVICE_BASE_CONFIG
 
     import argparse
 
@@ -549,7 +556,7 @@ def main():
     args = parser.parse_args()
 
     if args.device is not None:
-        BASE_CONFIG = Path(CONFIG_PATH / f"{args.device}_base.json")
+        DEVICE_BASE_CONFIG = Path(CONFIG_PATH / f"{args.device}_base.json")
 
     uvicorn.run(app, host="0.0.0.0", port=PORT)
 
