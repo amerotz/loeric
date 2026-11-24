@@ -103,6 +103,7 @@ class DroneModule(lmb.LOERICModule):
 
         self._last_pitch = None
         self._last_velocity = None
+        self._last_id = -1
         self._last_computed_time = {d: -np.inf for d in self._drone_sets}
         self._running = {
             name: False
@@ -156,6 +157,7 @@ class DroneModule(lmb.LOERICModule):
         elif isinstance(element, le.Note):
             self._last_pitch = element.pitch
             self._last_velocity = element.velocity
+            self._last_id = element.id
 
         # add drone
         notes = []
@@ -390,7 +392,7 @@ class DroneModule(lmb.LOERICModule):
 
             notes.append(
                 le.Note(
-                    id=element.id,
+                    id=self._last_id,
                     pitch=p,
                     eighth_duration=(note_duration - delay),
                     velocity=velocity,
