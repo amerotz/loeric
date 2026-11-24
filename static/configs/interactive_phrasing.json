@@ -1,0 +1,81 @@
+{
+  "variables": {
+    "var_phrase_length_2": 4,
+    "var_phrase_length_1": 8,
+    "var_velocity_multiplier": 0.75
+  },
+  "groover": {
+    "modules": {
+      "ornament": {
+        "bind": "ornament"
+      },
+      "swing": {
+        "bypass": true
+      },
+      "timing": {
+        "qpm_amount": 20
+      },
+      "legato": {
+        "min": 0.8,
+        "max": 1
+      }
+    }
+  },
+  "player": {
+    "input": {
+      "midi#main": {
+        "active": true,
+        "analysers": {
+          "midi_notes": {
+            "active": false
+          },
+          "midi_notes#intensity_velocity_tempo": {
+            "active": true,
+            "responsiveness": 1,
+            "controls": {
+              "global_intensity": "velocity",
+              "velocity_tempo_impact": "velocity"
+            }
+          },
+          "midi_notes#tempo": {
+            "active": true,
+            "responsiveness": 0.7,
+            "controls": { "tempo_intensity": "velocity" }
+          }
+        }
+      }
+    }
+  },
+  "mapper": {
+    "sources": [
+      "global_intensity",
+      "tempo_intensity",
+      "velocity_tempo_impact",
+      "tempo",
+      "velocity",
+      "legato",
+      "drone"
+    ],
+    "targets": [],
+    "rules": [
+      "global_intensity @ [0,0.35]",
+      "global_intensity @ [0.35,0.8] !",
+      "global_intensity @ [0.8,1]",
+      "velocity_tempo_impact @ [0,0.35] > [0.5,0.675]",
+      "velocity_tempo_impact @ [0.35,0.8] > [0.825,0.6]",
+      "velocity_tempo_impact @ [0.8,1] > [0.9,1]",
+      "tempo_intensity @ [0,0.7]",
+      "tempo_intensity @ [0.7,1] !",
+      "0.5 : %drone",
+      "0.5 : %legato",
+      "velocity_tempo_impact @ [0,0.35] : %velocity,%tempo",
+      "velocity_tempo_impact @ [0.35,0.8] : %velocity,%tempo",
+      "velocity_tempo_impact @ [0.8,1.0] : %velocity,%tempo",
+      "global_intensity @ [0,0.35] ~ velocity,legato,drone",
+      "global_intensity @ [0.35,0.8] ~ velocity,legato,drone",
+      "global_intensity @ [0.8,1] ~ velocity,legato,drone",
+      "tempo_intensity @ [0,0.7] ~ tempo",
+      "tempo_intensity @ [0.7,1] ~ tempo"
+    ]
+  }
+}

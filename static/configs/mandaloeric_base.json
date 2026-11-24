@@ -1,5 +1,7 @@
 {
   "variables": {
+    "site_responsiveness_path": "player/input/mic_input/analysers/loudness/responsiveness",
+
     "var_instrument_program": 1,
     "var_comping_pattern_period": 2,
     "var_drone_threshold": 0.5,
