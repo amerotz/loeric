@@ -330,7 +330,7 @@
     "input": {
       "midi": {
         "active": true,
-        "port": "KOMPLETE KONTROL S61 MK2:KOMPLETE KONTROL S61 MK2 MIDI 1 24:0",
+        "port": "Midi Through:Midi Through Port-0 14:0",
         "analysers": {
           "midi_notes": {
             "active": true,
