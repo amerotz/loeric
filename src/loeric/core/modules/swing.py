@@ -15,6 +15,8 @@
 
 from typing import Literal
 
+import numpy as np
+
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
 
@@ -61,7 +63,9 @@ class SwingModule(lmb.LOERICModule):
 
         :param element: the element to process.
         """
-        if isinstance(element, le.Note) or isinstance(element, le.Pause):
+        if (
+            isinstance(element, le.Note) or isinstance(element, le.Pause)
+        ) and not np.isnan(self._contour_values[self._contour]):
             x = element.time
 
             # is it an eight note?

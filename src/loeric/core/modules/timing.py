@@ -16,6 +16,8 @@
 import copy
 from typing import Literal
 
+import numpy as np
+
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
@@ -76,16 +78,19 @@ class TimingModule(lmb.LOERICModule):
 
         :param element: the element to process.
         """
+        ret_val = [element]
         if isinstance(element, le.UserTempo):
             self._user_tempo = element
         elif isinstance(element, le.Tempo):
             if self._first_tempo is None:
                 self._first_tempo = element
+            # filter out score tempo messages
+            # since this module elaborates tempo
+            ret_val = []
 
         elif not isinstance(element, le.NullEvent) and element.is_performable:
             element = self._process_element(element)
 
-        ret_val = [element]
         # always update tempo
         if self._tempo is not None:
             qpm = self._process_tempo()
@@ -93,6 +98,8 @@ class TimingModule(lmb.LOERICModule):
                 self._last_qpm = qpm
                 ret_val.append(le.Tempo(qpm=qpm, time=element.time))
 
+        if not isinstance(element, (le.NullEvent, le.ContourValue)):
+            print(ret_val)
         return ret_val
 
     def _process_element(
@@ -133,7 +140,11 @@ class TimingModule(lmb.LOERICModule):
             user_tempo_to_original_ratio = self._user_tempo.qpm / self._first_tempo.qpm
 
         bpm = self._tempo.qpm * user_tempo_to_original_ratio
-        value = 2 * self.qpm_amount * (self._contour_values[self._contour] - 0.5)
+        value = (
+            2
+            * self.qpm_amount
+            * (np.nan_to_num(self._contour_values[self._contour], nan=0) - 0.5)
+        )
 
         calculated_tempo = bpm + value
 

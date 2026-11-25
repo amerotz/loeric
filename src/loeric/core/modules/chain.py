@@ -45,7 +45,6 @@ class ChainModule(lmb.LOERICModule):
         for m in modules:
             module = lm.create_module(m, **modules[m])
             self._is_online = self._is_online or module.is_online
-            self._required_contours.update(module.required_contours)
             self._modules.append(module)
 
     def _process(

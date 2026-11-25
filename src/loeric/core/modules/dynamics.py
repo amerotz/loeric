@@ -15,6 +15,8 @@
 
 from typing import Literal
 
+import numpy as np
+
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
 import loeric.core.paths as lp
@@ -57,7 +59,10 @@ class DynamicsModule(lmb.LOERICModule):
         :param element: the element to process.
         """
         if isinstance(element, le.Note):
-            element.velocity = self._contour_values[self._contour]
-            if self._pattern is not None:
+            val = np.nan_to_num(self._contour_values[self._contour], nan=0)
+            element.velocity = val
+            if self._pattern is not None and not np.isnan(
+                self._contour_values[self._pattern]
+            ):
                 element.velocity *= self._contour_values[self._pattern]
         return [element]

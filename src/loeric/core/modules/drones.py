@@ -97,7 +97,6 @@ class DroneModule(lmb.LOERICModule):
 
         self._name = "drones"
         self._is_online = True
-        self._required_contours = set(filter(None, self._required_contours))
 
         self._drone_sets = {d: DroneModule._create_drone(data[d]) for d in data}
 
@@ -127,6 +126,7 @@ class DroneModule(lmb.LOERICModule):
                     d.delay_bind,
                     d.notes_per_bar_bind,
                 }
+        self._required_contours = set(filter(None, self._required_contours))
 
     @staticmethod
     def _create_drone(config):

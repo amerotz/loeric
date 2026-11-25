@@ -19,6 +19,7 @@ from functools import cached_property
 from typing import Optional
 
 import nanoid as nid
+import numpy as np
 from pydantic import BaseModel
 
 import loeric.core.element as le
@@ -33,6 +34,7 @@ class BaseModuleConfig(BaseModel):
     :param required_tags: tags an element must have to be processed.
     """
 
+    order: int = 0
     bypass: bool = False
     tag: Optional[str] = None
     required_tags: Optional[list[str]] = None
@@ -53,6 +55,7 @@ class LOERICModule:
         bypass: bool = False,
         tag: str = None,
         required_tags: list[str] = None,
+        order: int = None,
     ):
         """Process LOERICElements.
 
@@ -62,6 +65,7 @@ class LOERICModule:
         """
         self._signature = nid.generate()
         self._name = "module"
+        self._order = order
 
         self._lookahead_size = 0
         self._lookback_size = 0
@@ -121,10 +125,20 @@ class LOERICModule:
         elif isinstance(element, le.Tempo):
             self._tempo = copy.copy(element)
         elif isinstance(element, le.ContourValue):
-            # update contour values
-            self._contour_values[element.name] = element.value
+            if element.name in self._required_contours:
+                # update contour values
+                self._contour_values[element.name] = element.value
 
         return self._process(element, window)
+
+        """
+        # only run the actual loop
+        # if contours are valid
+        if self._has_all_contours:
+        # skip
+        else:
+            return [element]
+        """
 
     def _process(
         self,
@@ -205,4 +219,20 @@ class LOERICModule:
 
     @property
     def _has_all_contours(self):
-        return self._required_contours <= set(self._contour_values.keys())
+        """Check if all contours for this module have been acquired and are not nan."""
+        # if no contours are required
+        if len(self._required_contours) == 0:
+            return True
+
+        # have we gotten some value for each contour?
+        contours_obtained = self._required_contours <= set(self._contour_values.keys())
+
+        # are the values valid?
+        if contours_obtained:
+            # are they not nan?
+            contours_valid = not np.isnan(
+                np.asarray(list(self._contour_values.values()))
+            ).any()
+            return contours_valid
+        else:
+            return False

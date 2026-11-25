@@ -47,6 +47,7 @@ class Groover:
 
         self._modules = {}
         logger.info("Loading following modules:")
+        config.modules = dict(sorted(config.modules.items(), key=lambda x: x[1].order))
         for name, module_config in config.modules.items():
             logger.info(name)
             self._modules[name] = lm.create_module(name, **module_config.model_dump())

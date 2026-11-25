@@ -112,7 +112,10 @@ class OrnamentModule(lmb.LOERICModule):
         self._ornaments = [OrnamentConfig(name=o, **data[o]) for o in data]
         self._window_size = 0
         self._is_online = True
+
         self._required_contours = {bind}
+        self._required_contours.update({o.bind for o in self._ornaments})
+        self._required_contours = set(filter(None, self._required_contours))
 
         if len(self._ornaments) != 0:
             self._window_size = max([o.length for o in self._ornaments])
@@ -125,7 +128,7 @@ class OrnamentModule(lmb.LOERICModule):
         self._whitelist = set(self._whitelist)
 
         self._accidentals = defaultdict(int)
-        self._eighths_to_skip = 0
+        self._eighths_to_skip = le.TimeDelta(eighth_duration=0)
 
     def _process(
         self,

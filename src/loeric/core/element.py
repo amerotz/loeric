@@ -54,7 +54,9 @@ class TimeDelta:
             )
 
         else:
-            if not (isinstance(self.eighth_duration, (int, float))):
+            if not (isinstance(self.eighth_duration, (int, float))) or np.isnan(
+                self.eighth_duration
+            ):
                 raise TypeError(
                     f"TimeDelta requires int/float, got {type(self.eighth_duration)}"
                 )
@@ -67,6 +69,8 @@ class TimeDelta:
     def quantize(value: float) -> float:
         if np.isinf(value):
             return value
+        if np.isnan(value):
+            value = 0.0
         return (
             round(value * MINIMUM_QUARTER_DIVISION) * ONE_OVER_MINIMUM_QUARTER_DIVISION
         )
@@ -539,20 +543,20 @@ class KeySignature(LOERICElement):
             f"(KeySignature k={NOTE_NAMES[self._root]} m={self._mode} t={self._time})"
         )
 
-    def degree_from_root(self, pitch: int, with_octave=False):
+    def degree_from_root(self, pitch: float, with_octave=False):
 
-        indexes = np.argwhere(self.scale == (pitch - self.root) % 12)
-        accidental = 0
+        interval = (pitch - self._root) % 12
 
-        if len(indexes) == 0:
-            indexes = np.argwhere(self.scale == (pitch - 1 - self._root) % 12)
-            accidental = 1
+        # Find closest scale degree
+        differences = interval - self.scale
+        indexes = np.argmin(np.abs(differences))
 
-        indexes = indexes[0][0]
+        accidental = differences[indexes]
+
         if with_octave:
-            indexes += 7 * ((pitch - self._root) // 12)
+            indexes += 7 * int(np.floor((pitch - self._root) / 12))
 
-        return int(indexes), accidental
+        return int(indexes), float(accidental)
 
     def degree_difference(self, pitch1, pitch2):
 

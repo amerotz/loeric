@@ -15,6 +15,8 @@
 
 from typing import Literal
 
+import numpy as np
+
 import loeric.core.element as le
 import loeric.core.modules.base as lmb
 
@@ -56,7 +58,9 @@ class LegatoModule(lmb.LOERICModule):
 
         :param element: the element to process.
         """
-        if isinstance(element, le.Note):
+        if isinstance(element, le.Note) and not np.isnan(
+            self._contour_values[self._contour]
+        ):
             element.duration *= (
                 self._min_legato
                 + self._legato_amount * self._contour_values[self._contour]

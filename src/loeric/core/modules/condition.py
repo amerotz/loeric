@@ -114,7 +114,6 @@ class ConditionalModule(lmb.LOERICModule):
         self._condition = LOERICCondition(**condition)
 
         self._is_online = self._module.is_online
-        self._required_contours = self._module.required_contours
 
     def _process(
         self,
