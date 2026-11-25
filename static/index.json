@@ -1,15 +1,15 @@
 {
   "The Bonniest Lass in All the World": {
-    "configs": [],
-    "default": "interactive_phrasing.json"
+    "configs": ["interactive_phrasing.json", "errors.json" ],
+    "default": ""
   },
   "The Bonniest Lass in All the World (Var. 1)": {
-    "configs": [],
-    "default": "interactive_phrasing.json"
+    "configs": ["interactive_phrasing.json", "errors.json" ],
+    "default": ""
   },
   "The Bonniest Lass in All the World (Var. 2)": {
-    "configs": [],
-    "default": "interactive_phrasing.json"
+    "configs": ["interactive_phrasing.json", "errors.json" ],
+    "default": ""
   },
   "Dan Dowd's": {
     "configs": ["dan_dowds_no_errors.json"],
